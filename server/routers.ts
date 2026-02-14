@@ -46,6 +46,7 @@ import {
   behaviorEngineRouter,
   myReportsRouter,
   voiceBugReportRouter,
+  translationRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -135,6 +136,9 @@ export const appRouter = router({
   emailOptin: emailOptinRouter,
   bugReports: bugReportsRouter,
   voiceBugReport: voiceBugReportRouter,
+
+  // Translation
+  translation: translationRouter,
 });
 
 export type AppRouter = typeof appRouter;

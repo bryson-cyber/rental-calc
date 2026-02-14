@@ -316,6 +316,17 @@ export default function UnifiedAdmin() {
 
   const totalUserPages = Math.ceil((usersQuery.data?.total || 0) / userLimit);
 
+  // ============================================
+  // USER DRILL-DOWN STATE
+  // ============================================
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [drillDownPage, setDrillDownPage] = useState(1);
+
+  const userPropertiesQuery = trpc.admin.getUserProperties.useQuery(
+    { userId: selectedUserId!, page: drillDownPage, pageSize: 20 },
+    { enabled: !!selectedUserId && isAuthenticated && user?.role === 'admin' }
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -589,9 +600,18 @@ export default function UnifiedAdmin() {
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-foreground text-sm">
-                                {entry.userName || 'Anonymous'}
-                              </span>
+                              {entry.userId ? (
+                                <button
+                                  onClick={() => { setSelectedUserId(entry.userId!); setDrillDownPage(1); }}
+                                  className="font-medium text-primary hover:text-primary/80 hover:underline text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
+                                >
+                                  {entry.userName || 'Anonymous'}
+                                </button>
+                              ) : (
+                                <span className="font-medium text-foreground text-sm">
+                                  {entry.userName || 'Anonymous'}
+                                </span>
+                              )}
                               {entry.userEmail && (
                                 <span className="text-muted-foreground text-xs">
                                   {entry.userEmail}
@@ -719,8 +739,13 @@ export default function UnifiedAdmin() {
                         {usersQuery.data?.users?.map((u: any) => (
                           <TableRow key={u.id}>
                             <TableCell>
-                              <p className="font-medium text-foreground">{u.name || 'Unnamed User'}</p>
-                              <p className="text-xs text-muted-foreground">ID: {u.id}</p>
+                              <button
+                                onClick={() => { setSelectedUserId(u.id); setDrillDownPage(1); }}
+                                className="text-left hover:underline focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
+                              >
+                                <p className="font-medium text-primary hover:text-primary/80 cursor-pointer">{u.name || 'Unnamed User'}</p>
+                                <p className="text-xs text-muted-foreground">ID: {u.id}</p>
+                              </button>
                             </TableCell>
                             <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
                             <TableCell>
@@ -1441,6 +1466,170 @@ export default function UnifiedAdmin() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* ============================================ */}
+      {/* USER PROPERTIES DRILL-DOWN PANEL */}
+      {/* ============================================ */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[60] flex">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setSelectedUserId(null)}
+          />
+          {/* Side Panel */}
+          <div className="ml-auto relative w-full max-w-2xl bg-card border-l border-border shadow-2xl overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {userPropertiesQuery.data?.user?.name || 'Loading...'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {userPropertiesQuery.data?.user?.email || ''}
+                  </p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedUserId(null)}>
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {userPropertiesQuery.isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  {/* Reports Section */}
+                  {(userPropertiesQuery.data?.reports?.length ?? 0) > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        Property Reports ({userPropertiesQuery.data?.reports?.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {userPropertiesQuery.data?.reports?.map((report: any) => (
+                          <Card key={report.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground truncate">{report.address}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {report.city}{report.state ? `, ${report.state}` : ''}
+                                    {report.marketName ? ` — ${report.marketName}` : ''}
+                                  </p>
+                                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                    {report.bedrooms && (
+                                      <span className="text-xs text-muted-foreground">{report.bedrooms} BR / {report.bathrooms} BA</span>
+                                    )}
+                                    {report.annualRevenueRealistic && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        <DollarSign className="w-3 h-3 mr-0.5" />
+                                        {Number(report.annualRevenueRealistic).toLocaleString()}/yr
+                                      </Badge>
+                                    )}
+                                    {report.occupancyRate && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {Number(report.occupancyRate).toFixed(0)}% occ.
+                                      </Badge>
+                                    )}
+                                    {report.verdict && (
+                                      <Badge className={`text-xs ${
+                                        report.verdict === 'GO' ? 'bg-green-100 text-green-700 border-green-200' :
+                                        report.verdict === 'CAUTION' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                        'bg-red-100 text-red-700 border-red-200'
+                                      }`}>
+                                        {report.verdict}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {formatDate(report.createdAt)}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activity Timeline */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      Recent Activity ({userPropertiesQuery.data?.totalActivities || 0} total)
+                    </h3>
+                    {(userPropertiesQuery.data?.activities?.length ?? 0) === 0 ? (
+                      <p className="text-sm text-muted-foreground py-4">No property-related activity found for this user.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {userPropertiesQuery.data?.activities?.map((act: any) => {
+                          const details = act.details as Record<string, any> | null;
+                          const address = details?.address || details?.propertyAddress || details?.market || '';
+                          return (
+                            <div key={act.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                                {act.actionCategory === 'analysis' ? <BarChart3 className="w-3.5 h-3.5 text-primary" /> :
+                                 act.actionCategory === 'search' ? <Search className="w-3.5 h-3.5 text-blue-500" /> :
+                                 <FileText className="w-3.5 h-3.5 text-muted-foreground" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-foreground">
+                                  {act.action.replace(/_/g, ' ')}
+                                </p>
+                                {address && (
+                                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                    <MapPin className="w-3 h-3 inline mr-1" />{address}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDate(act.createdAt)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Pagination */}
+                    {(userPropertiesQuery.data?.totalActivities ?? 0) > 20 && (
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground">
+                          Page {drillDownPage} of {Math.ceil((userPropertiesQuery.data?.totalActivities || 0) / 20)}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setDrillDownPage(p => Math.max(1, p - 1))} disabled={drillDownPage <= 1}>
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setDrillDownPage(p => p + 1)} disabled={drillDownPage >= Math.ceil((userPropertiesQuery.data?.totalActivities || 0) / 20)}>
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Empty state */}
+                  {(userPropertiesQuery.data?.reports?.length ?? 0) === 0 && (userPropertiesQuery.data?.activities?.length ?? 0) === 0 && (
+                    <div className="text-center py-12">
+                      <Building className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground">No property activity found for this user yet.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

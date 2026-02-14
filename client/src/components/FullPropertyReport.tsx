@@ -76,6 +76,7 @@ import { LightMarkdown } from '@/components/LightMarkdown';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { lazy, Suspense } from 'react';
+import { TranslatePageBanner } from './TranslatePageBanner';
 
 const SendToSlackModal = lazy(() => import('./SendToSlackModal'));
 
@@ -577,6 +578,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
 
 export default function FullPropertyReport({ data, onBack, shareId, isSharedView }: FullPropertyReportProps) {
   const [activeSection, setActiveSection] = useState('overview');
+  const reportContentRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [showStreetView, setShowStreetView] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -1156,6 +1158,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       {/* MAIN CONTENT */}
       {/* ============================================================ */}
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
+        <TranslatePageBanner containerRef={reportContentRef} contentLabel="full property analysis report" />
+        <div ref={reportContentRef}>
 
         {/* ---------------------------------------------------------- */}
         {/* SECTION 1: PROPERTY OVERVIEW */}
@@ -3334,7 +3338,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             This is not investment advice.
           </p>
         </div>
-      </div>
+      </div> {/* closes ref={reportContentRef} */}
+      </div> {/* closes max-w-5xl */}
 
       {/* Send to Slack Modal — admin only */}
       {isAdmin && shareId && !isSharedView && (

@@ -110,6 +110,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
 import { AuthButton } from '@/components/AuthButton';
+import LanguageSelector from '@/components/LanguageSelector';
 const CompareFavoritesSection = lazy(() => import('@/components/CompareFavoritesSection').then(m => ({ default: m.CompareFavoritesSection })));
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -2159,7 +2160,8 @@ export default function LeadMagnet() {
           <span className="hidden sm:inline text-sm font-semibold text-slate-800">Coach Inayah</span>
         </button>
       </div>
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <LanguageSelector />
         <AuthButton />
         <NotificationBell />
       </div>

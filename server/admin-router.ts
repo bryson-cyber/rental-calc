@@ -709,6 +709,142 @@ export const adminRouter = router({
       }
     }),
 
+  // Get properties analyzed by a specific user (drill-down)
+  getUserProperties: adminProcedure
+    .input(
+      z.object({
+        userId: z.number().int(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(20),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        // Get user info
+        const [user] = await db
+          .select({ id: users.id, name: users.name, email: users.email })
+          .from(users)
+          .where(eq(users.id, input.userId));
+
+        if (!user) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        }
+
+        // Get all property-related activities for this user
+        const offset = (input.page - 1) * input.pageSize;
+
+        const [totalResult] = await db
+          .select({ count: count() })
+          .from(activityLogs)
+          .where(
+            and(
+              eq(activityLogs.userId, input.userId),
+              sql`${activityLogs.actionCategory} IN ('analysis', 'search', 'report')`
+            )
+          );
+
+        const activities = await db
+          .select({
+            id: activityLogs.id,
+            action: activityLogs.action,
+            actionCategory: activityLogs.actionCategory,
+            details: activityLogs.details,
+            pagePath: activityLogs.pagePath,
+            createdAt: activityLogs.createdAt,
+          })
+          .from(activityLogs)
+          .where(
+            and(
+              eq(activityLogs.userId, input.userId),
+              sql`${activityLogs.actionCategory} IN ('analysis', 'search', 'report')`
+            )
+          )
+          .orderBy(desc(activityLogs.createdAt))
+          .limit(input.pageSize)
+          .offset(offset);
+
+        // Also get reports linked to this user's sessions
+        const userSessionRows = await db
+          .select({ sessionId: userSessions.sessionId })
+          .from(userSessions)
+          .where(eq(userSessions.userId, input.userId));
+
+        const sessionIds = userSessionRows.map((s) => s.sessionId);
+
+        let reports: Array<{
+          id: number;
+          address: string | null;
+          city: string | null;
+          state: string | null;
+          bedrooms: number | null;
+          bathrooms: string | null;
+          annualRevenueRealistic: number | null;
+          occupancyRate: string | null;
+          averageDailyRate: number | null;
+          verdict: string | null;
+          marketName: string | null;
+          createdAt: Date;
+        }> = [];
+
+        if (sessionIds.length > 0) {
+          // Query in batches if many sessions
+          const batchSize = 50;
+          for (let i = 0; i < Math.min(sessionIds.length, batchSize); i += batchSize) {
+            const batch = sessionIds.slice(i, i + batchSize);
+            const batchReports = await db
+              .select({
+                id: analysisReports.id,
+                address: analysisReports.address,
+                city: analysisReports.city,
+                state: analysisReports.state,
+                bedrooms: analysisReports.bedrooms,
+                bathrooms: analysisReports.bathrooms,
+                annualRevenueRealistic: analysisReports.annualRevenueRealistic,
+                occupancyRate: analysisReports.occupancyRate,
+                averageDailyRate: analysisReports.averageDailyRate,
+                verdict: analysisReports.verdict,
+                marketName: analysisReports.marketName,
+                createdAt: analysisReports.createdAt,
+              })
+              .from(analysisReports)
+              .where(
+                sql`${analysisReports.sessionId} IN (${sql.join(
+                  batch.map((s) => sql`${s}`),
+                  sql`, `
+                )})`
+              )
+              .orderBy(desc(analysisReports.createdAt))
+              .limit(50);
+            reports = reports.concat(batchReports);
+          }
+        }
+
+        return {
+          user,
+          activities,
+          reports,
+          totalActivities: totalResult?.count ?? 0,
+          page: input.page,
+          pageSize: input.pageSize,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error("[Admin] Error getting user properties:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get user properties",
+        });
+      }
+    }),
+
   // Get today's API call count
   getTodayApiCount: adminProcedure
     .input(

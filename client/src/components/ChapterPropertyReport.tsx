@@ -3,7 +3,7 @@
  * Matches the Airbnb Arbitrage Opportunity format
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -49,6 +49,7 @@ import { CompsMapView } from './CompsMapView';
 import { ShareReportButton } from './ShareReportButton';
 import { StandaloneMarketAdvisor } from './StandaloneMarketAdvisor';
 import OpportunityFinderStep from './OpportunityFinderStep';
+import { TranslatePageBanner } from './TranslatePageBanner';
 
 // Helper function to extract Airbnb listing ID and construct image URL
 const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
@@ -308,6 +309,7 @@ function ThoughtProcess({ children }: { children: React.ReactNode }) {
 
 export default function ChapterPropertyReport({ data, onBack, clientName, marketId }: ChapterPropertyReportProps) {
   const [activeChapter, setActiveChapter] = useState(1);
+  const reportContentRef = useRef<HTMLDivElement>(null);
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
 
@@ -487,6 +489,8 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          <TranslatePageBanner containerRef={reportContentRef} contentLabel="property analysis report" />
+        <div ref={reportContentRef}>
           {/* Introduction */}
           <div className="mb-8 p-6 bg-white rounded-xl shadow-lg">
             <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-3">What is This Report?</h3>
@@ -1598,6 +1602,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               }}
             />
           </ChapterSection>
+        </div>
         </div>
       </div>
     </div>

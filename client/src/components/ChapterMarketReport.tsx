@@ -3,7 +3,7 @@
  * Matches the Marietta, GA Short-Term Rental Market Guide format
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -35,6 +35,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { TranslatePageBanner } from './TranslatePageBanner';
 
 // Types
 interface MarketMetrics {
@@ -345,6 +346,7 @@ function TierCard({ tier, title, description, markets }: {
 
 export default function ChapterMarketReport({ data, reportType, onBack, clientName }: ChapterMarketReportProps) {
   const [activeChapter, setActiveChapter] = useState(1);
+  const reportContentRef = useRef<HTMLDivElement>(null);
 
   const isSubmarket = reportType === 'submarket';
   const marketInfo = isSubmarket
@@ -450,6 +452,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          <TranslatePageBanner containerRef={reportContentRef} contentLabel="market analysis report" />
+        <div ref={reportContentRef}>
           {/* Chapter 1: The Big Picture */}
           <ChapterSection id="chapter-1" title="Chapter 1: The Big Picture">
             <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
@@ -1147,6 +1151,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               </p>
             </div>
           </ChapterSection>
+        </div>
         </div>
       </div>
     </div>

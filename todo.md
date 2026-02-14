@@ -11274,3 +11274,22 @@ Results:
 - [x] Add filtering by user, action type, and date range
 - [x] Paginate activity feed for performance
 - [x] Write vitest tests for activity feed (16 tests passing)
+
+## Full Website Translation via Gemini API (Feb 14, 2026)
+- [x] Build server-side translation service using Gemini API (invokeLLM with structured JSON output)
+- [x] Create translation tRPC endpoint for on-demand text translation (translate router with translateTexts + getSupportedLanguages)
+- [x] Build frontend TranslationContext with language selector (TranslationContext + useTranslation hook)
+- [x] Add language selector to site header/navigation (LanguageSelector in LeadMagnet header)
+- [x] Translate all static UI strings via TranslatableText component wrapper
+- [x] Translate report content via TranslatePageBanner (ChapterPropertyReport, ChapterMarketReport, FullPropertyReport)
+- [x] Cache translations in-memory on server to avoid redundant API calls
+- [x] Support 47 languages (all major world languages)
+- [x] Persist user language preference in localStorage
+- [x] Write vitest tests for translation service (33 tests passing)
+
+## Admin: Properties by User Drill-Down (Feb 14, 2026)
+- [x] Add tRPC endpoint to fetch all properties analyzed by a specific user (getUserProperties in admin-router)
+- [x] Add clickable user names in admin Users tab and Activity tab
+- [x] Show drill-down slide-over panel with all properties the user analyzed
+- [x] Include property address, analysis date, report type, verdict badge, and revenue estimate
+- [x] Add back navigation from drill-down to user list (close button on slide-over)
