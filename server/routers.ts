@@ -47,6 +47,7 @@ import {
   myReportsRouter,
   voiceBugReportRouter,
   translationRouter,
+  contentStudioRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -139,6 +140,8 @@ export const appRouter = router({
 
   // Translation
   translation: translationRouter,
+  // Content Studio
+  contentStudio: contentStudioRouter,
 });
 
 export type AppRouter = typeof appRouter;

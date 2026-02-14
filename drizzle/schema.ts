@@ -2164,3 +2164,55 @@ export const translationCache = mysqlTable("translation_cache", {
 
 export type TranslationCacheEntry = typeof translationCache.$inferSelect;
 export type InsertTranslationCacheEntry = typeof translationCache.$inferInsert;
+
+/**
+ * Content Studio - Script generation table.
+ * Stores AI-generated video narration scripts using Coach Inayah's persona.
+ * Supports 4 formats: reel, short, lesson, deep_dive.
+ */
+export const contentScripts = mysqlTable("content_scripts", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** User who generated the script (null for anonymous/admin-generated) */
+  userId: int("userId"),
+
+  /** Video format: reel | short | lesson | deep_dive */
+  format: varchar("format", { length: 20 }).notNull(),
+
+  /** Topic / prompt the user entered */
+  topic: text("topic").notNull(),
+
+  /** Generated video title */
+  title: varchar("title", { length: 500 }).notNull(),
+
+  /** Opening hook line */
+  hook: text("hook").notNull(),
+
+  /** Full narration script */
+  script: text("script").notNull(),
+
+  /** Closing call-to-action */
+  cta: text("cta").notNull(),
+
+  /** Estimated duration in seconds */
+  estimatedDurationSeconds: int("estimatedDurationSeconds"),
+
+  /** JSON array of key data points used in the script */
+  keyDataPoints: json("keyDataPoints").$type<string[]>(),
+
+  /** One-sentence target audience description */
+  targetAudience: varchar("targetAudience", { length: 500 }),
+
+  /** Optional market data context injected into generation (JSON) */
+  marketDataContext: json("marketDataContext").$type<Record<string, unknown>>(),
+
+  /** Timestamps */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("cs_user_idx").on(table.userId),
+  index("cs_format_idx").on(table.format),
+  index("cs_created_idx").on(table.createdAt),
+]);
+export type ContentScript = typeof contentScripts.$inferSelect;
+export type InsertContentScript = typeof contentScripts.$inferInsert;

@@ -11351,3 +11351,15 @@ Results:
 - [x] Add Property Cache viewer to admin dashboard (new Cache tab)
 - [x] Add getCacheStats, getCacheEntries, clearExpiredCache, deleteCacheEntry admin endpoints
 - [x] Cache tab shows overview cards (total/active/expired), breakdown by type, and paginated entry browser
+
+## Content Studio - STR Content Creator Integration (Feb 14)
+- [x] Add content_scripts table to drizzle schema
+- [x] Build server-side script generation service with PTCF prompt system (Gemini 3 Flash via user's API key)
+- [x] Create tRPC endpoints (generateScript, listScripts, getScript, deleteScript, getFormats)
+- [x] Build Content Studio frontend page with format selection and topic input
+- [x] Add optional AirDNA market data injection for real data points
+- [x] Display generated scripts with title, hook, full script, CTA, and metadata
+- [x] Add script history/library with search and filter
+- [x] Add copy-to-clipboard for scripts
+- [x] Register Content Studio route in App.tsx
+- [x] Write vitest tests for script generation (20 tests passing)

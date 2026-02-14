@@ -31,6 +31,7 @@ export type ToolName =
   | 'property_analyzer'
   | 'opportunity_finder'
   | 'comp_analysis'
+  | 'content_studio'
   | 'export';
 
 interface TrackEventParams {

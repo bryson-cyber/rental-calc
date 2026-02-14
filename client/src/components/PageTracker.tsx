@@ -17,6 +17,7 @@ const PATH_TO_TOOL: Record<string, ToolName> = {
   '/map': 'map_view',
   '/deal-alerts': 'deal_alerts',
   '/evaluate-market': 'market_explorer',
+  '/content-studio': 'content_studio',
   '/discover-markets': 'market_explorer',
   '/investment-calculator': 'revenue_calculator',
 };

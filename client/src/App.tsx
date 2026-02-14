@@ -52,6 +52,7 @@ const FullReportGenerator = lazy(() => import("./pages/FullReportGenerator"));
 const DealAlertsPage = lazy(() => import("./pages/DealAlertsPage"));
 const MarketEvaluationPage = lazy(() => import("./pages/MarketEvaluationPage"));
 const MyReportsPage = lazy(() => import("./pages/MyReportsPage"));
+const ContentStudioPage = lazy(() => import("./pages/ContentStudioPage"));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -140,6 +141,9 @@ function Router() {
         
         {/* One-Click Market Evaluation */}
         <Route path="/evaluate-market" component={MarketEvaluationPage} />
+        
+        {/* Content Studio - Script Generator */}
+        <Route path="/content-studio" component={ContentStudioPage} />
         
         {/* Legacy/admin routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />
