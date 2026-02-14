@@ -11343,3 +11343,11 @@ Results:
 - [x] Fix the SMS integration to work end-to-end (SINGLE_SMS→SINGLE_SMS_STRICTLY, added /api/ to URL)
 - [x] Test SMS sending functionality (API auth ✓, message evaluation ✓)
 - [x] Write vitest tests for SMS integration (17 tests passing)
+
+## CI Loop - Technical Debt (Feb 14, 2026)
+- [x] Fix Seasonal Forecast chart table badge colors (Slow badge was gray instead of rose)
+- [x] Update Seasonal Forecast chart colors to match Coach Inayah brand palette (gold peak, slate shoulder, rose slow)
+- [x] Remove deprecated opportunitySearches table from schema (unused, never imported)
+- [x] Add Property Cache viewer to admin dashboard (new Cache tab)
+- [x] Add getCacheStats, getCacheEntries, clearExpiredCache, deleteCacheEntry admin endpoints
+- [x] Cache tab shows overview cards (total/active/expired), breakdown by type, and paginated entry browser

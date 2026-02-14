@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
-import { users, activityLogs, userSessions, analysisReports, leads } from "../drizzle/schema";
+import { users, activityLogs, userSessions, analysisReports, leads, apiCache as apiCacheTable } from "../drizzle/schema";
 import { eq, desc, gte, lte, and, count, sql, like, or } from "drizzle-orm";
 import { userUsage } from "../drizzle/schema";
 import { getActivityLogs, getActivityStats, getRecentSessions } from "./activity";
@@ -842,6 +842,151 @@ export const adminRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to get user properties",
         });
+      }
+    }),
+
+  // Get API cache statistics
+  getCacheStats: adminProcedure
+    .query(async () => {
+      try {
+        const db = (await getDb())!;
+        const now = new Date();
+        
+        // Get total entries and breakdown by type
+        const typeBreakdown = await db
+          .select({
+            cacheType: apiCacheTable.cacheType,
+            totalEntries: count(),
+            activeEntries: sql<number>`SUM(CASE WHEN ${apiCacheTable.expiresAt} > ${now} THEN 1 ELSE 0 END)`,
+            expiredEntries: sql<number>`SUM(CASE WHEN ${apiCacheTable.expiresAt} <= ${now} THEN 1 ELSE 0 END)`,
+            oldestEntry: sql<string>`MIN(${apiCacheTable.createdAt})`,
+            newestEntry: sql<string>`MAX(${apiCacheTable.updatedAt})`,
+          })
+          .from(apiCacheTable)
+          .groupBy(apiCacheTable.cacheType)
+          .orderBy(desc(count()));
+        
+        // Get overall totals
+        const [totals] = await db
+          .select({
+            total: count(),
+            active: sql<number>`SUM(CASE WHEN ${apiCacheTable.expiresAt} > ${now} THEN 1 ELSE 0 END)`,
+            expired: sql<number>`SUM(CASE WHEN ${apiCacheTable.expiresAt} <= ${now} THEN 1 ELSE 0 END)`,
+          })
+          .from(apiCacheTable);
+        
+        return {
+          totals: {
+            total: totals?.total ?? 0,
+            active: totals?.active ?? 0,
+            expired: totals?.expired ?? 0,
+          },
+          byType: typeBreakdown.map(t => ({
+            cacheType: t.cacheType,
+            total: t.totalEntries,
+            active: t.activeEntries ?? 0,
+            expired: t.expiredEntries ?? 0,
+            oldestEntry: t.oldestEntry,
+            newestEntry: t.newestEntry,
+          })),
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting cache stats:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get cache stats" });
+      }
+    }),
+
+  // Get recent cache entries (paginated)
+  getCacheEntries: adminProcedure
+    .input(
+      z.object({
+        cacheType: z.string().optional(),
+        showExpired: z.boolean().default(false),
+        limit: z.number().min(1).max(100).default(25),
+        offset: z.number().min(0).default(0),
+        search: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const db = (await getDb())!;
+        const now = new Date();
+        const conditions = [];
+        
+        if (input.cacheType) {
+          conditions.push(eq(apiCacheTable.cacheType, input.cacheType));
+        }
+        if (!input.showExpired) {
+          conditions.push(gte(apiCacheTable.expiresAt, now));
+        }
+        if (input.search) {
+          conditions.push(like(apiCacheTable.cacheKey, `%${input.search}%`));
+        }
+        
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        
+        const entries = await db
+          .select({
+            id: apiCacheTable.id,
+            cacheKey: apiCacheTable.cacheKey,
+            cacheType: apiCacheTable.cacheType,
+            expiresAt: apiCacheTable.expiresAt,
+            createdAt: apiCacheTable.createdAt,
+            updatedAt: apiCacheTable.updatedAt,
+            // Don't return data blob — too large
+          })
+          .from(apiCacheTable)
+          .where(where)
+          .orderBy(desc(apiCacheTable.updatedAt))
+          .limit(input.limit)
+          .offset(input.offset);
+        
+        const [countResult] = await db
+          .select({ total: count() })
+          .from(apiCacheTable)
+          .where(where);
+        
+        return {
+          entries: entries.map(e => ({
+            ...e,
+            isExpired: e.expiresAt < now,
+          })),
+          total: countResult?.total ?? 0,
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting cache entries:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get cache entries" });
+      }
+    }),
+
+  // Clear expired cache entries
+  clearExpiredCache: adminProcedure
+    .mutation(async () => {
+      try {
+        const db = (await getDb())!;
+        const now = new Date();
+        const result = await db
+          .delete(apiCacheTable)
+          .where(lte(apiCacheTable.expiresAt, now));
+        
+        return { deletedCount: (result as any)[0]?.affectedRows ?? 0 };
+      } catch (error) {
+        console.error("[Admin] Error clearing expired cache:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to clear expired cache" });
+      }
+    }),
+
+  // Delete specific cache entry
+  deleteCacheEntry: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        const db = (await getDb())!;
+        await db.delete(apiCacheTable).where(eq(apiCacheTable.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("[Admin] Error deleting cache entry:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete cache entry" });
       }
     }),
 

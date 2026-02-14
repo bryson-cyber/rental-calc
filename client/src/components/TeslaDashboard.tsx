@@ -718,16 +718,16 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500" />
-          <span className="text-xs text-slate-600">Peak (Top 33%)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-rose-400" />
-          <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
+           <div className="w-3 h-3 rounded-full bg-[oklch(0.55_0.14_75)]" />
+           <span className="text-xs text-slate-600">Peak (Top 33%)</span>
+         </div>
+         <div className="flex items-center gap-2">
+           <div className="w-3 h-3 rounded-full bg-slate-400" />
+           <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
+         </div>
+         <div className="flex items-center gap-2">
+           <div className="w-3 h-3 rounded-full bg-rose-400" />
+           <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
         </div>
       </div>
       
@@ -794,10 +794,10 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                   <div 
                     className={`w-full rounded-t transition-all cursor-pointer ${
                       category === 'peak'
-                        ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
+                        ? 'bg-gradient-to-t from-[oklch(0.50_0.14_75)] to-[oklch(0.60_0.12_75)]' 
                         : category === 'slow'
                         ? 'bg-gradient-to-t from-rose-400 to-rose-300'
-                        : 'bg-gradient-to-t from-amber-500 to-amber-400'
+                        : 'bg-gradient-to-t from-slate-400 to-slate-300'
                     }`}
                     style={{ height: `${Math.max(heightPct, 8)}%` }}
                   />
@@ -1052,10 +1052,10 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         category === 'peak' 
-                          ? 'bg-slate-700 text-white'
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
                           : category === 'slow'
-                          ? 'bg-slate-300 text-slate-700'
-                          : 'bg-slate-500 text-white'
+                          ? 'bg-rose-400 text-white'
+                          : 'bg-slate-400 text-white'
                       }`}>
                         {category === 'peak' ? 'Peak' : category === 'slow' ? 'Slow' : 'Shoulder'}
                       </span>

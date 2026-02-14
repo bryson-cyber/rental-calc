@@ -408,6 +408,10 @@ export default function UnifiedAdmin() {
               <Mail className="w-4 h-4 mr-2" />
               Newsletter
             </TabsTrigger>
+            <TabsTrigger value="cache" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Database className="w-4 h-4 mr-2" />
+              Cache
+            </TabsTrigger>
           </TabsList>
 
           {/* ============================================ */}
@@ -1464,6 +1468,13 @@ export default function UnifiedAdmin() {
               </Link>
             </div>
           </TabsContent>
+
+          {/* ============================================ */}
+          {/* CACHE TAB */}
+          {/* ============================================ */}
+          <TabsContent value="cache" className="space-y-6">
+            <CacheTab />
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1630,6 +1641,257 @@ export default function UnifiedAdmin() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================
+// CACHE TAB COMPONENT
+// ============================================
+function CacheTab() {
+  const [cacheTypeFilter, setCacheTypeFilter] = useState<string>('');
+  const [showExpired, setShowExpired] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
+
+  const { data: cacheStats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.getCacheStats.useQuery();
+  const { data: cacheEntries, isLoading: entriesLoading, refetch: refetchEntries } = trpc.admin.getCacheEntries.useQuery({
+    cacheType: cacheTypeFilter || undefined,
+    showExpired,
+    limit: pageSize,
+    offset: page * pageSize,
+    search: searchQuery || undefined,
+  });
+
+  const clearExpiredMutation = trpc.admin.clearExpiredCache.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Cleared ${data.deletedCount} expired cache entries`);
+      refetchStats();
+      refetchEntries();
+    },
+    onError: () => toast.error('Failed to clear expired cache'),
+  });
+
+  const deleteEntryMutation = trpc.admin.deleteCacheEntry.useMutation({
+    onSuccess: () => {
+      toast.success('Cache entry deleted');
+      refetchStats();
+      refetchEntries();
+    },
+    onError: () => toast.error('Failed to delete cache entry'),
+  });
+
+  const formatDate = (d: string | Date | null | undefined) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Cache Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Entries</CardDescription>
+            <CardTitle className="text-3xl">
+              {statsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : (cacheStats?.totals.total ?? 0).toLocaleString()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">All cached API responses</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-3xl text-green-600">
+              {statsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : (cacheStats?.totals.active ?? 0).toLocaleString()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Not yet expired</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Expired</CardDescription>
+            <CardTitle className="text-3xl text-orange-500">
+              {statsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : (cacheStats?.totals.expired ?? 0).toLocaleString()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">Ready to purge</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => clearExpiredMutation.mutate()}
+                disabled={clearExpiredMutation.isPending || (cacheStats?.totals.expired ?? 0) === 0}
+              >
+                {clearExpiredMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                Clear
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cache Breakdown by Type */}
+      {cacheStats && cacheStats.byType.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Cache Breakdown by Type</CardTitle>
+            <CardDescription>Distribution of cached data across API endpoints</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cache Type</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Active</TableHead>
+                  <TableHead className="text-right">Expired</TableHead>
+                  <TableHead>Oldest</TableHead>
+                  <TableHead>Newest</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cacheStats.byType.map((t) => (
+                  <TableRow key={t.cacheType} className="cursor-pointer hover:bg-muted/50" onClick={() => { setCacheTypeFilter(t.cacheType); setPage(0); }}>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {t.cacheType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{t.total}</TableCell>
+                    <TableCell className="text-right text-green-600">{t.active}</TableCell>
+                    <TableCell className="text-right text-orange-500">{t.expired}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDate(t.oldestEntry)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDate(t.newestEntry)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cache Entries Browser */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Cache Entries</CardTitle>
+              <CardDescription>
+                Browse and manage individual cache entries
+                {cacheTypeFilter && (
+                  <span className="ml-2">
+                    — filtered by <Badge variant="secondary" className="font-mono text-xs ml-1">{cacheTypeFilter}</Badge>
+                    <Button variant="ghost" size="sm" className="ml-1 h-5 px-1" onClick={() => { setCacheTypeFilter(''); setPage(0); }}>✕</Button>
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { refetchStats(); refetchEntries(); }}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search cache keys..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={showExpired} onCheckedChange={(v) => { setShowExpired(v); setPage(0); }} />
+              <span className="text-sm text-muted-foreground">Show expired</span>
+            </div>
+          </div>
+
+          {/* Entries Table */}
+          {entriesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : (cacheEntries?.entries?.length ?? 0) === 0 ? (
+            <div className="text-center py-12">
+              <Database className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No cache entries found</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cache Key</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cacheEntries?.entries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="max-w-[300px]">
+                        <p className="font-mono text-xs truncate" title={entry.cacheKey}>{entry.cacheKey}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs">{entry.cacheType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {entry.isExpired ? (
+                          <Badge variant="secondary" className="text-orange-600 bg-orange-50">Expired</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-green-600 bg-green-50">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(entry.expiresAt)}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => deleteEntryMutation.mutate({ id: entry.id })}
+                          disabled={deleteEntryMutation.isPending}
+                        >
+                          ✕
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, cacheEntries?.total ?? 0)} of {cacheEntries?.total ?? 0}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={(page + 1) * pageSize >= (cacheEntries?.total ?? 0)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
