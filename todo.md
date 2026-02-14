@@ -11170,3 +11170,10 @@ Results:
 - [ ] BUG: Match cards are hard to read and not intuitive
 - [ ] FEATURE: One-click property analysis from match card — user should be able to analyze a specific property directly
 - [ ] FEATURE: Show actual Zillow/Redfin listing links in matches so users can see the real deal
+
+### HasData API & Rate Limiter Fixes (Feb 14, 2026)
+- [x] Fix HasData Zillow Listing API response mapping (properties array, nested address)
+- [x] Add two-step enrichment: Listing API → Property API for price/beds/baths
+- [x] Fix admin rate limit bypass in deal alert scan context (verified: already working via tRPC middleware)
+- [x] Filter out listings without price data before AirDNA analysis
+- [x] Add tests for HasData response mapping (17 tests pass)
