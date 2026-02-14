@@ -8,6 +8,7 @@ import { TrustBanner } from "./components/TrustBanner";
 import { MockModeBadge } from "./components/MockModeBadge";
 import { PageTracker } from "./components/PageTracker";
 import GlobalAutoTranslator from "./components/GlobalAutoTranslator";
+import GlobalLanguageSelector from "./components/GlobalLanguageSelector";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -171,6 +172,7 @@ function App() {
             <PageTracker />
             <TrustBanner />
             <MockModeBadge />
+            <GlobalLanguageSelector />
             <GlobalAutoTranslator />
           </TooltipProvider>
         </PropertyProvider>

@@ -10,21 +10,24 @@
  * - DOM-level approach: zero changes needed in individual components
  * - Batches text nodes to minimise API calls (≤ 50 items per batch)
  * - Debounces mutation callbacks to avoid hammering the API
- * - Skips numbers, currency, dates, code, SVG, inputs
+ * - Skips pure numbers, currency, dates, code, SVG
+ * - Translates <option> text, placeholder, title, aria-label, alt attributes
  * - Caches translations in a Map keyed by (lang + originalText)
  * - Shows a small floating indicator while translating
  * - Auto-reverts when user switches back to English
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Loader2, Globe, Check } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 
 // ── persistent caches (survive re-renders) ──
 const translationCache = new Map<string, string>();
 const originalTextMap = new Map<Text, string>();
-const originalAttrMap = new Map<string, string>(); // key: elementId+attr
 const translatedNodes = new Set<Text>();
+// Track translated <option> and attribute elements
+const translatedOptions = new Set<HTMLOptionElement>();
+const originalOptionText = new Map<HTMLOptionElement, string>();
 
 function cacheKey(text: string, lang: string) {
   return `${lang}::${text}`;
@@ -32,28 +35,38 @@ function cacheKey(text: string, lang: string) {
 
 // ── DOM helpers ──
 
-/** Tags whose text content should never be translated */
+/** Tags whose TEXT NODES should never be translated (but attributes may be) */
 const SKIP_TAGS = new Set([
   'script', 'style', 'code', 'pre', 'svg', 'math',
-  'input', 'textarea', 'select', 'option', 'noscript',
+  'noscript',
+  // NOTE: 'input', 'textarea' don't have meaningful text nodes anyway
+  // NOTE: 'select' and 'option' are NOT skipped — we translate option text separately
 ]);
 
 /** Attribute values we should translate */
 const TRANSLATABLE_ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
 
-/** Returns true when the string is purely numeric / currency / date / code */
+/**
+ * Returns true when the string is purely numeric / currency / date / code
+ * and should NOT be translated.
+ *
+ * IMPORTANT: Strings like "3 BR", "2 BA", "6 Guests" contain words and SHOULD be translated.
+ * Only skip strings that are ENTIRELY non-word characters.
+ */
 function isNonTranslatable(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length === 0) return true;
-  // Pure numbers, currency, percentages, dates, time
-  if (/^[\d$€£¥₹%,./:;\-–—\s()]+$/.test(trimmed)) return true;
+  // Single character (likely a bullet, separator, or icon)
+  if (trimmed.length === 1 && /[^a-zA-Z\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/.test(trimmed)) return true;
+  // Pure numbers, currency, percentages, dates, time — NO letters at all
+  if (/^[\d$€£¥₹%,./:;\-–—\s()#*+]+$/.test(trimmed)) return true;
   // ISO dates
   if (/^\d{4}-\d{2}(-\d{2})?$/.test(trimmed)) return true;
   // Email addresses
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return true;
   // URLs
   if (/^https?:\/\//.test(trimmed)) return true;
-  // Phone numbers
+  // Phone numbers (only digits, spaces, dashes, parens — no letters)
   if (/^\+?[\d\s\-().]+$/.test(trimmed) && trimmed.length >= 7) return true;
   return false;
 }
@@ -72,7 +85,12 @@ function collectTextNodes(root: Node): Text[] {
     acceptNode(node) {
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
-      if (SKIP_TAGS.has(parent.tagName.toLowerCase())) return NodeFilter.FILTER_REJECT;
+      const tag = parent.tagName.toLowerCase();
+      if (SKIP_TAGS.has(tag)) return NodeFilter.FILTER_REJECT;
+      // Skip input/textarea/select text nodes (they don't have meaningful ones)
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return NodeFilter.FILTER_REJECT;
+      // Option text is handled separately via collectOptionElements
+      if (tag === 'option') return NodeFilter.FILTER_REJECT;
       // Skip the translator indicator itself
       if (parent.closest('[data-global-translator]')) return NodeFilter.FILTER_REJECT;
       // Skip the language selector dropdown
@@ -91,10 +109,26 @@ function collectTextNodes(root: Node): Text[] {
   return nodes;
 }
 
+/** Collect all <option> elements with translatable text */
+function collectOptionElements(root: Node): HTMLOptionElement[] {
+  const container = root instanceof Element ? root : document.body;
+  const options = Array.from(container.querySelectorAll('option')) as HTMLOptionElement[];
+  return options.filter(opt => {
+    if (translatedOptions.has(opt)) return false;
+    if (opt.closest('[data-global-translator]')) return false;
+    if (opt.closest('[data-language-selector]')) return false;
+    const text = opt.textContent?.trim() || '';
+    if (text.length === 0) return false;
+    if (isNonTranslatable(text)) return false;
+    return true;
+  });
+}
+
 /** Collect translatable attributes from elements */
-function collectTranslatableAttrs(root: Element): Array<{ el: Element; attr: string; value: string }> {
+function collectTranslatableAttrs(root: Node): Array<{ el: Element; attr: string; value: string }> {
+  const container = root instanceof Element ? root : document.body;
   const results: Array<{ el: Element; attr: string; value: string }> = [];
-  const allElements = Array.from(root.querySelectorAll('*'));
+  const allElements = Array.from(container.querySelectorAll('*'));
   for (const el of allElements) {
     if (SKIP_TAGS.has(el.tagName.toLowerCase())) continue;
     if (el.closest('[data-global-translator]')) continue;
@@ -102,6 +136,8 @@ function collectTranslatableAttrs(root: Element): Array<{ el: Element; attr: str
     for (const attr of TRANSLATABLE_ATTRS) {
       const val = el.getAttribute(attr);
       if (val && val.trim().length >= 2 && !isNonTranslatable(val)) {
+        // Skip if already translated (has data-orig- attribute)
+        if (el.hasAttribute(`data-orig-${attr}`)) continue;
         results.push({ el, attr, value: val.trim() });
       }
     }
@@ -206,12 +242,65 @@ export default function GlobalAutoTranslator() {
         }
       } catch (err) {
         console.error('[GlobalAutoTranslator] batch failed, continuing:', err);
-        // Don't stop — continue with next batch
       }
 
       setProgress(p => ({ ...p, done: Math.min(p.done + batch.length, p.total) }));
       
       // Small delay between batches to avoid rate limiting
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }, []);
+
+  // ── translate <option> elements ──
+  const translateOptionElements = useCallback(async (
+    options: HTMLOptionElement[],
+    lang: string,
+    translateFn: typeof translateBatch,
+  ) => {
+    const uncached: HTMLOptionElement[] = [];
+    for (const opt of options) {
+      const text = opt.textContent?.trim() || '';
+      const key = cacheKey(text, lang);
+      if (translationCache.has(key)) {
+        if (!originalOptionText.has(opt)) {
+          originalOptionText.set(opt, opt.textContent || '');
+        }
+        opt.textContent = translationCache.get(key)!;
+        translatedOptions.add(opt);
+      } else {
+        uncached.push(opt);
+      }
+    }
+    if (uncached.length === 0) return;
+
+    // Save originals
+    for (const opt of uncached) {
+      if (!originalOptionText.has(opt)) {
+        originalOptionText.set(opt, opt.textContent || '');
+      }
+    }
+
+    const batches = batchItems(uncached, opt => opt.textContent?.trim() || '');
+    for (const batch of batches) {
+      const textsMap: Record<string, string> = {};
+      batch.forEach((opt, i) => {
+        textsMap[`o${i}`] = opt.textContent?.trim() || '';
+      });
+      try {
+        const result = await translateFn(textsMap, 'dropdown option labels on a rental property analysis website');
+        batch.forEach((opt, i) => {
+          const key = `o${i}`;
+          if (result[key]) {
+            const original = opt.textContent?.trim() || '';
+            opt.textContent = result[key];
+            translatedOptions.add(opt);
+            translationCache.set(cacheKey(original, lang), result[key]);
+          }
+        });
+      } catch (err) {
+        console.error('[GlobalAutoTranslator] option batch failed, continuing:', err);
+      }
+      setProgress(p => ({ ...p, done: Math.min(p.done + batch.length, p.total) }));
       await new Promise(r => setTimeout(r, 100));
     }
   }, []);
@@ -226,6 +315,9 @@ export default function GlobalAutoTranslator() {
     for (const item of attrs) {
       const key = cacheKey(item.value, lang);
       if (translationCache.has(key)) {
+        if (!item.el.hasAttribute(`data-orig-${item.attr}`)) {
+          item.el.setAttribute(`data-orig-${item.attr}`, item.value);
+        }
         item.el.setAttribute(item.attr, translationCache.get(key)!);
       } else {
         uncached.push(item);
@@ -266,10 +358,12 @@ export default function GlobalAutoTranslator() {
     try {
       const textNodes = collectTextNodes(document.body);
       const attrItems = collectTranslatableAttrs(document.body);
-      setProgress({ done: 0, total: textNodes.length + attrItems.length });
+      const optionEls = collectOptionElements(document.body);
+      setProgress({ done: 0, total: textNodes.length + attrItems.length + optionEls.length });
 
       await translateNodes(textNodes, lang, translateFn);
       await translateAttributes(attrItems, lang, translateFn);
+      await translateOptionElements(optionEls, lang, translateFn);
 
       setStatus('done');
     } catch (err) {
@@ -280,10 +374,11 @@ export default function GlobalAutoTranslator() {
       // Auto-hide the "done" indicator after 3s
       setTimeout(() => setStatus('idle'), 3000);
     }
-  }, [translateNodes, translateAttributes]);
+  }, [translateNodes, translateAttributes, translateOptionElements]);
 
   // ── revert all translations ──
   const revertAll = useCallback(() => {
+    // Revert text nodes
     for (const [node, original] of Array.from(originalTextMap.entries())) {
       if (node.isConnected) {
         node.textContent = original;
@@ -291,6 +386,15 @@ export default function GlobalAutoTranslator() {
     }
     originalTextMap.clear();
     translatedNodes.clear();
+
+    // Revert option elements
+    for (const [opt, original] of Array.from(originalOptionText.entries())) {
+      if (opt.isConnected) {
+        opt.textContent = original;
+      }
+    }
+    originalOptionText.clear();
+    translatedOptions.clear();
 
     // Revert attributes
     Array.from(document.querySelectorAll('[data-orig-placeholder], [data-orig-title], [data-orig-aria-label], [data-orig-alt]')).forEach(el => {
@@ -320,20 +424,24 @@ export default function GlobalAutoTranslator() {
     try {
       const allTextNodes: Text[] = [];
       const allAttrItems: Array<{ el: Element; attr: string; value: string }> = [];
+      const allOptions: HTMLOptionElement[] = [];
 
       for (const root of nodes) {
         if (!root.isConnected) continue;
         allTextNodes.push(...collectTextNodes(root));
+        allOptions.push(...collectOptionElements(root));
         if (root instanceof Element) {
           allAttrItems.push(...collectTranslatableAttrs(root));
         }
       }
 
       const newTextNodes = allTextNodes.filter(n => !translatedNodes.has(n));
-      if (newTextNodes.length > 0 || allAttrItems.length > 0) {
-        setProgress({ done: 0, total: newTextNodes.length + allAttrItems.length });
+      const totalNew = newTextNodes.length + allAttrItems.length + allOptions.length;
+      if (totalNew > 0) {
+        setProgress({ done: 0, total: totalNew });
         await translateNodes(newTextNodes, currentLanguage, translateBatch);
         await translateAttributes(allAttrItems, currentLanguage, translateBatch);
+        await translateOptionElements(allOptions, currentLanguage, translateBatch);
       }
     } catch (err) {
       console.error('[GlobalAutoTranslator] mutation processing error:', err);
@@ -342,7 +450,7 @@ export default function GlobalAutoTranslator() {
     setStatus('done');
     isProcessing.current = false;
     setTimeout(() => setStatus('idle'), 2000);
-  }, [isTranslationActive, currentLanguage, translateBatch, translateNodes, translateAttributes]);
+  }, [isTranslationActive, currentLanguage, translateBatch, translateNodes, translateAttributes, translateOptionElements]);
 
   // ── MutationObserver setup ──
   useEffect(() => {
@@ -394,7 +502,6 @@ export default function GlobalAutoTranslator() {
 
     // Revert first
     revertAll();
-    // Clear cache for new language (keep cross-language cache for performance)
 
     if (currentLanguage !== 'en') {
       // Delay to let React finish rendering after revert

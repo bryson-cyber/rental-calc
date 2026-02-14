@@ -2169,7 +2169,7 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {/* HERO HEADLINE */}
       {/* ============================================ */}
-      <section className="relative pt-12 pb-8 md:pt-20 md:pb-12 bg-gradient-to-b from-[oklch(0.98_0_0)] to-white">
+      <section className="relative pt-20 pb-8 md:pt-24 md:pb-12 bg-gradient-to-b from-[oklch(0.98_0_0)] to-white">
         <div className="container max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-[oklch(0.75_0.14_75)]/10 border border-[oklch(0.75_0.14_75)]/20 rounded-full text-[oklch(0.55_0.12_75)] text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />

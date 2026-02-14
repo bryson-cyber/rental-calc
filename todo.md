@@ -11308,3 +11308,19 @@ Results:
 - [x] Handle dynamically loaded content (lazy-loaded components, API responses) via MutationObserver
 - [x] Make language selector more prominent and accessible from every page (globe icon in header)
 - [x] Remove per-page TranslatePageBanner in favor of global auto-translation
+
+## Language Selector UI Fixes (Feb 14, 2026)
+- [x] Fix spacing between language selector and "Free Tools by Coach Inayah" header (increased hero padding)
+- [x] Ensure language selector appears natively on every page (GlobalLanguageSelector in App.tsx)
+- [x] Add language selector to shared report pages (global component covers all routes)
+- [x] Verify consistent placement and spacing across all pages in browser
+
+## Translation Coverage Expansion (Feb 14, 2026)
+- [x] Translate input placeholder text (e.g., "Enter address", "Paste Zillow/Redfin URL...")
+- [x] Translate select/dropdown option text (e.g., "3 BR", "2 BA", "6 Guests")
+- [x] Translate button text that isn't being caught
+- [x] Translate title/tooltip attributes on elements
+- [x] Translate aria-label attributes for accessibility
+- [x] Translate all form labels (e.g., "Purchase Price", "Loan Type", "Property Address")
+- [x] Ensure translation works on Investment Calculator page (dark theme)
+- [x] Ensure translation works on all tool pages with forms
