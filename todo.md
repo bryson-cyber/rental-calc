@@ -11468,3 +11468,12 @@ Results:
 - [x] Wire reportMode into AI chat components (AIAdvisorStep, StandaloneMarketAdvisor, ContextualAIChat)
 - [x] Write vitest tests for mode preference endpoints and prompt branching (20 tests passing)
 - [ ] Test end-to-end: both modes produce correct output style (requires live API calls)
+
+## Pro/Guided Toggle Fixes & SMS Debug (Feb 15, 2026)
+- [x] Fix floating Pro/Guided toggle not visible on homepage (removed `if (location === '/') return null`)
+- [x] Restyle onboarding modal to match navy/gold brand design language
+- [x] Debug SMS integration — root cause: INVALID_CONTACT error (contacts must exist in SimpleTexting before sending)
+- [x] Add ensureSimpleTextingContact() function that creates/checks contact before sending SMS
+- [x] Handle unsubscribed contacts gracefully (STOP opt-out detection)
+- [x] Switch SMS mode from SINGLE_SMS_STRICTLY to AUTO for better delivery
+- [x] Write 6 vitest tests for SMS contact creation flow (all passing)

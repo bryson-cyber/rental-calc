@@ -41,11 +41,91 @@ function formatPhoneNumber(phone: string): string {
 }
 
 /**
+ * Ensure a contact exists in SimpleTexting before sending.
+ * Creates the contact if it doesn't exist, or updates it if it does.
+ * Returns true if the contact is ready to receive messages.
+ */
+async function ensureSimpleTextingContact(
+  formattedPhone: string,
+  apiKey: string,
+  contactName?: string
+): Promise<{ ready: boolean; error?: string }> {
+  try {
+    // Strip the + prefix — SimpleTexting contacts API expects digits only
+    const digits = formattedPhone.replace(/\+/g, '');
+    
+    // First, check if contact already exists
+    const checkResponse = await fetch(
+      `https://api-app2.simpletexting.com/v2/api/contacts/${digits}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (checkResponse.ok) {
+      const contact = await checkResponse.json();
+      // Contact exists — check if they're subscribed
+      if (contact.subscriberStatus === 'ACTIVE') {
+        console.log(`[SMS] Contact ${digits} exists and is ACTIVE`);
+        return { ready: true };
+      } else if (contact.subscriberStatus === 'UNSUBSCRIBED') {
+        console.warn(`[SMS] Contact ${digits} has unsubscribed (STOP). Cannot send.`);
+        return { ready: false, error: 'Contact has opted out of SMS' };
+      } else if (contact.subscriberStatus === 'INVALID') {
+        console.warn(`[SMS] Contact ${digits} is marked INVALID. Attempting re-subscribe...`);
+        // Try to update the contact to re-activate
+      } else {
+        console.log(`[SMS] Contact ${digits} status: ${contact.subscriberStatus}`);
+      }
+    }
+    
+    // Contact doesn't exist or needs re-activation — create/update it
+    console.log(`[SMS] Creating/updating contact ${digits}...`);
+    const createResponse = await fetch(
+      'https://api-app2.simpletexting.com/v2/api/contacts',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: digits,
+          firstName: contactName || 'Investor',
+          // Mark as subscribed since they opted in through our tool
+          subscriberStatus: 'ACTIVE',
+        }),
+      }
+    );
+    
+    if (createResponse.ok || createResponse.status === 409) {
+      // 409 = contact already exists, which is fine
+      console.log(`[SMS] Contact ${digits} ensured (status: ${createResponse.status})`);
+      return { ready: true };
+    } else {
+      const errorData = await createResponse.text();
+      console.error(`[SMS] Failed to create contact ${digits}:`, errorData);
+      return { ready: false, error: `Failed to create contact: ${errorData}` };
+    }
+  } catch (error) {
+    console.error('[SMS] Error ensuring contact:', error);
+    // Don't block sending — try anyway
+    return { ready: true };
+  }
+}
+
+/**
  * Send SMS via SimpleTexting API
+ * Automatically ensures the contact exists before sending.
  */
 export async function sendSMSNotification(
   phoneNumber: string,
-  message: string
+  message: string,
+  contactName?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const apiKey = ENV.simpletextingApiKey;
   
@@ -57,6 +137,14 @@ export async function sendSMSNotification(
   const formattedPhone = formatPhoneNumber(phoneNumber);
   console.log(`[SMS] Sending to ${formattedPhone}: ${message.substring(0, 50)}...`);
   
+  // Step 1: Ensure the contact exists in SimpleTexting
+  const contactResult = await ensureSimpleTextingContact(formattedPhone, apiKey, contactName);
+  if (!contactResult.ready) {
+    console.error(`[SMS] Contact not ready: ${contactResult.error}`);
+    return { success: false, error: contactResult.error || 'Contact not ready for SMS' };
+  }
+  
+  // Step 2: Send the message
   try {
     const response = await fetch('https://api-app2.simpletexting.com/v2/api/messages', {
       method: 'POST',
@@ -66,7 +154,7 @@ export async function sendSMSNotification(
       },
       body: JSON.stringify({
         contactPhone: formattedPhone,
-        mode: 'SINGLE_SMS_STRICTLY',
+        mode: 'AUTO',
         text: message,
       }),
     });
@@ -78,6 +166,10 @@ export async function sendSMSNotification(
       return { success: true, messageId: data.id };
     } else {
       console.error(`[SMS] Failed to send:`, data);
+      // If INVALID_CONTACT even after creating, the number may be blocked
+      if (data.errorCode === 'INVALID_CONTACT') {
+        return { success: false, error: 'Phone number is invalid or has been blocked. Please check the number and try again.' };
+      }
       return { success: false, error: data.message || 'Failed to send SMS' };
     }
   } catch (error) {
@@ -197,7 +289,7 @@ export async function sendReportNotifications(
   // Send SMS if phone provided
   if (contact.phone) {
     const smsMessage = `Your ${reportData.reportType || 'Analysis'} Report for ${reportData.city}, ${reportData.state} is ready! View: ${reportUrl}`;
-    results.sms = await sendSMSNotification(contact.phone, smsMessage);
+    results.sms = await sendSMSNotification(contact.phone, smsMessage, contact.name);
   }
   
   // Send Email if email provided (with HubSpot priority)

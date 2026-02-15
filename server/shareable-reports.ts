@@ -205,7 +205,7 @@ export async function sendShareableReportNotifications(
   // Send SMS if phone provided
   if (contact.phone) {
     const smsMessage = `Your ${reportTypeName} for ${location} is ready! View: ${reportUrl}`;
-    results.sms = await sendSMSNotification(contact.phone, smsMessage);
+    results.sms = await sendSMSNotification(contact.phone, smsMessage, contact.name);
     
     // Track notification
     await trackNotification({
