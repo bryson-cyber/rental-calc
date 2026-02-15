@@ -876,7 +876,8 @@ export async function generateFullArbitrageAnalysis(
   bathrooms?: number,
   zillow_url?: string,
   attractive_features?: string[],
-  sessionId?: string
+  sessionId?: string,
+  reportMode?: 'pro' | 'guided'
 ): Promise<{
   report: string;
   percentiles: MarketPercentiles;

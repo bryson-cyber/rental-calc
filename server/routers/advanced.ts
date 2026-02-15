@@ -228,6 +228,7 @@ export const advancedRouter = router({
         bedrooms: z.number().int().min(1).max(20),
         bathrooms: z.number().min(0.5).max(20),
         sessionId: z.string().optional(), // For progress tracking
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
         // Lead capture fields
         leadName: z.string().optional(),
         leadEmail: z.string().email().optional(),
@@ -271,7 +272,8 @@ export const advancedRouter = router({
             input.bathrooms,
             undefined, // zillow_url
             undefined, // attractive_features
-            input.sessionId // sessionId for progress tracking
+            input.sessionId, // sessionId for progress tracking
+            input.reportMode // pro or guided mode
           );
           
           console.log('[LeadMagnet] Analysis complete');
@@ -463,13 +465,15 @@ export const advancedRouter = router({
           role: z.enum(["user", "assistant"]),
           content: z.string(),
         })).default([]),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
           // Use the new AI advisor with dynamic function calling
           const response = await getAIAdvisorResponse(
             input.question,
-            input.conversationHistory as ChatMessage[]
+            input.conversationHistory as ChatMessage[],
+            input.reportMode
           );
           
           return {
@@ -552,11 +556,12 @@ export const advancedRouter = router({
           score: z.number(),
           description: z.string(),
         }).optional(),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
           console.log('[AI Advisor] Generating comprehensive property advice for:', input.property.address);
-          const advice = await generateComprehensivePropertyAdvice(input as PropertyAdvisorInput);
+          const advice = await generateComprehensivePropertyAdvice(input as unknown as PropertyAdvisorInput);
           return {
             success: true,
             data: { advice },
@@ -588,6 +593,7 @@ export const advancedRouter = router({
         })),
         marketGrade: z.string(),
         marketScore: z.number(),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -745,15 +751,16 @@ export const advancedRouter = router({
             marketScore: z.number().optional(),
           }).optional(),
         })).optional(),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
           const db = await getDb();
           
-          // Generate cache key from property address + bedrooms + bathrooms + mode
+          // Generate cache key from property address + bedrooms + bathrooms + mode + reportMode
           const normalizedAddress = input.property.address.toLowerCase().replace(/[^a-z0-9]/g, '');
           const mode = input.mode || 'rent';
-          const cacheKey = `property_${normalizedAddress}_${input.property.bedrooms}_${input.property.bathrooms}_${mode}`;
+          const cacheKey = `property_${normalizedAddress}_${input.property.bedrooms}_${input.property.bathrooms}_${mode}_${input.reportMode}`;
           
           // Check cache first (only if db is available)
           if (db) {
@@ -834,7 +841,8 @@ export const advancedRouter = router({
           }
           
           const advice = await generateMaxPropertyAdvice({
-            ...input as MaxPropertyAdvisorInput,
+            ...input as unknown as MaxPropertyAdvisorInput,
+            reportMode: input.reportMode,
             rentometerData,
           });
           
@@ -962,15 +970,16 @@ export const advancedRouter = router({
           avgRevenue: z.number(),
           avgOccupancy: z.number(),
         })).optional(),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
           const db = await getDb();
           
-          // Generate cache key from market name + state
+          // Generate cache key from market name + state + reportMode
           const normalizedMarket = input.market.name.toLowerCase().replace(/[^a-z0-9]/g, '');
           const normalizedState = input.market.state.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const cacheKey = `market_${normalizedMarket}_${normalizedState}`;
+          const cacheKey = `market_${normalizedMarket}_${normalizedState}_${input.reportMode}`;
           
           // Check cache first (only if db is available)
           if (db) {
@@ -999,7 +1008,7 @@ export const advancedRouter = router({
           }
           
           console.log('[AI Advisor Max] Cache MISS - Generating maximum capacity market advice for:', input.market.name);
-          const advice = await generateMaxMarketAdvice(input as MaxMarketAdvisorInput);
+          const advice = await generateMaxMarketAdvice({ ...input, reportMode: input.reportMode } as unknown as MaxMarketAdvisorInput);
           
           // Store in cache (expires in 7 days) - only if db is available
           if (db) {
@@ -1060,6 +1069,7 @@ export const advancedRouter = router({
         bedrooms: z.number().min(0).max(10).optional(),
         // Fixed to entire_home for arbitrage analysis - no private rooms or shared spaces
         listingType: z.literal('entire_home').default('entire_home'),
+        reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -1087,6 +1097,7 @@ export const advancedRouter = router({
           
           // Step 2: Generate AI advice using the comprehensive data
           const adviceInput: MaxMarketAdvisorInput = {
+            reportMode: input.reportMode,
             market: {
               name: marketData.market.name,
               city: marketData.market.city,

@@ -66,6 +66,7 @@ export const aiPropertyReportInputSchema = z.object({
   accommodates: z.number().int().min(1).max(50).optional(),
   propertyType: z.string().optional(),
   squareFootage: z.number().optional(),
+  reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 
 export const marketSearchInputSchema = z.object({
@@ -75,10 +76,12 @@ export const marketSearchInputSchema = z.object({
 
 export const marketReportInputSchema = z.object({
   marketId: z.string().min(1, "Market ID is required"),
+  reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 
 export const submarketReportInputSchema = z.object({
   submarketId: z.string().min(1, "Submarket ID is required"),
+  reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 
 export const smartSearchInputSchema = z.object({
@@ -1332,6 +1335,7 @@ export const rentalRouter = router({
 
           // Generate AI-enhanced analysis
           const aiAnalysis = await generateEnhancedPropertyReport(input.address, {
+            reportMode: input.reportMode,
             property: {
               address: input.address,
               neighborhood,
@@ -1482,6 +1486,7 @@ export const rentalRouter = router({
 
           // Generate AI-enhanced analysis
           const aiAnalysis = await generateEnhancedMarketReport(report.market.name, {
+            reportMode: input.reportMode,
             market: {
               name: report.market.name,
               listingCount: report.market.listing_count,
@@ -1579,6 +1584,7 @@ export const rentalRouter = router({
 
           // Generate AI-enhanced analysis
           const aiAnalysis = await generateEnhancedMarketReport(report.submarket.name, {
+            reportMode: input.reportMode,
             market: {
               name: report.submarket.name,
               listingCount: report.submarket.listing_count,

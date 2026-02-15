@@ -2813,6 +2813,9 @@ Focus on:
  * Input data for generating a comprehensive narrative report
  */
 export interface NarrativeReportInput {
+  // Report mode: 'pro' for experienced investors, 'guided' for beginners
+  reportMode?: 'pro' | 'guided';
+  
   // Property basics
   address: string;
   monthly_rent: number;
@@ -4367,10 +4370,16 @@ KEY REQUIREMENTS:
     required: ['executive_summary', 'market_overview', 'revenue_analysis', 'competitive_landscape', 'seasonal_strategy', 'risk_assessment', 'financial_outlook', 'conclusion', 'key_metrics', 'quick_facts']
   };
 
+  // Build mode-aware system instruction
+  const baseSystemInstruction = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You are writing a comprehensive property report. Write in flowing paragraphs, not bullet points. Every claim must reference specific numbers from the data.';
+  const modeOverride = input.reportMode === 'pro'
+    ? ' Address the reader as a peer investor. Use precise financial terminology (ADR, RevPAR, Cap Rate, DSCR, CoC) without explanation. Be concise and data-dense. Benchmark against industry standards. Focus on investment thesis and risk-adjusted returns.'
+    : ' Use the story-before-the-stats approach. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor sharing insights over coffee. Never sugarcoat risks but always empower.';
+
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You are writing a comprehensive property report. Write in flowing paragraphs, not bullet points. Every claim must reference specific numbers from the data. Use the story-before-the-stats approach. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor sharing insights over coffee. Never sugarcoat risks but always empower.',
+      systemInstruction: baseSystemInstruction + modeOverride,
       responseSchema: reportSchema,
       maxTokens: 8192
     });
