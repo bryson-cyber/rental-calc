@@ -27,6 +27,7 @@ import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
 import { MarketComparison, ComparisonBar, type MarketComparisonData } from '@/components/MarketComparison';
 import { SharePageButton } from '@/components/SharePageButton';
 import { AnimatePresence } from 'framer-motion';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 export default function MarketAdvisor() {
   const [comparisonMarkets, setComparisonMarkets] = useState<MarketComparisonData[]>([]);
@@ -257,6 +258,7 @@ interface StandaloneMarketAdvisorWithCompareProps {
 }
 
 function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets, onMarketChange, initialMarketName }: StandaloneMarketAdvisorWithCompareProps) {
+  const { mode: reportMode } = useReportMode();
   const {
     filters,
     setBedroomFilter,
@@ -387,6 +389,7 @@ function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets,
         marketType: selectedMarket.type,
         bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
         listingType: 'entire_home',
+        reportMode,
       });
       
       clearInterval(progressInterval);

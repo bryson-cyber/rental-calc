@@ -30,6 +30,7 @@ import {
   AI_SYSTEM_PROMPT,
   SUGGESTED_QUESTIONS,
 } from '@/data/knowledgeBase';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 interface Message {
   id: string;
@@ -121,6 +122,7 @@ interface ContextualAIChatProps {
 }
 
 export function ContextualAIChat({ pageContext, className = '' }: ContextualAIChatProps) {
+  const { mode: reportMode } = useReportMode();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -327,8 +329,12 @@ ${FAQ_KNOWLEDGE}
       }));
 
       // Enhanced system prompt when live data is available
+      const modeInstruction = reportMode === 'pro'
+        ? `\n\nIMPORTANT MODE: The user is in PRO MODE. Use precise financial terminology, include exact numbers and percentages, reference market benchmarks, and write in a data-dense investor-grade style. Avoid over-explaining basic concepts.`
+        : `\n\nIMPORTANT MODE: The user is in GUIDED MODE. Use plain language with context and analogies. Explain industry terms when you use them. Break down complex concepts step by step. This user may be newer to short-term rental investing.`;
+
       const enhancedSystemPrompt = hasLiveData
-        ? `${AI_SYSTEM_PROMPT}
+        ? `${AI_SYSTEM_PROMPT}${modeInstruction}
 
 IMPORTANT: You have access to LIVE DATA from the user's current analysis. When answering questions:
 1. Reference specific numbers from the live data (revenue, occupancy, ADR, etc.)
@@ -336,7 +342,7 @@ IMPORTANT: You have access to LIVE DATA from the user's current analysis. When a
 3. Provide actionable insights based on the actual data
 4. Be specific - mention exact figures like "$85,000 annual revenue" not just "good revenue"
 5. If the user asks about their property or market, use the live data to give personalized answers`
-        : AI_SYSTEM_PROMPT;
+        : `${AI_SYSTEM_PROMPT}${modeInstruction}`;
 
       // Build full message array for streaming
       const fullMessages = [

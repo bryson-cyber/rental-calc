@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 import { UniversalShareButton } from '@/components/UniversalShareButton';
 import { UsageLimitInline } from '@/components/UsageLimitBadge';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 interface MarketSearchResult {
   id: string;
@@ -60,6 +61,7 @@ interface StandaloneMarketAdvisorProps {
 }
 
 export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: StandaloneMarketAdvisorProps) {
+  const { mode: reportMode } = useReportMode();
   // Use context for bedroom filter to persist across component remounts
   const {
     filters,
@@ -249,6 +251,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         marketType: selectedMarket.type,
         bedrooms: capturedBedroomFilter !== 'all' ? parseInt(capturedBedroomFilter) : undefined,
         listingType: 'entire_home',
+        reportMode,
       });
       
       clearInterval(progressInterval);

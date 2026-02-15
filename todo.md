@@ -11447,3 +11447,24 @@ Results:
 - [x] Add frontend UI feedback when daily limit is reached (amber warning in Home.tsx + PropertyAnalyzer.tsx with "Contact Coach Inayah" message)
 - [x] Write vitest tests for usage limit enforcement (usage-limits.test.ts — 12 tests covering admin bypass, limit checks, recording)
 - [x] Test admin bypass still works (admins never blocked — isUserAdmin check in all limit functions)
+
+## Pro Mode / Guided Mode Toggle (Feb 15, 2026)
+- [x] Add reportMode field to users table (enum: 'pro' | 'guided', nullable for first-time users)
+- [x] Create tRPC endpoints: getReportMode, setReportMode
+- [x] Build first-time preference modal (shown when reportMode is null)
+- [x] Build persistent mode toggle component (always visible in UI, like language selector)
+- [x] Create ReportMode React context for app-wide state management
+- [x] Create pro-mode-prompts.ts with all prompt overrides (advisor, property, market, executive)
+- [x] Branch property report prompts in gemini.ts based on mode
+- [x] Branch market report prompts in gemini.ts based on mode
+- [x] Branch executive summary prompts in gemini.ts based on mode
+- [x] Branch narrative report prompts in gemini-analyzer.ts based on mode
+- [x] Branch AI advisor prompts based on mode (ai-advisor.ts)
+- [x] Wire reportMode into all advanced.ts endpoints (analyzeProperty, getInvestmentAdvice, propertyAdvisor, marketTrendNarrative, propertyAdvisorMax, marketAdvisorMax, standaloneMarketAdvisor)
+- [x] Wire reportMode into all rental.ts endpoints (getAIPropertyReport, getMarketReport, getSubmarketReport)
+- [x] Wire reportMode into sop-reports.ts (generateFullArbitrageAnalysis)
+- [x] Wire reportMode into market-research-simple.ts (getMarketReport, getSubmarketReport, getMarketReportByLocation)
+- [x] Pass reportMode from frontend to all report generation API calls (Home, AIAdvisor, PropertyAnalyzer, LeadMagnet, MarketReport, MarketAdvisor, MarketComparison)
+- [x] Wire reportMode into AI chat components (AIAdvisorStep, StandaloneMarketAdvisor, ContextualAIChat)
+- [x] Write vitest tests for mode preference endpoints and prompt branching (20 tests passing)
+- [ ] Test end-to-end: both modes produce correct output style (requires live API calls)

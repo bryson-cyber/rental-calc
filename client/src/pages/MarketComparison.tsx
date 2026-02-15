@@ -33,6 +33,7 @@ import { useSaveSearch } from '@/components/SavedSearches';
 import { SubmarketExplorer } from '@/components/SubmarketExplorer';
 import { Bookmark, BookmarkCheck, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 interface MarketSearchResult {
   id: string;
@@ -74,6 +75,7 @@ interface MarketData {
 }
 
 export default function MarketComparison() {
+  const { mode: reportMode } = useReportMode();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -144,7 +146,8 @@ export default function MarketComparison() {
     try {
       console.log('[addMarket] Calling mutation...');
       const report = await marketReportMutation.mutateAsync({
-        submarketId: market.id
+        submarketId: market.id,
+        reportMode,
       });
 
       if (!report.success || !report.data) {

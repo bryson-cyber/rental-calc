@@ -47,6 +47,7 @@ import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/Enh
 import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
 import { SEOHead, calculatorSchema, organizationSchema } from '@/components/SEOHead';
 import { UsageLimitBadge } from '@/components/UsageLimitBadge';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 // Type definitions based on API response
 interface MonthlyForecast {
@@ -286,6 +287,7 @@ function parseZillowUrl(url: string): { address: string | null; bedrooms?: numbe
 }
 
 export default function RentalEstimator() {
+  const { mode: reportMode } = useReportMode();
   const [step, setStep] = useState<'search' | 'lead' | 'loading' | 'results'>('search');
   const [error, setError] = useState<string | null>(null);
   const [inputType, setInputType] = useState<'address' | 'zillow'>('address');
@@ -406,6 +408,7 @@ export default function RentalEstimator() {
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
         sessionId: trackingSessionId, // Enable real-time progress updates
+        reportMode: reportMode,
       });
 
       // Stop progress tracking

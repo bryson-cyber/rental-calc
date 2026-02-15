@@ -53,6 +53,7 @@ import { TypeformOverlay } from '@/components/TypeformOverlay';
 import { toast } from 'sonner';
 import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
 import NarrativeSkeleton, { InlineNarrativeSkeleton } from '@/components/NarrativeSkeleton';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 // Export PDF Button Component with Progress Indicator
 function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms, analysisData }: {
@@ -710,6 +711,7 @@ interface AnalysisResult {
 }
 
 export default function PropertyAnalyzer() {
+  const { mode: reportMode } = useReportMode();
   // Form state
   const [address, setAddress] = useState('');
   const [monthlyRent, setMonthlyRent] = useState('');
@@ -804,6 +806,7 @@ export default function PropertyAnalyzer() {
         monthly_rent: parseFloat(monthlyRent),
         bedrooms: parseInt(bedrooms),
         bathrooms: parseFloat(bathrooms),
+        reportMode: reportMode,
       });
       
       clearInterval(stepInterval);

@@ -125,6 +125,7 @@ const ContextualAIChat = lazy(() => import('@/components/ContextualAIChat').then
 import { LoginGate } from '@/components/LoginGate';
 const BuildFullReportButton = lazy(() => import('@/components/BuildFullReportButton').then(m => ({ default: m.BuildFullReportButton })));
 import StepErrorBoundary from '@/components/StepErrorBoundary';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -385,6 +386,8 @@ const getMonthAbbr = (dateStr: string): string => {
 type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore';
 
 export default function LeadMagnet() {
+  // Report mode
+  const { mode: reportMode } = useReportMode();
   // Auth state for login requirement
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
@@ -1312,6 +1315,7 @@ export default function LeadMagnet() {
           leadName: leadName || undefined,
           leadEmail: leadEmail || undefined,
           leadPhone: leadPhone || undefined,
+          reportMode: reportMode,
         }),
         timeoutPromise
       ]);
@@ -1629,6 +1633,7 @@ export default function LeadMagnet() {
           address: prop.address,
           bedrooms: prop.bedrooms,
           bathrooms: prop.bathrooms,
+          reportMode: reportMode,
         });
         
         if (!response.success || !response.data) {
@@ -1889,13 +1894,13 @@ export default function LeadMagnet() {
           const submarketId = selection.submarket.id;
           const submarketName = `${selection.zipcode} (${selection.submarket.name})`;
           console.log(`[handleResearch] Using submarket endpoint for zip code ${selection.zipcode} in ${selection.submarket.name}`);
-          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName, reportMode });
         } else if (selection.submarket?.id) {
           // Use submarket endpoint for neighborhood-level data
           const submarketId = selection.submarket.id;
           const submarketName = selection.submarket.name;
           console.log(`[handleResearch] Using submarket endpoint for ${submarketName} (${submarketId})`);
-          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName, reportMode });
         } else if (selection.market?.id) {
           // Check if this is a submarket being treated as a market (e.g., Downtown Nashville, Glendale AZ)
           if (selection.market.isSubmarketAsMarket) {
@@ -1903,21 +1908,21 @@ export default function LeadMagnet() {
             const submarketId = selection.market.id;
             const submarketName = selection.market.name;
             console.log(`[handleResearch] Using submarket endpoint for market-as-submarket: ${submarketName} (${submarketId})`);
-            report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+            report = await getSubmarketReport.mutateAsync({ submarketId, submarketName, reportMode });
           } else {
             // Use market endpoint for regular city-level data
             const marketId = selection.market.id;
             const marketName = selection.market.name;
             console.log(`[handleResearch] Using market endpoint for ${marketName} (${marketId})`);
-            report = await getMarketReport.mutateAsync({ marketId, marketName });
+            report = await getMarketReport.mutateAsync({ marketId, marketName, reportMode });
           }
         } else {
           // Fallback to location-based search
-          report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
+          report = await getMarketReportByLocation.mutateAsync({ location: researchMarket, reportMode });
         }
       } else {
         // Use the location-based endpoint for text search
-        report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
+        report = await getMarketReportByLocation.mutateAsync({ location: researchMarket, reportMode });
       }
       
       setSelectedMarketId(report.market.id);

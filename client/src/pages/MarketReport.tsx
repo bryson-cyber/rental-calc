@@ -32,6 +32,7 @@ import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { Link } from 'wouter';
 import ChapterMarketReport from '@/components/ChapterMarketReport';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 // Types
 interface MarketSearchResult {
@@ -204,6 +205,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 }
 
 export default function MarketReport() {
+  const { mode: reportMode } = useReportMode();
   const [step, setStep] = useState<'search' | 'loading' | 'results'>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
@@ -295,6 +297,7 @@ export default function MarketReport() {
         setReportType('submarket');
         const report = await getSubmarketReportMutation.mutateAsync({
           submarketId: result.id,
+          reportMode,
         });
         
         if (report.success && report.data) {
@@ -308,6 +311,7 @@ export default function MarketReport() {
         setReportType('market');
         const report = await getMarketReportMutation.mutateAsync({
           marketId: result.id,
+          reportMode,
         });
         
         if (report.success && report.data) {

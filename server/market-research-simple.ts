@@ -183,7 +183,8 @@ export const marketResearchSimpleRouter = router({
   getMarketReport: publicProcedure
     .input(z.object({
       marketId: z.string(),
-      marketName: z.string()
+      marketName: z.string(),
+      reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
     .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
       const { marketId, marketName } = input;
@@ -403,6 +404,7 @@ export const marketResearchSimpleRouter = router({
   getMarketReportByLocation: publicProcedure
     .input(z.object({
       location: z.string().min(2), // City name, address, or zip code
+      reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
     .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
       const { location } = input;
@@ -658,7 +660,8 @@ export const marketResearchSimpleRouter = router({
   getSubmarketReport: publicProcedure
     .input(z.object({
       submarketId: z.string(),
-      submarketName: z.string()
+      submarketName: z.string(),
+      reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
     .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
       const { submarketId, submarketName } = input;

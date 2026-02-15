@@ -56,6 +56,7 @@ export const propertyReportInputSchema = z.object({
   leadName: z.string().optional(),
   leadEmail: z.string().email().optional(),
   leadPhone: z.string().optional(),
+  reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 
 export const aiPropertyReportInputSchema = z.object({
@@ -76,11 +77,13 @@ export const marketSearchInputSchema = z.object({
 
 export const marketReportInputSchema = z.object({
   marketId: z.string().min(1, "Market ID is required"),
+  marketName: z.string().optional(),
   reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 
 export const submarketReportInputSchema = z.object({
   submarketId: z.string().min(1, "Submarket ID is required"),
+  submarketName: z.string().optional(),
   reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
 

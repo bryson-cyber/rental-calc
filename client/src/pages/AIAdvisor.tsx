@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import ReactMarkdown from 'react-markdown';
+import { useReportMode } from '@/contexts/ReportModeContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -73,6 +74,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 export default function AIAdvisor() {
+  const { mode: reportMode } = useReportMode();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -104,6 +106,7 @@ export default function AIAdvisor() {
       const result = await advisorMutation.mutateAsync({
         question: messageText,
         conversationHistory: messages,
+        reportMode: reportMode,
       });
 
       if (result.success && result.data?.response) {
