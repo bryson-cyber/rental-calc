@@ -4,6 +4,9 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PropertyProvider } from "./contexts/PropertyContext";
+import { ReportModeProvider } from "./contexts/ReportModeContext";
+import { ReportModeToggle } from "./components/ReportModeToggle";
+import { ReportModeOnboarding } from "./components/ReportModeOnboarding";
 import { TrustBanner } from "./components/TrustBanner";
 import { MockModeBadge } from "./components/MockModeBadge";
 import { PageTracker } from "./components/PageTracker";
@@ -170,15 +173,19 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <PropertyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-            <PageTracker />
-            <TrustBanner />
-            <MockModeBadge />
-            <GlobalLanguageSelector />
-            <GlobalAutoTranslator />
-          </TooltipProvider>
+          <ReportModeProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+              <PageTracker />
+              <TrustBanner />
+              <MockModeBadge />
+              <ReportModeToggle />
+              <ReportModeOnboarding />
+              <GlobalLanguageSelector />
+              <GlobalAutoTranslator />
+            </TooltipProvider>
+          </ReportModeProvider>
         </PropertyProvider>
       </ThemeProvider>
     </ErrorBoundary>

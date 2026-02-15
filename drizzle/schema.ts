@@ -21,6 +21,8 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** Report mode preference: 'pro' for investor-grade language, 'guided' for beginner-friendly */
+  reportMode: mysqlEnum("reportMode", ["pro", "guided"]),
 }, (table) => [
   index("users_email_idx").on(table.email),
   index("users_role_idx").on(table.role),

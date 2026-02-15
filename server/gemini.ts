@@ -411,12 +411,19 @@ Respond based ONLY on the market data above. If the data doesn't cover the quest
 
 export async function generateEnhancedPropertyReport(
   address: string,
-  features: Record<string, unknown>
+  features: Record<string, unknown>,
+  reportMode: 'pro' | 'guided' = 'guided'
 ): Promise<string> {
+  // Import pro mode overrides
+  const { getProModeOverride, getAudienceDescription } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'property');
+  const audience = getAudienceDescription(reportMode);
+  
   // PTCF-structured prompt for property reports
   const prompt = `<PERSONA>
-You are a real estate analyst who explains Airbnb investment opportunities in simple, beginner-friendly language.
+${reportMode === 'pro' ? 'You are a senior real estate investment analyst who produces institutional-grade Airbnb market assessments.' : 'You are a real estate analyst who explains Airbnb investment opportunities in simple, beginner-friendly language.'}
 </PERSONA>
+${proOverride}
 
 <TASK>
 Generate a brief property analysis summary for the address: ${address}
@@ -447,12 +454,18 @@ Property Features: ${JSON.stringify(features, null, 2)}
 
 export async function generateEnhancedMarketReport(
   marketName: string,
-  metrics: Record<string, unknown>
+  metrics: Record<string, unknown>,
+  reportMode: 'pro' | 'guided' = 'guided'
 ): Promise<string> {
+  // Import pro mode overrides
+  const { getProModeOverride } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'market');
+  
   // PTCF-structured prompt for market reports
   const prompt = `<PERSONA>
-You are a real estate market analyst who explains Airbnb market conditions in simple, beginner-friendly language.
+${reportMode === 'pro' ? 'You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate market analyst who explains Airbnb market conditions in simple, beginner-friendly language.'}
 </PERSONA>
+${proOverride}
 
 <TASK>
 Generate a brief market analysis summary for: ${marketName}
@@ -482,6 +495,7 @@ Market Metrics: ${JSON.stringify(metrics, null, 2)}
 }
 
 export interface MarketTrendNarrativeInput {
+  reportMode?: 'pro' | 'guided'; // Report style mode
   marketName: string;
   currentYearRevenue: number;
   lastYearRevenue: number;
@@ -501,11 +515,11 @@ export interface MarketTrendNarrativeInput {
 export async function generateMarketTrendNarrative(
   input: MarketTrendNarrativeInput
 ): Promise<string> {
-  const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore } = input;
+  const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore, reportMode = 'guided' } = input;
   
   // PTCF-structured prompt for trend analysis
   const prompt = `<PERSONA>
-You are a data analyst who explains market trends in simple, easy-to-understand language.
+${reportMode === 'pro' ? 'You are a quantitative market analyst who produces concise, benchmark-driven trend assessments for institutional investors.' : 'You are a data analyst who explains market trends in simple, easy-to-understand language.'}
 </PERSONA>
 
 <TASK>
@@ -550,6 +564,7 @@ ${monthlyData.slice(0, 6).map(d => `${d.month}: $${d.currentRevenue.toLocaleStri
  */
 export interface PropertyAdvisorInput {
   mode?: 'rent' | 'purchase'; // Analysis mode
+  reportMode?: 'pro' | 'guided'; // Report style mode
   property: {
     address: string;
     city: string;
@@ -624,7 +639,12 @@ export interface PropertyAdvisorInput {
 export async function generateComprehensivePropertyAdvice(
   input: PropertyAdvisorInput
 ): Promise<string> {
-  const { mode = 'rent', property, revenue, cashFlow, comparables, marketGrade, marketInsights, historicalData, seasonality } = input;
+  const { mode = 'rent', reportMode = 'guided', property, revenue, cashFlow, comparables, marketGrade, marketInsights, historicalData, seasonality } = input;
+  
+  // Import pro mode overrides
+  const { getProModeOverride, getCommunicationStyle } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'property');
+  const commStyle = getCommunicationStyle(reportMode);
   
   // Calculate metrics for context
   const avgCompRevenue = comparables.length > 0 
@@ -716,9 +736,10 @@ Revenue-to-Rent Ratio: ${cashFlow ? (cashFlow.monthlyRevenue / cashFlow.monthlyR
   // PTCF-structured comprehensive prompt
   const prompt = `<PERSONA>
 ${isPurchaseMode 
-  ? `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You help investors evaluate properties for purchase, specializing in investment metrics like Cap Rate, Cash-on-Cash Return, and DSCR. You use the "story before the stats" approach and analogy over jargon — like talking to a friend who's considering buying their first investment property. You never sugarcoat risks but always empower.`
-  : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend who's curious about Airbnb investing. You never sugarcoat risks but always empower.`}
+  ? `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You help investors evaluate properties for purchase, specializing in investment metrics like Cap Rate, Cash-on-Cash Return, and DSCR.${reportMode === 'pro' ? ' You speak to the reader as a peer investor with precise financial language.' : ' You use the "story before the stats" approach and analogy over jargon — like talking to a friend who\'s considering buying their first investment property.'} You never sugarcoat risks but always empower.`
+  : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets.${reportMode === 'pro' ? ' You help experienced investors evaluate rental arbitrage opportunities with precise financial metrics and market benchmarks.' : ' You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend who\'s curious about Airbnb investing.'} You never sugarcoat risks but always empower.`}
 </PERSONA>
+${proOverride}
 
 <TASK>
 ${isPurchaseMode
@@ -887,6 +908,7 @@ ${isPurchaseMode ? `- Focus on INVESTMENT METRICS: Cap Rate, Cash-on-Cash Return
 export interface MaxPropertyAdvisorInput {
   // Analysis Mode
   mode?: 'rent' | 'purchase';
+  reportMode?: 'pro' | 'guided'; // Report style mode
   
   // Purchase Mode Data (only used when mode === 'purchase')
   purchaseData?: {
@@ -1076,7 +1098,12 @@ export interface MaxPropertyAdvisorInput {
 export async function generateMaxPropertyAdvice(
   input: MaxPropertyAdvisorInput
 ): Promise<string> {
-  const { mode = 'rent', purchaseData, property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData, supplyTrend, submarkets } = input;
+  const { mode = 'rent', reportMode = 'guided', purchaseData, property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData, supplyTrend, submarkets } = input;
+  
+  // Import pro mode overrides
+  const { getProModeOverride, getCommunicationStyle } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'property');
+  const commStyle = getCommunicationStyle(reportMode);
   
   // Determine if this is purchase mode analysis
   const isPurchaseMode = mode === 'purchase' && purchaseData;
@@ -1164,23 +1191,35 @@ export async function generateMaxPropertyAdvice(
 
   // PTCF-structured maximum capacity prompt - MODE AWARE
   const personaSection = isPurchaseMode ? `<PERSONA>
-You are a world-class REAL ESTATE INVESTMENT analyst who helps beginners understand property purchase opportunities. You explain complex investment metrics in simple, friendly language - like talking to a smart friend who's curious about buying rental properties but has never done it before.
+${reportMode === 'pro' 
+    ? `You are a world-class REAL ESTATE INVESTMENT analyst who produces institutional-grade property purchase assessments. You speak to the reader as a peer investor with precise financial language.
+
+Your communication style:
+${commStyle}` 
+    : `You are a world-class REAL ESTATE INVESTMENT analyst who helps beginners understand property purchase opportunities. You explain complex investment metrics in simple, friendly language - like talking to a smart friend who's curious about buying rental properties but has never done it before.
 
 Your communication style:
 - Simple language (if a word is confusing, explain it)
 - Real-life comparisons ("Think of it like..." or "Imagine if...")
 - Friendly and encouraging (like talking to a friend)
 - Always explain the "so what?" - why does this number matter?
-- Focus on investment returns: Cap Rate, Cash-on-Cash, DSCR
-</PERSONA>` : `<PERSONA>
-You are a world-class RENTAL ARBITRAGE analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language - like talking to a smart friend who's curious about Airbnb investing but has never done it before.
+- Focus on investment returns: Cap Rate, Cash-on-Cash, DSCR`}
+</PERSONA>
+${proOverride}` : `<PERSONA>
+${reportMode === 'pro'
+    ? `You are a world-class RENTAL ARBITRAGE analyst who produces institutional-grade opportunity assessments with precise financial metrics and market benchmarks.
+
+Your communication style:
+${commStyle}`
+    : `You are a world-class RENTAL ARBITRAGE analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language - like talking to a smart friend who's curious about Airbnb investing but has never done it before.
 
 Your communication style:
 - Simple language (if a word is confusing, explain it)
 - Real-life comparisons ("Think of it like..." or "Imagine if...")
 - Friendly and encouraging (like talking to a friend)
-- Always explain the "so what?" - why does this number matter?
-</PERSONA>`;
+- Always explain the "so what?" - why does this number matter?`}
+</PERSONA>
+${proOverride}`;
 
   const taskSection = isPurchaseMode ? `<TASK>
 Analyze this property's potential as a PROPERTY PURCHASE investment and produce a comprehensive investment report.
@@ -1530,6 +1569,7 @@ IMPORTANT FORMATTING RULES:
  * For analyzing an entire market without a specific property
  */
 export interface MaxMarketAdvisorInput {
+  reportMode?: 'pro' | 'guided'; // Report style mode
   // Market Details
   market: {
     name: string;
@@ -1714,7 +1754,12 @@ export interface MaxMarketAdvisorInput {
 export async function generateMaxMarketAdvice(
   input: MaxMarketAdvisorInput
 ): Promise<string> {
-  const { market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes, bookingPatterns, supplyTrend, submarkets, cancellationPolicies, professionalStats, appliedFilters } = input;
+  const { reportMode = 'guided', market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes, bookingPatterns, supplyTrend, submarkets, cancellationPolicies, professionalStats, appliedFilters } = input;
+  
+  // Import pro mode overrides
+  const { getProModeOverride, getCommunicationStyle } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'market');
+  const commStyle = getCommunicationStyle(reportMode);
   
   // Build filter context string for the prompt
   const filterContextParts: string[] = [];
@@ -1775,15 +1820,21 @@ export async function generateMaxMarketAdvice(
 
   // PTCF-structured maximum capacity market prompt
   const prompt = `<PERSONA>
-You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart friend who's curious but has no background in real estate. Your communication style is:
+${reportMode === 'pro' 
+    ? `You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments. You speak to the reader as a peer investor evaluating market opportunities.
+
+Your communication style:
+${commStyle}`
+    : `You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart friend who's curious but has no background in real estate. Your communication style is:
 - Super simple language (if a word is confusing, explain it or use a simpler word)
-- Use real-life comparisons ("Think of it like..." or "Imagine if...")
+- Use real-life comparisons ("Think of it like..." or "Imagine if...")`}
 - Friendly and encouraging (like talking to a friend over coffee)
 - Always explain the "so what?" - why does this number matter?
 </PERSONA>
+${proOverride}
 
 <TASK>
-Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT. This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand - even if they've never invested in real estate before.
+${reportMode === 'pro' ? 'Analyze the market data below and produce an INSTITUTIONAL-GRADE MARKET REPORT with precise benchmarks and financial metrics.' : 'Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT.'} This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand.
 </TASK>
 
 <CONTEXT>
@@ -2074,6 +2125,7 @@ IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (
  * a compelling, non-prescriptive narrative.
  */
 export interface FullReportSummaryInput {
+  reportMode?: 'pro' | 'guided'; // Report style mode
   property: {
     address: string;
     city?: string;
@@ -2176,7 +2228,11 @@ export interface FullReportSummaryInput {
 }
 
 export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
-  const { property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales } = input;
+  const { reportMode = 'guided', property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales } = input;
+  
+  // Import pro mode overrides
+  const { getProModeOverride } = await import('./pro-mode-prompts');
+  const proOverride = getProModeOverride(reportMode, 'property');
 
   // Calculate derived metrics for the prompt
   const occRate = revenue.occupancy > 1 ? revenue.occupancy / 100 : revenue.occupancy;
@@ -2289,8 +2345,11 @@ HISTORICAL TRENDS:
   }
 
   const prompt = `<PERSONA>
-You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do. You never sugarcoat risks but always empower.
+${reportMode === 'pro' 
+    ? `You are David Wei Chen, a senior real estate investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You write institutional-grade executive summaries with precise financial metrics, benchmarks, and quantitative analysis. Your communication style: data-first with exact figures, industry-standard terminology (Cap Rate, DSCR, RevPAR, NOI), and benchmark comparisons. Your tone is authoritative and direct — like a managing director presenting to an investment committee. You never give prescriptive investment advice but present data with analytical rigor.`
+    : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do. You never sugarcoat risks but always empower.`}
 </PERSONA>
+${proOverride}
 
 <TASK>
 Write a comprehensive Executive Summary for a Full Property Investment Analysis Report.${preparedFor ? ` This report is prepared for ${preparedFor}.` : ''}

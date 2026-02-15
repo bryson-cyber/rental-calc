@@ -1,7 +1,12 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { getDb } from "./db";
 import { getUsageStatus } from "./usage-limits";
 import { getRateLimitStatus } from "./rate-limiter";
 
@@ -80,6 +85,22 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+
+  // Report mode preference (Pro / Guided)
+  reportMode: router({
+    get: publicProcedure.query(async ({ ctx }) => {
+      if (!ctx.user) return { mode: null as 'pro' | 'guided' | null };
+      return { mode: (ctx.user as any).reportMode ?? null };
+    }),
+    set: protectedProcedure
+      .input(z.object({ mode: z.enum(['pro', 'guided']) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+        await db.update(users).set({ reportMode: input.mode }).where(eq(users.id, ctx.user.id));
+        return { success: true, mode: input.mode };
+      }),
   }),
 
   // Core feature routers
