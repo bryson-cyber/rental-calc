@@ -611,9 +611,14 @@ export default function RentalEstimator() {
 
               {/* Error Message */}
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-700 text-sm font-sans">{error}</p>
+                <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${error.includes('limit reached') ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+                  <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${error.includes('limit reached') ? 'text-amber-500' : 'text-red-500'}`} />
+                  <div>
+                    <p className={`text-sm font-sans ${error.includes('limit reached') ? 'text-amber-700' : 'text-red-700'}`}>{error}</p>
+                    {error.includes('limit reached') && (
+                      <p className="text-xs text-amber-600 mt-1 font-sans">Usage limits reset daily. Contact Coach Inayah for unlimited access.</p>
+                    )}
+                  </div>
                 </div>
               )}
 

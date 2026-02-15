@@ -26,6 +26,7 @@ import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "..
 import { getLocationQuality } from "../location-quality";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { upsertContact, generateDeepLink } from "../hubspot";
+import { canPerformAnalysis, recordAnalysisUsage, canPerformMarketResearch, recordMarketResearchUsage } from "../usage-limits";
 
 // Input validation schemas
 export const rentalizerInputSchema = z.object({
@@ -1025,8 +1026,22 @@ export const rentalRouter = router({
     // Get comprehensive property report with market data
     getPropertyReport: publicProcedure
       .input(propertyReportInputSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily usage limits (admins bypass)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+          if (!limitCheck.allowed) {
+            return {
+              success: false,
+              error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+              remaining: 0,
+            };
+          }
+
           const report = await getComprehensivePropertyReport(
             input.address,
             input.bedrooms,
@@ -1075,9 +1090,15 @@ export const rentalRouter = router({
             }
           }
 
+          // Record usage after successful analysis
+          await recordAnalysisUsage(userId, undefined, ipAddress, 15).catch(err => 
+            console.error('[Rental] Error recording usage:', err)
+          );
+
           return {
             success: true,
             data: report,
+            remaining: limitCheck.remaining ? limitCheck.remaining - 1 : undefined,
           };
         } catch (error) {
           console.error("[Rental] Error getting property report:", error);
@@ -1102,8 +1123,21 @@ export const rentalRouter = router({
     // Get AI-enhanced property report with profitability analysis
     getAIPropertyReport: publicProcedure
       .input(aiPropertyReportInputSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily usage limits (admins bypass)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+          if (!limitCheck.allowed) {
+            return {
+              success: false,
+              error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+            };
+          }
+
           // First get the comprehensive property report from AirDNA
           const baseReport = await getComprehensivePropertyReport(
             input.address,
@@ -1338,8 +1372,8 @@ export const rentalRouter = router({
             id: marketId || baseReport.market.id,
           } : { id: marketId };
 
-          return {
-            success: true,
+          const result = {
+            success: true as const,
             data: {
               ...baseReport,
               // Ensure market.id is always included
@@ -1388,6 +1422,13 @@ export const rentalRouter = router({
               },
             },
           };
+
+          // Record usage after successful analysis
+          await recordAnalysisUsage(userId, undefined, ipAddress, 20).catch(err => 
+            console.error('[Rental] Error recording AI report usage:', err)
+          );
+
+          return result;
         } catch (error) {
           console.error("[Rental] Error getting AI property report:", error);
           const message = error instanceof Error ? error.message : "Failed to generate AI property report";
@@ -1402,8 +1443,21 @@ export const rentalRouter = router({
     // Get comprehensive market report with AI analysis
     getMarketReport: publicProcedure
       .input(marketReportInputSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily market research limits (admins bypass)
+          const mrUserId = ctx.user?.id;
+          const mrIpAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const mrLimitCheck = await canPerformMarketResearch(mrUserId, undefined, mrIpAddress);
+          if (!mrLimitCheck.allowed) {
+            return {
+              success: false,
+              error: mrLimitCheck.reason || 'Daily market research limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+            };
+          }
+
           console.log(`[getMarketReport] Fetching report for market: ${input.marketId}`);
           const report = await getComprehensiveMarketReport(input.marketId);
 
@@ -1460,6 +1514,11 @@ export const rentalRouter = router({
             } : undefined,
           });
 
+          // Record market research usage
+          await recordMarketResearchUsage(mrUserId, undefined, mrIpAddress, 10).catch(err => 
+            console.error('[Rental] Error recording market research usage:', err)
+          );
+
           return {
             success: true,
             data: {
@@ -1481,8 +1540,21 @@ export const rentalRouter = router({
     // Get comprehensive submarket/zip code report with AI analysis
     getSubmarketReport: publicProcedure
       .input(submarketReportInputSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily market research limits (admins bypass)
+          const smUserId = ctx.user?.id;
+          const smIpAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const smLimitCheck = await canPerformMarketResearch(smUserId, undefined, smIpAddress);
+          if (!smLimitCheck.allowed) {
+            return {
+              success: false,
+              error: smLimitCheck.reason || 'Daily market research limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+            };
+          }
+
           console.log(`[getSubmarketReport] Fetching report for submarket: ${input.submarketId}`);
           const report = await getComprehensiveSubmarketReport(input.submarketId);
 
@@ -1538,6 +1610,11 @@ export const rentalRouter = router({
               revenuePercentiles: report.insights.revenue_percentiles,
             } : undefined,
           });
+
+          // Record market research usage
+          await recordMarketResearchUsage(smUserId, undefined, smIpAddress, 10).catch(err => 
+            console.error('[Rental] Error recording submarket research usage:', err)
+          );
 
           return {
             success: true,

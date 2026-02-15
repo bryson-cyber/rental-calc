@@ -1258,10 +1258,15 @@ export default function PropertyAnalyzer() {
         
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mt-8">
-            <div className="flex items-center gap-3 text-red-600">
+          <div className={`rounded-2xl p-6 mt-8 ${error.includes('limit reached') ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+            <div className={`flex items-center gap-3 ${error.includes('limit reached') ? 'text-amber-600' : 'text-red-600'}`}>
               <AlertTriangle className="w-6 h-6" />
-              <span className="font-medium">{error}</span>
+              <div>
+                <span className="font-medium">{error}</span>
+                {error.includes('limit reached') && (
+                  <p className="text-sm text-amber-500 mt-1">Usage limits reset daily. Contact Coach Inayah for unlimited access.</p>
+                )}
+              </div>
             </div>
           </div>
         )}

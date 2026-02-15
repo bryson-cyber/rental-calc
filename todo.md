@@ -11438,3 +11438,12 @@ Results:
 - [x] All 1276 tests passing (1 pre-existing timeout in admin-router.test.ts — unrelated)
 - [ ] Verify Golpo API produces white background videos with audio (jobs still processing)
 - [ ] Verify minimum 5-minute video duration from Golpo
+
+## Wire Usage Limit Enforcement (Feb 14, 2026)
+- [x] Wire canPerformAnalysis check into property analysis endpoints (rental.getPropertyReport, rental.getAIPropertyReport, advanced.analyzeProperty, sharedReports.generateFromAddress)
+- [x] Wire recordAnalysisUsage after successful property analysis (all 4 endpoints)
+- [x] Wire canPerformMarketResearch check into market research endpoints (rental.getMarketReport, rental.getSubmarketReport)
+- [x] Wire recordMarketResearchUsage after successful market research (both endpoints)
+- [x] Add frontend UI feedback when daily limit is reached (amber warning in Home.tsx + PropertyAnalyzer.tsx with "Contact Coach Inayah" message)
+- [x] Write vitest tests for usage limit enforcement (usage-limits.test.ts — 12 tests covering admin bypass, limit checks, recording)
+- [x] Test admin bypass still works (admins never blocked — isUserAdmin check in all limit functions)

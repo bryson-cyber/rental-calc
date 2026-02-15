@@ -25,6 +25,7 @@ import { generateFullArbitrageAnalysis } from "../sop-reports";
 import { getRentSummary } from "../rentometer";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "../notification-service";
+import { canPerformAnalysis, recordAnalysisUsage } from "../usage-limits";
 
 export const advancedRouter = router({
     // Market Scorecard - Get all markets in a country with scores
@@ -232,8 +233,21 @@ export const advancedRouter = router({
         leadEmail: z.string().email().optional(),
         leadPhone: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily usage limits (admins bypass)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+          if (!limitCheck.allowed) {
+            return {
+              success: false as const,
+              error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+            };
+          }
+
           console.log('[LeadMagnet] Starting property analysis:', input.address);
           
           // Log activity
@@ -335,8 +349,10 @@ export const advancedRouter = router({
           }
           
           // Return structured data for the frontend
-          return {
-            success: true,
+          const result = {
+            success: true as const,
+            error: null as string | null,
+            limitReached: false,
             data: {
               // Core property info
               address: input.address,
@@ -421,12 +437,20 @@ export const advancedRouter = router({
               reportId: (analysis as any).reportId || null
             }
           };
+
+          // Record usage after successful analysis
+          await recordAnalysisUsage(userId, undefined, ipAddress, 20).catch(err => 
+            console.error('[LeadMagnet] Error recording usage:', err)
+          );
+
+          return result;
         } catch (error) {
           console.error('[LeadMagnet] Error analyzing property:', error);
           return {
-            success: false,
+            success: false as const,
             error: error instanceof Error ? error.message : 'Failed to analyze property',
-            data: null
+            data: null,
+            limitReached: false,
           };
         }
       }),

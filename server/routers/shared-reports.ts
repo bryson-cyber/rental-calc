@@ -8,6 +8,7 @@ import { generateFullReportSummary, type FullReportSummaryInput } from "../gemin
 import { getRegulationInfo } from "../regulation-tracker";
 import { searchZillowListings } from "../hasdata";
 import { checkReportRateLimit, incrementReportCount } from "../rate-limiter";
+import { canPerformAnalysis, recordAnalysisUsage } from "../usage-limits";
 
 /**
  * Extract city and state from an address or address_lookup string.
@@ -877,6 +878,14 @@ export const sharedReportsRouter = router({
         if (ctx.user) {
           checkReportRateLimit(ctx.user.id, ctx.user.role);
         }
+
+        // Enforce daily usage limits (admins bypass)
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+        if (!limitCheck.allowed) {
+          return { success: false as const, error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.' };
+        }
         
         const { address, bedrooms, bathrooms, preparedFor } = input;
         const accommodates = input.accommodates || bedrooms * 2;
@@ -1337,6 +1346,11 @@ export const sharedReportsRouter = router({
             incrementReportCount(ctx.user.id, ctx.user.role);
           }
           
+          // Record usage after successful report generation
+          await recordAnalysisUsage(userId, undefined, ipAddress, 20).catch(err => 
+            console.error('[GenerateFromAddress] Error recording usage:', err)
+          );
+
           return {
             success: true as const,
             shareId,
