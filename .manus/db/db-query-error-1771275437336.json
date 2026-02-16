@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, JSON_EXTRACT(report_data, '$.property.city') as city, JSON_EXTRACT(report_data, '$.property.state') as state, JSON_EXTRACT(report_data, '$.revenue_estimate.annual_revenue') as annual_revenue, JSON_EXTRACT(report_data, '$.revenue_estimate.average_daily_rate') as adr, JSON_EXTRACT(report_data, '$.revenue_estimate.occupancy_rate') as occupancy FROM shared_reports WHERE id = '4g6g9mo4mlpnmcva'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, JSON_EXTRACT(report_data, '$.property.city') as city, JSON_EXTRACT(report_data, '$.property.state') as state, JSON_EXTRACT(report_data, '$.revenue_estimate.annual_revenue') as annual_revenue, JSON_EXTRACT(report_data, '$.revenue_estimate.average_daily_rate') as adr, JSON_EXTRACT(report_data, '$.revenue_estimate.occupancy_rate') as occupancy FROM shared_reports WHERE id = '4g6g9mo4mlpnmcva'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'report_data' in 'field list'"
+  ]
+}

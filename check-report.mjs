@@ -1,12 +1,48 @@
+import 'dotenv/config';
 import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 const [rows] = await conn.execute(
-  "SELECT JSON_KEYS(reportData) as top_keys, JSON_EXTRACT(reportData, '$.purchase') as purchase_data, JSON_EXTRACT(reportData, '$.rental_arbitrage') as rental_data FROM shared_reports WHERE shareId = '1byhaxuxmlibqtbt' LIMIT 1"
+  "SELECT reportData FROM shared_reports WHERE shareId = '4g6g9mo4mlpnmcva'"
 );
-console.log('Top keys:', rows[0]?.top_keys);
-console.log('Purchase data:', rows[0]?.purchase_data);
-console.log('Rental data:', rows[0]?.rental_data);
+const data = JSON.parse(rows[0].reportData);
+console.log('Top-level keys:', Object.keys(data));
+console.log('\nProperty keys:', Object.keys(data.property || {}));
+
+// Check property.estimates
+if (data.property && data.property.estimates) {
+  console.log('\nproperty.estimates:', JSON.stringify(data.property.estimates, null, 2).substring(0, 500));
+}
+
+// Check estimates
+if (data.estimates) {
+  console.log('\nestimates:', JSON.stringify(data.estimates, null, 2).substring(0, 500));
+}
+
+// Check for comp_median_adjustment anywhere
+const dataStr = JSON.stringify(data);
+if (dataStr.includes('comp_median')) {
+  console.log('\ncomp_median found somewhere in data');
+} else {
+  console.log('\ncomp_median NOT found anywhere in data');
+}
+
+// Check for revenue-related fields at top level
+for (const key of Object.keys(data)) {
+  const val = data[key];
+  if (typeof val === 'object' && val !== null) {
+    const subKeys = Object.keys(val);
+    const hasRevenue = subKeys.some(function(k) { return k.includes('revenue') || k.includes('adr') || k.includes('occupancy'); });
+    if (hasRevenue) {
+      console.log('\nRevenue found in:', key);
+      console.log(JSON.stringify(val, null, 2).substring(0, 500));
+    }
+  }
+}
+
+// Check monthly_forecast
+if (data.monthly_forecast) {
+  console.log('\nmonthly_forecast (first 2):', JSON.stringify(data.monthly_forecast.slice(0, 2), null, 2));
+}
+
 await conn.end();

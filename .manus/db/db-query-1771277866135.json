@@ -1,0 +1,110 @@
+{
+  "query": "SELECT cacheKey, cacheType, createdAt FROM api_cache WHERE cacheKey LIKE '%411%' OR cacheKey LIKE '%32nd%' OR cacheKey LIKE '%Phoenix%' OR cacheKey LIKE '%85008%' LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT cacheKey, cacheType, createdAt FROM api_cache WHERE cacheKey LIKE '%411%' OR cacheKey LIKE '%32nd%' OR cacheKey LIKE '%Phoenix%' OR cacheKey LIKE '%85008%' LIMIT 20;",
+  "rows": [
+    {
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"Phoenix, AZ\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-06 04:04:11"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"PHOENIX, AZ\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-07 05:15:40"
+    },
+    {
+      "cacheKey": "search_markets:{\"limit\":20,\"searchTerm\":\"Phoenix\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-09 03:33:14"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":50,\"searchTerm\":\"Phoenix/Scottsdale\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 03:33:15"
+    },
+    {
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"Phoenix\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-09 04:33:13"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix \"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:32"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:35"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix,\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:36"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, \"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:36"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, A\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:37"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, AZ\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:38"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"MidtownPhoenix, AZ\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:44"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix, A\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:49"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix, \"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:34:49"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-09 22:35:02"
+    },
+    {
+      "cacheKey": "search_markets_api:{\"limit\":10,\"searchTerm\":\"84119\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-10 00:47:32"
+    },
+    {
+      "cacheKey": "rentalizer:{\"address\":\"South Salt Lake, UT 84119, USA\",\"bathrooms\":1,\"bedrooms\":2}",
+      "cacheType": "rentalizer",
+      "createdAt": "2026-02-10 00:48:41"
+    },
+    {
+      "cacheKey": "rentalizer:{\"address\":\"100 W Catalina Dr, Phoenix, AZ 85013, USA\",\"bathrooms\":1,\"bedrooms\":1}",
+      "cacheType": "rentalizer",
+      "createdAt": "2026-02-10 02:58:45"
+    },
+    {
+      "cacheKey": "search_markets:{\"limit\":20,\"searchTerm\":\"Phoenix, AZ\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-10 03:33:58"
+    },
+    {
+      "cacheKey": "rentalizer:{\"address\":\"321 W Pasadena Ave apt 12, Phoenix, AZ 85013, USA\",\"bathrooms\":1,\"bedrooms\":1}",
+      "cacheType": "rentalizer",
+      "createdAt": "2026-02-10 03:39:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "cacheKey\tcacheType\tcreatedAt\nsearch_markets:{\"limit\":15,\"searchTerm\":\"Phoenix, AZ\"}\tsearch_markets\t2026-02-06 04:04:11\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"PHOENIX, AZ\"}\tsearch_markets_api\t2026-02-07 05:15:40\nsearch_markets:{\"limit\":20,\"searchTerm\":\"Phoenix\"}\tsearch_markets\t2026-02-09 03:33:14\nsearch_markets_api:{\"limit\":50,\"searchTerm\":\"Phoenix/Scottsdale\"}\tsearch_markets_api\t2026-02-09 03:33:15\nsearch_markets:{\"limit\":15,\"searchTerm\":\"Phoenix\"}\tsearch_markets\t2026-02-09 04:33:13\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix \"}\tsearch_markets_api\t2026-02-09 22:34:32\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix\"}\tsearch_markets_api\t2026-02-09 22:34:35\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix,\"}\tsearch_markets_api\t2026-02-09 22:34:36\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, \"}\tsearch_markets_api\t2026-02-09 22:34:36\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, A\"}\tsearch_markets_api\t2026-02-09 22:34:37\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Midtown Phoenix, AZ\"}\tsearch_markets_api\t2026-02-09 22:34:38\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"MidtownPhoenix, AZ\"}\tsearch_markets_api\t2026-02-09 22:34:44\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix, A\"}\tsearch_markets_api\t2026-02-09 22:34:49\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix, \"}\tsearch_markets_api\t2026-02-09 22:34:49\nsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Phoenix\"}\tsearch_markets_api\t2026-02-09 22:35:02\nsearch_markets_api:{\"limit\":10,\"searchTerm\":\"84119\"}\tsearch_markets_api\t2026-02-10 00:47:32\nrentalizer:{\"address\":\"South Salt Lake, UT 84119, USA\",\"bathrooms\":1,\"bedrooms\":2}\trentalizer\t2026-02-10 00:48:41\nrentalizer:{\"address\":\"100 W Catalina Dr, Phoenix, AZ 85013, USA\",\"bathrooms\":1,\"bedrooms\":1}\trentalizer\t2026-02-10 02:58:45\nsearch_markets:{\"limit\":20,\"searchTerm\":\"Phoenix, AZ\"}\tsearch_markets\t2026-02-10 03:33:58\nrentalizer:{\"address\":\"321 W Pasadena Ave apt 12, Phoenix, AZ 85013, USA\",\"bathrooms\":1,\"bedrooms\":1}\trentalizer\t2026-02-10 03:39:25\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

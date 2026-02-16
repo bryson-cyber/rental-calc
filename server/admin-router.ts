@@ -996,6 +996,43 @@ export const adminRouter = router({
       }
     }),
 
+  // Clear all cache entries matching a search term (address, market, etc.)
+  clearCacheBySearch: adminProcedure
+    .input(z.object({ searchTerm: z.string().min(3) }))
+    .mutation(async ({ input }) => {
+      try {
+        const db = (await getDb())!;
+        const { apiCache: memoryCache } = await import('./cache');
+        const result = await db.delete(apiCacheTable)
+          .where(like(apiCacheTable.cacheKey, `%${input.searchTerm}%`));
+        const dbDeleted = (result as any)[0]?.affectedRows ?? 0;
+        const memDeleted = memoryCache.clearByPrefix('');
+        console.log(`[Admin] Cleared cache for \"${input.searchTerm}\": ${dbDeleted} DB entries, ${memDeleted} memory entries`);
+        return { dbDeleted, memDeleted, searchTerm: input.searchTerm };
+      } catch (error) {
+        console.error('[Admin] Error clearing cache by search:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to clear cache' });
+      }
+    }),
+
+  // Clear all property_comprehensive cache entries (forces P75 recalculation)
+  clearPropertyReportCache: adminProcedure
+    .mutation(async () => {
+      try {
+        const db = (await getDb())!;
+        const { apiCache: memoryCache } = await import('./cache');
+        const result = await db.delete(apiCacheTable)
+          .where(like(apiCacheTable.cacheKey, 'property_comprehensive:%'));
+        const dbDeleted = (result as any)[0]?.affectedRows ?? 0;
+        const memDeleted = memoryCache.clearByPrefix('property_comprehensive:');
+        console.log(`[Admin] Cleared ALL property report cache: ${dbDeleted} DB, ${memDeleted} memory`);
+        return { dbDeleted, memDeleted };
+      } catch (error) {
+        console.error('[Admin] Error clearing property report cache:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to clear property report cache' });
+      }
+    }),
+
   // Get today's API call count
   getTodayApiCount: adminProcedure
     .input(

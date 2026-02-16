@@ -11774,3 +11774,15 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Testing & Location Bug Fix (February 16, 2026)
 - [ ] Test Phoenix address fresh report to verify comp-median adjustment produces $35K-$38K range
 - [ ] Fix location bug: Phoenix property showing "San Diego, CA" instead of Phoenix, AZ
+- [ ] Add sort/filter to admin dashboard to see API usage by user
+- [ ] Switch comp adjustment from median to P75 with 2x Rentalizer cap
+
+## P75 Adjustment Cache Fix (February 16, 2026)
+- [x] ROOT CAUSE: P75 adjustment code was correct but stale DB cache (14-day TTL) returned pre-P75 results
+- [x] Fix: Cleared all property_comprehensive cache entries from DB
+- [x] Fix: Added P75 re-application logic to cache hit path (handles stale cached results automatically)
+- [x] Fix: Added admin endpoints: clearCacheBySearch (by address) and clearPropertyReportCache (all reports)
+- [x] Added 5 new vitest tests for cache P75 re-application logic (1,427 total tests passing)
+- [x] Location bug fix already in place (extractCity/extractState use geocoded data first)
+- [x] Switch comp adjustment from median to P75 with 2x Rentalizer cap
+- [ ] Live test: Generate fresh Phoenix report to verify P75 adjustment shows in UI

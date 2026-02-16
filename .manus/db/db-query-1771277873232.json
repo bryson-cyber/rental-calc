@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as remaining FROM api_cache WHERE cacheKey LIKE '%411%' OR cacheKey LIKE '%32nd%' OR cacheKey LIKE '%85008%' OR cacheKey LIKE '%Phoenix%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COUNT(*) as remaining FROM api_cache WHERE cacheKey LIKE '%411%' OR cacheKey LIKE '%32nd%' OR cacheKey LIKE '%85008%' OR cacheKey LIKE '%Phoenix%';",
+  "rows": [
+    {
+      "remaining": "18"
+    }
+  ],
+  "messages": [],
+  "stdout": "remaining\n18\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}
