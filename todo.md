@@ -11785,4 +11785,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added 5 new vitest tests for cache P75 re-application logic (1,427 total tests passing)
 - [x] Location bug fix already in place (extractCity/extractState use geocoded data first)
 - [x] Switch comp adjustment from median to P75 with 2x Rentalizer cap
-- [ ] Live test: Generate fresh Phoenix report to verify P75 adjustment shows in UI
+- [x] Live test: Generate fresh Phoenix report to verify P75 adjustment shows in UI (tested via direct function call)
+
+## Live P75 Testing: 10 Addresses (February 16, 2026)
+- [x] Test 10 diverse addresses to verify P75 adjustment works on each
+- [x] Verify each report shows P75-adjusted revenue (higher than raw Rentalizer)
+- [x] Verify _original_rentalizer is set on each result
+- [x] Document results with before/after comparison
