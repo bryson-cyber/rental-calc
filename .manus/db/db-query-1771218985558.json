@@ -1,0 +1,110 @@
+{
+  "query": "SELECT id, address, bedrooms, bathrooms, monthlyRent, annualRevenue, imageUrl, createdAt FROM favorite_properties ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, bedrooms, bathrooms, monthlyRent, annualRevenue, imageUrl, createdAt FROM favorite_properties ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "330008",
+      "address": "2386 S Linden Ct #C, Denver, CO 80222",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "monthlyRent": "1350",
+      "annualRevenue": "31887",
+      "imageUrl": "https://photos.zillowstatic.com/fp/d130abf299f185ab92c23b4a7e15ff19-p_e.jpg",
+      "createdAt": "2026-02-16 05:15:16"
+    },
+    {
+      "id": "330010",
+      "address": "4439 W Nevada Pl #4423, Denver, CO 80219",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "monthlyRent": "1295",
+      "annualRevenue": "26970",
+      "imageUrl": "https://photos.zillowstatic.com/fp/d7cabd2377fca268d9bbf4bc42fdb975-p_e.jpg",
+      "createdAt": "2026-02-16 05:15:16"
+    },
+    {
+      "id": "330009",
+      "address": "2416 W 36th Ave APT 2, Denver, CO 80211",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "monthlyRent": "1550",
+      "annualRevenue": "34723",
+      "imageUrl": "https://photos.zillowstatic.com/fp/e6ba3e00a874aa8406c1e024115fe9bd-p_e.jpg",
+      "createdAt": "2026-02-16 05:15:16"
+    },
+    {
+      "id": "330007",
+      "address": "2627 S Madison St, Denver, CO 80210",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "monthlyRent": "2700",
+      "annualRevenue": "57402",
+      "imageUrl": "https://photos.zillowstatic.com/fp/5551adec7b936eeb3d6ea5be4c6ecce1-p_e.jpg",
+      "createdAt": "2026-02-16 05:15:15"
+    },
+    {
+      "id": "330006",
+      "address": "2890 W Parkside Pl, Denver, CO 80221",
+      "bedrooms": "3",
+      "bathrooms": "4.0",
+      "monthlyRent": "3500",
+      "annualRevenue": "71611",
+      "imageUrl": "https://photos.zillowstatic.com/fp/67930c65eef3e3ac33e7e269319d2e50-p_e.jpg",
+      "createdAt": "2026-02-16 05:15:15"
+    },
+    {
+      "id": "300001",
+      "address": "295 Chestnut Ave, Carlsbad, CA 92008",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "monthlyRent": "2400",
+      "annualRevenue": "52941",
+      "imageUrl": "https://photos.zillowstatic.com/fp/1819823ba1d8bff7e4797083110320dc-p_e.jpg",
+      "createdAt": "2026-02-11 01:32:23"
+    },
+    {
+      "id": "270009",
+      "address": "165 E Miller Rd, Ithaca, NY 14850",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "monthlyRent": "2970",
+      "annualRevenue": "NULL",
+      "imageUrl": "https://photos.zillowstatic.com/fp/80659355307ca00d8e1caf37f276d5d7-p_e.jpg",
+      "createdAt": "2026-02-10 03:43:37"
+    },
+    {
+      "id": "270008",
+      "address": "325 W Seneca St #111-7, Ithaca, NY 14850",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "monthlyRent": "820",
+      "annualRevenue": "NULL",
+      "imageUrl": "https://photos.zillowstatic.com/fp/ae961b3d0b7e600c22e735dfaef181d8-p_e.jpg",
+      "createdAt": "2026-02-10 03:43:32"
+    },
+    {
+      "id": "270007",
+      "address": "312 Farm St, Ithaca, NY 14850",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "monthlyRent": "1545",
+      "annualRevenue": "NULL",
+      "imageUrl": "https://photos.zillowstatic.com/fp/6dca8ec19a52977300ffc39d90e42d4a-p_e.jpg",
+      "createdAt": "2026-02-10 03:43:28"
+    },
+    {
+      "id": "270006",
+      "address": "16 W Pasadena Ave #5, Phoenix, AZ 85013",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "monthlyRent": "1695",
+      "annualRevenue": "35607",
+      "imageUrl": "https://photos.zillowstatic.com/fp/773ad8710a247cb147757db129d645ab-p_e.jpg",
+      "createdAt": "2026-02-10 03:17:38"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\tbedrooms\tbathrooms\tmonthlyRent\tannualRevenue\timageUrl\tcreatedAt\n330008\t2386 S Linden Ct #C, Denver, CO 80222\t2\t1.0\t1350\t31887\thttps://photos.zillowstatic.com/fp/d130abf299f185ab92c23b4a7e15ff19-p_e.jpg\t2026-02-16 05:15:16\n330010\t4439 W Nevada Pl #4423, Denver, CO 80219\t2\t1.0\t1295\t26970\thttps://photos.zillowstatic.com/fp/d7cabd2377fca268d9bbf4bc42fdb975-p_e.jpg\t2026-02-16 05:15:16\n330009\t2416 W 36th Ave APT 2, Denver, CO 80211\t1\t1.0\t1550\t34723\thttps://photos.zillowstatic.com/fp/e6ba3e00a874aa8406c1e024115fe9bd-p_e.jpg\t2026-02-16 05:15:16\n330007\t2627 S Madison St, Denver, CO 80210\t3\t2.0\t2700\t57402\thttps://photos.zillowstatic.com/fp/5551adec7b936eeb3d6ea5be4c6ecce1-p_e.jpg\t2026-02-16 05:15:15\n330006\t2890 W Parkside Pl, Denver, CO 80221\t3\t4.0\t3500\t71611\thttps://photos.zillowstatic.com/fp/67930c65eef3e3ac33e7e269319d2e50-p_e.jpg\t2026-02-16 05:15:15\n300001\t295 Chestnut Ave, Carlsbad, CA 92008\t1\t1.0\t2400\t52941\thttps://photos.zillowstatic.com/fp/1819823ba1d8bff7e4797083110320dc-p_e.jpg\t2026-02-11 01:32:23\n270009\t165 E Miller Rd, Ithaca, NY 14850\t3\t2.0\t2970\tNULL\thttps://photos.zillowstatic.com/fp/80659355307ca00d8e1caf37f276d5d7-p_e.jpg\t2026-02-10 03:43:37\n270008\t325 W Seneca St #111-7, Ithaca, NY 14850\t1\t1.0\t820\tNULL\thttps://photos.zillowstatic.com/fp/ae961b3d0b7e600c22e735dfaef181d8-p_e.jpg\t2026-02-10 03:43:32\n270007\t312 Farm St, Ithaca, NY 14850\t1\t1.0\t1545\tNULL\thttps://photos.zillowstatic.com/fp/6dca8ec19a52977300ffc39d90e42d4a-p_e.jpg\t2026-02-10 03:43:28\n270006\t16 W Pasadena Ave #5, Phoenix, AZ 85013\t2\t1.0\t1695\t35607\thttps://photos.zillowstatic.com/fp/773ad8710a247cb147757db129d645ab-p_e.jpg\t2026-02-10 03:17:38\n",
+  "stderr": "",
+  "execution_time_ms": 68
+}

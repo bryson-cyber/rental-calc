@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, address, bedrooms, bathrooms, annualRevenue, monthlyRent, imageUrl FROM favorite_properties LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, bedrooms, bathrooms, annualRevenue, monthlyRent, imageUrl FROM favorite_properties LIMIT 10",
+  "rows": [
+    {
+      "id": "60001",
+      "address": "289 W Lake Ave NW #4, Atlanta, GA 30314",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "1355",
+      "imageUrl": "NULL"
+    },
+    {
+      "id": "60002",
+      "address": "194 Hendrix Ave SW, Atlanta, GA 30315",
+      "bedrooms": "4",
+      "bathrooms": "2.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "2500",
+      "imageUrl": "NULL"
+    },
+    {
+      "id": "90001",
+      "address": "2190 S Holly Street #116, Denver, CO 80222",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenue": "33531",
+      "monthlyRent": "175000",
+      "imageUrl": "NULL"
+    },
+    {
+      "id": "120001",
+      "address": "6823 Goforth St, Houston, TX 77021",
+      "bedrooms": "3",
+      "bathrooms": "1.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "1450",
+      "imageUrl": "https://photos.zillowstatic.com/fp/8ac375b7b32ef554891e00c87a74ed86-p_e.jpg"
+    },
+    {
+      "id": "120002",
+      "address": "13107 Northfleet Dr, Houston, TX 77082",
+      "bedrooms": "4",
+      "bathrooms": "2.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "1880",
+      "imageUrl": "https://photos.zillowstatic.com/fp/a30497faabf21f4e4924327bba5a2874-p_e.jpg"
+    },
+    {
+      "id": "120003",
+      "address": "2831 Kennet Manor Dr, Houston, TX 77047",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "2300",
+      "imageUrl": "https://photos.zillowstatic.com/fp/c222ba8120b6d1ff066d5fc7ece811b0-p_e.jpg"
+    },
+    {
+      "id": "120004",
+      "address": "5935 Bihia Forest Dr, Houston, TX 77088",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "1800",
+      "imageUrl": "https://photos.zillowstatic.com/fp/0e1a1e6b6ecbb5e8d45c07e99ca45de5-p_e.jpg"
+    },
+    {
+      "id": "120006",
+      "address": "2101 Fountain View Dr APT 76, Houston, TX 77057",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenue": "38356",
+      "monthlyRent": "1950",
+      "imageUrl": "https://photos.zillowstatic.com/fp/845f15d376b5d4d5758e0cd0cab4ad50-p_e.jpg"
+    },
+    {
+      "id": "120007",
+      "address": "12826 Westmere Dr, Houston, TX 77077",
+      "bedrooms": "4",
+      "bathrooms": "2.0",
+      "annualRevenue": "53138",
+      "monthlyRent": "2400",
+      "imageUrl": "https://photos.zillowstatic.com/fp/172511911391bc3051c718f81cbfc3a9-p_e.jpg"
+    },
+    {
+      "id": "120008",
+      "address": "15811 Pfeiffer Dr, Houston, TX 77082",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenue": "40747",
+      "monthlyRent": "1875",
+      "imageUrl": "https://photos.zillowstatic.com/fp/313b916dc3445272c3447165b1a1c859-p_e.jpg"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\tbedrooms\tbathrooms\tannualRevenue\tmonthlyRent\timageUrl\n60001\t289 W Lake Ave NW #4, Atlanta, GA 30314\t1\t1.0\tNULL\t1355\tNULL\n60002\t194 Hendrix Ave SW, Atlanta, GA 30315\t4\t2.0\tNULL\t2500\tNULL\n90001\t2190 S Holly Street #116, Denver, CO 80222\t2\t1.0\t33531\t175000\tNULL\n120001\t6823 Goforth St, Houston, TX 77021\t3\t1.0\tNULL\t1450\thttps://photos.zillowstatic.com/fp/8ac375b7b32ef554891e00c87a74ed86-p_e.jpg\n120002\t13107 Northfleet Dr, Houston, TX 77082\t4\t2.0\tNULL\t1880\thttps://photos.zillowstatic.com/fp/a30497faabf21f4e4924327bba5a2874-p_e.jpg\n120003\t2831 Kennet Manor Dr, Houston, TX 77047\t3\t2.0\tNULL\t2300\thttps://photos.zillowstatic.com/fp/c222ba8120b6d1ff066d5fc7ece811b0-p_e.jpg\n120004\t5935 Bihia Forest Dr, Houston, TX 77088\t3\t2.0\tNULL\t1800\thttps://photos.zillowstatic.com/fp/0e1a1e6b6ecbb5e8d45c07e99ca45de5-p_e.jpg\n120006\t2101 Fountain View Dr APT 76, Houston, TX 77057\t3\t2.0\t38356\t1950\thttps://photos.zillowstatic.com/fp/845f15d376b5d4d5758e0cd0cab4ad50-p_e.jpg\n120007\t12826 Westmere Dr, Houston, TX 77077\t4\t2.0\t53138\t2400\thttps://photos.zillowstatic.com/fp/172511911391bc3051c718f81cbfc3a9-p_e.jpg\n120008\t15811 Pfeiffer Dr, Houston, TX 77082\t3\t2.0\t40747\t1875\thttps://photos.zillowstatic.com/fp/313b916dc3445272c3447165b1a1c859-p_e.jpg\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}

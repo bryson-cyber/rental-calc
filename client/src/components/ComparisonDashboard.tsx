@@ -106,9 +106,11 @@ function calculateMetrics(property: ComparisonProperty, mode: 'rent' | 'purchase
     // Arbitrage mode calculations
     const monthlyRent = property.monthlyRent || 0;
     const expenseRate = 0.20; // 20% for expenses
-    const monthlyProfit = monthlyRevenue * (1 - expenseRate) - monthlyRent;
+    // If no rent data (For Sale property in arbitrage mode), profit is meaningless
+    const hasRentData = monthlyRent > 0;
+    const monthlyProfit = hasRentData ? monthlyRevenue * (1 - expenseRate) - monthlyRent : 0;
     const annualProfit = monthlyProfit * 12;
-    const profitRatio = monthlyRent > 0 ? monthlyRevenue / monthlyRent : 0;
+    const profitRatio = hasRentData ? monthlyRevenue / monthlyRent : 0;
     
     return {
       monthlyRevenue,
@@ -346,9 +348,14 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
 
       {/* Winner Banner */}
       {bestProperty && (() => {
-        const bestProfit = mode === 'rent' ? (bestProperty.metrics.monthlyProfit || 0) : (bestProperty.metrics.cashFlow || 0);
+        // In arbitrage mode, find the best property that actually has rent data
+        const bestDeal = mode === 'rent' 
+          ? sortedProperties.find(p => (p.metrics.monthlyRent || 0) > 0) || bestProperty
+          : bestProperty;
+        const bestProfit = mode === 'rent' ? (bestDeal.metrics.monthlyProfit || 0) : (bestDeal.metrics.cashFlow || 0);
         const hasPositiveProfit = bestProfit > 0;
-        const hasRevenue = (bestProperty.annualRevenue || 0) > 0;
+        const hasRevenue = (bestDeal.annualRevenue || 0) > 0;
+        const hasRentData = mode === 'rent' ? (bestDeal.metrics.monthlyRent || 0) > 0 : true;
         
         if (!hasRevenue) {
           return (
@@ -361,6 +368,24 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
                   <p className="font-semibold text-amber-800">Revenue Data Missing</p>
                   <p className="text-sm text-amber-700">
                     Some properties don't have revenue data yet. Try validating them in Step 5 first to get accurate comparisons.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
+        if (!hasRentData && mode === 'rent') {
+          return (
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Info className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-800">No Arbitrage Properties Found</p>
+                  <p className="text-sm text-amber-700">
+                    None of your saved properties have monthly rent data. Save rental properties from Step 2 to compare arbitrage deals.
                   </p>
                 </div>
               </div>
@@ -393,17 +418,17 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
                 <Trophy className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-emerald-800">Best Deal: {bestProperty.address}</p>
+                <p className="font-semibold text-emerald-800">Best Deal: {bestDeal.address}</p>
                 <p className="text-sm text-emerald-700">
                   {mode === 'rent' 
-                    ? `${formatCurrency(bestProperty.metrics.monthlyProfit || 0)}/month profit • ${(bestProperty.metrics.profitRatio || 0).toFixed(1)}x revenue ratio`
-                    : `${formatCurrency(bestProperty.metrics.cashFlow || 0)}/month cash flow • ${formatPercent(bestProperty.metrics.cashOnCash || 0)} CoC return`
+                    ? `${formatCurrency(bestDeal.metrics.monthlyProfit || 0)}/month profit \u2022 ${(bestDeal.metrics.profitRatio || 0).toFixed(1)}x revenue ratio`
+                    : `${formatCurrency(bestDeal.metrics.cashFlow || 0)}/month cash flow \u2022 ${formatPercent(bestDeal.metrics.cashOnCash || 0)} CoC return`
                   }
                 </p>
               </div>
-              {bestProperty.zillowUrl && (
+              {bestDeal.zillowUrl && (
                 <a 
-                  href={bestProperty.zillowUrl} 
+                  href={bestDeal.zillowUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
@@ -515,11 +540,12 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
             <TableBody>
               {sortedProperties.map((property, index) => {
                 const metrics = property.metrics;
+                const hasRentData = mode === 'rent' ? (metrics.monthlyRent || 0) > 0 : true;
                 const gradeValue = mode === 'rent' 
                   ? (metrics.profitRatio || 0) 
                   : (metrics.cashOnCash || 0);
-                const grade = getGrade(gradeValue, mode);
-                const isWinner = index === 0;
+                const grade = hasRentData ? getGrade(gradeValue, mode) : { grade: 'N/A', color: 'text-slate-400', bgColor: 'bg-slate-50' };
+                const isWinner = index === 0 && hasRentData && (mode === 'rent' ? (metrics.monthlyProfit || 0) > 0 : (metrics.cashFlow || 0) > 0);
 
                 return (
                   <TableRow 
@@ -581,14 +607,22 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
                           {metrics.monthlyRent ? formatCurrency(metrics.monthlyRent) + '/mo' : '—'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={`font-bold ${(metrics.monthlyProfit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {formatCurrency(metrics.monthlyProfit || 0)}/mo
-                          </span>
+                          {metrics.monthlyRent ? (
+                            <span className={`font-bold ${(metrics.monthlyProfit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {formatCurrency(metrics.monthlyProfit || 0)}/mo
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">N/A</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="font-medium text-slate-700">
-                            {(metrics.profitRatio || 0).toFixed(1)}x
-                          </span>
+                          {metrics.monthlyRent ? (
+                            <span className="font-medium text-slate-700">
+                              {(metrics.profitRatio || 0).toFixed(1)}x
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">N/A</span>
+                          )}
                         </TableCell>
                       </>
                     ) : (

@@ -299,25 +299,33 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
       {/* Table View - ComparisonDashboard */}
       {viewMode === 'table' && (
         <ComparisonDashboard
-          properties={favorites.map(fav => ({
-            id: fav.id,
-            address: fav.address,
-            city: fav.city,
-            state: fav.state,
-            zipCode: fav.zipCode,
-            bedrooms: fav.bedrooms ?? 0,
-            bathrooms: fav.bathrooms || '0',
-            annualRevenue: fav.annualRevenue || 0,
-            occupancyRate: fav.occupancyRate || '0',
-            averageDailyRate: fav.averageDailyRate || 0,
-            monthlyRent: fav.monthlyRent,
-            zillowUrl: fav.zillowUrl,
-            // Purchase mode fields - use defaults if not stored
-            purchasePrice: (fav as unknown as { purchasePrice?: number }).purchasePrice || null,
-            loanType: (fav as unknown as { loanType?: string }).loanType || null,
-            downPaymentPercent: (fav as unknown as { downPaymentPercent?: number }).downPaymentPercent || null,
-            interestRate: (fav as unknown as { interestRate?: number }).interestRate || null,
-          }))}
+          properties={favorites.map(fav => {
+            // Detect For Sale properties: if monthlyRent > 20,000, it's likely a purchase price stored incorrectly
+            const isLikelyForSale = (fav.monthlyRent ?? 0) > 20000;
+            const effectiveMonthlyRent = isLikelyForSale ? null : fav.monthlyRent;
+            const effectivePurchasePrice = isLikelyForSale ? fav.monthlyRent : ((fav as unknown as { purchasePrice?: number }).purchasePrice || null);
+            
+            return {
+              id: fav.id,
+              address: fav.address,
+              city: fav.city,
+              state: fav.state,
+              zipCode: fav.zipCode,
+              bedrooms: fav.bedrooms ?? 0,
+              bathrooms: fav.bathrooms || '0',
+              annualRevenue: fav.annualRevenue || 0,
+              occupancyRate: fav.occupancyRate || '0',
+              averageDailyRate: fav.averageDailyRate || 0,
+              monthlyRent: effectiveMonthlyRent,
+              zillowUrl: fav.zillowUrl,
+              imageUrl: fav.imageUrl, // Pass property thumbnail image
+              // Purchase mode fields
+              purchasePrice: effectivePurchasePrice,
+              loanType: (fav as unknown as { loanType?: string }).loanType || null,
+              downPaymentPercent: (fav as unknown as { downPaymentPercent?: number }).downPaymentPercent || null,
+              interestRate: (fav as unknown as { interestRate?: number }).interestRate || null,
+            };
+          })}
           onRemove={(id) => handleRemove(id)}
           mode={globalMode || 'rent'}
         />

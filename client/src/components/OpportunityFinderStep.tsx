@@ -466,7 +466,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           bedrooms: property.bedrooms,
           bathrooms: property.bathrooms,
           propertyType: property.homeType,
-          monthlyRent: property.price,
+          // For Sale properties: store price as purchasePrice, not monthlyRent
+          monthlyRent: searchType === 'forRent' ? property.price : undefined,
           zillowUrl: property.url,
           imageUrl: property.image, // Property thumbnail image
           // Include analysis data if available
@@ -531,6 +532,10 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       verdict: string;
       image?: string;
       zillowUrl?: string;
+      bedrooms?: number;
+      bathrooms?: number;
+      annualRevenue?: number;
+      monthlyRevenue?: number;
     }>;
   } | null>(null);
   const [showBatchResults, setShowBatchResults] = useState(false);
@@ -693,7 +698,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
           bedrooms: property.bedrooms ?? 2,
           bathrooms: property.bathrooms ?? 1,
-          monthlyRent: property.price,
+          monthlyRent: searchType === 'forRent' ? property.price : 0,
         });
       }
     } catch (error) {
@@ -803,8 +808,9 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     let savedCount = 0;
     
     for (const deal of batchResults.topDeals) {
-      // Skip if already in favorites
-      if (favorites.has(deal.id)) {
+      // Skip only if we have a confirmed database ID for this deal
+      // (localStorage favorites can be stale, so we check favoritesDbIds which tracks actual DB saves)
+      if (favoritesDbIds.has(deal.id)) {
         savedCount++;
         setSavedTopDealsCount(savedCount);
         continue;
@@ -816,13 +822,13 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           address: deal.address,
           city: deal.city,
           state: deal.state,
-          bedrooms: undefined, // Not available in topDeals summary
-          bathrooms: undefined,
+          bedrooms: deal.bedrooms ?? undefined,
+          bathrooms: deal.bathrooms ?? undefined,
           monthlyRent: deal.rent,
           zillowUrl: deal.zillowUrl,
           imageUrl: deal.image,
-          annualRevenue: deal.annualProfit + deal.rent * 12, // Approximate from profit
-          monthlyRevenue: Math.round((deal.annualProfit + deal.rent * 12) / 12),
+          annualRevenue: deal.annualRevenue ?? Math.round(deal.annualProfit + deal.rent * 12),
+          monthlyRevenue: deal.monthlyRevenue ?? Math.round((deal.annualProfit + deal.rent * 12) / 12),
           occupancyRate: deal.occupancy,
           averageDailyRate: deal.adr,
           estimatedProfit: deal.annualProfit,
@@ -1726,11 +1732,11 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                         <div className="mt-4 flex flex-wrap justify-center gap-3">
                           <button
                             onClick={handleSaveTopDeals}
-                            disabled={isSavingTopDeals || batchResults.topDeals.every(d => favorites.has(d.id))}
+                            disabled={isSavingTopDeals || batchResults.topDeals.every(d => favoritesDbIds.has(d.id))}
                             className="text-sm px-5 py-2.5 rounded-lg transition-all font-medium flex items-center gap-2 disabled:opacity-50"
                             style={{ 
-                              backgroundColor: batchResults.topDeals.every(d => favorites.has(d.id)) ? 'oklch(0.92 0.03 145)' : 'oklch(0.55 0.14 75)',
-                              color: batchResults.topDeals.every(d => favorites.has(d.id)) ? 'oklch(0.35 0.12 145)' : 'white',
+                              backgroundColor: batchResults.topDeals.every(d => favoritesDbIds.has(d.id)) ? 'oklch(0.92 0.03 145)' : 'oklch(0.55 0.14 75)',
+                              color: batchResults.topDeals.every(d => favoritesDbIds.has(d.id)) ? 'oklch(0.35 0.12 145)' : 'white',
                             }}
                           >
                             {isSavingTopDeals ? (
@@ -1738,7 +1744,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 Saving {savedTopDealsCount}/{batchResults.topDeals.length}...
                               </>
-                            ) : batchResults.topDeals.every(d => favorites.has(d.id)) ? (
+                            ) : batchResults.topDeals.every(d => favoritesDbIds.has(d.id)) ? (
                               <>
                                 <CheckCircle2 className="w-4 h-4" />
                                 All Saved to Favorites

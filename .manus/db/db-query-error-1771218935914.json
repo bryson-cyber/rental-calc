@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, address, bedrooms, bathrooms, monthly_rent, annual_revenue, created_at FROM favorite_properties ORDER BY created_at DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, bedrooms, bathrooms, monthly_rent, annual_revenue, created_at FROM favorite_properties ORDER BY created_at DESC LIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'monthly_rent' in 'field list'"
+  ]
+}

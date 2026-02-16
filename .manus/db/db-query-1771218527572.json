@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, LEFT(address, 30) as addr, bedrooms, bathrooms, annualRevenue, monthlyRent, LEFT(imageUrl, 40) as img FROM favorite_properties ORDER BY id DESC LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, LEFT(address, 30) as addr, bedrooms, bathrooms, annualRevenue, monthlyRent, LEFT(imageUrl, 40) as img FROM favorite_properties ORDER BY id DESC LIMIT 10",
+  "rows": [
+    {
+      "id": "300001",
+      "addr": "295 Chestnut Ave, Carlsbad, CA",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenue": "52941",
+      "monthlyRent": "2400",
+      "img": "https://photos.zillowstatic.com/fp/18198"
+    },
+    {
+      "id": "270009",
+      "addr": "165 E Miller Rd, Ithaca, NY 14",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "2970",
+      "img": "https://photos.zillowstatic.com/fp/80659"
+    },
+    {
+      "id": "270008",
+      "addr": "325 W Seneca St #111-7, Ithaca",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "820",
+      "img": "https://photos.zillowstatic.com/fp/ae961"
+    },
+    {
+      "id": "270007",
+      "addr": "312 Farm St, Ithaca, NY 14850",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenue": "NULL",
+      "monthlyRent": "1545",
+      "img": "https://photos.zillowstatic.com/fp/6dca8"
+    },
+    {
+      "id": "270006",
+      "addr": "16 W Pasadena Ave #5, Phoenix,",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenue": "35607",
+      "monthlyRent": "1695",
+      "img": "https://photos.zillowstatic.com/fp/773ad"
+    },
+    {
+      "id": "270005",
+      "addr": "3848 N 3rd Ave Unit 2052, Phoe",
+      "bedrooms": "2",
+      "bathrooms": "2.0",
+      "annualRevenue": "32260",
+      "monthlyRent": "1595",
+      "img": "https://photos.zillowstatic.com/fp/70871"
+    },
+    {
+      "id": "270004",
+      "addr": "3848 N 3rd Ave Unit 3021, Phoe",
+      "bedrooms": "2",
+      "bathrooms": "2.0",
+      "annualRevenue": "32260",
+      "monthlyRent": "1500",
+      "img": "https://photos.zillowstatic.com/fp/fe7be"
+    },
+    {
+      "id": "270003",
+      "addr": "35 W Medlock Dr #4, Phoenix, A",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenue": "36145",
+      "monthlyRent": "1349",
+      "img": "https://photos.zillowstatic.com/fp/947f8"
+    },
+    {
+      "id": "270001",
+      "addr": "1308 W Whitton Ave APT 2, Phoe",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenue": "29804",
+      "monthlyRent": "1250",
+      "img": "https://photos.zillowstatic.com/fp/27d4d"
+    },
+    {
+      "id": "240003",
+      "addr": "442 S Prince St, Lancaster, PA",
+      "bedrooms": "3",
+      "bathrooms": "3.0",
+      "annualRevenue": "56234",
+      "monthlyRent": "2800",
+      "img": "https://photos.zillowstatic.com/fp/aa4f7"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddr\tbedrooms\tbathrooms\tannualRevenue\tmonthlyRent\timg\n300001\t295 Chestnut Ave, Carlsbad, CA\t1\t1.0\t52941\t2400\thttps://photos.zillowstatic.com/fp/18198\n270009\t165 E Miller Rd, Ithaca, NY 14\t3\t2.0\tNULL\t2970\thttps://photos.zillowstatic.com/fp/80659\n270008\t325 W Seneca St #111-7, Ithaca\t1\t1.0\tNULL\t820\thttps://photos.zillowstatic.com/fp/ae961\n270007\t312 Farm St, Ithaca, NY 14850\t1\t1.0\tNULL\t1545\thttps://photos.zillowstatic.com/fp/6dca8\n270006\t16 W Pasadena Ave #5, Phoenix,\t2\t1.0\t35607\t1695\thttps://photos.zillowstatic.com/fp/773ad\n270005\t3848 N 3rd Ave Unit 2052, Phoe\t2\t2.0\t32260\t1595\thttps://photos.zillowstatic.com/fp/70871\n270004\t3848 N 3rd Ave Unit 3021, Phoe\t2\t2.0\t32260\t1500\thttps://photos.zillowstatic.com/fp/fe7be\n270003\t35 W Medlock Dr #4, Phoenix, A\t2\t1.0\t36145\t1349\thttps://photos.zillowstatic.com/fp/947f8\n270001\t1308 W Whitton Ave APT 2, Phoe\t2\t1.0\t29804\t1250\thttps://photos.zillowstatic.com/fp/27d4d\n240003\t442 S Prince St, Lancaster, PA\t3\t3.0\t56234\t2800\thttps://photos.zillowstatic.com/fp/aa4f7\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

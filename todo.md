@@ -11621,3 +11621,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: framer-motion button intercepting clicks - replaced with regular button
 - [x] Removed debug console.log statements
 - [x] All 1333 tests passing
+
+## Save All Top Deals → Compare Favorites Flow Test (February 16, 2026)
+- [x] Test "Save All 5 Top Deals" button in Step 2 batch results
+- [x] Verify saved properties appear in Step 6 (Compare Favorites)
+- [x] Test the comparison table with saved properties
+- [x] Fix: For Sale property ($175K) was stored as monthlyRent instead of being excluded
+- [x] Fix: ComparisonDashboard now shows N/A for profit/ratio/grade when no rent data
+- [x] Fix: Best Deal banner now skips properties without rent data in arbitrage mode
+- [x] Fix: OpportunityFinder save handler now only stores price as monthlyRent for For Rent properties
+- [x] Fix: Property images now display correctly in comparison table (imageUrl passed through)
+- [x] All fixes verified in browser
