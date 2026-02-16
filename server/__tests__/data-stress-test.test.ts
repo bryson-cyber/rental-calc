@@ -3,7 +3,7 @@
  * 
  * Tests ALL data outputs across the rental calculator pipeline:
  * 1. Revenue calculations (annual, monthly, ADR, occupancy consistency)
- * 2. P75 adjustment (cap enforcement, edge cases, negative scenarios)
+ * 2. Comp-median adjustment (median-based revenue, edge cases, bidirectional)
  * 3. Comp filtering (bedroom/bathroom matching, inactive filtering, distance)
  * 4. Shared report generation (data integrity from raw → shared format)
  * 5. Forecast consistency (monthly totals vs annual, seasonal shape)
@@ -33,38 +33,43 @@ function getMedian(arr: number[]) {
   return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
 }
 
-/** Replicate the P75 adjustment logic from airdna.ts */
-function applyP75Adjustment(
+/** Replicate the comp-median adjustment logic from airdna.ts */
+function applyCompMedianAdjustment(
   rentalizerRevenue: number,
-  exactMatchComps: Array<{ annual_revenue: number; adr: number; occupancy: number }>,
-  options: { capMultiplier?: number } = {}
+  exactMatchComps: Array<{ annual_revenue: number; adr: number; occupancy: number }>
 ) {
-  const capMultiplier = options.capMultiplier ?? 1.5;
-  
   if (exactMatchComps.length < 3) {
     return { adjusted: false, reason: 'insufficient_comps', finalRevenue: rentalizerRevenue };
   }
   
   const sortedRevenues = exactMatchComps.map(c => c.annual_revenue).sort((a, b) => a - b);
-  const compP75Revenue = getPercentile(sortedRevenues, 75);
-  const maxAllowedRevenue = Math.floor(rentalizerRevenue * capMultiplier);
-  const targetRevenue = Math.min(compP75Revenue, maxAllowedRevenue);
+  const sortedAdrs = exactMatchComps.map(c => c.adr).sort((a, b) => a - b);
+  const sortedOccs = exactMatchComps.map(c => c.occupancy).sort((a, b) => a - b);
   
-  if (targetRevenue <= rentalizerRevenue) {
-    return { adjusted: false, reason: 'rentalizer_already_higher', finalRevenue: rentalizerRevenue, compP75Revenue, maxAllowedRevenue };
+  const compMedianRevenue = getMedian(sortedRevenues);
+  const compMedianAdr = getMedian(sortedAdrs);
+  const compMedianOccupancy = getMedian(sortedOccs);
+  const compQ1Revenue = getPercentile(sortedRevenues, 25);
+  const compQ3Revenue = getPercentile(sortedRevenues, 75);
+  
+  const targetRevenue = compMedianRevenue;
+  
+  if (targetRevenue === rentalizerRevenue) {
+    return { adjusted: false, reason: 'median_equals_rentalizer', finalRevenue: rentalizerRevenue, compMedianRevenue };
   }
   
   const scaleFactor = targetRevenue / rentalizerRevenue;
-  const compMedianRevenue = getMedian(sortedRevenues);
   
   return {
     adjusted: true,
     finalRevenue: targetRevenue,
-    compP75Revenue,
-    maxAllowedRevenue,
-    scaleFactor,
     compMedianRevenue,
-    wasCapped: compP75Revenue > maxAllowedRevenue,
+    compMedianAdr,
+    compMedianOccupancy,
+    compQ1Revenue,
+    compQ3Revenue,
+    scaleFactor,
+    adjustedDown: targetRevenue < rentalizerRevenue,
   };
 }
 
@@ -199,7 +204,7 @@ describe('Revenue Calculation Consistency', () => {
   });
 
   it('occupancy normalization: values > 1 should be divided by 100', () => {
-    // The P75 code normalizes occupancy > 1 to decimal
+    // The comp-median code normalizes occupancy > 1 to decimal
     const normalize = (occ: number) => occ > 1 ? occ / 100 : occ;
     expect(normalize(73)).toBeCloseTo(0.73, 2);
     expect(normalize(0.73)).toBeCloseTo(0.73, 2);
@@ -234,13 +239,13 @@ describe('Revenue Calculation Consistency', () => {
 
 
 // ============================================
-// TEST SUITE 2: P75 ADJUSTMENT COMPREHENSIVE
+// TEST SUITE 2: COMP-MEDIAN ADJUSTMENT COMPREHENSIVE
 // ============================================
 
-describe('P75 Adjustment Comprehensive', () => {
-  describe('Cap enforcement (1.5x)', () => {
-    it('caps at 1.5x when P75 exceeds the cap', () => {
-      const result = applyP75Adjustment(20000, [
+describe('Comp-Median Adjustment Comprehensive', () => {
+  describe('Median as headline revenue', () => {
+    it('uses comp median when comps are higher than Rentalizer', () => {
+      const result = applyCompMedianAdjustment(20000, [
         { annual_revenue: 25000, adr: 150, occupancy: 0.65 },
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
         { annual_revenue: 35000, adr: 190, occupancy: 0.75 },
@@ -248,65 +253,62 @@ describe('P75 Adjustment Comprehensive', () => {
         { annual_revenue: 50000, adr: 250, occupancy: 0.85 },
       ]);
       expect(result.adjusted).toBe(true);
-      // P75 of [25K, 30K, 35K, 40K, 50K] = 40000
-      // 1.5x cap = 30000
-      // target = min(40000, 30000) = 30000
-      expect(result.finalRevenue).toBe(30000);
-      expect(result.wasCapped).toBe(true);
+      // Median of [25K, 30K, 35K, 40K, 50K] = 35000
+      expect(result.finalRevenue).toBe(35000);
     });
 
-    it('does not cap when P75 is below 1.5x', () => {
-      const result = applyP75Adjustment(20000, [
-        { annual_revenue: 18000, adr: 120, occupancy: 0.55 },
-        { annual_revenue: 22000, adr: 140, occupancy: 0.60 },
-        { annual_revenue: 25000, adr: 155, occupancy: 0.65 },
-        { annual_revenue: 28000, adr: 170, occupancy: 0.70 },
-      ]);
-      expect(result.adjusted).toBe(true);
-      // Sorted: [18K, 22K, 25K, 28K], P75 idx = ceil(75/100 * 4) - 1 = 2 → 25000
-      // 1.5x cap = 30000
-      // target = min(25000, 30000) = 25000
-      expect(result.finalRevenue).toBe(25000);
-      expect(result.wasCapped).toBe(false);
-    });
-
-    it('cap is exactly floor(rentalizer * 1.5)', () => {
-      // 20889 * 1.5 = 31333.5 → floor = 31333
-      const result = applyP75Adjustment(20889, [
+    it('adjusts downward when comp median is lower than Rentalizer', () => {
+      const result = applyCompMedianAdjustment(50000, [
         { annual_revenue: 25000, adr: 150, occupancy: 0.65 },
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
-        { annual_revenue: 33000, adr: 190, occupancy: 0.75 },
+        { annual_revenue: 35000, adr: 190, occupancy: 0.75 },
         { annual_revenue: 40000, adr: 210, occupancy: 0.80 },
       ]);
-      expect(result.maxAllowedRevenue).toBe(Math.floor(20889 * 1.5));
-      expect(result.maxAllowedRevenue).toBe(31333);
+      expect(result.adjusted).toBe(true);
+      // Median of [25K, 30K, 35K, 40K] = (30K+35K)/2 = 32500
+      expect(result.finalRevenue).toBe(32500);
+      expect(result.adjustedDown).toBe(true);
     });
 
-    it('cap uses Math.floor for clean integers', () => {
-      const oddValues = [20001, 33333, 99999, 12345, 77777];
-      for (const val of oddValues) {
-        const cap = Math.floor(val * 1.5);
-        expect(Number.isInteger(cap)).toBe(true);
-        expect(cap).toBeLessThanOrEqual(val * 1.5);
-      }
+    it('has no artificial cap — comp median is real data', () => {
+      const result = applyCompMedianAdjustment(20000, [
+        { annual_revenue: 80000, adr: 300, occupancy: 0.80 },
+        { annual_revenue: 90000, adr: 350, occupancy: 0.85 },
+        { annual_revenue: 100000, adr: 400, occupancy: 0.88 },
+      ]);
+      expect(result.adjusted).toBe(true);
+      // Median = 90000, which is 4.5x Rentalizer — no cap
+      expect(result.finalRevenue).toBe(90000);
+    });
+
+    it('Phoenix scenario: 2BR/1BA with $21K Rentalizer vs $32-42K comps', () => {
+      const result = applyCompMedianAdjustment(20889, [
+        { annual_revenue: 32000, adr: 110, occupancy: 0.75 },
+        { annual_revenue: 35000, adr: 113, occupancy: 0.78 },
+        { annual_revenue: 38000, adr: 120, occupancy: 0.80 },
+        { annual_revenue: 42000, adr: 134, occupancy: 0.82 },
+        { annual_revenue: 42000, adr: 137, occupancy: 0.85 },
+      ]);
+      expect(result.adjusted).toBe(true);
+      // Median of [32K, 35K, 38K, 42K, 42K] = 38000
+      expect(result.finalRevenue).toBe(38000);
     });
   });
 
   describe('No adjustment scenarios', () => {
-    it('no adjustment when Rentalizer >= P75', () => {
-      const result = applyP75Adjustment(50000, [
+    it('no adjustment when comp median equals Rentalizer', () => {
+      const result = applyCompMedianAdjustment(35000, [
         { annual_revenue: 30000, adr: 150, occupancy: 0.60 },
         { annual_revenue: 35000, adr: 170, occupancy: 0.65 },
         { annual_revenue: 40000, adr: 190, occupancy: 0.70 },
-        { annual_revenue: 45000, adr: 210, occupancy: 0.75 },
       ]);
       expect(result.adjusted).toBe(false);
-      expect(result.reason).toBe('rentalizer_already_higher');
-      expect(result.finalRevenue).toBe(50000);
+      expect(result.reason).toBe('median_equals_rentalizer');
+      expect(result.finalRevenue).toBe(35000);
     });
 
     it('no adjustment when fewer than 3 exact comps', () => {
-      const result = applyP75Adjustment(20000, [
+      const result = applyCompMedianAdjustment(20000, [
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
         { annual_revenue: 40000, adr: 210, occupancy: 0.80 },
       ]);
@@ -315,27 +317,15 @@ describe('P75 Adjustment Comprehensive', () => {
     });
 
     it('no adjustment when zero comps', () => {
-      const result = applyP75Adjustment(20000, []);
+      const result = applyCompMedianAdjustment(20000, []);
       expect(result.adjusted).toBe(false);
       expect(result.reason).toBe('insufficient_comps');
-    });
-
-    it('no adjustment when P75 equals Rentalizer exactly', () => {
-      const result = applyP75Adjustment(30000, [
-        { annual_revenue: 25000, adr: 150, occupancy: 0.60 },
-        { annual_revenue: 28000, adr: 160, occupancy: 0.65 },
-        { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
-      ]);
-      // P75 of [25K, 28K, 30K] = 30000
-      // target = min(30000, 45000) = 30000
-      // 30000 <= 30000, so no adjustment
-      expect(result.adjusted).toBe(false);
     });
   });
 
   describe('Scale factor correctness', () => {
-    it('scale factor is target / rentalizer', () => {
-      const result = applyP75Adjustment(20000, [
+    it('scale factor is median / rentalizer', () => {
+      const result = applyCompMedianAdjustment(20000, [
         { annual_revenue: 22000, adr: 140, occupancy: 0.60 },
         { annual_revenue: 25000, adr: 155, occupancy: 0.65 },
         { annual_revenue: 28000, adr: 170, occupancy: 0.70 },
@@ -345,20 +335,30 @@ describe('P75 Adjustment Comprehensive', () => {
       }
     });
 
-    it('scale factor is always > 1 when adjusted', () => {
+    it('scale factor can be < 1 when adjusting downward', () => {
+      const result = applyCompMedianAdjustment(50000, [
+        { annual_revenue: 20000, adr: 120, occupancy: 0.55 },
+        { annual_revenue: 25000, adr: 150, occupancy: 0.60 },
+        { annual_revenue: 30000, adr: 170, occupancy: 0.65 },
+      ]);
+      if (result.adjusted) {
+        expect(result.scaleFactor!).toBeLessThan(1);
+        expect(result.adjustedDown).toBe(true);
+      }
+    });
+
+    it('scale factor > 1 when adjusting upward', () => {
       const scenarios = [
         { rentalizer: 20000, comps: [25000, 30000, 35000] },
         { rentalizer: 10000, comps: [12000, 13000, 14000] },
-        { rentalizer: 50000, comps: [55000, 60000, 70000] },
       ];
       for (const s of scenarios) {
-        const result = applyP75Adjustment(
+        const result = applyCompMedianAdjustment(
           s.rentalizer,
           s.comps.map(r => ({ annual_revenue: r, adr: 150, occupancy: 0.70 }))
         );
-        if (result.adjusted) {
+        if (result.adjusted && !result.adjustedDown) {
           expect(result.scaleFactor!).toBeGreaterThan(1);
-          expect(result.scaleFactor!).toBeLessThanOrEqual(1.5); // capped at 1.5x
         }
       }
     });
@@ -366,28 +366,30 @@ describe('P75 Adjustment Comprehensive', () => {
 
   describe('Extreme value handling', () => {
     it('handles very low Rentalizer values', () => {
-      const result = applyP75Adjustment(1000, [
+      const result = applyCompMedianAdjustment(1000, [
         { annual_revenue: 5000, adr: 50, occupancy: 0.30 },
         { annual_revenue: 8000, adr: 70, occupancy: 0.40 },
         { annual_revenue: 10000, adr: 80, occupancy: 0.45 },
       ]);
       expect(result.adjusted).toBe(true);
-      expect(result.finalRevenue).toBeLessThanOrEqual(Math.floor(1000 * 1.5));
-      expect(result.finalRevenue).toBe(1500); // capped
+      // Median = 8000, no cap
+      expect(result.finalRevenue).toBe(8000);
     });
 
-    it('handles very high Rentalizer values', () => {
-      const result = applyP75Adjustment(500000, [
+    it('handles very high Rentalizer values (adjusts downward)', () => {
+      const result = applyCompMedianAdjustment(500000, [
         { annual_revenue: 400000, adr: 1200, occupancy: 0.90 },
         { annual_revenue: 450000, adr: 1300, occupancy: 0.92 },
         { annual_revenue: 480000, adr: 1400, occupancy: 0.94 },
       ]);
-      // P75 < Rentalizer, no adjustment
-      expect(result.adjusted).toBe(false);
+      // Median = 450000, different from 500000
+      expect(result.adjusted).toBe(true);
+      expect(result.finalRevenue).toBe(450000);
+      expect(result.adjustedDown).toBe(true);
     });
 
     it('handles comps with identical revenues', () => {
-      const result = applyP75Adjustment(20000, [
+      const result = applyCompMedianAdjustment(20000, [
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
         { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
@@ -403,10 +405,29 @@ describe('P75 Adjustment Comprehensive', () => {
         adr: 100 + i * 5,
         occupancy: 0.50 + i * 0.01,
       }));
-      const result = applyP75Adjustment(20000, comps);
+      const result = applyCompMedianAdjustment(20000, comps);
       expect(result.adjusted).toBe(true);
-      // P75 of 20K-69K range should be around 57K, capped at 30K
-      expect(result.finalRevenue).toBe(Math.floor(20000 * 1.5)); // capped
+      // Median of 20K-69K (50 items) = (44K+45K)/2 = 44500
+      expect(result.finalRevenue).toBe(44500);
+    });
+  });
+
+  describe('Q1/Q3 range', () => {
+    it('sets Q1 as low and Q3 as high', () => {
+      const result = applyCompMedianAdjustment(20000, [
+        { annual_revenue: 25000, adr: 150, occupancy: 0.65 },
+        { annual_revenue: 30000, adr: 170, occupancy: 0.70 },
+        { annual_revenue: 35000, adr: 190, occupancy: 0.75 },
+        { annual_revenue: 40000, adr: 210, occupancy: 0.80 },
+        { annual_revenue: 50000, adr: 250, occupancy: 0.85 },
+      ]);
+      expect(result.adjusted).toBe(true);
+      expect(result.compQ1Revenue).toBe(30000); // Q1
+      expect(result.compQ3Revenue).toBe(40000); // Q3
+      expect(result.finalRevenue).toBe(35000); // median
+      // Q1 <= median <= Q3
+      expect(result.compQ1Revenue!).toBeLessThanOrEqual(result.finalRevenue);
+      expect(result.finalRevenue).toBeLessThanOrEqual(result.compQ3Revenue!);
     });
   });
 });
@@ -632,13 +653,13 @@ describe('Shared Report Data Integrity', () => {
     expect(est.range.high).toBe(55000);
   });
 
-  it('revenue_estimate with P75 overrides uses median as low, P75 as high', () => {
-    const compMedian = 28000;
-    const compP75 = 35000;
-    const est = buildRevenueEstimate(32000, 180, 0.72, compMedian, compP75);
-    expect(est.range.low).toBe(28000); // median
-    expect(est.range.high).toBe(35000); // P75
-    expect(est.annual).toBe(32000); // target (capped P75)
+  it('revenue_estimate with comp overrides uses Q1 as low, Q3 as high', () => {
+    const compQ1 = 28000;
+    const compQ3 = 42000;
+    const est = buildRevenueEstimate(35000, 180, 0.72, compQ1, compQ3);
+    expect(est.range.low).toBe(28000); // Q1
+    expect(est.range.high).toBe(42000); // Q3
+    expect(est.annual).toBe(35000); // comp median
   });
 
   it('percentile calculation requires >= 5 unique revenues', () => {
@@ -901,16 +922,16 @@ describe('Edge Cases & Data Safety', () => {
     expect(allComps.length).toBe(0);
   });
 
-  it('handles single comp (not enough for P75)', () => {
-    const result = applyP75Adjustment(20000, [
+  it('handles single comp (not enough for comp-median)', () => {
+    const result = applyCompMedianAdjustment(20000, [
       { annual_revenue: 35000, adr: 190, occupancy: 0.75 },
     ]);
     expect(result.adjusted).toBe(false);
     expect(result.reason).toBe('insufficient_comps');
   });
 
-  it('handles two comps (not enough for P75)', () => {
-    const result = applyP75Adjustment(20000, [
+  it('handles two comps (not enough for comp-median)', () => {
+    const result = applyCompMedianAdjustment(20000, [
       { annual_revenue: 35000, adr: 190, occupancy: 0.75 },
       { annual_revenue: 40000, adr: 210, occupancy: 0.80 },
     ]);
@@ -918,17 +939,15 @@ describe('Edge Cases & Data Safety', () => {
     expect(result.reason).toBe('insufficient_comps');
   });
 
-  it('handles exactly 3 comps (minimum for P75)', () => {
-    const result = applyP75Adjustment(20000, [
+  it('handles exactly 3 comps (minimum for comp-median)', () => {
+    const result = applyCompMedianAdjustment(20000, [
       { annual_revenue: 25000, adr: 155, occupancy: 0.65 },
       { annual_revenue: 28000, adr: 170, occupancy: 0.70 },
       { annual_revenue: 30000, adr: 180, occupancy: 0.73 },
     ]);
-    // P75 of [25K, 28K, 30K] = 30000
-    // 1.5x cap = 30000
-    // target = min(30000, 30000) = 30000
+    // Median of [25K, 28K, 30K] = 28000
     expect(result.adjusted).toBe(true);
-    expect(result.finalRevenue).toBe(30000);
+    expect(result.finalRevenue).toBe(28000);
   });
 
   it('currency formatting produces valid output', () => {
@@ -989,7 +1008,7 @@ describe('Edge Cases & Data Safety', () => {
 // ============================================
 
 describe('Full Pipeline Simulation', () => {
-  it('complete property report flow: Rentalizer → P75 → Shared Report', () => {
+  it('complete property report flow: Rentalizer → Comp Median → Shared Report', () => {
     // Step 1: Simulate Rentalizer response
     const rentalizerRevenue = 20889;
     const rentalizerAdr = 120;
@@ -1004,35 +1023,31 @@ describe('Full Pipeline Simulation', () => {
       { annual_revenue: 35000, adr: 200, occupancy: 0.78 },
     ];
     
-    // Step 3: Apply P75 adjustment
-    const p75Result = applyP75Adjustment(rentalizerRevenue, comps);
-    expect(p75Result.adjusted).toBe(true);
+    // Step 3: Apply comp-median adjustment
+    const medianResult = applyCompMedianAdjustment(rentalizerRevenue, comps);
+    expect(medianResult.adjusted).toBe(true);
     
-    // P75 of [25K, 28K, 30K, 33K, 35K] = 33000
-    // 1.5x cap = floor(20889 * 1.5) = 31333
-    // target = min(33000, 31333) = 31333
-    expect(p75Result.finalRevenue).toBe(31333);
-    expect(p75Result.wasCapped).toBe(true);
+    // Median of [25K, 28K, 30K, 33K, 35K] = 30000
+    expect(medianResult.finalRevenue).toBe(30000);
     
     // Step 4: Build shared report revenue estimate
-    const finalRevenue = p75Result.finalRevenue;
-    const compMedian = p75Result.compMedianRevenue!;
-    const compP75 = p75Result.compP75Revenue!;
+    const finalRevenue = medianResult.finalRevenue;
+    const compQ1 = medianResult.compQ1Revenue!;
+    const compQ3 = medianResult.compQ3Revenue!;
     
     const est = buildRevenueEstimate(
       finalRevenue,
-      Math.round(rentalizerAdr * (p75Result.scaleFactor || 1)),
-      rentalizerOccupancy,
-      compMedian,  // low = median
-      compP75      // high = raw P75
+      medianResult.compMedianAdr!,
+      medianResult.compMedianOccupancy!,
+      compQ1,   // low = Q1
+      compQ3    // high = Q3
     );
     
     // Verify all fields are populated
-    expect(est.annual).toBe(31333);
-    expect(est.monthly).toBe(Math.round(31333 / 12));
-    expect(est.range.low).toBe(compMedian);
-    expect(est.range.high).toBe(33000); // raw P75
-    expect(est.occupancy).toBe(0.48);
+    expect(est.annual).toBe(30000);
+    expect(est.monthly).toBe(Math.round(30000 / 12));
+    expect(est.range.low).toBe(compQ1);
+    expect(est.range.high).toBe(compQ3);
     
     // Step 5: Verify consistency
     expect(est.annual).toBeGreaterThanOrEqual(est.range.low);
@@ -1041,7 +1056,7 @@ describe('Full Pipeline Simulation', () => {
     expect(est.monthly * 12).toBeLessThanOrEqual(est.annual + 12);
   });
 
-  it('complete flow with no P75 adjustment (Rentalizer is high)', () => {
+  it('complete flow with comp median lower than Rentalizer (adjusts down)', () => {
     const rentalizerRevenue = 50000;
     const comps = [
       { annual_revenue: 30000, adr: 170, occupancy: 0.65 },
@@ -1049,13 +1064,14 @@ describe('Full Pipeline Simulation', () => {
       { annual_revenue: 40000, adr: 210, occupancy: 0.75 },
     ];
     
-    const p75Result = applyP75Adjustment(rentalizerRevenue, comps);
-    expect(p75Result.adjusted).toBe(false);
+    const medianResult = applyCompMedianAdjustment(rentalizerRevenue, comps);
+    expect(medianResult.adjusted).toBe(true);
+    // Median = 35000, lower than Rentalizer 50000
+    expect(medianResult.finalRevenue).toBe(35000);
+    expect(medianResult.adjustedDown).toBe(true);
     
-    const est = buildRevenueEstimate(rentalizerRevenue, 200, 0.68);
-    expect(est.annual).toBe(50000);
-    expect(est.range.low).toBe(45000);
-    expect(est.range.high).toBe(55000);
+    const est = buildRevenueEstimate(medianResult.finalRevenue, medianResult.compMedianAdr!, medianResult.compMedianOccupancy!);
+    expect(est.annual).toBe(35000);
   });
 
   it('complete flow with forecast scaling', () => {
@@ -1069,16 +1085,15 @@ describe('Full Pipeline Simulation', () => {
       { annual_revenue: 30000, adr: 180, occupancy: 0.73 },
     ];
     
-    const p75Result = applyP75Adjustment(rentalizerRevenue, comps);
-    expect(p75Result.adjusted).toBe(true);
+    const medianResult = applyCompMedianAdjustment(rentalizerRevenue, comps);
+    expect(medianResult.adjusted).toBe(true);
     
-    const scaleFactor = p75Result.scaleFactor!;
+    const scaleFactor = medianResult.scaleFactor!;
     const scaled = scaleMonthlyForecast(forecast, scaleFactor);
     const scaledTotal = scaled.reduce((sum, m) => sum + m.revenue, 0);
     
     // Scaled total should be approximately originalTotal * scaleFactor
     expect(scaledTotal).toBeGreaterThan(originalTotal);
-    expect(scaledTotal).toBeLessThanOrEqual(Math.round(originalTotal * 1.5) + 12);
     
     // All months should be positive
     for (const m of scaled) {
@@ -1093,55 +1108,46 @@ describe('Full Pipeline Simulation', () => {
 // TEST SUITE 10: LIVE DATA SCENARIOS
 // ============================================
 
-describe('Live Data Scenarios (from actual test results)', () => {
-  // These are the actual results from the 10-address test run
+describe('Live Data Scenarios (comp-median approach)', () => {
+  // Comp-median results: final = comp median of exact-match comps
+  // When comps exist, final may be higher OR lower than Rentalizer
+  // When no comps, final = Rentalizer (fallback)
   const liveResults = [
-    { address: 'Phoenix, AZ', rentalizer: 20889, final: 32174, comps: 7, adjusted: true },
-    { address: 'Denver, CO (3BR)', rentalizer: 44778, final: 44778, comps: 0, adjusted: false },
-    { address: 'Wilmington, NC', rentalizer: 41391, final: 82782, comps: 5, adjusted: true },
-    { address: 'Miami Beach, FL', rentalizer: 53954, final: 93726, comps: 8, adjusted: true },
-    { address: 'Nashville, TN', rentalizer: 124056, final: 124056, comps: 0, adjusted: false },
-    { address: 'Atlanta, GA', rentalizer: 44012, final: 85284, comps: 6, adjusted: true },
-    { address: 'Austin, TX', rentalizer: 56978, final: 64828, comps: 4, adjusted: true },
-    { address: 'New Orleans, LA', rentalizer: 84787, final: 120280, comps: 7, adjusted: true },
-    { address: 'Baltimore, MD', rentalizer: 41102, final: 41102, comps: 0, adjusted: false },
-    { address: 'Denver, CO (1BR)', rentalizer: 34867, final: 58554, comps: 5, adjusted: true },
+    { address: 'Phoenix, AZ (2BR/1BA)', rentalizer: 20889, comps: 7, adjusted: true, description: 'Low Rentalizer, comps should be higher' },
+    { address: 'Denver, CO (3BR)', rentalizer: 44778, comps: 0, adjusted: false, description: 'No exact-match comps, Rentalizer fallback' },
+    { address: 'Nashville, TN', rentalizer: 124056, comps: 0, adjusted: false, description: 'High Rentalizer, no comps' },
+    { address: 'Baltimore, MD', rentalizer: 41102, comps: 0, adjusted: false, description: 'No exact-match comps' },
   ];
 
   it('all live results have positive revenue', () => {
     for (const r of liveResults) {
       expect(r.rentalizer).toBeGreaterThan(0);
-      expect(r.final).toBeGreaterThan(0);
-      expect(r.final).toBeGreaterThanOrEqual(r.rentalizer);
     }
   });
 
-  it('adjusted results respect 1.5x cap (with 2x legacy tolerance)', () => {
-    for (const r of liveResults) {
-      if (r.adjusted) {
-        // NOTE: The live test was run with the 2x cap before the reduction to 1.5x
-        // So some results may exceed 1.5x but should not exceed 2x
-        const ratio = r.final / r.rentalizer;
-        expect(ratio).toBeGreaterThan(1);
-        expect(ratio).toBeLessThanOrEqual(2.01); // 2x cap + rounding tolerance
-      }
-    }
-  });
-
-  it('non-adjusted results have identical rentalizer and final', () => {
+  it('non-adjusted results fall back to Rentalizer', () => {
     for (const r of liveResults) {
       if (!r.adjusted) {
-        expect(r.final).toBe(r.rentalizer);
+        expect(r.comps).toBe(0);
       }
     }
   });
 
-  it('all 10 addresses returned valid data', () => {
-    expect(liveResults.length).toBe(10);
+  it('comp-median approach: adjusted results are based on real comp data', () => {
+    // With comp-median, the final number IS the median of what real properties earn
+    // It can be higher or lower than Rentalizer — both are valid
+    for (const r of liveResults) {
+      if (r.adjusted) {
+        expect(r.comps).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('all addresses returned valid data', () => {
+    expect(liveResults.length).toBe(4);
     for (const r of liveResults) {
       expect(r.address).toBeTruthy();
       expect(typeof r.rentalizer).toBe('number');
-      expect(typeof r.final).toBe('number');
     }
   });
 });

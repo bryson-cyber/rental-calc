@@ -2719,8 +2719,8 @@ export async function getComprehensivePropertyReport(
   const reportCacheKey = `property_comprehensive:${address}:${bedrooms || 'auto'}:${bathrooms || 'auto'}:${accommodates || 'auto'}`;
   const cachedReport = await apiCache.getAsync<Awaited<ReturnType<typeof getComprehensivePropertyReport>>>(reportCacheKey);
   if (cachedReport) {
-    // Check if cached result has P75 adjustment applied (indicated by _original_rentalizer)
-    // If not, the cache is stale (pre-P75 code) — apply P75 now
+    // Check if cached result has comp-median adjustment applied (indicated by _original_rentalizer)
+    // If not, the cache is stale (pre-comp-median code) — apply comp median now
     const cachedProp = cachedReport.property as any;
     if (cachedProp?.estimates && !cachedProp._original_rentalizer && cachedReport.same_bedroom_comps?.length > 0) {
       const propBr = bedrooms || cachedProp.property?.bedrooms;
@@ -2732,18 +2732,19 @@ export async function getComprehensivePropertyReport(
         );
         if (exactComps.length >= 3) {
           const sortedRevs = exactComps.map((c: any) => c.annual_revenue).sort((a: number, b: number) => a - b);
-          const p75Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
-          const compP75 = sortedRevs[p75Idx];
+          const sortedAdrs = exactComps.map((c: any) => c.adr).sort((a: number, b: number) => a - b);
+          const sortedOccs = exactComps.map((c: any) => c.occupancy).sort((a: number, b: number) => a - b);
+          const medianIdx = Math.floor(sortedRevs.length / 2);
+          const median = sortedRevs.length % 2 === 0 ? Math.round((sortedRevs[medianIdx - 1] + sortedRevs[medianIdx]) / 2) : sortedRevs[medianIdx];
+          const medianAdr = sortedAdrs.length % 2 === 0 ? Math.round((sortedAdrs[medianIdx - 1] + sortedAdrs[medianIdx]) / 2) : sortedAdrs[medianIdx];
+          const medianOcc = sortedOccs.length % 2 === 0 ? (sortedOccs[medianIdx - 1] + sortedOccs[medianIdx]) / 2 : sortedOccs[medianIdx];
+          const q1Idx = Math.max(0, Math.ceil((25 / 100) * sortedRevs.length) - 1);
+          const q3Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
           const rentalizerRev = cachedProp.estimates.annual_revenue;
-          const maxAllowed = Math.floor(rentalizerRev * 1.5);
-          const target = Math.min(compP75, maxAllowed);
-          if (target > rentalizerRev) {
-            console.log(`[Property Report] CACHE HIT — applying P75 adjustment: $${rentalizerRev.toLocaleString()} -> $${target.toLocaleString()} (${exactComps.length} comps)`);
-            const scale = target / rentalizerRev;
-            const sortedAdrs = exactComps.map((c: any) => c.adr).sort((a: number, b: number) => a - b);
-            const sortedOccs = exactComps.map((c: any) => c.occupancy).sort((a: number, b: number) => a - b);
-            const medianIdx = Math.floor(sortedRevs.length / 2);
-            const median = sortedRevs.length % 2 === 0 ? Math.round((sortedRevs[medianIdx - 1] + sortedRevs[medianIdx]) / 2) : sortedRevs[medianIdx];
+          
+          if (median !== rentalizerRev) {
+            console.log(`[Property Report] CACHE HIT — applying comp-median adjustment: $${rentalizerRev.toLocaleString()} -> $${median.toLocaleString()} (${exactComps.length} comps)`);
+            const scale = median / rentalizerRev;
             cachedProp._original_rentalizer = {
               annual_revenue: rentalizerRev,
               annual_revenue_low: cachedProp.estimates.annual_revenue_low,
@@ -2751,11 +2752,11 @@ export async function getComprehensivePropertyReport(
               average_daily_rate: cachedProp.estimates.average_daily_rate,
               occupancy_rate: cachedProp.estimates.occupancy_rate,
             };
-            cachedProp.estimates.annual_revenue = target;
-            cachedProp.estimates.average_daily_rate = sortedAdrs[p75Idx];
-            cachedProp.estimates.occupancy_rate = sortedOccs[p75Idx] > 1 ? sortedOccs[p75Idx] / 100 : sortedOccs[p75Idx];
-            cachedProp.estimates.annual_revenue_low = median;
-            cachedProp.estimates.annual_revenue_high = compP75;
+            cachedProp.estimates.annual_revenue = median;
+            cachedProp.estimates.average_daily_rate = medianAdr;
+            cachedProp.estimates.occupancy_rate = medianOcc > 1 ? medianOcc / 100 : medianOcc;
+            cachedProp.estimates.annual_revenue_low = sortedRevs[q1Idx];
+            cachedProp.estimates.annual_revenue_high = sortedRevs[q3Idx];
             if (cachedProp.monthly_forecast?.length > 0) {
               cachedProp.monthly_forecast = cachedProp.monthly_forecast.map((m: any) => ({
                 ...m,
@@ -2763,17 +2764,17 @@ export async function getComprehensivePropertyReport(
                 adr: Math.round(m.adr * scale),
               }));
             }
-            // Update cache with P75-adjusted result
+            // Update cache with comp-median-adjusted result
             apiCache.set(reportCacheKey, cachedReport, 'property_details');
           } else {
-            console.log(`[Property Report] CACHE HIT — P75 not needed (Rentalizer $${rentalizerRev} >= P75 $${target})`);
+            console.log(`[Property Report] CACHE HIT — comp median equals Rentalizer ($${rentalizerRev})`);
           }
         } else {
-          console.log(`[Property Report] CACHE HIT — only ${exactComps.length} exact comps, P75 skipped`);
+          console.log(`[Property Report] CACHE HIT — only ${exactComps.length} exact comps, comp-median skipped`);
         }
       }
     } else {
-      console.log(`[Property Report] CACHE HIT for ${address} — P75 already applied or no comps`);
+      console.log(`[Property Report] CACHE HIT for ${address} — comp-median already applied or no comps`);
     }
     return cachedReport;
   }
@@ -3687,16 +3688,16 @@ export async function getComprehensivePropertyReport(
   
   // ============================================
   // ============================================
-  // COMP P75 ADJUSTMENT (Option B)
-  // Use the 75th percentile of same BR+BA comps as the headline revenue.
-  console.log(`\n\n>>> P75 ADJUSTMENT BLOCK REACHED <<<`);
+  // COMP-MEDIAN REVENUE ADJUSTMENT
+  // Use the median of exact-match (same BR+BA) comps as the headline revenue.
+  // This shows what real operators with the same property type are actually earning.
+  // Rentalizer is kept as fallback when insufficient comps exist.
+  // ============================================
+  console.log(`\n\n>>> COMP-MEDIAN ADJUSTMENT BLOCK REACHED <<<`);
   console.log(`sameBedroomComps count: ${sameBedroomComps.length}`);
   console.log(`propertyBedrooms: ${propertyBedrooms} (type: ${typeof propertyBedrooms}), propertyBathrooms: ${propertyBathrooms} (type: ${typeof propertyBathrooms})`);
   console.log(`Sample comp BR/BA:`, sameBedroomComps.slice(0, 3).map(c => `${c.bedrooms}BR/${c.bathrooms}BA (types: ${typeof c.bedrooms}/${typeof c.bathrooms}), rev: $${c.annual_revenue}`));
-  // P75 represents what the top 25% of operators earn — a reasonable target
-  // for a professionally managed property. Capped at 1.5x the Rentalizer
-  // estimate to prevent unrealistic outliers.
-  // ============================================
+  
   const exactMatchComps = sameBedroomComps.filter(
     c => c.bedrooms === propertyBedrooms && matchesBathrooms(c.bathrooms, propertyBathrooms) && c.annual_revenue > 0
   );
@@ -3717,27 +3718,25 @@ export async function getComprehensivePropertyReport(
       return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
     };
     
-    const compP75Revenue = getPercentile(sortedRevenues, 75);
-    const compP75Adr = getPercentile(sortedAdrs, 75);
-    const compP75Occupancy = getPercentile(sortedOccupancies, 75);
-    const compP25Revenue = getPercentile(sortedRevenues, 25);
+    // Comp-based values: median is the headline, Q1 is low, Q3 is high
     const compMedianRevenue = getMedian(sortedRevenues);
+    const compMedianAdr = getMedian(sortedAdrs);
+    const compMedianOccupancy = getMedian(sortedOccupancies);
+    const compQ1Revenue = getPercentile(sortedRevenues, 25);
+    const compQ3Revenue = getPercentile(sortedRevenues, 75);
     
     const rentalizerRevenue = propertyEstimate.estimates.annual_revenue;
     
-    // Apply 1.5x Rentalizer cap to prevent unrealistic outliers
-    const maxAllowedRevenue = Math.floor(rentalizerRevenue * 1.5);
-    const targetRevenue = Math.min(compP75Revenue, maxAllowedRevenue);
+    // Use comp median as the headline — this is what real operators are actually earning
+    const targetRevenue = compMedianRevenue;
     
-    // Only adjust upward — if P75 (capped) is higher than Rentalizer, use it
-    if (targetRevenue > rentalizerRevenue) {
+    console.log(`[Comp-Median Adjustment] Comp median: $${compMedianRevenue.toLocaleString()}, Rentalizer: $${rentalizerRevenue.toLocaleString()}, Q1: $${compQ1Revenue.toLocaleString()}, Q3: $${compQ3Revenue.toLocaleString()} (${exactMatchComps.length} exact-match comps)`);
+    
+    // Only adjust if comp median differs from Rentalizer
+    if (targetRevenue !== rentalizerRevenue) {
       const scaleFactor = targetRevenue / rentalizerRevenue;
-      // Calculate ADR and occupancy proportionally to the revenue adjustment
-      const revenueRatio = targetRevenue / compP75Revenue; // 1.0 if no cap, <1.0 if capped
-      const targetAdr = Math.round(compP75Adr * revenueRatio);
-      const targetOccupancy = compP75Occupancy;
       
-      console.log(`[Comp P75 Adjustment] Upgrading revenue: $${rentalizerRevenue.toLocaleString()} → $${targetRevenue.toLocaleString()} (P75: $${compP75Revenue.toLocaleString()}, cap: $${maxAllowedRevenue.toLocaleString()}, ${exactMatchComps.length} exact-match comps, scale: ${scaleFactor.toFixed(2)}x)`);
+      console.log(`[Comp-Median Adjustment] Setting revenue: $${rentalizerRevenue.toLocaleString()} → $${targetRevenue.toLocaleString()} (${exactMatchComps.length} exact-match comps, scale: ${scaleFactor.toFixed(2)}x)`);
       
       // Store original Rentalizer values for reference
       (propertyEstimate as any)._original_rentalizer = {
@@ -3748,13 +3747,13 @@ export async function getComprehensivePropertyReport(
         occupancy_rate: propertyEstimate.estimates.occupancy_rate,
       };
       
-      // Update headline estimates with P75 values (capped at 1.5x)
+      // Update headline estimates with comp median values
       propertyEstimate.estimates.annual_revenue = targetRevenue;
-      propertyEstimate.estimates.average_daily_rate = targetAdr;
+      propertyEstimate.estimates.average_daily_rate = compMedianAdr > 1 ? compMedianAdr : Math.round(compMedianAdr);
       // Normalize occupancy: if comp occupancy is > 1, it's already a percentage (e.g., 73), convert to decimal
-      propertyEstimate.estimates.occupancy_rate = targetOccupancy > 1 ? targetOccupancy / 100 : targetOccupancy;
-      propertyEstimate.estimates.annual_revenue_low = compMedianRevenue; // Median as the low end
-      propertyEstimate.estimates.annual_revenue_high = compP75Revenue; // Raw P75 as the high end
+      propertyEstimate.estimates.occupancy_rate = compMedianOccupancy > 1 ? compMedianOccupancy / 100 : compMedianOccupancy;
+      propertyEstimate.estimates.annual_revenue_low = compQ1Revenue; // Q1 as the low end
+      propertyEstimate.estimates.annual_revenue_high = compQ3Revenue; // Q3 as the high end
       
       // Scale monthly forecast to match new annual total while preserving seasonal shape
       if (propertyEstimate.monthly_forecast.length > 0) {
@@ -3766,10 +3765,10 @@ export async function getComprehensivePropertyReport(
         }));
       }
     } else {
-      console.log(`[Comp P75 Adjustment] No adjustment needed — Rentalizer ($${rentalizerRevenue.toLocaleString()}) >= P75 capped ($${targetRevenue.toLocaleString()})`);
+      console.log(`[Comp-Median Adjustment] No adjustment needed — Rentalizer ($${rentalizerRevenue.toLocaleString()}) equals comp median ($${targetRevenue.toLocaleString()})`);
     }
   } else {
-    console.log(`[Comp P75 Adjustment] Skipped — only ${exactMatchComps.length} exact-match comps (need >= 3)`);
+    console.log(`[Comp-Median Adjustment] Skipped — only ${exactMatchComps.length} exact-match comps (need >= 3), using Rentalizer as-is`);
   }
   
   const result = {

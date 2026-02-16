@@ -11816,3 +11816,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verify 1.5x cap enforced on all live results (3/5 capped, 2/5 below cap)
 - [x] All 1,494 tests passing (67 new stress tests + 1,427 existing)
 - [x] Document all findings — zero data integrity issues found
+
+## Comp-Median Revenue: Replace P75 with Real Comp Data (February 16, 2026)
+- [x] Replace P75 adjustment with comp-median-based revenue
+- [x] Use median of exact-match (same BR/BA) comps as headline revenue
+- [x] Keep Rentalizer as fallback when <3 exact-match comps available
+- [x] Scale monthly forecast proportionally to comp median
+- [x] Update ADR and occupancy from comp median values
+- [x] Set revenue range: low = comp Q1 (25th percentile), high = comp Q3 (75th percentile)
+- [x] Preserve _original_rentalizer for reference
+- [x] Update cache re-application logic for new approach
+- [x] Update all P75 tests to comp-median tests (30 comp-filtering + 68 stress tests)
+- [x] All 1,495 tests passing
+- [x] Clear stale cache entries
+- [ ] Run live integration tests on 5+ addresses (pending API rate limit reset)
