@@ -11709,3 +11709,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Root cause: Google Places returns "Pasadena, CA 91109, USA" format; HasData API can't handle it
 - [x] Fix: Added cleanup in disambiguateLocation to strip zip code and country → "City, ST"
 - [x] Verified: 91109 now returns 86 properties (1,016 in market)
+
+## Investigate API Usage Not Showing in User Dashboard (February 16, 2026)
+- [ ] API calls made today but user usage dashboard shows nothing
+- [ ] Check how usage is tracked (rate limiter vs user-facing dashboard)
+- [ ] Identify if tracking is per-user or global
+- [ ] Fix any gaps in usage tracking
+
+## Fix Admin Usage Not Tracked in Dashboard (February 16, 2026)
+- [x] Remove admin bypass in recordAnalysisUsage so admin usage is recorded (but not limited)
+- [x] Remove admin bypass in recordMarketResearchUsage
+- [x] Remove admin bypass in recordApiCallsUsage
+- [x] Keep admin bypass only in canPerformAnalysis/canPerformMarketResearch (limit enforcement)
+- [x] Updated rate-limiter test to reflect raised soft limit (400→550)
+- [x] All 1397 tests passing

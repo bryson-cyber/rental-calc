@@ -242,11 +242,7 @@ export async function recordAnalysisUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Check if admin - don't record for admins
-  if (userId && await isUserAdmin(userId)) {
-    return;
-  }
-  
+  // Track admin usage for visibility (limits are bypassed in canPerformAnalysis)
   const db = await getDb();
   if (!db) return;
   
@@ -272,11 +268,7 @@ export async function recordMarketResearchUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Check if admin - don't record for admins
-  if (userId && await isUserAdmin(userId)) {
-    return;
-  }
-  
+  // Track admin usage for visibility (limits are bypassed in canPerformMarketResearch)
   const db = await getDb();
   if (!db) return;
   
@@ -302,11 +294,7 @@ export async function recordApiCallsUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Check if admin - don't record for admins
-  if (userId && await isUserAdmin(userId)) {
-    return;
-  }
-  
+  // Track admin usage for visibility (limits are bypassed in canPerform* checks)
   const db = await getDb();
   if (!db) return;
   

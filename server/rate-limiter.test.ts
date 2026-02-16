@@ -60,9 +60,9 @@ describe('Rate Limiter - Fail-Closed Design', () => {
     expect(error.message).toContain('too many requests per minute');
   });
 
-  it('should export NON_ADMIN_SOFT_LIMIT as 400', async () => {
+  it('should export NON_ADMIN_SOFT_LIMIT as 550', async () => {
     const { NON_ADMIN_SOFT_LIMIT } = await import('./airdna-rate-limiter');
-    expect(NON_ADMIN_SOFT_LIMIT).toBe(400);
+    expect(NON_ADMIN_SOFT_LIMIT).toBe(550);
   });
 });
 
