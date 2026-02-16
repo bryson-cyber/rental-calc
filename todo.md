@@ -11652,3 +11652,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Write vitest tests for the toggle behavior (17 tests passing)
 - [x] Verified in browser: Arbitrage shows Rent/Profit/Ratio; Purchase shows Price/CashFlow/CoCReturn/CapRate
 - [x] Checkpoint saved
+
+## Editable Purchase Assumptions in Compare Favorites (February 16, 2026)
+- [x] Add collapsible Purchase Assumptions panel with 3 columns: Financing, Costs, Operations
+- [x] Financing: Down Payment % slider (0-100%), Interest Rate slider (0-15%), Loan Term buttons (15/20/25/30yr)
+- [x] Costs: Closing Costs % slider, Property Tax % slider, Insurance % slider, Startup Costs input
+- [x] Operations: Management Fee % slider (Self-managed to Full service), Maintenance % slider
+- [x] Add "Your Settings" summary box showing current configuration
+- [x] Add per-property inline price editing with checkmark/cancel buttons and "reset to original" link
+- [x] All metrics (Cash Flow, CoC Return, Cap Rate, Grade) recalculate live when assumptions change
+- [x] Table re-sorts and Best Deal banner updates when assumptions or prices change
+- [x] Write 23 vitest tests for calculation logic (defaults, custom values, price overrides, edge cases)
+- [x] Verified in browser: price editing works, what-if analysis recalculates correctly
+
+## Sort-by Dropdown for Purchase Mode (February 16, 2026)
+- [x] Already implemented: Sort-by dropdown exists with Cash Flow, Cash-on-Cash, Cap Rate, Purchase Price options
+- [x] Already implemented: Sorting logic with ascending/descending toggle
+- [x] No additional work needed
