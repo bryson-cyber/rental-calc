@@ -2735,7 +2735,7 @@ export async function getComprehensivePropertyReport(
           const p75Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
           const compP75 = sortedRevs[p75Idx];
           const rentalizerRev = cachedProp.estimates.annual_revenue;
-          const maxAllowed = rentalizerRev * 2;
+          const maxAllowed = Math.floor(rentalizerRev * 1.5);
           const target = Math.min(compP75, maxAllowed);
           if (target > rentalizerRev) {
             console.log(`[Property Report] CACHE HIT — applying P75 adjustment: $${rentalizerRev.toLocaleString()} -> $${target.toLocaleString()} (${exactComps.length} comps)`);
@@ -3694,7 +3694,7 @@ export async function getComprehensivePropertyReport(
   console.log(`propertyBedrooms: ${propertyBedrooms} (type: ${typeof propertyBedrooms}), propertyBathrooms: ${propertyBathrooms} (type: ${typeof propertyBathrooms})`);
   console.log(`Sample comp BR/BA:`, sameBedroomComps.slice(0, 3).map(c => `${c.bedrooms}BR/${c.bathrooms}BA (types: ${typeof c.bedrooms}/${typeof c.bathrooms}), rev: $${c.annual_revenue}`));
   // P75 represents what the top 25% of operators earn — a reasonable target
-  // for a professionally managed property. Capped at 2x the Rentalizer
+  // for a professionally managed property. Capped at 1.5x the Rentalizer
   // estimate to prevent unrealistic outliers.
   // ============================================
   const exactMatchComps = sameBedroomComps.filter(
@@ -3725,8 +3725,8 @@ export async function getComprehensivePropertyReport(
     
     const rentalizerRevenue = propertyEstimate.estimates.annual_revenue;
     
-    // Apply 2x Rentalizer cap to prevent unrealistic outliers
-    const maxAllowedRevenue = rentalizerRevenue * 2;
+    // Apply 1.5x Rentalizer cap to prevent unrealistic outliers
+    const maxAllowedRevenue = Math.floor(rentalizerRevenue * 1.5);
     const targetRevenue = Math.min(compP75Revenue, maxAllowedRevenue);
     
     // Only adjust upward — if P75 (capped) is higher than Rentalizer, use it
@@ -3748,7 +3748,7 @@ export async function getComprehensivePropertyReport(
         occupancy_rate: propertyEstimate.estimates.occupancy_rate,
       };
       
-      // Update headline estimates with P75 values (capped at 2x)
+      // Update headline estimates with P75 values (capped at 1.5x)
       propertyEstimate.estimates.annual_revenue = targetRevenue;
       propertyEstimate.estimates.average_daily_rate = targetAdr;
       // Normalize occupancy: if comp occupancy is > 1, it's already a percentage (e.g., 73), convert to decimal

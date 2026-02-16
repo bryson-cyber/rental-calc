@@ -214,7 +214,7 @@ interface MockForecast {
 /**
  * Replicates the P75 adjustment logic from airdna.ts:
  * - Uses P75 of exact-match comps (not median)
- * - Caps at 2x the Rentalizer estimate
+ * - Caps at 1.5x the Rentalizer estimate
  * - Only adjusts upward
  * - Requires >= 3 exact-match comps
  * - Sets median as the low end, raw P75 as the high end
@@ -240,8 +240,8 @@ function applyCompP75Adjustment(
 
   const rentalizerRevenue = estimates.annual_revenue;
 
-  // Apply 2x Rentalizer cap
-  const maxAllowedRevenue = rentalizerRevenue * 2;
+  // Apply 1.5x Rentalizer cap
+  const maxAllowedRevenue = Math.floor(rentalizerRevenue * 1.5);
   const targetRevenue = Math.min(compP75Revenue, maxAllowedRevenue);
 
   // Only adjust upward
@@ -271,7 +271,7 @@ function applyCompP75Adjustment(
   return { estimates: newEstimates, monthly_forecast: newForecast, adjusted: true };
 }
 
-describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
+describe("Comp P75 Adjustment (Option B with 1.5x cap)", () => {
   const baseEstimates: MockEstimate = {
     annual_revenue: 20889,
     annual_revenue_low: 19000,
@@ -301,13 +301,13 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     expect(result.adjusted).toBe(true);
     // P75 of [32K, 35K, 38K, 42K, 42K] = 42000
-    // 2x cap = 20889 * 2 = 41778
-    // targetRevenue = min(42000, 41778) = 41778
-    expect(result.estimates.annual_revenue).toBe(41778);
+    // 1.5x cap = 20889 * 1.5 = 31333.5 → 31333
+    // targetRevenue = min(42000, 31333) = 31333
+    expect(result.estimates.annual_revenue).toBe(Math.floor(20889 * 1.5));
     expect(result.estimates.annual_revenue).toBeGreaterThan(baseEstimates.annual_revenue);
   });
 
-  it("caps at 2x Rentalizer when P75 exceeds the cap", () => {
+  it("caps at 1.5x Rentalizer when P75 exceeds the cap", () => {
     const comps = [
       { annual_revenue: 40000, adr: 140, occupancy: 0.80 },
       { annual_revenue: 50000, adr: 170, occupancy: 0.85 },
@@ -317,16 +317,17 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     const result = applyCompP75Adjustment(baseEstimates, baseForecast, comps);
 
+    const cap = Math.floor(20889 * 1.5);
     expect(result.adjusted).toBe(true);
     // P75 of [40K, 50K, 60K, 70K] = 60000
-    // 2x cap = 20889 * 2 = 41778
-    // targetRevenue = min(60000, 41778) = 41778
-    expect(result.estimates.annual_revenue).toBe(41778);
-    // ADR should be proportionally scaled: P75 ADR * (41778/60000)
-    expect(result.estimates.average_daily_rate).toBe(Math.round(200 * (41778 / 60000)));
+    // 1.5x cap = 20889 * 1.5 = 31333
+    // targetRevenue = min(60000, 31333) = 31333
+    expect(result.estimates.annual_revenue).toBe(cap);
+    // ADR should be proportionally scaled: P75 ADR * (31333/60000)
+    expect(result.estimates.average_daily_rate).toBe(Math.round(200 * (cap / 60000)));
   });
 
-  it("does NOT cap when P75 is within 2x Rentalizer", () => {
+  it("does NOT cap when P75 is within 1.5x Rentalizer", () => {
     const highEstimates: MockEstimate = {
       ...baseEstimates,
       annual_revenue: 30000,
@@ -342,8 +343,8 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     expect(result.adjusted).toBe(true);
     // P75 of [32K, 38K, 42K] = 42000
-    // 2x cap = 30000 * 2 = 60000
-    // targetRevenue = min(42000, 60000) = 42000 (no cap needed)
+    // 1.5x cap = 30000 * 1.5 = 45000
+    // targetRevenue = min(42000, 45000) = 42000 (no cap needed)
     expect(result.estimates.annual_revenue).toBe(42000);
     expect(result.estimates.average_daily_rate).toBe(134); // Full P75 ADR, no ratio applied
   });
@@ -396,8 +397,8 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     expect(result.adjusted).toBe(true);
 
-    // P75 = 42000, 2x cap = 41778, target = 41778
-    const targetRevenue = Math.min(42000, 20889 * 2);
+    // P75 = 42000, 1.5x cap = 31333, target = 31333
+    const targetRevenue = Math.min(42000, Math.floor(20889 * 1.5));
     const scaleFactor = targetRevenue / 20889;
 
     // Revenue and ADR should be scaled
@@ -469,15 +470,15 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     expect(result.adjusted).toBe(true);
     // P75 of [32K, 35K, 38K, 42K, 42K] = 42000
-    // 2x cap = 20889 * 2 = 41778
-    // targetRevenue = min(42000, 41778) = 41778
-    expect(result.estimates.annual_revenue).toBe(41778);
+    // 1.5x cap = 20889 * 1.5 = 31333
+    // targetRevenue = min(42000, 31333) = 31333
+    expect(result.estimates.annual_revenue).toBe(Math.floor(20889 * 1.5));
     expect(result.estimates.annual_revenue).toBeGreaterThan(phoenixEstimates.annual_revenue);
 
-    // Monthly revenue should now be ~$3,482/mo instead of ~$1,741/mo
+    // Monthly revenue should now be ~$2,611/mo instead of ~$1,741/mo
     const totalMonthlyRevenue = result.monthly_forecast.reduce((sum, m) => sum + m.revenue, 0);
     const avgMonthly = totalMonthlyRevenue / result.monthly_forecast.length;
-    expect(avgMonthly).toBeGreaterThan(3000);
+    expect(avgMonthly).toBeGreaterThan(2000);
   });
 
   it("handles exactly 3 comps (minimum threshold)", () => {
@@ -491,9 +492,9 @@ describe("Comp P75 Adjustment (Option B with 2x cap)", () => {
 
     expect(result.adjusted).toBe(true);
     // P75 of [30K, 35K, 42K] = 42000
-    // 2x cap = 41778
-    // target = 41778
-    expect(result.estimates.annual_revenue).toBe(41778);
+    // 1.5x cap = 31333
+    // target = 31333
+    expect(result.estimates.annual_revenue).toBe(Math.floor(20889 * 1.5));
   });
 });
 
@@ -551,7 +552,7 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
           const p75Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
           const compP75 = sortedRevs[p75Idx];
           const rentalizerRev = cachedProp.estimates.annual_revenue;
-          const maxAllowed = rentalizerRev * 2;
+          const maxAllowed = Math.floor(rentalizerRev * 1.5);
           const target = Math.min(compP75, maxAllowed);
           if (target > rentalizerRev) {
             const scale = target / rentalizerRev;
@@ -617,7 +618,8 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
     const result = applyCacheP75(cached, 2, 1);
     
     expect(result.adjusted).toBe(true);
-    expect(cached.property.estimates.annual_revenue).toBe(35000); // P75 of [25K, 30K, 35K, 40K]
+    // P75 of [25K, 30K, 35K, 40K] = 35000, but 1.5x cap of 20000 = 30000
+    expect(cached.property.estimates.annual_revenue).toBe(30000); // 1.5x cap
     expect(cached.property._original_rentalizer.annual_revenue).toBe(20000);
     expect(cached.property.estimates.annual_revenue_low).toBe(Math.round((30000 + 35000) / 2)); // median
     expect(cached.property.estimates.annual_revenue_high).toBe(35000); // raw P75
@@ -639,7 +641,7 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
     expect(cached.property.estimates.annual_revenue).toBe(35000); // unchanged
   });
 
-  it("caps cache P75 at 2x Rentalizer", () => {
+  it("caps cache P75 at 1.5x Rentalizer", () => {
     const comps = [
       mockComp({ id: "1", bedrooms: 2, bathrooms: 1, annual_revenue: 30000, adr: 170 }),
       mockComp({ id: "2", bedrooms: 2, bathrooms: 1, annual_revenue: 40000, adr: 200 }),
@@ -650,7 +652,7 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
     const result = applyCacheP75(cached, 2, 1);
     
     expect(result.adjusted).toBe(true);
-    expect(cached.property.estimates.annual_revenue).toBe(40000); // 2x cap of 20000
+    expect(cached.property.estimates.annual_revenue).toBe(30000); // 1.5x cap of 20000
   });
 
   it("scales monthly forecast proportionally on cache P75", () => {
@@ -665,7 +667,7 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
     
     applyCacheP75(cached, 2, 1);
     
-    const scale = 35000 / 20000; // P75 / Rentalizer
+    const scale = 30000 / 20000; // 1.5x cap / Rentalizer (P75=35000 capped to 30000)
     expect(cached.property.monthly_forecast[0].revenue).toBe(Math.round(originalMonth1Rev * scale));
   });
 
@@ -697,10 +699,11 @@ describe("Cache P75 Re-application (stale cache handling)", () => {
     
     expect(result.adjusted).toBe(true);
     // P75 of 19 comps: ceil(0.75 * 19) - 1 = ceil(14.25) - 1 = 15 - 1 = 14 (0-indexed)
-    // sorted[14] = 33000
-    expect(cached.property.estimates.annual_revenue).toBe(33000);
+    // sorted[14] = 33000, but 1.5x cap = floor(20889 * 1.5) = 31333
+    // target = min(33000, 31333) = 31333
+    expect(cached.property.estimates.annual_revenue).toBe(Math.floor(20889 * 1.5));
     expect(cached.property.estimates.annual_revenue).toBeGreaterThan(20889);
-    expect(cached.property.estimates.annual_revenue).toBeLessThanOrEqual(20889 * 2); // within 2x cap
+    expect(cached.property.estimates.annual_revenue).toBeLessThanOrEqual(Math.floor(20889 * 1.5)); // within 1.5x cap
     expect(cached.property._original_rentalizer.annual_revenue).toBe(20889);
   });
 });
