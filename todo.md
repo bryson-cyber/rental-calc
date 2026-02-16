@@ -11799,3 +11799,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update all 12 test expectations from 2x to 1.5x
 - [x] All 1,427 tests passing with new 1.5x cap
 - [x] Switch comp adjustment from median to P75 with 1.5x Rentalizer cap
+
+## Comprehensive Data Stress Test (February 16, 2026)
+- [x] Map all data flows: property reports, market data, comps, forecasts, shared reports
+- [x] Test revenue calculations: annual, monthly, ADR, occupancy consistency (10 tests)
+- [x] Test P75 adjustment: cap enforcement, edge cases, negative scenarios (16 tests)
+- [x] Test comp filtering: bedroom/bathroom matching, inactive filtering, distance (10 tests)
+- [x] Test market data: market scores, supply trends, booking patterns (5 tests)
+- [x] Test shared report generation: data integrity from raw → shared format (5 tests)
+- [x] Test forecast consistency: monthly totals vs annual, seasonal shape preservation (6 tests)
+- [x] Test edge cases: zero comps, single comp, extreme values, missing data (7 tests)
+- [x] Test currency/number formatting: no NaN, no undefined, no negative where inappropriate (3 tests)
+- [x] Test profit calculation: formula, break-even, loss scenarios (7 tests)
+- [x] Test full pipeline simulation: Rentalizer → P75 → shared report (3 tests)
+- [x] Run live integration tests on 5 real addresses via admin context — ALL PASSED
+- [x] Verify 1.5x cap enforced on all live results (3/5 capped, 2/5 below cap)
+- [x] All 1,494 tests passing (67 new stress tests + 1,427 existing)
+- [x] Document all findings — zero data integrity issues found
