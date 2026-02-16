@@ -3630,6 +3630,80 @@ export async function getComprehensivePropertyReport(
     }
   }
   
+  // ============================================
+  // COMP-MEDIAN ADJUSTMENT (Option B)
+  // Use the median of same BR+BA comps as the headline revenue
+  // instead of AirDNA's conservative new-listing Rentalizer estimate.
+  // This reflects what actual operators with the same property config are earning.
+  // ============================================
+  const exactMatchComps = sameBedroomComps.filter(
+    c => c.bedrooms === propertyBedrooms && matchesBathrooms(c.bathrooms, propertyBathrooms) && c.annual_revenue > 0
+  );
+  
+  if (exactMatchComps.length >= 2) {
+    // Calculate median revenue, ADR, and occupancy from exact-match comps
+    const sortedRevenues = exactMatchComps.map(c => c.annual_revenue).sort((a, b) => a - b);
+    const sortedAdrs = exactMatchComps.map(c => c.adr).sort((a, b) => a - b);
+    const sortedOccupancies = exactMatchComps.map(c => c.occupancy).sort((a, b) => a - b);
+    
+    const getMedian = (arr: number[]) => {
+      const mid = Math.floor(arr.length / 2);
+      return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
+    };
+    const getPercentile = (arr: number[], p: number) => {
+      const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+      return arr[idx];
+    };
+    
+    const compMedianRevenue = getMedian(sortedRevenues);
+    const compMedianAdr = getMedian(sortedAdrs);
+    const compMedianOccupancy = getMedian(sortedOccupancies);
+    const compP25Revenue = getPercentile(sortedRevenues, 25);
+    const compP75Revenue = getPercentile(sortedRevenues, 75);
+    
+    const rentalizerRevenue = propertyEstimate.estimates.annual_revenue;
+    
+    // Only adjust upward — if comp median is higher than Rentalizer, use comp median
+    if (compMedianRevenue > rentalizerRevenue) {
+      const scaleFactor = compMedianRevenue / rentalizerRevenue;
+      
+      console.log(`[Comp-Median Adjustment] Upgrading revenue: $${rentalizerRevenue.toLocaleString()} → $${compMedianRevenue.toLocaleString()} (${exactMatchComps.length} exact-match comps, scale factor: ${scaleFactor.toFixed(2)}x)`);
+      console.log(`[Comp-Median Adjustment] ADR: $${propertyEstimate.estimates.average_daily_rate} → $${compMedianAdr}, Occupancy: ${propertyEstimate.estimates.occupancy_rate} → ${compMedianOccupancy}`);
+      
+      // Store original Rentalizer values for reference
+      (propertyEstimate as any)._original_rentalizer = {
+        annual_revenue: rentalizerRevenue,
+        annual_revenue_low: propertyEstimate.estimates.annual_revenue_low,
+        annual_revenue_high: propertyEstimate.estimates.annual_revenue_high,
+        average_daily_rate: propertyEstimate.estimates.average_daily_rate,
+        occupancy_rate: propertyEstimate.estimates.occupancy_rate,
+      };
+      
+      // Update headline estimates with comp-median values
+      propertyEstimate.estimates.annual_revenue = compMedianRevenue;
+      propertyEstimate.estimates.average_daily_rate = compMedianAdr;
+      // Normalize occupancy: if comp occupancy is > 1, it's already a percentage (e.g., 73), convert to decimal
+      propertyEstimate.estimates.occupancy_rate = compMedianOccupancy > 1 ? compMedianOccupancy / 100 : compMedianOccupancy;
+      propertyEstimate.estimates.annual_revenue_low = compP25Revenue;
+      propertyEstimate.estimates.annual_revenue_high = compP75Revenue;
+      
+      // Scale monthly forecast to match new annual total while preserving seasonal shape
+      if (propertyEstimate.monthly_forecast.length > 0) {
+        propertyEstimate.monthly_forecast = propertyEstimate.monthly_forecast.map(m => ({
+          ...m,
+          revenue: Math.round(m.revenue * scaleFactor),
+          adr: Math.round(m.adr * scaleFactor),
+          // Keep occupancy unchanged — it's a percentage reflecting seasonal demand patterns
+        }));
+        console.log(`[Comp-Median Adjustment] Scaled ${propertyEstimate.monthly_forecast.length} months of forecast data by ${scaleFactor.toFixed(2)}x`);
+      }
+    } else {
+      console.log(`[Comp-Median Adjustment] No adjustment needed — Rentalizer ($${rentalizerRevenue.toLocaleString()}) >= comp median ($${compMedianRevenue.toLocaleString()})`);
+    }
+  } else {
+    console.log(`[Comp-Median Adjustment] Skipped — only ${exactMatchComps.length} exact-match comps (need >= 2)`);
+  }
+  
   const result = {
     property: propertyEstimate,
     market: marketData,

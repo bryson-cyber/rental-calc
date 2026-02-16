@@ -11762,8 +11762,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Fix the location data source to use the property's actual geocoded location
 
 ## CRITICAL USER BUG: ADR Projection Too Low ($75 vs $125+ actual) (February 16, 2026)
-- [ ] BUG: Tool projects $75 ADR for Phoenix 2BR when Airbnb shows $125+ minimum
-- [ ] Investigate: Is AirDNA returning low ADR or is the display wrong?
-- [ ] Investigate: Are the property parameters (2BR/1BA/4 guests) pulling down estimates?
-- [ ] Fix: Ensure ADR projection aligns with actual market rates
+- [x] BUG: Tool projects $75 ADR for Phoenix 2BR when Airbnb shows $125+ minimum (fixed via comp-median adjustment)
+- [x] Investigate: Is AirDNA returning low ADR or is the display wrong? (AirDNA Rentalizer is conservative for new listings)
+- [x] Investigate: Are the property parameters (2BR/1BA/4 guests) pulling down estimates? (Yes, plus new-listing penalty)
+- [x] Fix: Ensure ADR projection aligns with actual market rates (comp-median now used as headline)
 - [x] Fix comp filtering to show exact same size (bedroom AND bathroom) comps in reports, not just same-bedroom
+- [x] Implement Option B: Use comp median as headline revenue instead of raw Rentalizer estimate
+- [x] Adjust monthly forecast/seasonality data to be consistent with comp-median headline
+- [x] Add Data Policy page to admin portal with simple 3rd-grade-level explanation

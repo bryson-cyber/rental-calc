@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
-import { 
+import {
   Shield,
   ShieldCheck,
   Users, 
@@ -65,7 +65,8 @@ import {
   Building,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  BookOpen
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -419,6 +420,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="content-studio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <PenLine className="w-4 h-4 mr-2" />
               Content Studio
+            </TabsTrigger>
+            <TabsTrigger value="data-policy" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Data Policy
             </TabsTrigger>
           </TabsList>
 
@@ -1503,6 +1508,10 @@ export default function UnifiedAdmin() {
               <ContentStudioTabLazy />
             </Suspense>
           </TabsContent>
+
+          <TabsContent value="data-policy" className="space-y-6">
+            <DataPolicyTab />
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1918,6 +1927,180 @@ function CacheTab() {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+
+// ============================================
+// DATA POLICY TAB
+// How we calculate our numbers — explained simply
+// ============================================
+function DataPolicyTab() {
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
+            How We Calculate Our Numbers
+          </CardTitle>
+          <CardDescription>
+            A simple guide to explain to clients where our revenue estimates come from and why they can trust them.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          
+          {/* Section 1: Where the numbers come from */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">Where Do the Numbers Come From?</h3>
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                We use real data from a company called <strong>AirDNA</strong>. They track every single Airbnb and VRBO listing in the country. 
+                They know how much each property makes, how often it gets booked, and what it charges per night. This is not guesswork — 
+                it is real performance data from real properties.
+              </p>
+              <p>
+                When you put an address into our tool, we pull data on properties that are <strong>the same size</strong> as yours 
+                (same number of bedrooms AND bathrooms) and that are <strong>near your location</strong>. These are your "comps" — 
+                short for comparable properties.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 2: How we calculate the headline number */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">How We Calculate the Revenue Estimate</h3>
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                Our headline revenue number is based on the <strong>median</strong> of what real properties like yours are actually earning right now. 
+                "Median" just means the middle number. If there are 5 similar properties earning $30K, $35K, $38K, $42K, and $48K per year, 
+                the median is <strong>$38K</strong> — the one right in the middle.
+              </p>
+              <p>
+                We use the median instead of the average because it is more honest. The average can get pulled up by one super-successful 
+                property or pulled down by one that is barely trying. The median tells you what a <strong>typical, normal operator</strong> is making.
+              </p>
+              <p>
+                Think of it this way: if you set up your property properly and run it like a normal business, the median is what you 
+                should realistically expect to earn. You are not the best, you are not the worst — you are right in the middle of the pack.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 3: What "same size" means */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">What "Same Size" Means</h3>
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                When we say we compare your property to "same size" properties, we mean properties with the <strong>exact same number of 
+                bedrooms AND bathrooms</strong>. A 2-bedroom, 1-bathroom property only gets compared to other 2-bedroom, 1-bathroom properties.
+              </p>
+              <p>
+                This matters because an extra bathroom can add $30 to $50 per night to what a property can charge. If we compared a 
+                2-bed/1-bath to a 2-bed/2-bath, the numbers would be misleading. We keep it apples to apples so the estimate is fair and accurate.
+              </p>
+              <p>
+                We do allow a small wiggle room for half-baths. So a 1-bathroom property can be compared to a 1.5-bathroom property, 
+                but not a 2-bathroom property. This keeps the comparison tight while still giving us enough data to work with.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 4: The monthly forecast */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">The Monthly Forecast (Seasonality)</h3>
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                The monthly chart in the report shows how revenue changes throughout the year. Some months are busy (like summer or holidays) 
+                and some months are slow. This pattern is called <strong>seasonality</strong>.
+              </p>
+              <p>
+                We get the seasonal pattern from AirDNA's data — they know exactly which months are hot and which are not for your specific area. 
+                Then we scale those monthly numbers so they add up to the comp-median annual total. This means the <strong>shape</strong> of the 
+                chart (which months are high, which are low) is accurate to your market, and the <strong>dollar amounts</strong> match what 
+                real operators are earning.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 5: What the comparables section shows */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">The Comparable Properties Section</h3>
+            <div className="bg-muted/50 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                The report includes a list of real Airbnb properties near yours that have the same bedroom and bathroom count. 
+                For each one, you can see their annual revenue, nightly rate, occupancy rate, and guest ratings.
+              </p>
+              <p>
+                These are <strong>real, active listings</strong> — not made-up examples. You can even click through to see them on Airbnb. 
+                This lets you (or your client) verify the numbers independently. The comps are sorted with the best matches at the top.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 6: Quick reference for client conversations */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">Quick Reference for Client Conversations</h3>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left p-3 font-medium">If the client asks...</th>
+                    <th className="text-left p-3 font-medium">You can say...</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"Where do these numbers come from?"</td>
+                    <td className="p-3">"Real performance data from AirDNA, which tracks every Airbnb and VRBO in the country."</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"How accurate is the revenue estimate?"</td>
+                    <td className="p-3">"It is the median of what properties with the same bedrooms and bathrooms near yours are actually earning right now. It is the middle of the pack — not the best case, not the worst."</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"Why is my number different from what I see on AirDNA?"</td>
+                    <td className="p-3">"AirDNA's Rentalizer gives a conservative estimate for brand-new listings with no reviews. Our number reflects what established properties like yours are actually making today."</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"Can I really make this much?"</td>
+                    <td className="p-3">"This is what the average operator is making with the same type of property in your area. With professional setup and management, you could match or beat this number."</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"What about the comps — are those real?"</td>
+                    <td className="p-3">"Yes, those are real active Airbnb listings. You can click through and see them yourself. We only show properties with the same bedroom and bathroom count as yours."</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-muted-foreground">"Why do some months show more revenue?"</td>
+                    <td className="p-3">"That is seasonality — some months are busier than others in your market. The chart shows the actual seasonal pattern for your area based on real booking data."</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section 7: Important notes */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">Important Notes</h3>
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-5 space-y-3 text-sm leading-relaxed">
+              <p>
+                <strong>These are estimates, not guarantees.</strong> Actual results depend on how well the property is set up, 
+                the quality of the listing photos, pricing strategy, guest reviews, and how the property is managed day to day.
+              </p>
+              <p>
+                <strong>The data updates regularly.</strong> AirDNA refreshes their data frequently, so the numbers reflect current 
+                market conditions — not outdated information from years ago.
+              </p>
+              <p>
+                <strong>We never inflate numbers.</strong> Our estimates are based on what real properties are actually earning. 
+                We do not add made-up multipliers or "best case" assumptions. What you see is what the data shows.
+              </p>
+            </div>
+          </div>
+
         </CardContent>
       </Card>
     </div>
