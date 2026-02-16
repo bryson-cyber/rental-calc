@@ -345,34 +345,76 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
       </div>
 
       {/* Winner Banner */}
-      {bestProperty && (
-        <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-white" />
+      {bestProperty && (() => {
+        const bestProfit = mode === 'rent' ? (bestProperty.metrics.monthlyProfit || 0) : (bestProperty.metrics.cashFlow || 0);
+        const hasPositiveProfit = bestProfit > 0;
+        const hasRevenue = (bestProperty.annualRevenue || 0) > 0;
+        
+        if (!hasRevenue) {
+          return (
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Info className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-800">Revenue Data Missing</p>
+                  <p className="text-sm text-amber-700">
+                    Some properties don't have revenue data yet. Try validating them in Step 5 first to get accurate comparisons.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-emerald-800">Best Deal: {bestProperty.address}</p>
-              <p className="text-sm text-emerald-700">
-                {mode === 'rent' 
-                  ? `${formatCurrency(bestProperty.metrics.monthlyProfit || 0)}/month profit • ${(bestProperty.metrics.profitRatio || 0).toFixed(1)}x revenue ratio`
-                  : `${formatCurrency(bestProperty.metrics.cashFlow || 0)}/month cash flow • ${formatPercent(bestProperty.metrics.cashOnCash || 0)} CoC return`
-                }
-              </p>
+          );
+        }
+        
+        if (!hasPositiveProfit) {
+          return (
+            <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                  <Info className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-800">No Profitable Properties Found</p>
+                  <p className="text-sm text-red-700">
+                    None of your saved properties are projected to be profitable. Consider adjusting rent expectations or exploring different markets.
+                  </p>
+                </div>
+              </div>
             </div>
-            {bestProperty.zillowUrl && (
-              <a 
-                href={bestProperty.zillowUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
-              >
-                View Listing <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
+          );
+        }
+        
+        return (
+          <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-emerald-800">Best Deal: {bestProperty.address}</p>
+                <p className="text-sm text-emerald-700">
+                  {mode === 'rent' 
+                    ? `${formatCurrency(bestProperty.metrics.monthlyProfit || 0)}/month profit • ${(bestProperty.metrics.profitRatio || 0).toFixed(1)}x revenue ratio`
+                    : `${formatCurrency(bestProperty.metrics.cashFlow || 0)}/month cash flow • ${formatPercent(bestProperty.metrics.cashOnCash || 0)} CoC return`
+                  }
+                </p>
+              </div>
+              {bestProperty.zillowUrl && (
+                <a 
+                  href={bestProperty.zillowUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
+                >
+                  View Listing <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Comparison Table */}
       <div className="border border-slate-200 rounded-xl overflow-hidden">

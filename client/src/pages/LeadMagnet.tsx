@@ -666,6 +666,9 @@ export default function LeadMagnet() {
       'validate': 'validate',
       'prove': 'prove',
       'find': 'find',
+      'comps': 'find',
+      'explore': 'find',
+      'competitors': 'find',
       'advisor': 'advisor',
       'opportunity': 'opportunity',
       'ebook': 'ebook',
@@ -1369,7 +1372,7 @@ export default function LeadMagnet() {
         })),
         comparables: (data.same_bedroom_comps || []).map((c: any) => ({
           id: c.id || String(Math.random()),
-          title: c.title || `${c.bedrooms}BR Property`,
+          title: c.title || (c.bedrooms === 0 ? 'Studio Property' : `${c.bedrooms}BR Property`),
           bedrooms: c.bedrooms,
           bathrooms: c.bathrooms,
           accommodates: c.accommodates,
@@ -2863,7 +2866,7 @@ export default function LeadMagnet() {
                       Property loaded from Step 1
                     </span>
                     <span className="text-xs text-amber-600 ml-auto">
-                      {myProperty.bedrooms} BR • {myProperty.bathrooms} BA
+                      {myProperty.bedrooms === 0 ? 'Studio' : `${myProperty.bedrooms} BR`} • {myProperty.bathrooms} BA
                       {globalMode === 'purchase' && myProperty.purchasePrice && (
                         <> • ${myProperty.purchasePrice.toLocaleString()}</>
                       )}

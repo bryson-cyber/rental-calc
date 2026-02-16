@@ -108,11 +108,15 @@ function captureContext() {
   // Detect tool from URL path
   if (!toolName) {
     if (pagePath.includes('deal-alert')) toolName = 'Deal Alerts';
-    else if (pagePath.includes('tab=validate') || pagePath.includes('step=1')) toolName = 'Deal Validator (Step 1)';
-    else if (pagePath.includes('tab=find') || pagePath.includes('step=2')) toolName = 'Opportunity Finder (Step 2)';
-    else if (pagePath.includes('tab=estimate') || pagePath.includes('step=3')) toolName = 'Revenue Estimator (Step 3)';
-    else if (pagePath.includes('tab=compare') || pagePath.includes('step=4')) toolName = 'Market Comparison (Step 4)';
-    else if (pagePath.includes('tab=regulations') || pagePath.includes('step=5')) toolName = 'Regulations Tracker (Step 5)';
+    else if (pagePath.includes('tab=regulations') || pagePath.includes('step=1')) toolName = 'Regulations Tracker (Step 1)';
+    else if (pagePath.includes('tab=opportunity') || pagePath.includes('step=2')) toolName = 'Find a Property (Step 2)';
+    else if (pagePath.includes('tab=prove') || pagePath.includes('step=3')) toolName = 'See Real Revenue (Step 3)';
+    else if (pagePath.includes('tab=find') || pagePath.includes('step=4')) toolName = 'Explore Competitors (Step 4)';
+    else if (pagePath.includes('tab=validate') || pagePath.includes('step=5')) toolName = 'Validate the Deal (Step 5)';
+    else if (pagePath.includes('tab=compare') || pagePath.includes('step=6')) toolName = 'Compare Favorites (Step 6)';
+    else if (pagePath.includes('tab=map') || pagePath.includes('step=7')) toolName = 'See the Map (Step 7)';
+    else if (pagePath.includes('tab=market') || pagePath.includes('step=8')) toolName = 'Market Advisor (Step 8)';
+    else if (pagePath.includes('tab=advisor') || pagePath.includes('step=9')) toolName = 'AI Advisor (Step 9)';
     else if (pagePath.includes('report')) toolName = 'Property Report';
     else if (pagePath.includes('admin')) toolName = 'Admin Dashboard';
     else toolName = 'Main App';

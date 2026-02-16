@@ -520,7 +520,7 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
           <div>
             <div className="font-medium" style={{ color: 'oklch(0.35 0.08 75)' }}>Looking for Market Analysis?</div>
             <p className="text-sm mt-1" style={{ color: 'oklch(0.45 0.06 75)' }}>
-              For comprehensive market-level analysis (not specific to a property), use <strong>Step 6: Market Advisor</strong>. 
+              For comprehensive market-level analysis (not specific to a property), use <strong>Step 8: Market Advisor</strong>. 
               It provides deep insights into market trends, competition, and investment potential for any area.
             </p>
           </div>

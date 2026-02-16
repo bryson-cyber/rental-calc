@@ -227,8 +227,8 @@ describe("opportunityFinder.batchValidateProperties", () => {
   it("calculates profit correctly for a successful analysis", async () => {
     // Mock returns revenue=48000, occupancy=0.65 (65%)
     // Monthly revenue = 48000/12 = 4000
-    // Operating costs = 1500 * 0.20 = 300
-    // Monthly profit = 4000 - 1500 - 300 = 2200
+    // Operating costs = 4000 * 0.20 = 800 (20% of monthly revenue)
+    // Monthly profit = 4000 - 1500 - 800 = 1700
     const result = await caller.opportunityFinder.batchValidateProperties({
       properties: [
         {
@@ -245,17 +245,17 @@ describe("opportunityFinder.batchValidateProperties", () => {
     expect(successResult).toBeDefined();
     expect(successResult!.projection!.annualRevenue).toBe(48000);
     expect(successResult!.projection!.monthlyRevenue).toBe(4000);
-    expect(successResult!.projection!.operatingCosts).toBe(300);
-    expect(successResult!.projection!.monthlyProfit).toBe(2200);
-    expect(successResult!.projection!.annualProfit).toBe(26400);
+    expect(successResult!.projection!.operatingCosts).toBe(800);
+    expect(successResult!.projection!.monthlyProfit).toBe(1700);
+    expect(successResult!.projection!.annualProfit).toBe(20400);
     // Occupancy is returned as 0.65 * 100 = 65
     expect(successResult!.projection!.occupancy).toBe(65);
     expect(successResult!.projection!.adr).toBe(200);
   });
 
   it("returns topDeals only for properties that meet the threshold", async () => {
-    // Good deal: rent=1500, profit=4000-1500-300=2200 > 500, occupancy=65 > 50 → isGoodDeal=true
-    // Bad deal: rent=3800, profit=4000-3800-760=-560 → isGoodDeal=false
+    // Good deal: rent=1500, profit=4000-1500-800=1700 > 500, occupancy=65 > 50 → isGoodDeal=true
+    // Bad deal: rent=3800, profit=4000-3800-800=-600 → isGoodDeal=false
     const properties = [
       { id: "good-deal", address: "100 Profit St", rent: 1500, bedrooms: 2, bathrooms: 1 },
       { id: "bad-deal", address: "200 Loss St", rent: 3800, bedrooms: 2, bathrooms: 1 },
@@ -270,12 +270,12 @@ describe("opportunityFinder.batchValidateProperties", () => {
     const badDealInTop = result.topDeals.find((d) => d.id === "bad-deal");
 
     expect(goodDealInTop).toBeDefined();
-    expect(goodDealInTop!.monthlyProfit).toBe(2200);
+    expect(goodDealInTop!.monthlyProfit).toBe(1700);
     expect(badDealInTop).toBeUndefined();
   });
 
   it("assigns correct verdict labels based on profit", async () => {
-    // rent=1000, profit=4000-1000-200=2800 → Excellent Opportunity (> 1000)
+    // rent=1000, profit=4000-1000-800=2200 → Excellent Opportunity (> 1000)
     const result = await caller.opportunityFinder.batchValidateProperties({
       properties: [
         { id: "excellent", address: "100 Excellent St", rent: 1000, bedrooms: 2, bathrooms: 1 },

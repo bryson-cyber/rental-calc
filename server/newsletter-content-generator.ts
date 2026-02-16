@@ -61,7 +61,7 @@ async function callGeminiForJson<T>(
         temperature,
         maxOutputTokens: 2048,
         thinkingConfig: {
-          thinkingLevel: 'medium'
+          thinkingLevel: 'low'
         }
       }
     }),

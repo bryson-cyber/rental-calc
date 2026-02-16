@@ -138,7 +138,7 @@ describe('Gemini Streaming Integration', () => {
       
       // Should have thinkingConfig inside generationConfig
       expect(body.generationConfig.thinkingConfig).toBeDefined();
-      expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe('medium');
+      expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe('low');
       
       // Temperature should be 1.0 for thinking models
       expect(body.generationConfig.temperature).toBe(1.0);

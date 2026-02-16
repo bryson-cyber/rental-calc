@@ -146,7 +146,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
           <span className="flex items-center gap-1.5">
             <Bed className="w-4 h-4" />
-            {bedrooms} bed
+            {bedrooms === 0 ? 'Studio' : `${bedrooms} bed`}
           </span>
           <span className="flex items-center gap-1.5">
             <Bath className="w-4 h-4" />

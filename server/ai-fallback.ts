@@ -272,7 +272,7 @@ async function generateWithGeminiDirect(
         generationConfig: {
           temperature: 1.0,
           maxOutputTokens: 1024,
-          thinkingConfig: { thinkingLevel: 'medium' }
+          thinkingConfig: { thinkingLevel: 'low' }
         }
       }),
       signal: controller.signal

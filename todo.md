@@ -11541,3 +11541,34 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] BUG: AI chat interface is hidden/blocked in the Guide tab — FIXED: repositioned z-index and bottom offset for all floating buttons
 - [x] BUG: "? bed" display for missing bedroom data — FIXED: changed `|| '?'` to proper studio-aware display in CompareFavoritesSection.tsx and CompsMapView.tsx
 - [x] BUG: Broken "Powered by Google" logo — FIXED: added Google logo image to AddressAutocomplete.tsx
+
+## Comprehensive QA Pass (Feb 15, 2026)
+### Bugs Found During QA:
+- [x] BUG: Gemini thinkingLevel 'medium' not supported by Pro model — FIXED: changed to 'low' across 6 files
+- [ ] BUG: Step 3 shows "0 active listings" in summary card but 13,214 in bedroom breakdown
+- [ ] BUG: Step 3 "What are successful properties doing?" section shows 0 listings
+
+## QA Testing Round - February 16, 2026
+
+### Bugs Found & Fixed
+- [x] Studio display bug: PropertyCard showed "0 bed" instead of "Studio" for studio apartments
+- [x] Studio display in property summary and comparable title fallback
+- [x] AirDNA API pagination error: Multiple endpoints using page_size > 25 (AirDNA max is 25)
+- [x] Step numbering cross-references: SavedItemsPanel said "Compare in Step 4" (should be Step 6) and "Use in Step 3" (should be Step 5)
+- [x] VoiceBugReportButton step mapping was completely wrong (old 5-step mapping vs current 9-step)
+- [x] AIAdvisorStep cross-reference said "Step 6: Market Advisor" (should be "Step 8: Market Advisor")
+- [x] App.tsx comment said "Map View - Step 5" (should be "Step 7")
+- [x] ComparisonDashboard "Best Deal" banner showed misleading "Best Deal" for properties with negative profit
+- [x] Test fixes: batch-validate.test.ts had wrong operating costs formula (used rent*0.20 instead of revenue*0.20)
+- [x] Test fixes: ai-streaming.test.ts expected thinkingLevel 'medium' but implementation uses 'low'
+
+### QA Test Results by Step
+- Step 3 (See Real Revenue): Working - shows market stats, top performers, seasonality, historical trends
+- Step 4 (Explore Competitors): Working - hierarchy picker, property cards with revenue data
+- Step 5 (Validate the Deal): Working - address autocomplete, revenue projection, rent tiers, comparables
+- Step 6 (Compare Favorites): Working - comparison table, sorting, Best Deal banner with negative profit handling
+- Step 7 (See the Map): Working - map loads, requires hierarchy picker selection
+- Step 8 (Market Advisor): Working - city search, AI analysis with market data
+- Step 9 (AI Advisor): Working - address input, AI analysis with property-specific data
+
+### All 1333 vitest tests passing

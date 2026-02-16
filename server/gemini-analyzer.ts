@@ -427,7 +427,7 @@ async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: 
         temperature: 1.0,
         maxOutputTokens: maxTokens,
         thinkingConfig: {
-          thinkingLevel: 'medium'
+          thinkingLevel: 'low'
         }
       }
     })

@@ -166,7 +166,7 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
       };
     }>("/market/search", "POST", {
       search_term: marketId,
-      pagination: { page_size: 50, offset: 0 }
+      pagination: { page_size: 25, offset: 0 }
     });
     
     const results = response.payload?.results || [];

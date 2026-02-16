@@ -286,7 +286,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                   className="bg-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.70_0.12_75)] text-white"
                 >
                   <GitCompare className="w-4 h-4 mr-2" />
-                  Compare in Step 4
+                  Compare in Step 6
                 </Button>
               </div>
             </div>
@@ -442,7 +442,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                       className="w-full border-emerald-500 text-emerald-600 hover:bg-emerald-50"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Use in Step 3 (Validate Deal)
+                      Use in Step 5 (Validate Deal)
                     </Button>
                   </div>
                 )}

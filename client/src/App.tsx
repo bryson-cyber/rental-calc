@@ -76,7 +76,7 @@ function Router() {
         {/* Main lead magnet page - lazy loaded */}
         <Route path={"/"} component={LeadMagnet} />
         
-        {/* Map View - Step 5 */}
+        {/* Map View - Step 7 */}
         <Route path={"/map"} component={MapViewPage} />
         
         {/* Market Advisor - Standalone market analysis */}

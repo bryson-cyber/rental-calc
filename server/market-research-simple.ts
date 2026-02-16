@@ -306,6 +306,12 @@ export const marketResearchSimpleRouter = router({
       
       const bedroomBreakdown = accurateBedroomData.bedroomCounts;
 
+      // FIX: Use bedroom counts total as fallback when market-level count is 0
+      if (overview.totalListings === 0 && accurateBedroomData.totalListings > 0) {
+        console.log(`[MarketResearch] Fixing totalListings: was 0, using bedroom counts total: ${accurateBedroomData.totalListings}`);
+        overview.totalListings = accurateBedroomData.totalListings;
+      }
+
       // Generate insights
       const insights = generateInsights(overview, seasonalityData, processedTopPerformers, bedroomBreakdown);
 
@@ -710,6 +716,12 @@ export const marketResearchSimpleRouter = router({
       console.log(`[getSubmarketReport] Total from bedroom counts: ${accurateBedroomData.totalListings}, Submarket total: ${overview.totalListings}`);
       
       const bedroomBreakdown = accurateBedroomData.bedroomCounts;
+
+      // FIX: Use bedroom counts total as fallback when submarket-level count is 0
+      if (overview.totalListings === 0 && accurateBedroomData.totalListings > 0) {
+        console.log(`[getSubmarketReport] Fixing totalListings: was 0, using bedroom counts total: ${accurateBedroomData.totalListings}`);
+        overview.totalListings = accurateBedroomData.totalListings;
+      }
       
       // Seasonality - use parent market seasonality from comprehensive report
       const monthlyData = (report.seasonality || []).map(s => ({
@@ -772,7 +784,7 @@ export const marketResearchSimpleRouter = router({
       try {
         // Use the AirDNA /market/{market_id}/submarkets endpoint via rate limiter
         const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
-          pagination: { page_size: 50, offset: 0 }
+          pagination: { page_size: 25, offset: 0 }
         }, { retries: 2, source: 'market-research-getSubmarkets' });
         
         if (data.status?.type === 'error') {
@@ -785,19 +797,19 @@ export const marketResearchSimpleRouter = router({
         
         // Fetch additional pages if needed (use larger page size to reduce calls)
         let allSubmarkets = [...submarkets];
-        let offset = 50;
+        let offset = 25;
         
         while (offset < totalCount) {
           try {
             const moreData = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
-              pagination: { page_size: 50, offset }
+              pagination: { page_size: 25, offset }
             }, { retries: 1, source: 'market-research-getSubmarkets-page' });
             allSubmarkets.push(...(moreData.payload?.submarkets || []));
           } catch (err) {
             if (err instanceof AirDNARateLimitError) break; // Stop paginating if rate limited
             console.warn(`[getSubmarkets] Failed to fetch page at offset ${offset}`);
           }
-          offset += 50;
+          offset += 25;
         }
         
         console.log(`[getSubmarkets] Found ${allSubmarkets.length} submarkets`);
@@ -885,8 +897,8 @@ export const marketResearchSimpleRouter = router({
       try {
         // Use rate-limited requests with larger page size to reduce API calls
         // Max 3 pages (150 listings) instead of 8 pages (200 listings) — good enough for zip distribution
-        const pageSize = 50;
-        const maxPages = 3;
+        const pageSize = 25;
+        const maxPages = 6;
         
         // Helper to fetch from submarket API via rate limiter
         const fetchSubmarketPage = async (offset: number) => {

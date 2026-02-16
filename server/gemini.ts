@@ -170,7 +170,7 @@ interface InvestmentAdvisorContext {
 interface GeminiCallOptions {
   maxTokens?: number;
   temperature?: number;
-  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+  thinkingLevel?: 'low' | 'high';
   model?: 'pro' | 'flash';
 }
 
@@ -193,7 +193,9 @@ async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<
   // - Temperature 1.0 for optimal reasoning (per Gemini 3 docs)
   // - thinkingLevel 'high' for complex analysis (default for Pro)
   const temperature = options?.temperature ?? 1.0;
-  const thinkingLevel = options?.thinkingLevel ?? (model === 'pro' ? 'high' : 'medium');
+  // Gemini 3 Pro only supports 'low' and 'high' (not 'medium' or 'minimal')
+  // Flash supports all levels but we keep it simple
+  const thinkingLevel = options?.thinkingLevel ?? 'high';
   
   try {
     const response = await fetch(`${apiUrl}?key=${ENV.geminiApiKey}`, {
@@ -269,7 +271,7 @@ async function callGeminiMax(prompt: string, maxRetries: number = 3): Promise<st
             temperature: 1.0,
             maxOutputTokens: 16384,
             thinkingConfig: {
-              thinkingLevel: 'medium'
+              thinkingLevel: 'low'
             }
           }
         }),
@@ -398,7 +400,7 @@ Respond based ONLY on the market data above. If the data doesn't cover the quest
     // Use Flash model for faster chat responses with medium thinking
     const response = await callGemini(prompt, { 
       model: 'flash',
-      thinkingLevel: 'medium',
+      thinkingLevel: 'low',
       temperature: 1.0
     });
     return response.trim();
@@ -2475,7 +2477,7 @@ CRITICAL RULES:
     console.error('Error generating full report summary:', error);
     // Fallback to the simpler function
     try {
-      const fallbackResponse = await callGemini(prompt, { maxTokens: 4096, thinkingLevel: 'medium' });
+      const fallbackResponse = await callGemini(prompt, { maxTokens: 4096, thinkingLevel: 'low' });
       return fallbackResponse.trim();
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError);

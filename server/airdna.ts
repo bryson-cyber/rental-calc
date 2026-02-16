@@ -340,7 +340,7 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
   console.log('[getAllUSMarkets] Fetching all US markets...');
   const allMarkets: typeof usMarketsCache = [];
   let offset = 0;
-  const pageSize = 100; // Larger pages = fewer API calls (was 25, now 4 calls instead of 13)
+  const pageSize = 25; // AirDNA API max page_size is 25
   let hasMore = true;
   
   while (hasMore && offset < 500) { // Max 500 markets to avoid infinite loop
@@ -2276,7 +2276,7 @@ export async function exploreListingsInMarket(
     minRevenue?: number;
     listingType?: string;
   },
-  limit: number = 50
+  limit: number = 25
 ): Promise<ListingData[]> {
   try {
     // The explore/market endpoint doesn't work, so we'll return empty
@@ -2297,7 +2297,7 @@ export async function exploreListingsInRadius(
     bathrooms?: number;
     minRevenue?: number;
   },
-  limit: number = 50
+  limit: number = 25
 ): Promise<ListingData[]> {
   // ── Cache radius searches to prevent redundant API calls ──
   const radiusCacheKey = `radius_listings:${address}:${radiusMeters}:br${filters?.bedrooms ?? 'all'}:ba${filters?.bathrooms ?? 'all'}:rev${filters?.minRevenue ?? 0}:lim${limit}`;
@@ -5821,9 +5821,8 @@ export async function getRentalizerComps(
       address,
       bedrooms,
       bathrooms,
-      pagination: { page_size: limit, offset: 0 },
+      pagination: { page_size: Math.min(limit, 25), offset: 0 },
     });
-
     const responsePayload = (response as any)?.payload;
     if (!responsePayload) {
       return null;
@@ -6206,10 +6205,9 @@ export async function getMarketProfessionalStats(
       "POST",
       {
         filters,
-        pagination: { page_size: 500, offset: 0 },
+        pagination: { page_size: 25, offset: 0 },
       }
     );
-
     const responseListings = (response as any)?.payload?.listings;
     if (!responseListings) {
       return null;
@@ -6282,7 +6280,7 @@ export async function getMarketCancellationPolicies(
       "POST",
       {
         filters,
-        pagination: { page_size: 500, offset: 0 },
+        pagination: { page_size: 25, offset: 0 },
       }
     );
 

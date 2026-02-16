@@ -619,7 +619,7 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
       temperature: 1.0,
       maxOutputTokens: 8192,
       thinkingConfig: {
-        thinkingLevel: 'medium'
+        thinkingLevel: 'low'
       }
     }
   };
