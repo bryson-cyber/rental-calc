@@ -11669,3 +11669,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Already implemented: Sort-by dropdown exists with Cash Flow, Cash-on-Cash, Cap Rate, Purchase Price options
 - [x] Already implemented: Sorting logic with ascending/descending toggle
 - [x] No additional work needed
+
+## Redesign "Choose Your Report Style" Modal (February 16, 2026)
+- [x] Redesign modal to match Coach Inayah brand (full navy background, gold/teal gradients)
+- [x] Improve typography, spacing, and visual hierarchy (larger icons, feature pills, better copy)
+- [x] Add brand-consistent icons and color scheme (Sparkles icon, TrendingUp for Pro, MessageCircle for Guided)
+- [x] Make the modal feel premium and polished (glow effects, shimmer CTA, gold-to-teal gradient button)
+- [x] Test in browser and save checkpoint
