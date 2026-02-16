@@ -11723,3 +11723,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Keep admin bypass only in canPerformAnalysis/canPerformMarketResearch (limit enforcement)
 - [x] Updated rate-limiter test to reflect raised soft limit (400→550)
 - [x] All 1397 tests passing
+
+## Add Usage Tracking to Opportunity Finder - Step 2 (February 16, 2026)
+- [x] Audit all API call points in opportunity-finder.ts
+- [x] Add recordAnalysisUsage for validateProperty (1 AirDNA call per single analysis)
+- [x] Add recordAnalysisUsage for batchValidateProperties (N AirDNA calls per batch)
+- [x] Only tracking AirDNA calls per user request (not HasData/Zillow searches)
+- [x] All 1397 tests passing

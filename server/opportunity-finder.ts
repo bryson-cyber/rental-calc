@@ -22,6 +22,7 @@ const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps
 const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
+import { recordAnalysisUsage } from './usage-limits';
 
 // ============================================
 // CITY NAME NORMALIZATION
@@ -877,7 +878,7 @@ export const opportunityFinderRouter = router({
       zillowUrl: z.string().optional(),
       image: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         console.log(`[Opportunity Finder] Validating property: ${input.address}`);
         
@@ -910,6 +911,13 @@ export const opportunityFinderRouter = router({
                         monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :
                         'Not Recommended';
         
+        // Record AirDNA usage
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        await recordAnalysisUsage(userId, undefined, ipAddress, 1).catch(err =>
+          console.error('[OpportunityFinder] Error recording usage:', err)
+        );
+
         return {
           success: true,
           property: {
@@ -964,7 +972,7 @@ export const opportunityFinderRouter = router({
       })).min(1).max(50),
       minProfitThreshold: z.number().min(0).default(500),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { properties, minProfitThreshold } = input;
       console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties`);
       const startTime = Date.now();
@@ -1083,6 +1091,15 @@ export const opportunityFinderRouter = router({
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`[Batch Analyze] Complete: ${successful.length} succeeded, ${failed.length} failed in ${elapsed}s`);
+
+      // Record AirDNA usage for all successful analyses
+      if (successful.length > 0) {
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        await recordAnalysisUsage(userId, undefined, ipAddress, successful.length).catch(err =>
+          console.error('[BatchAnalyze] Error recording usage:', err)
+        );
+      }
 
       return {
         success: true,
