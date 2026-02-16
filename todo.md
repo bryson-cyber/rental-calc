@@ -11698,3 +11698,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added loadMore support for fetching additional pages beyond the initial 3
 - [x] Added deduplication by property ID to prevent duplicates across pages
 - [x] 12 vitest tests passing for pagination, hasMore, and deduplication logic
+
+## Fix Duplicate Properties on Load More (February 16, 2026)
+- [x] Fix deduplication when Load More fetches additional pages - properties appearing twice in the list
+- [x] Root cause: Frontend set currentPage to frontend's page arg (1) instead of backend's result.currentPage (3)
+- [x] Fix: Changed setCurrentPage(page) to setCurrentPage(result.currentPage || page) in handleSearch and handleLoadMoreAndAnalyze
+- [x] Verified: San Diego 57→74, Pasadena 86→118 after Load More
+
+## Fix 91109 Zip Code Returning 0 Results (February 16, 2026)
+- [x] Root cause: Google Places returns "Pasadena, CA 91109, USA" format; HasData API can't handle it
+- [x] Fix: Added cleanup in disambiguateLocation to strip zip code and country → "City, ST"
+- [x] Verified: 91109 now returns 86 properties (1,016 in market)

@@ -601,7 +601,11 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         : result.properties;
       
       if (append) {
-        setProperties(prev => [...prev, ...result.properties]);
+        setProperties(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newUnique = result.properties.filter((p: ZillowProperty) => !existingIds.has(p.id));
+          return [...prev, ...newUnique];
+        });
         // When appending, only update totalResults if the new value is greater
         // This prevents the "32 of 0" issue when API returns 0 on subsequent pages
         setTotalResults(prev => result.totalResults > 0 ? result.totalResults : prev);
@@ -610,7 +614,9 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         setTotalResults(result.totalResults);
       }
       setHasMore(result.hasMore || false);
-      setCurrentPage(page);
+      // Use the backend's currentPage (which accounts for multi-page initial fetch)
+      // e.g., initial load fetches pages 1-3, so currentPage should be 3, not 1
+      setCurrentPage(result.currentPage ?? page);
       
       // Save state to localStorage for persistence when switching tabs
       // When appending, preserve the original totalResults if API returns 0
@@ -894,11 +900,15 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       
       const newProperties = result.properties;
       
-      // Append to existing properties
-      setProperties(prev => [...prev, ...newProperties]);
+      // Append to existing properties (deduplicate)
+      setProperties(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newUnique = newProperties.filter((p: ZillowProperty) => !existingIds.has(p.id));
+        return [...prev, ...newUnique];
+      });
       setTotalResults(prev => result.totalResults > 0 ? result.totalResults : prev);
       setHasMore(result.hasMore || false);
-      setCurrentPage(nextPage);
+      setCurrentPage(result.currentPage ?? nextPage);
       setIsLoadingMore(false);
       
       // Save state

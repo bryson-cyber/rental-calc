@@ -60,6 +60,25 @@ function normalizeCityName(name: string): string {
  * This fixes issues where "Saint Louis" could match multiple cities
  */
 async function disambiguateLocation(location: string): Promise<string> {
+  // Clean up Google Places format: "City, ST ZIPCODE, USA" -> "City, ST"
+  // Also handles: "City, ST ZIPCODE, Country" and "City, State ZIPCODE, Country"
+  const googlePlacesPattern = /^(.+?,\s*[A-Z]{2})\s+\d{5}(?:-\d{4})?,\s*(?:USA|United States)$/i;
+  const googlePlacesMatch = location.match(googlePlacesPattern);
+  if (googlePlacesMatch) {
+    const cleaned = googlePlacesMatch[1];
+    console.log(`[OpportunityFinder] Cleaned Google Places format: "${location}" -> "${cleaned}"`);
+    location = cleaned;
+  }
+  
+  // Also handle: "City, ST, USA" or "City, ST, United States" -> "City, ST"
+  const countryPattern = /^(.+?,\s*[A-Z]{2}),\s*(?:USA|United States)$/i;
+  const countryMatch = location.match(countryPattern);
+  if (countryMatch) {
+    const cleaned = countryMatch[1];
+    console.log(`[OpportunityFinder] Removed country suffix: "${location}" -> "${cleaned}"`);
+    location = cleaned;
+  }
+
   // If location already contains a state abbreviation or full state name, use as-is
   const statePattern = /,\s*([A-Z]{2}|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s*$/i;
   
