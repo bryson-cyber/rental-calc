@@ -25,12 +25,16 @@ const BUG_TRIAGE_CHANNEL_ID = "C0AFD8WV2KB";
 // Known file mapping for the codebase — helps AI triage identify affected files
 const CODEBASE_MAP = `
 Key files in the Coach Inayah Turnkey Tool codebase:
-- client/src/pages/LeadMagnet.tsx — Main calculator page with 5 tabs (steps)
-- client/src/components/OpportunityFinderStep.tsx — Step 2: Find properties, batch analysis, top deals
-- client/src/components/RegulationTrackerStep.tsx — Step 5: Regulations search
-- client/src/components/RevenueEstimatorStep.tsx — Step 3: Revenue estimates
-- client/src/components/MarketComparisonStep.tsx — Step 4: Market comparison
-- client/src/components/DealValidatorStep.tsx — Step 1: Deal validation
+- client/src/pages/LeadMagnet.tsx — Main calculator page with 9 steps (tabs)
+- client/src/components/RegulationTrackerStep.tsx — Step 1: Check Regulations
+- client/src/components/OpportunityFinderStep.tsx — Step 2: Find a Property
+- client/src/components/RevenueEstimatorStep.tsx — Step 3: See Real Revenue
+- client/src/components/MarketComparisonStep.tsx — Step 4: Explore Competitors
+- client/src/components/DealValidatorStep.tsx — Step 5: Validate the Deal
+- client/src/components/ComparisonDashboard.tsx — Step 6: Compare Favorites
+- client/src/components/MapViewContent.tsx — Step 7: See the Map
+- client/src/components/StandaloneMarketAdvisor.tsx — Step 8: Market Advisor
+- client/src/components/AIAdvisorStep.tsx — Step 9: AI Advisor
 - client/src/pages/DealAlertsPage.tsx — Deal alerts management and matches
 - client/src/components/shared-report/ — Report generation components
 - server/sop-reports.ts — Server-side report generation (SOP reports)

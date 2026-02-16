@@ -12,7 +12,7 @@ export const COACH_INAYAH_METHODOLOGY = `
 ## What is Airbnb Arbitrage?
 Airbnb arbitrage is a real estate investment strategy where you lease a property long-term (typically 12 months) and then rent it out short-term on platforms like Airbnb and VRBO. The profit comes from the difference between your monthly lease payment and your short-term rental income.
 
-## The 5-Step Analysis Process
+## The 9-Step Analysis Process
 
 ### Step 1: Check Regulations First
 Before investing time in any market, verify that short-term rentals are legally allowed. Many cities have restrictions or outright bans. Key things to check:
@@ -21,33 +21,60 @@ Before investing time in any market, verify that short-term rentals are legally 
 - What taxes must be collected?
 - Are there occupancy limits?
 
-### Step 2: Prove the Market
-Look at real revenue data from actual Airbnb hosts in your target market. You want to see:
-- Average annual revenue for your property type
-- Occupancy rates (aim for 65%+ average)
-- Average daily rates (ADR)
-- Seasonal trends
-
-### Step 3: Find Properties
-Search for rental listings that could work for arbitrage. Look for:
+### Step 2: Find a Property
+Search for rental listings that could work for arbitrage using the Opportunity Finder. Look for:
 - Properties in STR-friendly zones
 - Rent under $2,000/month for best margins
 - 2-3 bedrooms (sweet spot for most markets)
 - Good location near attractions/downtown
 
-### Step 4: Validate the Deal
-Run the numbers on specific properties. A good deal should have:
+### Step 3: See Real Revenue (Prove the Market)
+Look at real revenue data from actual Airbnb hosts in your target market. You want to see:
+- Average annual revenue for your property type
+- Occupancy rates (aim for 65%+ average)
+- Average daily rates (ADR)
+- Seasonal trends and top-performing properties
+
+### Step 4: Explore Competitors
+Browse active Airbnb and VRBO listings in your target area to understand the competition:
+- What property types are succeeding
+- What amenities top performers offer
+- Price points and nightly rates
+- Review counts and ratings
+
+### Step 5: Validate the Deal
+Run the numbers on a specific property. A good deal should have:
 - Projected profit margin of 30%+ after all expenses
 - Break-even occupancy under 50%
 - Revenue at least 2x the monthly rent
 - Positive cash flow even in slow months
 
-### Step 5: Compare and Decide
-Compare your top property options side-by-side. Consider:
+### Step 6: Compare Favorites
+Compare your saved property options side-by-side. Consider:
 - Total profit potential
 - Risk factors (location, competition)
 - Startup costs
 - Management complexity
+
+### Step 7: See the Map
+Visualize competition and property locations on an interactive map:
+- See where successful Airbnbs are clustered
+- Identify underserved areas with less competition
+- Understand location advantages and proximity to attractions
+
+### Step 8: Market Advisor
+Get a comprehensive AI-powered market analysis for any city:
+- Market health scores (investability, guest interest, earnings trend)
+- Revenue by bedroom type
+- Seasonality patterns and supply trends
+- Submarket comparisons
+
+### Step 9: AI Advisor
+Get personalized AI analysis for a specific property:
+- Property-specific revenue projections
+- Comparable property analysis
+- Risk assessment and investment verdict
+- Cross-referenced data from all other steps
 
 ## Key Metrics to Understand
 
@@ -100,50 +127,55 @@ Monthly Rent / Monthly Revenue. Should be 0.40 or lower for a healthy deal.
 export const TOOL_DOCUMENTATION = `
 # Tool Documentation
 
-## Tool 1: Read the Guide (Ebook)
+## Guide: Read the Guide (Ebook)
 **Purpose:** Learn the fundamentals of Airbnb arbitrage before using the analysis tools.
 **How to use:** Read through the chapters to understand the business model, key metrics, and how to analyze deals.
 **What you'll learn:** The complete arbitrage methodology, from finding markets to scaling your portfolio.
 
-## Tool 2: Check Regulations
+## Step 1: Check Regulations
 **Purpose:** Verify if short-term rentals are allowed in your target market.
 **How to use:** Enter a city or address to see local STR regulations, permit requirements, and restrictions.
 **What you'll learn:** Whether you can legally operate, what permits are needed, and any restrictions to be aware of.
 
-## Tool 3: Find a Property (Opportunity Finder)
+## Step 2: Find a Property (Opportunity Finder)
 **Purpose:** Browse available rental listings and validate their STR potential.
 **How to use:** Search by city or zip code to see available listings. Click "Analyze" on any property to see projected revenue.
 **What you'll learn:** What properties are available in your target market and their profit potential.
 
-## Tool 4: See Real Revenue (Prove the Market)
+## Step 3: See Real Revenue (Prove the Market)
 **Purpose:** View actual Airbnb earnings data from any market.
-**How to use:** Enter a city, state, or zip code to see market performance data.
-**What you'll learn:** Average revenue, occupancy rates, ADR, and seasonal trends for your target market.
+**How to use:** Enter a city, state, or zip code to see market performance data including top performers, seasonality, and historical trends.
+**What you'll learn:** Average revenue, occupancy rates, ADR, seasonal trends, and what successful properties look like in your target market.
 
-## Tool 5: Explore Listings
+## Step 4: Explore Competitors
 **Purpose:** See what successful Airbnb properties look like in any area.
-**How to use:** Enter a city or address to browse active listings with their performance data.
+**How to use:** Search by city or zip code using the hierarchy picker to browse active listings with their performance data.
 **What you'll learn:** What property types, amenities, and price points work best in your market.
 
-## Tool 6: Validate the Deal
+## Step 5: Validate the Deal
 **Purpose:** Run detailed numbers on a specific property.
-**How to use:** Enter the property address, bedrooms, bathrooms, and monthly rent.
-**What you'll learn:** Projected revenue, profit margin, break-even occupancy, and comparison to nearby properties.
+**How to use:** Enter the property address (with Google Places autocomplete), bedrooms, bathrooms, and monthly rent.
+**What you'll learn:** Projected revenue, profit margin, break-even occupancy, rent tier analysis, and comparison to nearby properties.
 
-## Tool 7: Compare Favorites
-**Purpose:** Compare multiple properties side-by-side.
-**How to use:** Save properties from the Map view, then select them here to compare.
-**What you'll learn:** Which of your saved properties has the best profit potential.
+## Step 6: Compare Favorites
+**Purpose:** Compare multiple saved properties side-by-side.
+**How to use:** Save properties from other steps, then view them here in a comparison table sorted by profit potential.
+**What you'll learn:** Which of your saved properties has the best profit potential, with metrics like monthly profit, ROI, and rent-to-revenue ratio.
 
-## Tool 8: See the Map
-**Purpose:** Visualize competition and property locations.
-**How to use:** Browse the map to see where successful Airbnbs are located.
-**What you'll learn:** Competition density, location advantages, and market hotspots.
+## Step 7: See the Map
+**Purpose:** Visualize competition and property locations on an interactive map.
+**How to use:** Search for a market using the hierarchy picker, then browse the map to see where successful Airbnbs are located.
+**What you'll learn:** Competition density, location advantages, market hotspots, and geographic patterns.
 
-## Tool 9: AI Advisor
-**Purpose:** Get AI-powered insights about markets and properties.
-**How to use:** Ask questions about any market or property and get personalized analysis.
-**What you'll learn:** Market trends, investment recommendations, and strategic advice.
+## Step 8: Market Advisor
+**Purpose:** Get a comprehensive AI-powered market analysis for any city.
+**How to use:** Search for a city, then click "Tell Me About This Market" to get a full AI analysis.
+**What you'll learn:** Market health scores, revenue by bedroom type, seasonality patterns, supply trends, submarket comparisons, and strategic insights.
+
+## Step 9: AI Advisor
+**Purpose:** Get personalized AI analysis for a specific property.
+**How to use:** Enter a property address to get AI-powered analysis that cross-references data from all other steps.
+**What you'll learn:** Property-specific revenue projections, comparable analysis, risk assessment, and investment verdict.
 `;
 
 export const MARKET_BENCHMARKS = `
@@ -717,7 +749,7 @@ export const FAQ_KNOWLEDGE = `
 ## Getting Started
 
 **Q: Where should I start if I'm completely new?**
-A: Start with the Guide (ebook) to learn the fundamentals, then use the Regulations tool to check markets you're interested in. Don't skip the education phase - understanding the business model is crucial.
+A: Start with the Guide (ebook) to learn the fundamentals, then use Step 1 (Check Regulations) to verify your target market allows short-term rentals. From there, follow the 9-step process: find properties (Step 2), see real revenue data (Step 3), explore competitors (Step 4), validate specific deals (Step 5), compare favorites (Step 6), visualize on the map (Step 7), and get AI-powered analysis (Steps 8-9). Don't skip the education phase - understanding the business model is crucial.
 
 **Q: How much money do I need to start?**
 A: Typically $7,000-15,000 for your first property, including first month's rent, security deposit, furnishing, and supplies. Have an additional 3-6 months of rent in reserves.
@@ -765,10 +797,10 @@ A: This is a real risk. Stay informed about local politics, diversify across mar
 ## Using the Tools
 
 **Q: Can I save my analyses?**
-A: Yes! Use the Save button to bookmark properties and markets for later comparison.
+A: Yes! Use the Save button to bookmark properties and markets. Your saved items appear in the Saved Items panel and can be used in Step 6 (Compare Favorites) for side-by-side comparison.
 
 **Q: How do I compare multiple properties?**
-A: Save properties from the Map view, then use the Compare tool to see them side-by-side.
+A: Save properties from any step (Step 2, 3, 4, or 5), then go to Step 6 (Compare Favorites) to see them side-by-side in a comparison table sorted by profit potential.
 
 **Q: What does "Training Mode" do?**
 A: It loads sample data so you can practice using the tools without entering real property information. Great for learning the platform.
@@ -884,8 +916,8 @@ export const AI_SYSTEM_PROMPT = `You are David Wei Chen, a 54-year-old AI-first 
 
 ## Your Knowledge Base
 You have comprehensive knowledge of:
-1. Coach Inayah's Airbnb arbitrage methodology (5-step process)
-2. How to use each of the 9 tools in the platform
+1. Coach Inayah's Airbnb arbitrage methodology (9-step process)
+2. How to use each of the 9 steps in the platform (plus the Guide ebook)
 3. Key metrics: ADR, occupancy, RevPAR, profit margin, break-even analysis
 4. Market benchmarks for top 50 US markets
 5. Seasonal patterns by market type

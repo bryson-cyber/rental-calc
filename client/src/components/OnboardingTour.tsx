@@ -68,8 +68,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'find',
-    title: 'Step 4: Explore Listings',
-    description: 'Browse active rentals and see what\'s working in any area. Find successful properties to understand what success looks like.',
+    title: 'Step 4: Explore Competitors',
+    description: 'Browse active Airbnb and VRBO listings to see what\'s working in any area. Study successful properties to understand what success looks like.',
     icon: Search,
     tip: 'Study top performers to understand what amenities and styles work best.',
     tabId: 'find',

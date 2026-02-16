@@ -11572,3 +11572,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - Step 9 (AI Advisor): Working - address input, AI analysis with property-specific data
 
 ### All 1333 vitest tests passing
+
+## Knowledge Base Step Descriptions Fix - February 16, 2026
+- [x] Update knowledgeBase.ts COACH_INAYAH_METHODOLOGY from old 5-step to current 9-step flow
+- [x] Update knowledgeBase.ts TOOL_DOCUMENTATION from "Tool 1-9" to "Step 1-9" naming
+- [x] Update knowledgeBase.ts AI_SYSTEM_PROMPT from "5-step" to "9-step" reference
+- [x] Update knowledgeBase.ts FAQ_KNOWLEDGE with correct step references
+- [x] Update shared/persona.ts AI_CHAT_PERSONA from "5-step" to "9-step" reference
+- [x] Update voice-bug-report.ts CODEBASE_MAP with correct step-to-component mapping
+- [x] Fix OnboardingTour.tsx Step 4 title from "Explore Listings" to "Explore Competitors"
+- [x] Update knowledge-base.test.ts assertions to match new 9-step naming
+- [x] All 1333 tests passing

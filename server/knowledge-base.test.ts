@@ -22,14 +22,18 @@ describe('AI Knowledge Base', () => {
   });
 
   describe('Coach Inayah Methodology', () => {
-    it('should contain the 5-step analysis process', async () => {
+    it('should contain the 9-step analysis process', async () => {
       const { COACH_INAYAH_METHODOLOGY } = await import('../client/src/data/knowledgeBase');
       
       expect(COACH_INAYAH_METHODOLOGY).toContain('Step 1: Check Regulations');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 2: Prove the Market');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 3: Find Properties');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 4: Validate the Deal');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 5: Compare and Decide');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 2: Find a Property');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 3: See Real Revenue');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 4: Explore Competitors');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 5: Validate the Deal');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 6: Compare Favorites');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 7: See the Map');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 8: Market Advisor');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 9: AI Advisor');
     });
 
     it('should contain key metrics definitions', async () => {
@@ -52,18 +56,19 @@ describe('AI Knowledge Base', () => {
   });
 
   describe('Tool Documentation', () => {
-    it('should document all 9 tools', async () => {
+    it('should document all 9 steps plus the guide', async () => {
       const { TOOL_DOCUMENTATION } = await import('../client/src/data/knowledgeBase');
       
-      expect(TOOL_DOCUMENTATION).toContain('Tool 1:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 2:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 3:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 4:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 5:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 6:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 7:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 8:');
-      expect(TOOL_DOCUMENTATION).toContain('Tool 9:');
+      expect(TOOL_DOCUMENTATION).toContain('Guide: Read the Guide');
+      expect(TOOL_DOCUMENTATION).toContain('Step 1: Check Regulations');
+      expect(TOOL_DOCUMENTATION).toContain('Step 2: Find a Property');
+      expect(TOOL_DOCUMENTATION).toContain('Step 3: See Real Revenue');
+      expect(TOOL_DOCUMENTATION).toContain('Step 4: Explore Competitors');
+      expect(TOOL_DOCUMENTATION).toContain('Step 5: Validate the Deal');
+      expect(TOOL_DOCUMENTATION).toContain('Step 6: Compare Favorites');
+      expect(TOOL_DOCUMENTATION).toContain('Step 7: See the Map');
+      expect(TOOL_DOCUMENTATION).toContain('Step 8: Market Advisor');
+      expect(TOOL_DOCUMENTATION).toContain('Step 9: AI Advisor');
     });
 
     it('should include purpose and how-to for each tool', async () => {
@@ -73,8 +78,8 @@ describe('AI Knowledge Base', () => {
       const purposeCount = (TOOL_DOCUMENTATION.match(/\*\*Purpose:\*\*/g) || []).length;
       const howToCount = (TOOL_DOCUMENTATION.match(/\*\*How to use:\*\*/g) || []).length;
       
-      expect(purposeCount).toBeGreaterThanOrEqual(9);
-      expect(howToCount).toBeGreaterThanOrEqual(9);
+      expect(purposeCount).toBeGreaterThanOrEqual(10);
+      expect(howToCount).toBeGreaterThanOrEqual(10);
     });
   });
 

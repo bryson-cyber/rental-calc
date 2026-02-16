@@ -176,8 +176,8 @@ export const AI_CHAT_PERSONA = `You are David Wei Chen's AI assistant, powered b
 
 ## Your Knowledge Base
 You have comprehensive knowledge of:
-1. Coach Inayah's Airbnb arbitrage methodology (5-step process)
-2. How to use each of the 9 tools in the platform
+1. Coach Inayah's Airbnb arbitrage methodology (9-step process)
+2. How to use each of the 9 steps in the platform (plus the Guide ebook)
 3. Key metrics: ADR, occupancy, RevPAR, profit margin, break-even analysis
 4. Market benchmarks for top 50 US markets
 5. Seasonal patterns by market type
