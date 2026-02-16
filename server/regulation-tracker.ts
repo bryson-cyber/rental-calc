@@ -765,11 +765,24 @@ export async function getRegulationInfo(
   // Format: JSON with specific fields
   // =========================================================================
   
-  const researchPrompt = `You are a regulatory research specialist. Research the current short-term rental regulations for ${city}, ${stateAbbrev}.
+  const researchPrompt = `You are a regulatory research specialist. Research the current short-term rental (STR) regulations for ${city}, ${stateAbbrev}.
 
-SEARCH: "${city} ${stateAbbrev} short term rental ordinance site:gov"
+SEARCH STRATEGY - Try these searches in order until you find official regulation info:
+1. "${city} ${stateAbbrev} short term rental ordinance"
+2. "${city} ${stateAbbrev} vacation rental permit requirements"
+3. "${city} ${stateAbbrev} Airbnb regulations ${new Date().getFullYear()}"
+4. "${city} ${stateAbbrev} transient rental license"
+5. "${city} county ${stateAbbrev} short term rental rules"
 
-OUTPUT ONLY THIS JSON:
+IMPORTANT: Most major US cities DO have STR regulations. If your initial search doesn't find results, try broader searches. Cities like Miami, Los Angeles, New York, Chicago, Austin, Denver, Nashville, etc. ALL have specific STR ordinances. Do NOT return "unknown" for any major US city - dig deeper.
+
+For ${city} specifically, search for:
+- The city's municipal code or ordinance related to short-term/vacation rentals
+- The city's business tax receipt or resort tax requirements
+- Any county-level regulations that apply (e.g., Miami-Dade County, Clark County)
+- State-level STR laws for ${stateAbbrev} that may apply
+
+OUTPUT ONLY THIS JSON (fill in ALL fields based on your research):
 {
   "status": "allowed_with_permit",
   "yesNoSummary": "Yes, short-term rentals are allowed in ${city} with a permit.",
@@ -784,7 +797,7 @@ OUTPUT ONLY THIS JSON:
     "Pass safety inspection",
     "Provide local contact info"
   ],
-  "summary": "2-3 sentence factual summary of CURRENT regulations.",
+  "summary": "2-3 sentence factual summary of CURRENT regulations with specific details (fees, tax rates, permit types).",
   "confidence": "high",
   "warnings": ["Only include warnings that affect ability to operate"],
   "officialSourceUrls": ["https://city.gov/str-info"]
@@ -797,12 +810,17 @@ STATUS OPTIONS:
 - "limited" = Heavy restrictions but possible
 - "paused" = Enforcement suspended/moratorium
 - "banned" = Not permitted
+- "unknown" = ONLY use if the city truly has NO regulations AND you cannot find ANY information after exhaustive search
 
 CRITICAL RULES:
 1. primaryResidenceOnly = true ONLY if owner MUST live there as main home
 2. If investors CAN rent properties they don't live in, set primaryResidenceOnly = false
 3. Needing a permit is NORMAL - don't frame it negatively
 4. Include actual .gov URLs you found
+5. NEVER return "unknown" status for major US cities - they ALL have regulations
+6. If city-level info is sparse, include county-level and state-level regulations that apply
+7. Always include the occupancy/tourist/resort tax rate - nearly every city has one
+8. Include at least 3 key requirements - dig into permit application steps, safety requirements, tax registration
 
 EXCLUDE FROM OUTPUT (not actionable):
 - Rejected proposals or failed legislation
@@ -814,9 +832,10 @@ EXCLUDE FROM OUTPUT (not actionable):
 FOCUS ONLY ON:
 - Can I operate? (Yes/No/With permit)
 - What do I need to do? (Permit, fees, requirements)
-- What restrictions apply? (Primary residence, caps, zones)`;
+- What restrictions apply? (Primary residence, caps, zones)
+- What taxes apply? (Tourist tax, resort tax, occupancy tax)`;
 
-  const systemPrompt = `You are a regulatory research specialist. Your role is to provide accurate, factual information about short-term rental regulations from official government sources. Be precise and objective. If you cannot verify a fact from an official source, say so. Never make assumptions about regulations.`;
+  const systemPrompt = `You are a regulatory research specialist with deep expertise in US short-term rental (STR) laws. Your role is to provide accurate, factual information about STR regulations from official government sources. Be precise and objective. If you cannot verify a specific detail from an official source, note it but still provide what you can find. For major US cities, you MUST be able to find regulation information - search thoroughly using multiple queries including city ordinances, county regulations, and state laws. Include both city-level and county-level regulations when applicable (e.g., Miami is in Miami-Dade County, Las Vegas is in Clark County). Always output valid JSON.`;
 
   try {
     console.log(`[RegulationTracker] Searching regulations for ${city}, ${state}...`);

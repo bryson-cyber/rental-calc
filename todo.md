@@ -11604,3 +11604,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: For Sale toggle now auto-re-searches instead of keeping stale For Rent results
 - [x] Fix: report-mode test timeout increased from 5s to 15s for appRouter import test
 - [x] All 1333 tests passing
+
+## Step 1 Regulation Improvement & Step 2 Batch Analysis (February 16, 2026)
+
+### Step 1: Improve regulation results for major cities
+- [x] Investigate why Miami returns "Unknown" status (stale cache + weak prompt)
+- [x] Deleted stale Miami cache entry from database
+- [x] Improved AI prompt: added explicit instruction to NEVER return "unknown" for US cities, added fallback research strategy
+- [x] Improved system prompt: more aggressive about finding results
+- [x] Test with Miami, FL: Now returns "Allowed with Restrictions" with detailed permit requirements and 3 sources
+
+### Step 2: Test Analyze All batch button
+- [x] Test the "Analyze All" batch button in Step 2 (Denver, CO - 16 properties)
+- [x] Verify batch analysis results display correctly (5 top deals, 16 analyzed, 0 failed, 6.7s)
+- [x] Fix: Zod validation rejecting studios (bedrooms min 1 -> 0, bathrooms min 0.5 -> 0)
+- [x] Fix: framer-motion button intercepting clicks - replaced with regular button
+- [x] Removed debug console.log statements
+- [x] All 1333 tests passing

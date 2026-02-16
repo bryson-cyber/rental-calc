@@ -719,7 +719,6 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   // Handle batch analysis of all visible properties
   const handleBatchAnalyze = async () => {
     if (displayedProperties.length === 0) return;
-    
     setIsBatchAnalyzing(true);
     setBatchProgress(0);
     setBatchResults(null);
@@ -1527,20 +1526,18 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     </div>
                   </div>
                   
-                  <motion.button
-                    onClick={handleBatchAnalyze}
-                    className="w-full py-4 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg"
+                  <button
+                    onClick={() => handleBatchAnalyze()}
+                    className="w-full py-4 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99]"
                     style={{ 
                       background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.40 0.12 160))',
                       boxShadow: '0 4px 14px oklch(0.45 0.15 145 / 0.3)',
                     }}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
                   >
                     <Zap className="w-5 h-5" />
                     <span>Analyze All {Math.min(displayedProperties.length, 50)} Properties</span>
                     <span className="text-sm opacity-80">— Show deals above ${profitThreshold.toLocaleString()}/mo</span>
-                  </motion.button>
+                  </button>
                 </div>
               )}
               

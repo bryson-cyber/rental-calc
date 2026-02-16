@@ -1,0 +1,33 @@
+{
+  "query": "SELECT * FROM regulation_cache WHERE city LIKE '%Miami%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM regulation_cache WHERE city LIKE '%Miami%';",
+  "rows": [
+    {
+      "id": "870001",
+      "locationKey": "miami_fl",
+      "city": "Miami",
+      "state": "FL",
+      "status": "unknown",
+      "yesNoSummary": "Please check official Miami government sources for current STR regulations.",
+      "summary": "Unable to parse regulation data for Miami, FL.",
+      "simplifiedSummary": "STR regulations for Miami: Verify with official sources before investing.",
+      "keyRequirements": "[]",
+      "permitRequired": "0",
+      "primaryResidenceOnly": "0",
+      "maxNightsPerYear": "NULL",
+      "registrationFee": "Unknown",
+      "occupancyTax": "Unknown",
+      "zoningRestrictions": "Unknown",
+      "sources": "[{\"isOfficial\": false, \"title\": \"Search Miami STR Regulations\", \"type\": \"official\", \"url\": \"https://www.google.com/search?q=Miami%20FL%20short%20term%20rental%20regulations%20site%3Agov\"}]",
+      "confidence": "low",
+      "warnings": "[\"Could not parse structured data. Please verify with official sources.\", \"Verify with official city/county sources before investing.\"]",
+      "expiresAt": "2026-02-18 17:08:11",
+      "createdAt": "2026-02-11 17:08:10",
+      "updatedAt": "2026-02-11 17:08:10"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tlocationKey\tcity\tstate\tstatus\tyesNoSummary\tsummary\tsimplifiedSummary\tkeyRequirements\tpermitRequired\tprimaryResidenceOnly\tmaxNightsPerYear\tregistrationFee\toccupancyTax\tzoningRestrictions\tsources\tconfidence\twarnings\texpiresAt\tcreatedAt\tupdatedAt\n870001\tmiami_fl\tMiami\tFL\tunknown\tPlease check official Miami government sources for current STR regulations.\tUnable to parse regulation data for Miami, FL.\tSTR regulations for Miami: Verify with official sources before investing.\t[]\t0\t0\tNULL\tUnknown\tUnknown\tUnknown\t[{\"isOfficial\": false, \"title\": \"Search Miami STR Regulations\", \"type\": \"official\", \"url\": \"https://www.google.com/search?q=Miami%20FL%20short%20term%20rental%20regulations%20site%3Agov\"}]\tlow\t[\"Could not parse structured data. Please verify with official sources.\", \"Verify with official city/county sources before investing.\"]\t2026-02-18 17:08:11\t2026-02-11 17:08:10\t2026-02-11 17:08:10\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}
