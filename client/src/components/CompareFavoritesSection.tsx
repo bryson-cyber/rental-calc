@@ -31,8 +31,19 @@ import {
   LayoutGrid,
   Table2,
   AlertTriangle,
-  Sparkles
+  Sparkles,
+  Home,
+  Building,
+  Info,
+  ArrowLeftRight
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import type { GlobalMode } from '@/contexts/PropertyContext';
 import { Link } from 'wouter';
 import { ComparisonDashboard } from './ComparisonDashboard';
 
@@ -77,8 +88,20 @@ interface CompareFavoritesSectionProps {
 
 export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSectionProps) {
   const { user, isAuthenticated } = useAuth();
-  const { globalMode } = useProperty();
+  const { globalMode, setGlobalMode } = useProperty();
+  const [localMode, setLocalMode] = useState<GlobalMode>(globalMode);
   const [rentInputs, setRentInputs] = useState<Record<number, number>>({});
+  
+  // Sync local mode when global mode changes externally
+  useEffect(() => {
+    setLocalMode(globalMode);
+  }, [globalMode]);
+  
+  // Handler to toggle mode locally and also update global
+  const handleModeToggle = useCallback((mode: GlobalMode) => {
+    setLocalMode(mode);
+    setGlobalMode(mode);
+  }, [setGlobalMode]);
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<Set<number>>(new Set());
@@ -263,10 +286,54 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
         <div>
           <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)]">Your Saved Favorites</h3>
           <p className="text-sm text-[oklch(0.55_0_0)]">
-            {favorites.length} properties saved • {globalMode === 'purchase' ? 'Purchase Mode' : 'Arbitrage Mode'}
+            {favorites.length} properties saved
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {/* Analysis Mode Toggle */}
+          <TooltipProvider>
+            <div className="flex items-center gap-1.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center border border-slate-200 rounded-lg p-0.5 bg-white shadow-sm">
+                    <button
+                      onClick={() => handleModeToggle('rent')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                        localMode === 'rent'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Home className="w-3.5 h-3.5" />
+                      Arbitrage
+                    </button>
+                    <button
+                      onClick={() => handleModeToggle('purchase')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                        localMode === 'purchase'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Building className="w-3.5 h-3.5" />
+                      Purchase
+                    </button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="text-xs space-y-1.5 p-1">
+                    <p className="font-semibold">Analysis Mode</p>
+                    <p><span className="font-medium text-amber-600">Arbitrage:</span> Compare monthly rent vs. STR revenue to find profitable rental arbitrage deals.</p>
+                    <p><span className="font-medium text-blue-600">Purchase:</span> Analyze purchase price, mortgage, cash flow, and cap rate for buying properties.</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-slate-200" />
+
           {/* View Mode Toggle */}
           <div className="flex items-center border border-slate-200 rounded-lg p-0.5">
             <button
@@ -329,7 +396,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
             };
           })}
           onRemove={(id) => handleRemove(id)}
-          mode={globalMode || 'rent'}
+          mode={localMode || 'rent'}
         />
       )}
       
@@ -471,15 +538,26 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                       <span className="text-xs text-[oklch(0.55_0_0)]">Est. Annual Revenue</span>
                       <span className="font-semibold text-[oklch(0.15_0_0)]">{formatCurrency(annualRevenue)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-[oklch(0.55_0_0)]">Monthly Rent</span>
-                      <span className="font-medium text-[oklch(0.35_0_0)]">{formatCurrency(monthlyRent)}/mo</span>
-                    </div>
+                    {localMode === 'rent' ? (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-[oklch(0.55_0_0)]">Monthly Rent</span>
+                        <span className="font-medium text-[oklch(0.35_0_0)]">
+                          {monthlyRent > 0 && monthlyRent <= 50000 ? formatCurrency(monthlyRent) + '/mo' : <span className="text-slate-400">N/A</span>}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-[oklch(0.55_0_0)]">Purchase Price</span>
+                        <span className="font-medium text-[oklch(0.35_0_0)]">
+                          {(fav as any).purchasePrice ? formatCurrency((fav as any).purchasePrice) : <span className="text-slate-400">N/A</span>}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {/* Profit Preview */}
-                {monthlyRent > 0 && monthlyRent <= 50000 && annualRevenue > 0 && (
+                {/* Profit Preview - Arbitrage Mode */}
+                {localMode === 'rent' && monthlyRent > 0 && monthlyRent <= 50000 && annualRevenue > 0 && (
                   <div className={`flex items-center justify-between p-2 rounded-lg border ${grade.bgColor}`}>
                     <span className="text-xs text-[oklch(0.45_0_0)]">Est. Monthly Profit</span>
                     <span className={`font-bold ${monthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -487,6 +565,23 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                     </span>
                   </div>
                 )}
+                
+                {/* Purchase Mode Metrics */}
+                {localMode === 'purchase' && annualRevenue > 0 && (() => {
+                  const purchasePrice = (fav as any).purchasePrice || 200000;
+                  const noi = annualRevenue * (1 - 0.20 - 0.05) - purchasePrice * 0.012 - purchasePrice * 0.005;
+                  const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+                  return (
+                    <div className={`flex items-center justify-between p-2 rounded-lg border ${
+                      capRate >= 8 ? 'bg-emerald-50 border-emerald-200' : capRate >= 5 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+                    }`}>
+                      <span className="text-xs text-[oklch(0.45_0_0)]">Cap Rate</span>
+                      <span className={`font-bold ${capRate >= 8 ? 'text-emerald-600' : capRate >= 5 ? 'text-amber-600' : 'text-red-600'}`}>
+                        {capRate.toFixed(1)}%
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
               
               {/* Action buttons */}

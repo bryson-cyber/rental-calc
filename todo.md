@@ -11642,3 +11642,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Updated CompareFavoritesSection to pass purchasePrice through with legacy data handling
 - [x] Added vitest test suite (12 tests) for purchasePrice schema, metrics, and legacy handling
 - [ ] Test in browser with For Sale and For Rent properties mixed
+
+## Add Mode Toggle to Compare Favorites Section (February 16, 2026)
+- [x] Investigate how globalMode is passed to CompareFavoritesSection
+- [x] Add local mode state with toggle UI (Arbitrage vs Purchase) in CompareFavoritesSection
+- [x] Pass local mode override to ComparisonDashboard and card view
+- [x] Add tooltip/explainer for what each mode means (hover tooltip with descriptions)
+- [x] Update card view to show mode-appropriate metrics (rent/profit vs price/cap rate)
+- [x] Write vitest tests for the toggle behavior (17 tests passing)
+- [x] Verified in browser: Arbitrage shows Rent/Profit/Ratio; Purchase shows Price/CashFlow/CoCReturn/CapRate
+- [x] Checkpoint saved
