@@ -1372,7 +1372,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                   'Searching...'
                 ) : (
                   <>
-                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{totalResults > 0 ? totalResults : sortedProperties.length}</span> properties
+                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> properties{totalResults > sortedProperties.length && <span style={{ color: 'oklch(0.55 0 0)' }}> ({totalResults.toLocaleString()} in market)</span>}
                   </>
                 )}
               </p>
@@ -1478,7 +1478,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                 
                 {/* Page Info */}
                 <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0 0)' }}>
-                  Page {displayPage} of {hasMore ? `${totalPages} (${estimatedTotalPages} total)` : totalPages}
+                  Page {displayPage} of {totalPages}{hasMore && ` · ${(totalResults - sortedProperties.length).toLocaleString()} more available`}
                 </span>
               </div>
             )}

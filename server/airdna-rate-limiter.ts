@@ -26,7 +26,7 @@ const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 const DAILY_HARD_LIMIT = 600;
 
 /** Soft limit for non-admins - non-admin requests are paused beyond this to conserve quota */
-const NON_ADMIN_SOFT_LIMIT = 400;
+const NON_ADMIN_SOFT_LIMIT = 550;
 
 /** Warning threshold - notifications sent beyond this */
 const DAILY_WARN_THRESHOLD = 500;

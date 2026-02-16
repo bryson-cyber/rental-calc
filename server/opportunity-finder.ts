@@ -501,11 +501,52 @@ export const opportunityFinderRouter = router({
         // Then disambiguate location by geocoding to get correct city + state
         // This fixes issues where "Saint Louis" could match Florida instead of Missouri
         const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}`);
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
-        // Fetch the requested page with automatic price enrichment for multi-unit listings
-        // This calls the Property Details API for listings without price ("Contact for Price")
-        const result = await searchZillowListingsWithEnrichment(
+        // If loadMore is true, just fetch the specific page
+        if (input.loadMore && input.page > 1) {
+          const result = await searchZillowListingsWithEnrichment(
+            {
+              keyword: disambiguatedLocation,
+              type: 'forRent',
+              priceMin: input.priceMin,
+              priceMax: input.priceMax,
+              bedsMin: input.bedsMin,
+              bedsMax: input.bedsMax,
+              bathsMin: input.bathsMin,
+              bathsMax: input.bathsMax,
+              homeTypes: input.homeTypes,
+              page: input.page,
+            },
+            { maxEnrichments: 10 }
+          );
+          
+          if (!result.success) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: result.error || 'Failed to search Zillow rentals',
+            });
+          }
+          
+          const estimatedTotalPages = Math.ceil(result.totalResults / 40);
+          const hasMore = input.page < estimatedTotalPages;
+          
+          console.log(`[Opportunity Finder] Load more rentals page ${input.page}: ${result.properties.length} properties, hasMore: ${hasMore}`);
+          
+          return {
+            success: true,
+            totalResults: result.totalResults,
+            properties: result.properties,
+            location: input.location,
+            hasMore,
+            currentPage: input.page,
+            totalPages: estimatedTotalPages,
+          };
+        }
+        
+        // Initial search: fetch first 3 pages for comprehensive results
+        // This fixes the issue where only ~37 of 97 rentals were returned
+        const firstResult = await searchZillowListingsWithEnrichment(
           {
             keyword: disambiguatedLocation,
             type: 'forRent',
@@ -516,40 +557,72 @@ export const opportunityFinderRouter = router({
             bathsMin: input.bathsMin,
             bathsMax: input.bathsMax,
             homeTypes: input.homeTypes,
-            page: input.page,
+            page: 1,
           },
-          { maxEnrichments: 15 } // Enrich up to 15 properties per page for better coverage
+          { maxEnrichments: 15 }
         );
         
-        if (!result.success) {
+        if (!firstResult.success) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: result.error || 'Failed to search Zillow rentals',
+            message: firstResult.error || 'Failed to search Zillow rentals',
           });
         }
         
-        // Use pagination info directly from the API response
-        const totalResults = result.totalResults;
-        const totalPages = result.totalPages || Math.ceil(totalResults / 40);
+        let allProperties = [...firstResult.properties];
+        const totalResults = firstResult.totalResults;
         
-        // Calculate properties shown so far (current page * ~40 properties per page)
-        // But we need to account for the actual properties returned
-        const propertiesShownSoFar = (input.page - 1) * 40 + result.properties.length;
+        // Estimate ~40 properties per page
+        const estimatedTotalPages = Math.ceil(totalResults / 40);
+        // Fetch first 3 pages on initial load for comprehensive coverage
+        const initialPagesToFetch = Math.min(3, estimatedTotalPages);
         
-        // hasMore should be true if:
-        // 1. We're not on the last page (page < totalPages), OR
-        // 2. Total results is greater than what we've shown so far
-        const hasMore = input.page < totalPages || propertiesShownSoFar < totalResults;
+        console.log(`[Opportunity Finder] Rentals total: ${totalResults}, estimated pages: ${estimatedTotalPages}, fetching initial ${initialPagesToFetch} pages`);
         
-        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, totalPages: ${totalPages}, propertiesShown: ${propertiesShownSoFar}, hasMore: ${hasMore}`);
+        // Fetch pages 2-3 in parallel for initial load
+        if (initialPagesToFetch > 1) {
+          const pagePromises = [];
+          for (let page = 2; page <= initialPagesToFetch; page++) {
+            pagePromises.push(
+              searchZillowListings({
+                keyword: disambiguatedLocation,
+                type: 'forRent',
+                priceMin: input.priceMin,
+                priceMax: input.priceMax,
+                bedsMin: input.bedsMin,
+                bedsMax: input.bedsMax,
+                bathsMin: input.bathsMin,
+                bathsMax: input.bathsMax,
+                homeTypes: input.homeTypes,
+                page,
+              })
+            );
+          }
+          
+          const additionalResults = await Promise.all(pagePromises);
+          
+          for (const result of additionalResults) {
+            if (result.success && result.properties.length > 0) {
+              // Deduplicate by property ID
+              const existingIds = new Set(allProperties.map(p => p.id));
+              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
+              allProperties.push(...newProperties);
+            }
+          }
+        }
+        
+        // Determine if there are more pages to load
+        const hasMore = initialPagesToFetch < estimatedTotalPages;
+        
+        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total rental properties, hasMore: ${hasMore}`);
         
         return {
           success: true,
           totalResults: totalResults,
-          properties: result.properties,
+          properties: allProperties,
           location: input.location,
-          currentPage: input.page,
-          totalPages: totalPages,
+          currentPage: initialPagesToFetch,
+          totalPages: estimatedTotalPages,
           hasMore: hasMore,
         };
         

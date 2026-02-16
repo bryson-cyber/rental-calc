@@ -11676,3 +11676,25 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add brand-consistent icons and color scheme (Sparkles icon, TrendingUp for Pro, MessageCircle for Guided)
 - [x] Make the modal feel premium and polished (glow effects, shimmer CTA, gold-to-teal gradient button)
 - [x] Test in browser and save checkpoint
+
+## Fix Report Style Modal Font (February 16, 2026)
+- [x] Fixed --font-display CSS variable to use 'Playfair Display' instead of system fonts
+- [x] Added --font-serif and --font-sans variables for Tailwind utility classes
+- [x] Updated --font-body to use 'DM Sans' as primary body font
+- [x] All h1-h6 headings now render in Playfair Display serif
+
+## Fix Batch Analysis Failures in Step 2 - San Diego (February 16, 2026)
+- [x] Root cause: Non-admin daily soft limit (400/600) was exceeded (594 calls used)
+- [x] Raised non-admin soft limit from 400 to 550 to prevent blocking user-facing features
+
+## Fix Pagination Bug in Step 2 Property Listings (February 16, 2026)
+- [x] Fixed "Showing X of Y" to show loaded count, with market total in parentheses
+- [x] Fixed page info to show loaded vs available properties clearly
+
+## Fix HasData Zillow API Data Discrepancy (February 16, 2026)
+- [x] Root cause: Rental search only fetched page 1 (~40 results), while For Sale fetched pages 1-3
+- [x] HasData API returns ~40 results per page; 97 rentals needs 3 pages (97/40 = 2.4)
+- [x] Fix: Updated searchZillowRentals to fetch up to 3 pages on initial load (matching For Sale)
+- [x] Added loadMore support for fetching additional pages beyond the initial 3
+- [x] Added deduplication by property ID to prevent duplicates across pages
+- [x] 12 vitest tests passing for pagination, hasMore, and deduplication logic
