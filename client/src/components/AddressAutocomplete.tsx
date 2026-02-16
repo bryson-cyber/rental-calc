@@ -493,7 +493,7 @@ export function AddressAutocomplete({
               ? "text-white/40 border-white/10 bg-white/5"
               : "text-slate-400 border-slate-100 bg-slate-50"
           )}>
-            Powered by Google
+            <span className="flex items-center gap-1">Powered by <img src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg" alt="Google" className="h-3.5 inline-block" /></span>
           </div>
         </div>,
         document.body

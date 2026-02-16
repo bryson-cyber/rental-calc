@@ -259,12 +259,12 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
           </div>
           <div style="position:absolute;bottom:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap;">
             ${comp.rating ? `<span style="background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);color:#FBBF24;font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;">★ ${comp.rating.toFixed(1)}${comp.reviews ? ` (${comp.reviews})` : ''}</span>` : ''}
-            <span style="background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);color:white;font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;">${comp.bedrooms || '?'}BR / ${comp.bathrooms || '?'}BA</span>
+            <span style="background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);color:white;font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;">${comp.bedrooms === 0 ? 'Studio' : (comp.bedrooms ?? '?') + 'BR'} / ${comp.bathrooms ?? '?'}BA</span>
           </div>
         </div>`
       : `<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">
           <span style="background:${colors.gradient};color:white;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">#${index + 1}</span>
-          <span style="font-size:12px;color:#64748B;">${comp.bedrooms || '?'}BR / ${comp.bathrooms || '?'}BA${comp.rating ? ` · ★ ${comp.rating.toFixed(1)}` : ''}</span>
+          <span style="font-size:12px;color:#64748B;">${comp.bedrooms === 0 ? 'Studio' : (comp.bedrooms ?? '?') + 'BR'} / ${comp.bathrooms ?? '?'}BA${comp.rating ? ` · ★ ${comp.rating.toFixed(1)}` : ''}</span>
         </div>`;
 
     const airbnbLink = comp.airbnb_listing_id
@@ -529,7 +529,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
               </div>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:${distText ? '4px' : '0'};">
                 <span style="font-size:12px;font-weight:700;color:#166534;">${formatCurrency(comp.annual_revenue)}/yr</span>
-                <span style="font-size:11px;color:#64748B;">${comp.bedrooms || '?'}BR</span>
+                <span style="font-size:11px;color:#64748B;">${comp.bedrooms === 0 ? 'Studio' : (comp.bedrooms ?? '?') + 'BR'}</span>
                 ${comp.rating ? `<span style="font-size:11px;color:#D97706;">★ ${comp.rating.toFixed(1)}</span>` : ''}
               </div>
               ${distText ? `<div style="font-size:11px;color:#3B82F6;font-weight:500;">${distText}</div>` : ''}

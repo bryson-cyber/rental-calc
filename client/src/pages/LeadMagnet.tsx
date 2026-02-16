@@ -404,7 +404,7 @@ export default function LeadMagnet() {
   }, [isFirstVisit, showTour, startTour]);
   
   // Property context for property-centric workflow
-  const { myProperty, hasProperty, bedroomFilter, setMyProperty, globalMode } = useProperty();
+  const { myProperty, hasProperty, bedroomFilter, setMyProperty, clearProperty, globalMode } = useProperty();
   
   // Tool usage tracking
   const { trackAction } = useActionTracking('revenue_calculator');
@@ -2249,23 +2249,60 @@ export default function LeadMagnet() {
       <section id="tools-section" className="pt-8 pb-20 md:pt-12 md:pb-24">
         <div className="container max-w-4xl mx-auto">
           
-          {/* Start With Property - Property-Centric Entry Point */}
-          <div className="mb-12">
-            <StartWithProperty
-              onPropertySet={(property) => {
-                // When property is set, auto-fill the validate form
-                setAddress(property.address);
-                setBedrooms(String(property.bedrooms));
-                setBathrooms(String(property.bathrooms));
-                if (property.monthlyRent) {
-                  setMonthlyRent(String(property.monthlyRent));
-                }
-              }}
-              onNavigateToStep={(step) => {
-                setActiveTab(step as TabType);
-              }}
-            />
-          </div>
+          {/* Start With Property - Only show on Guide tab (entry point) */}
+          {activeTab === 'ebook' && (
+            <div className="mb-12">
+              <StartWithProperty
+                onPropertySet={(property) => {
+                  // When property is set, auto-fill the validate form
+                  setAddress(property.address);
+                  setBedrooms(String(property.bedrooms));
+                  setBathrooms(String(property.bathrooms));
+                  if (property.monthlyRent) {
+                    setMonthlyRent(String(property.monthlyRent));
+                  }
+                }}
+                onNavigateToStep={(step) => {
+                  setActiveTab(step as TabType);
+                }}
+              />
+            </div>
+          )}
+          
+          {/* Subtle property context bar - shows on other steps when property is set */}
+          {activeTab !== 'ebook' && hasProperty && myProperty?.address && (
+            <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-amber-50/80 border border-amber-200/60 rounded-xl">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Home className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{myProperty.address}</p>
+                <p className="text-xs text-slate-500">
+                  {myProperty.bedrooms === 0 ? 'Studio' : `${myProperty.bedrooms} BR`} · {myProperty.bathrooms} BA
+                  {globalMode === 'rent' && myProperty.monthlyRent ? ` · $${myProperty.monthlyRent.toLocaleString()}/mo` : ''}
+                  {globalMode === 'purchase' && myProperty.purchasePrice ? ` · $${myProperty.purchasePrice.toLocaleString()}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab('ebook')}
+                className="text-xs text-amber-600 hover:text-amber-800 font-medium whitespace-nowrap transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  clearProperty();
+                  setAddress('');
+                  setBedrooms('2');
+                  setBathrooms('1');
+                  setMonthlyRent('');
+                }}
+                className="text-xs text-slate-400 hover:text-slate-600 font-medium whitespace-nowrap transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           
           {/* Full Report CTA - Admin Only */}
           {user?.role === 'admin' && <div className="mb-12">

@@ -488,7 +488,7 @@ IMPORTANT: You have access to LIVE DATA from the user's current analysis. When a
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className={`fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-[80] w-14 h-14 rounded-full bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.14_75)] text-white shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center ${className}`}
+            className={`fixed bottom-24 sm:bottom-[4.5rem] right-4 sm:right-6 z-[9998] w-14 h-14 rounded-full bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.14_75)] text-white shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center ${className}`}
             aria-label="Open AI Assistant"
           >
             <MessageCircle className="w-6 h-6" />
@@ -517,7 +517,7 @@ IMPORTANT: You have access to LIVE DATA from the user's current analysis. When a
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-[80] w-[calc(100%-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col ${className}`}
+            className={`fixed bottom-24 sm:bottom-[4.5rem] right-4 sm:right-6 z-[9998] w-[calc(100%-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col ${className}`}
             style={{ maxHeight: isMinimized ? 'auto' : 'calc(100vh - 120px)' }}
           >
             {/* Header */}

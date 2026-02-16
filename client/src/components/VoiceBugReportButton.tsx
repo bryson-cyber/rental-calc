@@ -364,7 +364,7 @@ export function VoiceBugReportButton() {
             setTimeout(() => startRecording(), 300);
           }
         }}
-        className="fixed bottom-36 sm:bottom-28 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-36 sm:bottom-[11.5rem] right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
         title="Voice Bug Report (Admin Only)"
       >
         <Mic className="w-5 h-5" />

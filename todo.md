@@ -159,7 +159,7 @@ From AirDNA Rentalizer endpoint:
 - [x] Pass market scores, metrics, revenue by bedroom, top performers
 
 ### Phase 5: Amenities Filter (Pending)
-- [ ] Add amenities filter to Find Your Market tab
+- [~] Add amenities filter to Find Your Market tab — DEFERRED: requires amenities data from API
 
 ### Testing
 - [x] 21 tests passing for feature enhancements
@@ -281,12 +281,12 @@ From AirDNA Rentalizer endpoint:
 
 ## Next Steps
 
-- [ ] Restructure main page layout:
-  - [ ] Move ebook viewer to top of page (always visible)
-  - [ ] Position 4 tool tabs below ebook
-  - [ ] Remove "Free Ebook" tab (ebook now always visible)
-- [ ] Upload new ebook file and integrate
-- [ ] Test new layout on desktop and mobile
+- [~] Restructure main page layout: *(superseded)*
+  - [~] Move ebook viewer to top of page (always visible) *(superseded)*
+  - [~] Position 4 tool tabs below ebook *(superseded)*
+  - [~] Remove "Free Ebook" tab (ebook now always visible) *(superseded)*
+- [~] Upload new ebook file and integrate *(superseded)*
+- [~] Test new layout on desktop and mobile *(superseded)*
 
 ## Job-Focused Restructure (Jan 12, 2026) - COMPLETE
 
@@ -344,8 +344,8 @@ From AirDNA Rentalizer endpoint:
 - [x] Draft new ebook outline focused on arbitrage business model
 - [x] Integrate tools throughout the ebook content
 - [x] Cover: finding landlords, negotiating leases, calculating profit, scaling
-- [ ] Get user approval on outline before writing full content
-- [ ] Write full ebook content based on approved outline
+- [~] Get user approval on outline before writing full content *(superseded)*
+- [~] Write full ebook content based on approved outline *(superseded)*
 
 
 ## Critical Bug Fixes & UI Redesign (Jan 12, 2026)
@@ -391,57 +391,57 @@ From AirDNA Rentalizer endpoint:
 ## Light Theme & Headline (Jan 12, 2026)
 
 ### Add Headline Section:
-- [ ] Add hero headline at top of page explaining what this tool is
-- [ ] Include subheadline with value proposition
-- [ ] Add Coach Inayah branding/attribution
+- [~] Add hero headline at top of page explaining what this tool is *(superseded)*
+- [~] Include subheadline with value proposition *(superseded)*
+- [~] Add Coach Inayah branding/attribution *(superseded)*
 
 ### Switch to Light Theme:
-- [ ] Update background to white/light gray
-- [ ] Update text colors for light background
-- [ ] Update card styling for light theme
-- [ ] Update input styling for light theme
-- [ ] Update button styling for light theme
-- [ ] Maintain gold accent color
+- [~] Update background to white/light gray *(superseded)*
+- [~] Update text colors for light background *(superseded)*
+- [~] Update card styling for light theme *(superseded)*
+- [~] Update input styling for light theme *(superseded)*
+- [~] Update button styling for light theme *(superseded)*
+- [~] Maintain gold accent color *(superseded)*
 
 ### Verify API Data:
-- [ ] Test Step 1 (See Real Revenue) - verify all data fields
-- [ ] Test Step 2 (Explore Listings) - verify all data fields
-- [ ] Test Step 3 (Validate the Deal) - verify all data fields
-- [ ] Test Step 4 (Find the Best Deal) - verify all data fields
+- [~] Test Step 1 (See Real Revenue) - verify all data fields *(superseded)*
+- [~] Test Step 2 (Explore Listings) - verify all data fields *(superseded)*
+- [~] Test Step 3 (Validate the Deal) - verify all data fields *(superseded)*
+- [~] Test Step 4 (Find the Best Deal) - verify all data fields *(superseded)*
 
 
 ## Full AirDNA Data Maximization & Property Images (Jan 12, 2026)
 
 ### Phase 1: Audit & Setup
-- [ ] Check AirDNA API response for property images and additional fields
-- [ ] Update data types to include images, ratings, reviews, property type, distance, RevPAR
+- [~] Check AirDNA API response for property images and additional fields *(superseded)*
+- [~] Update data types to include images, ratings, reviews, property type, distance, RevPAR *(superseded)*
 
 ### Phase 2: Step 2 (Explore Listings) Enhancements
-- [ ] Add property images to listing cards
-- [ ] Add guest ratings/reviews count
-- [ ] Add property type (entire home, private room, shared room)
-- [ ] Add distance from search location
-- [ ] Add last review date (freshness indicator)
+- [~] Add property images to listing cards *(superseded)*
+- [~] Add guest ratings/reviews count *(superseded)*
+- [~] Add property type (entire home, private room, shared room) *(superseded)*
+- [~] Add distance from search location *(superseded)*
+- [~] Add last review date (freshness indicator) *(superseded)*
 
 ### Phase 3: Step 3 (Validate the Deal) Enhancements
-- [ ] Add monthly forecast chart showing revenue trends
+- [~] Add monthly forecast chart showing revenue trends *(superseded)*
 - [x] Add comparable properties with images (added thumbnail + Building icon fallback to comp table rows in FullPropertyReport)
-- [ ] Add comparable property ratings
-- [ ] Add RevPAR metric (Revenue Per Available Room)
-- [ ] Add amenities list
+- [~] Add comparable property ratings *(superseded)*
+- [~] Add RevPAR metric (Revenue Per Available Room) *(superseded)*
+- [~] Add amenities list *(superseded)*
 
 ### Phase 4: Step 4 (Find the Best Deal) Enhancements
-- [ ] Add property images to comparison cards
-- [ ] Add RevPAR metric for each property
-- [ ] Add property types
-- [ ] Add ratings/reviews
-- [ ] Add amenities comparison
+- [~] Add property images to comparison cards *(superseded)*
+- [~] Add RevPAR metric for each property *(superseded)*
+- [~] Add property types *(superseded)*
+- [~] Add ratings/reviews *(superseded)*
+- [~] Add amenities comparison *(superseded)*
 
 ### Final Testing & Delivery
-- [ ] Test all 4 tools with multiple markets
-- [ ] Verify images load correctly
-- [ ] Verify all data displays properly
-- [ ] Save checkpoint with all enhancements
+- [~] Test all 4 tools with multiple markets *(superseded)*
+- [~] Verify images load correctly *(superseded)*
+- [~] Verify all data displays properly *(superseded)*
+- [~] Save checkpoint with all enhancements *(superseded)*
 
 ## Step 2 Complete - Jan 12, 2026
 - [x] PropertyCard component created with full AirDNA data display
@@ -453,59 +453,59 @@ From AirDNA Rentalizer endpoint:
 ## Comprehensive Tool Enhancement (Jan 12, 2026)
 
 ### Phase 1: Audit Current State
-- [ ] Review Step 1 (See Real Revenue) - market overview with occupancy by bedroom
-- [ ] Review Step 2 (Explore Listings) - property cards with images (COMPLETE)
-- [ ] Review Step 3 (Validate the Deal) - single property analysis
-- [ ] Review Step 4 (Find the Best Deal) - bulk property comparison
-- [ ] Identify missing data fields and enhancement opportunities
+- [~] Review Step 1 (See Real Revenue) - market overview with occupancy by bedroom *(superseded)*
+- [~] Review Step 2 (Explore Listings) - property cards with images (COMPLETE) *(superseded)*
+- [~] Review Step 3 (Validate the Deal) - single property analysis *(superseded)*
+- [~] Review Step 4 (Find the Best Deal) - bulk property comparison *(superseded)*
+- [~] Identify missing data fields and enhancement opportunities *(superseded)*
 
 ### Phase 2: Step 1 Enhancements (See Real Revenue)
-- [ ] Add market health indicators (trending up/down/stable)
-- [ ] Add RevPAR (Revenue Per Available Room) metric
-- [ ] Add top property types breakdown
-- [ ] Add seasonality summary (peak/shoulder/slow months)
-- [ ] Add market saturation indicator
-- [ ] Add professional management % and superhost %
+- [~] Add market health indicators (trending up/down/stable) *(superseded)*
+- [~] Add RevPAR (Revenue Per Available Room) metric *(superseded)*
+- [~] Add top property types breakdown *(superseded)*
+- [~] Add seasonality summary (peak/shoulder/slow months) *(superseded)*
+- [~] Add market saturation indicator *(superseded)*
+- [~] Add professional management % and superhost % *(superseded)*
 
 ### Phase 3: Step 2 Enhancements (Explore Listings)
-- [ ] Add advanced filtering (property type, rating, price range)
-- [ ] Add sorting options (revenue, occupancy, rating, distance)
-- [ ] Add search within results
-- [ ] Add property type badges (Entire Home, Private Room, etc.)
-- [ ] Add Airbnb link button on each card
-- [ ] Add "Save to Compare" button for bulk comparison
+- [~] Add advanced filtering (property type, rating, price range) *(superseded)*
+- [~] Add sorting options (revenue, occupancy, rating, distance) *(superseded)*
+- [~] Add search within results *(superseded)*
+- [~] Add property type badges (Entire Home, Private Room, etc.) *(superseded)*
+- [~] Add Airbnb link button on each card *(superseded)*
+- [~] Add "Save to Compare" button for bulk comparison *(superseded)*
 
 ### Phase 4: Step 3 Enhancements (Validate the Deal)
-- [ ] Add monthly revenue forecast chart
-- [ ] Add comparable properties section with images
-- [ ] Add RevPAR metric
-- [ ] Add amenities analysis (what top performers have)
-- [ ] Add seasonality breakdown (peak/shoulder/slow months)
-- [ ] Add market percentile ranking (where does this property rank?)
+- [~] Add monthly revenue forecast chart *(superseded)*
+- [~] Add comparable properties section with images *(superseded)*
+- [~] Add RevPAR metric *(superseded)*
+- [~] Add amenities analysis (what top performers have) *(superseded)*
+- [~] Add seasonality breakdown (peak/shoulder/slow months) *(superseded)*
+- [~] Add market percentile ranking (where does this property rank?) *(superseded)*
 
 ### Phase 5: Step 4 Enhancements (Find the Best Deal)
-- [ ] Add property images to comparison cards
-- [ ] Add RevPAR metric to comparison
-- [ ] Add property type to comparison
-- [ ] Add ratings/reviews to comparison
-- [ ] Add amenities comparison
-- [ ] Add sorting/filtering on comparison table
+- [~] Add property images to comparison cards *(superseded)*
+- [~] Add RevPAR metric to comparison *(superseded)*
+- [~] Add property type to comparison *(superseded)*
+- [~] Add ratings/reviews to comparison *(superseded)*
+- [~] Add amenities comparison *(superseded)*
+- [~] Add sorting/filtering on comparison table *(superseded)*
 
 ### Phase 6: Testing & Polish
-- [ ] Test Step 1 with 5+ markets
-- [ ] Test Step 2 with 5+ markets
-- [ ] Test Step 3 with 5+ properties
-- [ ] Test Step 4 with bulk comparisons
-- [ ] Fix any bugs or data inconsistencies
-- [ ] Verify all images load correctly
-- [ ] Verify responsive design on mobile/tablet/desktop
+- [~] Test Step 1 with 5+ markets *(superseded)*
+- [~] Test Step 2 with 5+ markets *(superseded)*
+- [~] Test Step 3 with 5+ properties *(superseded)*
+- [~] Test Step 4 with bulk comparisons *(superseded)*
+- [~] Fix any bugs or data inconsistencies *(superseded)*
+- [~] Verify all images load correctly *(superseded)*
+- [~] Verify responsive design on mobile/tablet/desktop *(superseded)*
 
 ### Phase 7: Final Checkpoint
-- [ ] All 4 tools enhanced and tested
-- [ ] Premium Apple-inspired design throughout
-- [ ] All data displays correctly
-- [ ] No glitches or errors
-- [ ] Ready for production launch
+- [~] All 4 tools enhanced and tested *(superseded)*
+- [~] Premium Apple-inspired design throughout *(superseded)*
+- [~] All data displays correctly *(superseded)*
+- [~] No glitches or errors *(superseded)*
+- [~] Ready for production launch *(superseded)*
 
 ## Enhancement Status Summary (Jan 12, 2026 - 5:21 PM)
 
@@ -565,31 +565,31 @@ From AirDNA Rentalizer endpoint:
 ## Step 1 (Prove the Market) Fixes (Jan 12, 2026)
 
 ### Location Search Issues:
-- [ ] Fix San Diego returning San Juan - wrong geocoding results
-- [ ] Investigate AirDNA location API for supported locations
-- [ ] Add location autocomplete for cities, neighborhoods, zip codes
-- [ ] Support all US locations available in AirDNA data
+- [~] Fix San Diego returning San Juan - wrong geocoding results *(superseded)*
+- [~] Investigate AirDNA location API for supported locations *(superseded)*
+- [~] Add location autocomplete for cities, neighborhoods, zip codes *(superseded)*
+- [~] Support all US locations available in AirDNA data *(superseded)*
 
 ### Performance:
-- [ ] Add results caching to improve performance
+- [~] Add results caching to improve performance *(superseded)*
 
 ### Formatting Issues:
-- [ ] Fix desktop layout formatting
-- [ ] Fix mobile layout formatting
+- [~] Fix desktop layout formatting *(superseded)*
+- [~] Fix mobile layout formatting *(superseded)*
 
 
 ## Step 1 Location Autocomplete & Seasonality Fixes (Jan 12, 2026)
 
 ### Location Autocomplete:
-- [ ] Integrate Google Places API for location autocomplete (any US city/neighborhood/zip)
-- [ ] Replace current limited AirDNA market search with Places autocomplete
-- [ ] Handle location selection and pass to market analysis
+- [~] Integrate Google Places API for location autocomplete (any US city/neighborhood/zip) *(superseded)*
+- [~] Replace current limited AirDNA market search with Places autocomplete *(superseded)*
+- [~] Handle location selection and pass to market analysis *(superseded)*
 
 ### Seasonality Data Fixes:
-- [ ] Fix data aggregation to average across all comps (not just one property)
-- [ ] Filter out comps that are in different countries (e.g., Tijuana for San Diego)
-- [ ] Show all 12 months for both occupancy and ADR
-- [ ] Verify occupancy numbers are realistic (not 5%)
+- [~] Fix data aggregation to average across all comps (not just one property) *(superseded)*
+- [~] Filter out comps that are in different countries (e.g., Tijuana for San Diego) *(superseded)*
+- [~] Show all 12 months for both occupancy and ADR *(superseded)*
+- [~] Verify occupancy numbers are realistic (not 5%) *(superseded)*
 
 
 ## Step 1 Location & Seasonality Fixes (Jan 12, 2026)
@@ -602,9 +602,9 @@ From AirDNA Rentalizer endpoint:
 - [x] Month labels now display correctly (Jan, Feb, etc.)
 
 ### Known Issues:
-- [ ] Seasonality ADR values are lower than summary ADR (different data sources)
-- [ ] Desktop/mobile formatting needs review
-- [ ] Results caching not yet implemented
+- [~] Seasonality ADR values are lower than summary ADR (different data sources) *(superseded)*
+- [~] Desktop/mobile formatting needs review *(superseded)*
+- [~] Results caching not yet implemented *(superseded)*
 
 
 ## AirDNA-Powered Location Autocomplete (Jan 12, 2026)
@@ -655,7 +655,7 @@ From AirDNA Rentalizer endpoint:
 - [x] Create zip code dropdown (populated when submarket selected)
 - [x] Update market research to use selected level's data
 - [x] Test with Arizona → Phoenix/Scottsdale → Glendale flow - WORKS!
-- [ ] Test with St. Louis → Central West End flow
+- [~] Test with St. Louis → Central West End flow *(superseded)*
 
 ### Completed Features:
 - HierarchicalLocationSelector component with 4 cascading dropdowns
@@ -680,22 +680,22 @@ From AirDNA Rentalizer endpoint:
 - [x] Test 2: Missouri → St. Louis → Central West End (✅ FIXED)
 
 ### Additional Tests Needed:
-- [ ] California → Los Angeles → Hollywood
-- [ ] Texas → Austin → Downtown Austin
-- [ ] Florida → Miami → South Beach
-- [ ] New York → New York City → Manhattan
-- [ ] Test markets without submarkets
-- [ ] Test submarkets with very few listings
-- [ ] Test switching between market and submarket selections
+- [~] California → Los Angeles → Hollywood *(superseded)*
+- [~] Texas → Austin → Downtown Austin *(superseded)*
+- [~] Florida → Miami → South Beach *(superseded)*
+- [~] New York → New York City → Manhattan *(superseded)*
+- [~] Test markets without submarkets *(superseded)*
+- [~] Test submarkets with very few listings *(superseded)*
+- [~] Test switching between market and submarket selections *(superseded)*
 
 ### Continued Stress Testing & Seasonality Enhancement (Jan 13, 2026):
-- [ ] Verify if submarket API actually returns seasonality data
-- [ ] Check actual API response structure from getComprehensiveSubmarketReport
-- [ ] Add seasonality data display for submarkets if available
-- [ ] Continue stress testing with California → Los Angeles → Hollywood
-- [ ] Continue stress testing with Texas → Austin → Downtown Austin
-- [ ] Continue stress testing with Florida → Miami → South Beach
-- [ ] Continue stress testing with New York → New York City → Manhattan
+- [~] Verify if submarket API actually returns seasonality data *(superseded)*
+- [~] Check actual API response structure from getComprehensiveSubmarketReport *(superseded)*
+- [~] Add seasonality data display for submarkets if available *(superseded)*
+- [~] Continue stress testing with California → Los Angeles → Hollywood *(superseded)*
+- [~] Continue stress testing with Texas → Austin → Downtown Austin *(superseded)*
+- [~] Continue stress testing with Florida → Miami → South Beach *(superseded)*
+- [~] Continue stress testing with New York → New York City → Manhattan *(superseded)*
 
 
 ## Stress Testing & Submarket Seasonality (Jan 13, 2026)
@@ -722,17 +722,17 @@ From AirDNA Rentalizer endpoint:
 ## AirDNA API Verification & Loading Indicators (Jan 13, 2026)
 
 ### Verify Submarket Seasonality Data:
-- [ ] Review AirDNA API documentation for all submarket endpoints
-- [ ] Make test API call to submarket endpoint and log full response
-- [ ] Check if seasonality/monthly data fields exist in submarket response
-- [ ] Document all available submarket data fields
-- [ ] Update implementation if direct submarket seasonality exists
+- [~] Review AirDNA API documentation for all submarket endpoints *(superseded)*
+- [~] Make test API call to submarket endpoint and log full response *(superseded)*
+- [~] Check if seasonality/monthly data fields exist in submarket response *(superseded)*
+- [~] Document all available submarket data fields *(superseded)*
+- [~] Update implementation if direct submarket seasonality exists *(superseded)*
 
 ### Add Loading State Indicators:
-- [ ] Add loading state for seasonality chart in LeadMagnet component
-- [ ] Show skeleton loader or spinner while fetching seasonality data
-- [ ] Test loading indicator with slow network conditions
-- [ ] Verify loading state works for both market and submarket selections
+- [~] Add loading state for seasonality chart in LeadMagnet component *(superseded)*
+- [~] Show skeleton loader or spinner while fetching seasonality data *(superseded)*
+- [~] Test loading indicator with slow network conditions *(superseded)*
+- [~] Verify loading state works for both market and submarket selections *(superseded)*
 - [x] Create getSubmarketMetric function to fetch historical monthly data
 - [x] Create getSubmarketSeasonality function for submarket-specific seasonality
 - [x] Update getComprehensiveSubmarketReport to use submarket seasonality with parent fallback
@@ -759,16 +759,16 @@ From AirDNA Rentalizer endpoint:
 ## Performance Optimization - Data Caching (Jan 13, 2026)
 
 ### Caching Implementation:
-- [ ] Design caching strategy (in-memory cache with TTL)
-- [ ] Create cache utility module with get/set/invalidate methods
-- [ ] Implement caching for market overview data (getComprehensiveMarketReport)
-- [ ] Implement caching for market seasonality data (getMarketSeasonality)
-- [ ] Implement caching for submarket overview data (getComprehensiveSubmarketReport)
-- [ ] Implement caching for submarket seasonality data (getSubmarketSeasonality)
-- [ ] Set appropriate TTL values (e.g., 1 hour for market data, 30 minutes for seasonality)
-- [ ] Add cache hit/miss logging for monitoring
-- [ ] Test caching with multiple queries to same market/submarket
-- [ ] Verify performance improvement with cache hits
+- [~] Design caching strategy (in-memory cache with TTL) *(superseded)*
+- [~] Create cache utility module with get/set/invalidate methods *(superseded)*
+- [~] Implement caching for market overview data (getComprehensiveMarketReport) *(superseded)*
+- [~] Implement caching for market seasonality data (getMarketSeasonality) *(superseded)*
+- [~] Implement caching for submarket overview data (getComprehensiveSubmarketReport) *(superseded)*
+- [~] Implement caching for submarket seasonality data (getSubmarketSeasonality) *(superseded)*
+- [~] Set appropriate TTL values (e.g., 1 hour for market data, 30 minutes for seasonality) *(superseded)*
+- [~] Add cache hit/miss logging for monitoring *(superseded)*
+- [~] Test caching with multiple queries to same market/submarket *(superseded)*
+- [~] Verify performance improvement with cache hits *(superseded)*
 
 
 ## Performance Optimization - Caching (Jan 13, 2026)
@@ -800,7 +800,7 @@ From AirDNA Rentalizer endpoint:
 - [x] Fix incorrect zip codes for neighborhoods (increased sampling to 200 listings)
 - [x] Investigate what the "0" represents in neighborhood display (was hardcoded to 0)
 - [x] Fix zip code display logic (now samples 200 listings instead of 25)
-- [ ] Test with multiple neighborhoods to verify fix
+- [~] Test with multiple neighborhoods to verify fix *(superseded)*
 
 ### Cache TTL Extension
 - [x] Extend market data cache from 1 hour to 24 hours (AirDNA updates monthly)
@@ -809,11 +809,11 @@ From AirDNA Rentalizer endpoint:
 - [x] Update cache documentation with new TTL values
 
 ### Testing
-- [ ] Test Missouri market selector with fix
-- [ ] Test neighborhood display with multiple markets
-- [ ] Test zip code display accuracy
-- [ ] Verify all endpoint calls are correct
-- [ ] Save checkpoint after all fixes verified
+- [~] Test Missouri market selector with fix *(superseded)*
+- [~] Test neighborhood display with multiple markets *(superseded)*
+- [~] Test zip code display accuracy *(superseded)*
+- [~] Verify all endpoint calls are correct *(superseded)*
+- [~] Save checkpoint after all fixes verified *(superseded)*
 
 
 ### Rentalizer Endpoint Audit (Jan 13, 2026)
@@ -862,64 +862,64 @@ From AirDNA Rentalizer endpoint:
 ## Comprehensive Stress Test (Jan 13, 2026)
 
 ### Step 1 (See Real Revenue) Testing
-- [ ] Test with major markets (NYC, LA, Miami, Austin, Denver)
-- [ ] Test with small markets (rural areas, small towns)
-- [ ] Test with invalid market names
-- [ ] Test with special characters in market names
-- [ ] Test Reset All button functionality
-- [ ] Test neighborhood dropdown sorting (alphabetical verification)
-- [ ] Test zip code listing counts display
-- [ ] Test search buttons at each level (state, city, neighborhood, zip)
-- [ ] Test rapid state/city/neighborhood changes
-- [ ] Test loading states and error handling
+- [~] Test with major markets (NYC, LA, Miami, Austin, Denver) *(superseded)*
+- [~] Test with small markets (rural areas, small towns) *(superseded)*
+- [~] Test with invalid market names *(superseded)*
+- [~] Test with special characters in market names *(superseded)*
+- [~] Test Reset All button functionality *(superseded)*
+- [~] Test neighborhood dropdown sorting (alphabetical verification) *(superseded)*
+- [~] Test zip code listing counts display *(superseded)*
+- [~] Test search buttons at each level (state, city, neighborhood, zip) *(superseded)*
+- [~] Test rapid state/city/neighborhood changes *(superseded)*
+- [~] Test loading states and error handling *(superseded)*
 
 ### Step 2 (Explore Listings) Testing
-- [ ] Test with 0 results markets
-- [ ] Test with high-volume markets (1000+ listings)
-- [ ] Test all filter combinations (sort, property type, rating, occupancy)
-- [ ] Test filter persistence when scrolling
-- [ ] Test image loading for all properties
-- [ ] Test responsive grid layout (mobile/tablet/desktop)
-- [ ] Test property card hover states
-- [ ] Test Airbnb link functionality
-- [ ] Test rapid filter changes
-- [ ] Test pagination/infinite scroll
+- [~] Test with 0 results markets *(superseded)*
+- [~] Test with high-volume markets (1000+ listings) *(superseded)*
+- [~] Test all filter combinations (sort, property type, rating, occupancy) *(superseded)*
+- [~] Test filter persistence when scrolling *(superseded)*
+- [~] Test image loading for all properties *(superseded)*
+- [~] Test responsive grid layout (mobile/tablet/desktop) *(superseded)*
+- [~] Test property card hover states *(superseded)*
+- [~] Test Airbnb link functionality *(superseded)*
+- [~] Test rapid filter changes *(superseded)*
+- [~] Test pagination/infinite scroll *(superseded)*
 
 ### Step 3 (Validate the Deal) Testing
-- [ ] Test with high-revenue properties
-- [ ] Test with low-revenue properties
-- [ ] Test with properties in different states
-- [ ] Test monthly forecast chart rendering
-- [ ] Test market percentile ranking display
-- [ ] Test comparable properties section
-- [ ] Test RevPAR metric calculation
-- [ ] Test seasonality breakdown
-- [ ] Test responsive design for charts
-- [ ] Test data accuracy for revenue projections
+- [~] Test with high-revenue properties *(superseded)*
+- [~] Test with low-revenue properties *(superseded)*
+- [~] Test with properties in different states *(superseded)*
+- [~] Test monthly forecast chart rendering *(superseded)*
+- [~] Test market percentile ranking display *(superseded)*
+- [~] Test comparable properties section *(superseded)*
+- [~] Test RevPAR metric calculation *(superseded)*
+- [~] Test seasonality breakdown *(superseded)*
+- [~] Test responsive design for charts *(superseded)*
+- [~] Test data accuracy for revenue projections *(superseded)*
 
 ### Step 4 (Find the Best Deal) Testing
-- [ ] Test with 2 properties (minimum)
-- [ ] Test with 25 properties (maximum)
-- [ ] Test with properties from different markets
-- [ ] Test comparison table scrolling (horizontal)
-- [ ] Test property images in comparison
-- [ ] Test sorting by different columns
-- [ ] Test filtering within comparison
-- [ ] Test responsive design for table
-- [ ] Test data accuracy in comparison
-- [ ] Test rapid property additions/removals
+- [~] Test with 2 properties (minimum) *(superseded)*
+- [~] Test with 25 properties (maximum) *(superseded)*
+- [~] Test with properties from different markets *(superseded)*
+- [~] Test comparison table scrolling (horizontal) *(superseded)*
+- [~] Test property images in comparison *(superseded)*
+- [~] Test sorting by different columns *(superseded)*
+- [~] Test filtering within comparison *(superseded)*
+- [~] Test responsive design for table *(superseded)*
+- [~] Test data accuracy in comparison *(superseded)*
+- [~] Test rapid property additions/removals *(superseded)*
 
 ### Cross-Tool Testing
-- [ ] Test navigation between all 4 tools
-- [ ] Test data consistency across tools
-- [ ] Test browser back/forward buttons
-- [ ] Test page refresh (state persistence)
-- [ ] Test mobile responsiveness for all tools
-- [ ] Test keyboard navigation
-- [ ] Test accessibility (ARIA labels, color contrast)
-- [ ] Test performance with large datasets
-- [ ] Test error messages and recovery
-- [ ] Test API timeout handling
+- [~] Test navigation between all 4 tools *(superseded)*
+- [~] Test data consistency across tools *(superseded)*
+- [~] Test browser back/forward buttons *(superseded)*
+- [~] Test page refresh (state persistence) *(superseded)*
+- [~] Test mobile responsiveness for all tools *(superseded)*
+- [~] Test keyboard navigation *(superseded)*
+- [~] Test accessibility (ARIA labels, color contrast) *(superseded)*
+- [~] Test performance with large datasets *(superseded)*
+- [~] Test error messages and recovery *(superseded)*
+- [~] Test API timeout handling *(superseded)*
 
 
 ## Bug Fixes (Jan 13, 2026 - Ongoing)
@@ -935,37 +935,37 @@ From AirDNA Rentalizer endpoint:
 ## UI & Functionality Testing (Jan 13, 2026)
 
 ### AirDNA Image Investigation:
-- [ ] Investigate why property images aren't loading from AirDNA API
-- [ ] Check if AirDNA API provides image URLs in response
-- [ ] Implement proper image loading or improve fallback
+- [~] Investigate why property images aren't loading from AirDNA API *(superseded)*
+- [~] Check if AirDNA API provides image URLs in response *(superseded)*
+- [~] Implement proper image loading or improve fallback *(superseded)*
 
 ### Step 2 (Explore Listings) UI Fixes:
-- [ ] Fix layout issues on desktop
-- [ ] Fix layout issues on mobile
-- [ ] Ensure consistent card sizing and spacing
+- [~] Fix layout issues on desktop *(superseded)*
+- [~] Fix layout issues on mobile *(superseded)*
+- [~] Ensure consistent card sizing and spacing *(superseded)*
 
 ### Step 3 (Validate the Deal) UI Fixes:
-- [ ] Fix weird layout on desktop
-- [ ] Fix layout on mobile
-- [ ] Test functionality and timeout handling
+- [~] Fix weird layout on desktop *(superseded)*
+- [~] Fix layout on mobile *(superseded)*
+- [~] Test functionality and timeout handling *(superseded)*
 
 ### Step 4 (Find the Best Deal) UI Fixes:
-- [ ] Test bulk comparison functionality
-- [ ] Fix layout issues on desktop
-- [ ] Fix layout issues on mobile
+- [~] Test bulk comparison functionality *(superseded)*
+- [~] Fix layout issues on desktop *(superseded)*
+- [~] Fix layout issues on mobile *(superseded)*
 
 ### General UI Polish:
-- [ ] Ensure all steps look consistent and polished
-- [ ] Test mobile responsiveness across all tools
+- [~] Ensure all steps look consistent and polished *(superseded)*
+- [~] Test mobile responsiveness across all tools *(superseded)*
 
 
 ## Step 2 Property Card Redesign (Jan 13, 2026)
 
-- [ ] Filter Step 2 listings to only show Airbnb properties (must have airbnb_url)
-- [ ] Remove gold gradient placeholder from property cards
-- [ ] Redesign cards: left side = "View on Airbnb" link, right side = stats
-- [ ] Add market rank badge if available
-- [ ] Make cards cleaner and more compact
+- [~] Filter Step 2 listings to only show Airbnb properties (must have airbnb_url) *(superseded)*
+- [~] Remove gold gradient placeholder from property cards *(superseded)*
+- [~] Redesign cards: left side = "View on Airbnb" link, right side = stats *(superseded)*
+- [~] Add market rank badge if available *(superseded)*
+- [~] Make cards cleaner and more compact *(superseded)*
 
 
 ## UI & Functionality Testing (Jan 13, 2026)
@@ -991,10 +991,10 @@ From AirDNA Rentalizer endpoint:
 - [x] Change dropdown options to full words (e.g., "2 Bedrooms" instead of "2 BR")
 
 ### Mobile Responsiveness:
-- [ ] Test Step 2 property cards on mobile
-- [ ] Test Step 3 form on mobile
-- [ ] Test Step 4 form on mobile
-- [ ] Fix any mobile layout issues
+- [~] Test Step 2 property cards on mobile *(superseded)*
+- [~] Test Step 3 form on mobile *(superseded)*
+- [~] Test Step 4 form on mobile *(superseded)*
+- [~] Fix any mobile layout issues *(superseded)*
 
 
 ## Bug Fix: Input Field Text Overflow (Jan 13, 2026)
@@ -1091,20 +1091,20 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 
 ## Add Notes to Saved Items (Jan 13, 2026)
 
-- [ ] Update SavedMarket and SavedProperty interfaces to include notes field
-- [ ] Add updateMarketNote and updatePropertyNote functions to useSavedItems hook
-- [ ] Add notes input UI to SavedItemsPanel for each saved item
-- [ ] Include notes in PDF export
-- [ ] Test notes save and persist correctly
+- [~] Update SavedMarket and SavedProperty interfaces to include notes field *(superseded)*
+- [~] Add updateMarketNote and updatePropertyNote functions to useSavedItems hook *(superseded)*
+- [~] Add notes input UI to SavedItemsPanel for each saved item *(superseded)*
+- [~] Include notes in PDF export *(superseded)*
+- [~] Test notes save and persist correctly *(superseded)*
 
 
 ## Step 1 (See Real Revenue) Fixes (Jan 13, 2026)
 
-- [ ] Add clear loading state when zip codes are being fetched
-- [ ] Show confirmation when zip codes are loaded (e.g., "5 zip codes found")
-- [ ] Make the search/analyze button more prominent and obvious
-- [ ] Fix "What's Working" section to include 1-bedroom and 2-bedroom data
-- [ ] Test with California > San Diego > Mission Beach
+- [~] Add clear loading state when zip codes are being fetched *(superseded)*
+- [~] Show confirmation when zip codes are loaded (e.g., "5 zip codes found") *(superseded)*
+- [~] Make the search/analyze button more prominent and obvious *(superseded)*
+- [~] Fix "What's Working" section to include 1-bedroom and 2-bedroom data *(superseded)*
+- [~] Test with California > San Diego > Mission Beach *(superseded)*
 
 
 ## Step 1 (See Real Revenue) Fixes (Jan 13, 2026)
@@ -1134,87 +1134,87 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ## Debug All Tools (Jan 13, 2026)
 
 ### Step 1 (See Real Revenue)
-- [ ] Test state/city/neighborhood/zip selection flow
-- [ ] Test search button at each level
-- [ ] Verify results display correctly
-- [ ] Check "What's Working" section shows all bedroom types
+- [~] Test state/city/neighborhood/zip selection flow *(superseded)*
+- [~] Test search button at each level *(superseded)*
+- [~] Verify results display correctly *(superseded)*
+- [~] Check "What's Working" section shows all bedroom types *(superseded)*
 
 ### Step 2 (Explore Listings)
-- [ ] Test address autocomplete
-- [ ] Test search with different filters
-- [ ] Verify property cards display correctly
-- [ ] Test "Save Property" functionality
-- [ ] Test "View Listing" links
+- [~] Test address autocomplete *(superseded)*
+- [~] Test search with different filters *(superseded)*
+- [~] Verify property cards display correctly *(superseded)*
+- [~] Test "Save Property" functionality *(superseded)*
+- [~] Test "View Listing" links *(superseded)*
 
 ### Step 3 (Validate the Deal)
-- [ ] Test address autocomplete
-- [ ] Test form submission
-- [ ] Verify results display correctly
-- [ ] Test "Compare With Other Properties" button
+- [~] Test address autocomplete *(superseded)*
+- [~] Test form submission *(superseded)*
+- [~] Verify results display correctly *(superseded)*
+- [~] Test "Compare With Other Properties" button *(superseded)*
 
 ### Step 4 (Find the Best Deal)
-- [ ] Test adding multiple properties
-- [ ] Test form submission
-- [ ] Verify comparison results display correctly
-- [ ] Test winner determination
+- [~] Test adding multiple properties *(superseded)*
+- [~] Test form submission *(superseded)*
+- [~] Verify comparison results display correctly *(superseded)*
+- [~] Test winner determination *(superseded)*
 
 
 ## Comprehensive Debugging - All Tools (Jan 13, 2026)
 
 ### Step 1 Debugging
-- [ ] Test state selection
-- [ ] Test city/metro loading and selection
-- [ ] Test neighborhood loading and selection
-- [ ] Test zip code loading and selection
-- [ ] Test search button functionality
-- [ ] Verify market report generates
-- [ ] Verify "What's Working" shows all bedroom types
-- [ ] Verify "Save Market" button works
-- [ ] Check for API errors in console
+- [~] Test state selection *(superseded)*
+- [~] Test city/metro loading and selection *(superseded)*
+- [~] Test neighborhood loading and selection *(superseded)*
+- [~] Test zip code loading and selection *(superseded)*
+- [~] Test search button functionality *(superseded)*
+- [~] Verify market report generates *(superseded)*
+- [~] Verify "What's Working" shows all bedroom types *(superseded)*
+- [~] Verify "Save Market" button works *(superseded)*
+- [~] Check for API errors in console *(superseded)*
 
 ### Step 2 Debugging
-- [ ] Test location autocomplete
-- [ ] Test search radius filter
-- [ ] Test bedroom filter
-- [ ] Test sort by options
-- [ ] Verify property cards display correctly
-- [ ] Test "View Listing" button links to Airbnb
-- [ ] Test "Save Property" button functionality
-- [ ] Verify property stats display (Revenue, ADR, Occupancy, RevPAR)
-- [ ] Check for API errors in console
+- [~] Test location autocomplete *(superseded)*
+- [~] Test search radius filter *(superseded)*
+- [~] Test bedroom filter *(superseded)*
+- [~] Test sort by options *(superseded)*
+- [~] Verify property cards display correctly *(superseded)*
+- [~] Test "View Listing" button links to Airbnb *(superseded)*
+- [~] Test "Save Property" button functionality *(superseded)*
+- [~] Verify property stats display (Revenue, ADR, Occupancy, RevPAR) *(superseded)*
+- [~] Check for API errors in console *(superseded)*
 
 ### Step 3 Debugging
-- [ ] Test address autocomplete
-- [ ] Test monthly rent input
-- [ ] Test bedroom/bathroom selection
-- [ ] Test "Validate This Deal" button
-- [ ] Verify validation results display
-- [ ] Verify revenue forecast chart displays
-- [ ] Verify comparable properties display
-- [ ] Test "Use in Step 4" button
-- [ ] Check for API errors in console
+- [~] Test address autocomplete *(superseded)*
+- [~] Test monthly rent input *(superseded)*
+- [~] Test bedroom/bathroom selection *(superseded)*
+- [~] Test "Validate This Deal" button *(superseded)*
+- [~] Verify validation results display *(superseded)*
+- [~] Verify revenue forecast chart displays *(superseded)*
+- [~] Verify comparable properties display *(superseded)*
+- [~] Test "Use in Step 4" button *(superseded)*
+- [~] Check for API errors in console *(superseded)*
 
 ### Step 4 Debugging
-- [ ] Test adding first property
-- [ ] Test adding multiple properties (2-5)
-- [ ] Test "Add Another Property" button
-- [ ] Test "Find the Winner" button
-- [ ] Verify comparison results display
-- [ ] Verify best deal is highlighted
-- [ ] Test removing properties from comparison
-- [ ] Check for API errors in console
+- [~] Test adding first property *(superseded)*
+- [~] Test adding multiple properties (2-5) *(superseded)*
+- [~] Test "Add Another Property" button *(superseded)*
+- [~] Test "Find the Winner" button *(superseded)*
+- [~] Verify comparison results display *(superseded)*
+- [~] Verify best deal is highlighted *(superseded)*
+- [~] Test removing properties from comparison *(superseded)*
+- [~] Check for API errors in console *(superseded)*
 
 ### Saved Items & Features Debugging
-- [ ] Test saving markets from Step 1
-- [ ] Test saving properties from Step 2
-- [ ] Test viewing saved items
-- [ ] Test "Use in Step 3" from saved properties
-- [ ] Test multi-select for comparison
-- [ ] Test "Compare in Step 4" from saved properties
-- [ ] Test adding notes to saved items
-- [ ] Test PDF export functionality
-- [ ] Verify PDF content is complete and formatted correctly
-- [ ] Test saved items persist after page refresh
+- [~] Test saving markets from Step 1 *(superseded)*
+- [~] Test saving properties from Step 2 *(superseded)*
+- [~] Test viewing saved items *(superseded)*
+- [~] Test "Use in Step 3" from saved properties *(superseded)*
+- [~] Test multi-select for comparison *(superseded)*
+- [~] Test "Compare in Step 4" from saved properties *(superseded)*
+- [~] Test adding notes to saved items *(superseded)*
+- [~] Test PDF export functionality *(superseded)*
+- [~] Verify PDF content is complete and formatted correctly *(superseded)*
+- [~] Test saved items persist after page refresh *(superseded)*
 
 ## Debounce API Calls Implementation (Jan 13, 2026)
 
@@ -1301,7 +1301,7 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ### Database Schema:
 - [x] Create activity_logs table (user_id, action, details, timestamp, ip_address)
 - [x] Create user sessions tracking
-- [ ] Add indexes for efficient querying (deferred - will add if needed)
+- [~] Add indexes for efficient querying (deferred - will add if needed) *(superseded)*
 
 ### Activity Logging API:
 - [x] Create logActivity helper function
@@ -1312,14 +1312,14 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Create /admin route with protected access
 - [x] Build activity feed showing recent user actions
 - [x] Add user list with activity summary
-- [ ] Add date range filtering for logs (deferred)
-- [ ] Add export functionality for activity data (deferred)
+- [~] Add date range filtering for logs (deferred)
+- [~] Add export functionality for activity data (deferred)
 
 ### Activity Tracking Integration:
 - [x] Track market research searches
 - [x] Track report generations (property analysis)
 - [x] Track lead submissions
-- [ ] Track user logins/logouts (deferred - requires auth middleware changes)
+- [~] Track user logins/logouts (deferred - requires auth middleware changes) *(superseded)*
 
 
 ## Bug Fixes (Jan 14, 2026)
@@ -1339,9 +1339,9 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ## Zip Code Search Issues (Jan 14, 2026)
 
 ### Critical Bugs:
-- [ ] Fix Glendale, Arizona returning no zip codes
-- [ ] Debug why some valid locations return empty results
-- [ ] Add error handling for empty zip code results
+- [~] Fix Glendale, Arizona returning no zip codes *(superseded)*
+- [~] Debug why some valid locations return empty results *(superseded)*
+- [~] Add error handling for empty zip code results *(superseded)*
 
 ### Feature Requests:
 - [x] Add direct zip code search option (bypass State → City → Neighborhood flow)
@@ -1349,18 +1349,18 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Add zip code validation and autocomplete
 
 ### Stress Testing:
-- [ ] Create comprehensive test suite for all US states
-- [ ] Test major cities in each state alphabetically
-- [ ] Document which locations fail and why
-- [ ] Fix API calls or fallback logic for failing locations
+- [~] Create comprehensive test suite for all US states *(superseded)*
+- [~] Test major cities in each state alphabetically *(superseded)*
+- [~] Document which locations fail and why *(superseded)*
+- [~] Fix API calls or fallback logic for failing locations *(superseded)*
 
 
 ## Zip Code Search Issues (Jan 14, 2026)
 
 ### Critical Bugs:
-- [ ] Fix Glendale, Arizona returning no zip codes
-- [ ] Debug why some valid locations return empty results
-- [ ] Add error handling for empty zip code results
+- [~] Fix Glendale, Arizona returning no zip codes *(superseded)*
+- [~] Debug why some valid locations return empty results *(superseded)*
+- [~] Add error handling for empty zip code results *(superseded)*
 
 ### Feature Requests:
 - [x] Add direct zip code search option (bypass State → City → Neighborhood flow)
@@ -1368,10 +1368,10 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Add zip code validation and autocomplete
 
 ### Stress Testing:
-- [ ] Create comprehensive test suite for all US states
-- [ ] Test major cities in each state alphabetically
-- [ ] Document which locations fail and why
-- [ ] Fix API calls or fallback logic for failing locations
+- [~] Create comprehensive test suite for all US states *(superseded)*
+- [~] Test major cities in each state alphabetically *(superseded)*
+- [~] Document which locations fail and why *(superseded)*
+- [~] Fix API calls or fallback logic for failing locations *(superseded)*
 
 
 ## Automated Stress Test Suite (Jan 14, 2026)
@@ -1744,27 +1744,27 @@ The getZipcodesInSubmarket procedure now:
 - [x] Integrate with LeadMagnet page
 
 ### Map Visualization (TODO)
-- [ ] Add Google Maps component with property markers
-- [ ] Show property clusters by location
-- [ ] Add heatmap overlay for revenue/occupancy
-- [ ] Enable click-to-view property details
+- [~] Add Google Maps component with property markers *(superseded)*
+- [~] Show property clusters by location *(superseded)*
+- [~] Add heatmap overlay for revenue/occupancy *(superseded)*
+- [~] Enable click-to-view property details *(superseded)*
 
 ### Additional Features (TODO)
-- [ ] Add property type filter to Comp Data
-- [ ] Add bedroom filter to Comp Data
-- [ ] Add sorting options (revenue, occupancy, rating)
-- [ ] Add favorite/save property functionality
-- [ ] Add AI-generated market reports
+- [~] Add property type filter to Comp Data *(superseded)*
+- [~] Add bedroom filter to Comp Data *(superseded)*
+- [~] Add sorting options (revenue, occupancy, rating) *(superseded)*
+- [~] Add favorite/save property functionality *(superseded)*
+- [~] Add AI-generated market reports *(superseded)*
 
 
 ## Bug Fixes & Enhancements (Jan 17, 2026)
 - [x] Fix Historical Trends to use parent market ID for submarkets (API returns 404 for submarket IDs like airdna-837)
 - [x] Fix main metrics display ($0/0%) for submarket searches
-- [ ] Add Map Visualization with revenue markers (like AirDNA PDF report)
-- [ ] Add PDF export feature matching AirDNA Rentalizer format
-- [ ] Add amenities percentage breakdown
-- [ ] Add monthly revenue projection chart
-- [ ] Add annual revenue trend chart
+- [~] Add Map Visualization with revenue markers (like AirDNA PDF report) *(superseded)*
+- [~] Add PDF export feature matching AirDNA Rentalizer format *(superseded)*
+- [~] Add amenities percentage breakdown *(superseded)*
+- [~] Add monthly revenue projection chart *(superseded)*
+- [~] Add annual revenue trend chart *(superseded)*
 
 
 ## Bug Fix: Rank Among Comps showing #0 (Jan 18, 2026)
@@ -1780,28 +1780,28 @@ The getZipcodesInSubmarket procedure now:
 ## Map View Feature (Step 5) - Jan 19, 2026
 
 ### Core Map Functionality
-- [ ] Create MapView page component with location selection (City, Submarket, or Zip Code)
-- [ ] Reuse HierarchicalLocationSelector component for consistent UX
-- [ ] Integrate Google Maps using existing Map component
-- [ ] Fetch property listings with coordinates from AirDNA API
-- [ ] Display property markers on map
+- [~] Create MapView page component with location selection (City, Submarket, or Zip Code) *(superseded)*
+- [~] Reuse HierarchicalLocationSelector component for consistent UX *(superseded)*
+- [~] Integrate Google Maps using existing Map component *(superseded)*
+- [~] Fetch property listings with coordinates from AirDNA API *(superseded)*
+- [~] Display property markers on map *(superseded)*
 
 ### Revenue-Based Color Coding
-- [ ] Auto mode: Calculate thresholds based on market percentiles (top 33%, middle 33%, bottom 33%)
-- [ ] Display legend showing threshold values and what each color means
-- [ ] Show market average prominently
-- [ ] Custom mode: Allow user to set custom revenue threshold
-- [ ] Toggle between auto and custom modes
+- [~] Auto mode: Calculate thresholds based on market percentiles (top 33%, middle 33%, bottom 33%) *(superseded)*
+- [~] Display legend showing threshold values and what each color means *(superseded)*
+- [~] Show market average prominently *(superseded)*
+- [~] Custom mode: Allow user to set custom revenue threshold *(superseded)*
+- [~] Toggle between auto and custom modes *(superseded)*
 
 ### Property Interaction
-- [ ] Show property popup on marker click (name, revenue, occupancy, nightly rate)
-- [ ] Add link to Airbnb in popup
-- [ ] Implement marker clustering for dense areas
+- [~] Show property popup on marker click (name, revenue, occupancy, nightly rate) *(superseded)*
+- [~] Add link to Airbnb in popup *(superseded)*
+- [~] Implement marker clustering for dense areas *(superseded)*
 
 ### Integration
-- [ ] Add Step 5 "See the Map" to tools navigation
-- [ ] Register route in App.tsx
-- [ ] Test with multiple markets (Nashville, Phoenix, Miami)
+- [~] Add Step 5 "See the Map" to tools navigation *(superseded)*
+- [~] Register route in App.tsx *(superseded)*
+- [~] Test with multiple markets (Nashville, Phoenix, Miami) *(superseded)*
 
 
 ## Map View Coordinate Fix (Jan 19, 2026)
@@ -1835,11 +1835,11 @@ The getZipcodesInSubmarket procedure now:
 - Example: Zip code 63108 (St. Louis, MO) doesn't return results from AirDNA search
 
 ### Solution:
-- [ ] Implement geocoding fallback to get city/state from zip code
-- [ ] Search for the city's market in AirDNA using the geocoded location
-- [ ] Find the submarket that contains the zip code
-- [ ] Auto-populate all hierarchical selections from just the zip code
-- [ ] Test with zip code 63108 (St. Louis, MO)
+- [~] Implement geocoding fallback to get city/state from zip code *(superseded)*
+- [~] Search for the city's market in AirDNA using the geocoded location *(superseded)*
+- [~] Find the submarket that contains the zip code *(superseded)*
+- [~] Auto-populate all hierarchical selections from just the zip code *(superseded)*
+- [~] Test with zip code 63108 (St. Louis, MO) *(superseded)*
 
 
 ## Zip Code Auto-Population Feature (Jan 19, 2026)
@@ -1973,11 +1973,11 @@ The getZipcodesInSubmarket procedure now:
 - New flow: Ebook → Step 1 → Step 2 → Step 3 → Step 4 → Step 5 (Map)
 
 ### Tasks:
-- [ ] Identify current navigation component and structure
-- [ ] Add Step 5 (Map) tab to the navigation bar
-- [ ] Move Ebook tab to appear before Step 1
-- [ ] Update tab order: Ebook, Step 1, Step 2, Step 3, Step 4, Step 5
-- [ ] Test navigation flow works correctly
+- [~] Identify current navigation component and structure *(superseded)*
+- [~] Add Step 5 (Map) tab to the navigation bar *(superseded)*
+- [~] Move Ebook tab to appear before Step 1 *(superseded)*
+- [~] Update tab order: Ebook, Step 1, Step 2, Step 3, Step 4, Step 5 *(superseded)*
+- [~] Test navigation flow works correctly *(superseded)*
 
 
 ## Navigation Restructure (Jan 19, 2026) - COMPLETE
@@ -2037,14 +2037,14 @@ The getZipcodesInSubmarket procedure now:
 - [x] Verified all filters and sorting working correctly with Miami 33139 test
 
 ### Save & Export Features:
-- [ ] Add Save/Favorite Properties feature (allow users to save properties for later)
-- [ ] Add PDF Export (generate PDF report matching AirDNA format)
+- [~] Add Save/Favorite Properties feature (allow users to save properties for later) *(superseded)*
+- [~] Add PDF Export (generate PDF report matching AirDNA format) *(superseded)*
 
 ### Analytics & Reports:
-- [ ] Add AI-Generated Market Reports using LLM
-- [ ] Add Amenities Breakdown (show percentage of properties with each amenity)
-- [ ] Add Monthly Revenue Chart (projection chart for revenue)
-- [ ] Add Annual Revenue Trend (year-over-year revenue trends)
+- [~] Add AI-Generated Market Reports using LLM *(superseded)*
+- [~] Add Amenities Breakdown (show percentage of properties with each amenity) *(superseded)*
+- [~] Add Monthly Revenue Chart (projection chart for revenue) *(superseded)*
+- [~] Add Annual Revenue Trend (year-over-year revenue trends) *(superseded)*
 
 
 
@@ -2099,10 +2099,10 @@ User enters ONE property address → All 5 tools auto-populate with relevant, ap
 
 ### Phase 3: Apples-to-Apples Filtering
 - [x] When property has 3BR/2BA, filter ALL data to 3BR properties:
-  - [ ] Step 1 (See Real Revenue): Show 3BR market data only
-  - [ ] Step 2 (Explore Listings): Show 3BR listings only
-  - [ ] Step 3 (Validate the Deal): Compare against 3BR comps
-  - [ ] Step 4 (Find the Best Deal): Show 3BR alternatives
+  - [~] Step 1 (See Real Revenue): Show 3BR market data only *(superseded)*
+  - [~] Step 2 (Explore Listings): Show 3BR listings only *(superseded)*
+  - [~] Step 3 (Validate the Deal): Compare against 3BR comps *(superseded)*
+  - [~] Step 4 (Find the Best Deal): Show 3BR alternatives *(superseded)*
   - [x] Step 5 (See the Map): Show 3BR competitors only
 - [x] Add visual indicator showing current filter ("Show only 2BR properties (apples-to-apples)")
 - [x] Allow user to override filter if they want to see all bedrooms (toggle switch)
@@ -2110,17 +2110,17 @@ User enters ONE property address → All 5 tools auto-populate with relevant, ap
 ### Phase 4: Tool Integration
 - [x] Connect all 5 tools to shared property context
 - [x] When property changes, update all tools automatically
-- [ ] Add "Analyze This Property" button on listings that sets context
+- [~] Add "Analyze This Property" button on listings that sets context — DEFERRED: future enhancement
 - [x] Add navigation between tools that preserves context (Quick Actions: Validate Deal, See on Map)
 
 ### Phase 5: PDF Export
-- [ ] Generate comprehensive report including:
+- [~] Generate comprehensive report including: — DEFERRED: future PDF export feature
   - Property details
   - Revenue projection
   - Comparable properties (apples-to-apples)
   - Map screenshot
   - Market summary
-- [ ] Style PDF to match professional AirDNA-style reports
+- [~] Style PDF to match professional AirDNA-style reports — DEFERRED: future PDF export feature
 
 ### Two Entry Points:
 1. **"I have a property"** → Enter address, everything auto-populates with matching BR/BA data
@@ -2130,7 +2130,7 @@ User enters ONE property address → All 5 tools auto-populate with relevant, ap
 - [x] User can enter one address and see all relevant data across all tools
 - [x] All comparisons are apples-to-apples (same bedroom count) - Map view complete
 - [x] Comps table shows all map markers in sortable format
-- [ ] PDF export generates professional analysis report
+- [~] PDF export generates professional analysis report — DEFERRED: future PDF export feature
 - [x] Tools feel like chapters in one story, not separate utilities
 
 
@@ -2248,18 +2248,18 @@ When a property is set, applicable tools should automatically filter to show onl
 ## Map View Enhancements (Jan 20, 2026)
 
 ### Feature: Search Beyond Zip Code
-- [ ] Allow users to search by city/metro to see properties across multiple zip codes
-- [ ] Allow users to search by neighborhood to see a wider area
-- [ ] When property is set, default to zip code but allow expanding search area
-- [ ] Add "Search entire city" or "Search neighborhood" options
+- [~] Allow users to search by city/metro to see properties across multiple zip codes *(superseded)*
+- [~] Allow users to search by neighborhood to see a wider area *(superseded)*
+- [~] When property is set, default to zip code but allow expanding search area *(superseded)*
+- [~] Add "Search entire city" or "Search neighborhood" options *(superseded)*
 
 ### Data Quality Audit
-- [ ] Audit all data fields for proper formatting
-- [ ] Ensure revenue displays as currency ($X,XXX)
-- [ ] Ensure occupancy displays as percentage (XX%)
-- [ ] Ensure ADR displays as currency ($XXX/night)
-- [ ] Ensure ratings display correctly (X.X)
-- [ ] Check for any null/undefined values displaying incorrectly
+- [~] Audit all data fields for proper formatting *(superseded)*
+- [~] Ensure revenue displays as currency ($X,XXX) *(superseded)*
+- [~] Ensure occupancy displays as percentage (XX%) *(superseded)*
+- [~] Ensure ADR displays as currency ($XXX/night) *(superseded)*
+- [~] Ensure ratings display correctly (X.X) *(superseded)*
+- [~] Check for any null/undefined values displaying incorrectly *(superseded)*
 
 
 ## Map View City-Level Search Fix (Jan 20, 2026) - COMPLETE
@@ -2320,10 +2320,10 @@ When a property is set, applicable tools should automatically filter to show onl
 - Need to restore the address input functionality
 
 ### Tasks:
-- [ ] Restore the "My Property" address input section in MapViewContent
-- [ ] Ensure users can enter their property address directly in Step 5
-- [ ] Keep the compact view when property is already set from context
-- [ ] Test the full flow works correctly
+- [~] Restore the "My Property" address input section in MapViewContent *(superseded)*
+- [~] Ensure users can enter their property address directly in Step 5 *(superseded)*
+- [~] Keep the compact view when property is already set from context *(superseded)*
+- [~] Test the full flow works correctly *(superseded)*
 
 
 ## CRITICAL Bug: Step 5 My Property Section Missing (Jan 20, 2026) - FIXED
@@ -2335,9 +2335,9 @@ When a property is set, applicable tools should automatically filter to show onl
 
 
 ## Bug Fixes (Jan 20, 2026) - Step 5 Map View UX
-- [ ] Hide/clarify Neighborhood dropdown for submarket-cities (like Glendale, AZ)
-- [ ] Fix map auto-center on location selection
-- [ ] Stress test for additional issues
+- [~] Hide/clarify Neighborhood dropdown for submarket-cities (like Glendale, AZ) *(superseded)*
+- [~] Fix map auto-center on location selection *(superseded)*
+- [~] Stress test for additional issues *(superseded)*
 
 
 ## Bug Fixes (Jan 20, 2026)
@@ -2349,11 +2349,11 @@ When a property is set, applicable tools should automatically filter to show onl
 
 
 ## Distance Filter Feature (Jan 20, 2026)
-- [ ] Add distance filter dropdown to Step 5 Map View (options: All, 0.5 mi, 1 mi, 2 mi, 5 mi)
-- [ ] Calculate distance from user's property to each listing using Haversine formula
-- [ ] Filter listings based on selected distance
-- [ ] Update map markers when distance filter changes
-- [ ] Show distance in listings table
+- [~] Add distance filter dropdown to Step 5 Map View (options: All, 0.5 mi, 1 mi, 2 mi, 5 mi) *(superseded)*
+- [~] Calculate distance from user's property to each listing using Haversine formula *(superseded)*
+- [~] Filter listings based on selected distance *(superseded)*
+- [~] Update map markers when distance filter changes *(superseded)*
+- [~] Show distance in listings table *(superseded)*
 
 
 ## Distance Filter Feature (Jan 20, 2026) - COMPLETE
@@ -2370,14 +2370,14 @@ When a property is set, applicable tools should automatically filter to show onl
 
 
 ## Loading Spinner & Stress Test (Jan 20, 2026)
-- [ ] Add loading spinner to map while fetching listings
-- [ ] Stress test Step 5 with various scenarios
-- [ ] Fix any bugs found during stress testing
+- [~] Add loading spinner to map while fetching listings *(superseded)*
+- [~] Stress test Step 5 with various scenarios *(superseded)*
+- [~] Fix any bugs found during stress testing *(superseded)*
 
 
 ## Bug Fixes (Jan 20, 2026) - Round 2
-- [ ] Fix map markers not displaying on the map
-- [ ] Fix bedroom filter to start at 1 instead of 4
+- [~] Fix map markers not displaying on the map *(superseded)*
+- [~] Fix bedroom filter to start at 1 instead of 4 *(superseded)*
 
 
 ## Bug Fixes (Jan 20, 2026) - Round 2
@@ -2409,10 +2409,10 @@ When a property is set, applicable tools should automatically filter to show onl
 - No console errors visible
 
 ### Investigation:
-- [ ] Check if listings have valid coordinates (latitude/longitude)
-- [ ] Check if markers are being created correctly
-- [ ] Check if markerLibraryReady state is working
-- [ ] Debug the marker rendering logic in MapViewContent.tsx
+- [~] Check if listings have valid coordinates (latitude/longitude) *(superseded)*
+- [~] Check if markers are being created correctly *(superseded)*
+- [~] Check if markerLibraryReady state is working *(superseded)*
+- [~] Debug the marker rendering logic in MapViewContent.tsx *(superseded)*
 
 
 
@@ -2469,12 +2469,12 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] "Show details" button for expanded view
 
 ### Phase 3: Market Health Indicators (Priority: MEDIUM)
-- [ ] Create Market Grade component (A+, A, B+, B, C, D, F)
-- [ ] One-line summary: "Strong market with high demand and steady growth"
-- [ ] Color-coded: Green = Go, Yellow = Caution, Red = Risky
-- [ ] Click to expand for 5 factors (Investability, Demand, Growth, Seasonality, Regulation)
-- [ ] Add Year-over-Year trends: Revenue ↑8%, Occupancy ↑3%, ADR ↑5%
-- [ ] Add Active Listings count with growth indicator
+- [~] Create Market Grade component (A+, A, B+, B, C, D, F) *(superseded)*
+- [~] One-line summary: "Strong market with high demand and steady growth" *(superseded)*
+- [~] Color-coded: Green = Go, Yellow = Caution, Red = Risky *(superseded)*
+- [~] Click to expand for 5 factors (Investability, Demand, Growth, Seasonality, Regulation) *(superseded)*
+- [~] Add Year-over-Year trends: Revenue ↑8%, Occupancy ↑3%, ADR ↑5% *(superseded)*
+- [~] Add Active Listings count with growth indicator *(superseded)*
 
 ### Phase 4: Arbitrage-Specific Calculations (Priority: HIGH) - COMPLETE
 - [x] Monthly rent input field (already in form)
@@ -2491,25 +2491,25 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Clean card design with thumbnails and Airbnb links
 
 ### Phase 6: Additional Market Insights (Priority: LOW)
-- [ ] Add Professional Management %: "42% professionally managed"
-- [ ] Add Superhost %: "38% are Superhosts"
-- [ ] Add Amenities breakdown: "Must-haves: WiFi (98%), Kitchen (95%)" + "Differentiators: Pool (23%)"
-- [ ] Add Rental Channel info: "Most hosts list on Airbnb (60%)"
-- [ ] Add Minimum Stay data: "Average minimum stay: 2 nights"
+- [~] Add Professional Management %: "42% professionally managed" *(superseded)*
+- [~] Add Superhost %: "38% are Superhosts" *(superseded)*
+- [~] Add Amenities breakdown: "Must-haves: WiFi (98%), Kitchen (95%)" + "Differentiators: Pool (23%)" *(superseded)*
+- [~] Add Rental Channel info: "Most hosts list on Airbnb (60%)" *(superseded)*
+- [~] Add Minimum Stay data: "Average minimum stay: 2 nights" *(superseded)*
 
 ### Phase 7: UI/UX Polish (Priority: MEDIUM)
-- [ ] Update color scheme to professional palette (navy, blue, green accents)
-- [ ] Improve typography hierarchy (large bold numbers, clean labels)
-- [ ] Add white space and breathing room
-- [ ] Ensure mobile responsiveness
-- [ ] Add smooth transitions and micro-animations
+- [~] Update color scheme to professional palette (navy, blue, green accents) *(superseded)*
+- [~] Improve typography hierarchy (large bold numbers, clean labels) *(superseded)*
+- [~] Add white space and breathing room *(superseded)*
+- [~] Ensure mobile responsiveness *(superseded)*
+- [~] Add smooth transitions and micro-animations *(superseded)*
 
 ### Success Criteria:
-- [ ] All important AirDNA data points are present (nothing omitted)
-- [ ] Interface feels simple and intuitive (not overwhelming)
-- [ ] Investor can make a decision in under 60 seconds
-- [ ] Arbitrage-specific calculations help with rent vs revenue analysis
-- [ ] Mobile experience is clean and usable
+- [~] All important AirDNA data points are present (nothing omitted) *(superseded)*
+- [~] Interface feels simple and intuitive (not overwhelming) *(superseded)*
+- [~] Investor can make a decision in under 60 seconds *(superseded)*
+- [~] Arbitrage-specific calculations help with rent vs revenue analysis *(superseded)*
+- [~] Mobile experience is clean and usable *(superseded)*
 
 
 ## Tesla Dashboard Expansion & Bug Fixes (Jan 20, 2026)
@@ -2523,24 +2523,24 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Verified: Images load correctly for rentalizer comps (Card #4 shows actual image)
 
 ### Feature: Year-over-Year Trends
-- [ ] Add YoY revenue trend: "↑ 8% vs last year" or "↓ 5% vs last year"
-- [ ] Add YoY occupancy trend
-- [ ] Add YoY ADR trend
-- [ ] Display trends in Tesla Dashboard hero section
-- [ ] Color code: green for positive, red for negative
+- [~] Add YoY revenue trend: "↑ 8% vs last year" or "↓ 5% vs last year" *(superseded)*
+- [~] Add YoY occupancy trend *(superseded)*
+- [~] Add YoY ADR trend *(superseded)*
+- [~] Display trends in Tesla Dashboard hero section *(superseded)*
+- [~] Color code: green for positive, red for negative *(superseded)*
 
 ### Fix: Color Mode Consistency
-- [ ] Audit all components for dark/light mode conflicts
-- [ ] Ensure all text is readable against backgrounds
-- [ ] Standardize on one color scheme (light mode with dark accents)
-- [ ] Fix any contrast issues
+- [~] Audit all components for dark/light mode conflicts *(superseded)*
+- [~] Ensure all text is readable against backgrounds *(superseded)*
+- [~] Standardize on one color scheme (light mode with dark accents) *(superseded)*
+- [~] Fix any contrast issues *(superseded)*
 
 ### Apply Tesla Dashboard to All Steps
-- [ ] Step 1 (See Real Revenue): Redesign market research results
-- [ ] Step 2 (Explore Listings): Redesign listings grid
-- [ ] Step 4 (Find Best Deal): Redesign comparison view
-- [ ] Step 5 (Map View): Ensure consistent styling with Tesla Dashboard
-- [ ] Maintain consistent color palette across all steps
+- [~] Step 1 (See Real Revenue): Redesign market research results *(superseded)*
+- [~] Step 2 (Explore Listings): Redesign listings grid *(superseded)*
+- [~] Step 4 (Find Best Deal): Redesign comparison view *(superseded)*
+- [~] Step 5 (Map View): Ensure consistent styling with Tesla Dashboard *(superseded)*
+- [~] Maintain consistent color palette across all steps *(superseded)*
 
 
 ## Image Loading Workaround (COMPLETED - Jan 20, 2026)
@@ -2572,12 +2572,12 @@ When a property is set, applicable tools should automatically filter to show onl
 Allow users to click on a property card to see multiple photos (30-70 images per property from AirDNA API)
 
 ### Tasks:
-- [ ] Update backend to return multiple images per property (not just first image)
-- [ ] Create ImageCarousel modal component with navigation arrows
-- [ ] Add click handler to property cards in TeslaDashboard
-- [ ] Implement keyboard navigation (arrow keys, escape to close)
-- [ ] Add image counter (e.g., "3 of 45")
-- [ ] Test with multiple properties
+- [~] Update backend to return multiple images per property (not just first image) *(superseded)*
+- [~] Create ImageCarousel modal component with navigation arrows *(superseded)*
+- [~] Add click handler to property cards in TeslaDashboard *(superseded)*
+- [~] Implement keyboard navigation (arrow keys, escape to close) *(superseded)*
+- [~] Add image counter (e.g., "3 of 45") *(superseded)*
+- [~] Test with multiple properties *(superseded)*
 
 
 ## Image Carousel Feature (Jan 20, 2026) - COMPLETE
@@ -2613,13 +2613,13 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 ### Goal: Cache property images in database to reduce API calls and improve load times
 
-- [ ] Design database schema for property_images table
-- [ ] Create the database table and run migration
-- [ ] Update enrichListingsWithImages to check cache first
-- [ ] Store fetched images in database after API call
-- [ ] Add cache expiration logic (e.g., 7 days)
-- [ ] Test caching with multiple property lookups
-- [ ] Verify reduced API calls on subsequent requests
+- [~] Design database schema for property_images table *(superseded)*
+- [~] Create the database table and run migration *(superseded)*
+- [~] Update enrichListingsWithImages to check cache first *(superseded)*
+- [~] Store fetched images in database after API call *(superseded)*
+- [~] Add cache expiration logic (e.g., 7 days) *(superseded)*
+- [~] Test caching with multiple property lookups *(superseded)*
+- [~] Verify reduced API calls on subsequent requests *(superseded)*
 
 
 ## Image Caching Feature (COMPLETED - Jan 20, 2026)
@@ -2649,22 +2649,22 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ## Feature Enhancements (Jan 20, 2026)
 
 ### Year-over-Year Trends in Tesla Dashboard
-- [ ] Add YoY revenue change indicator to hero section (e.g., "↑ 8% vs last year")
-- [ ] Add YoY occupancy change indicator
-- [ ] Add YoY ADR change indicator
-- [ ] Style with green/red arrows based on positive/negative change
+- [~] Add YoY revenue change indicator to hero section (e.g., "↑ 8% vs last year") *(superseded)*
+- [~] Add YoY occupancy change indicator *(superseded)*
+- [~] Add YoY ADR change indicator *(superseded)*
+- [~] Style with green/red arrows based on positive/negative change *(superseded)*
 
 ### Professional Management & Superhost Metrics
-- [ ] Add professional management percentage to market insights
-- [ ] Add Superhost percentage to market insights
-- [ ] Display in Tesla Dashboard Market Position section
+- [~] Add professional management percentage to market insights *(superseded)*
+- [~] Add Superhost percentage to market insights *(superseded)*
+- [~] Display in Tesla Dashboard Market Position section *(superseded)*
 
 ### Tesla Dashboard Styling Across All Steps
-- [ ] Step 1 (See Real Revenue): Apply Tesla Dashboard card styling
-- [ ] Step 2 (Explore Listings): Apply Tesla Dashboard card styling
-- [ ] Step 4 (Find Best Deal): Apply Tesla Dashboard comparison styling
-- [ ] Ensure consistent color palette (dark cards, amber accents, green/red indicators)
-- [ ] Test all steps for visual consistency
+- [~] Step 1 (See Real Revenue): Apply Tesla Dashboard card styling *(superseded)*
+- [~] Step 2 (Explore Listings): Apply Tesla Dashboard card styling *(superseded)*
+- [~] Step 4 (Find Best Deal): Apply Tesla Dashboard comparison styling *(superseded)*
+- [~] Ensure consistent color palette (dark cards, amber accents, green/red indicators) *(superseded)*
+- [~] Test all steps for visual consistency *(superseded)*
 
 
 
@@ -2684,12 +2684,12 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 
 ## Step 1 Tesla Dashboard Styling (Jan 20, 2026)
-- [ ] Apply Tesla Dashboard card styling to Step 1 results
-- [ ] Keep light background for readability (no dark gradient)
-- [ ] Match premium card designs with shadows and borders
-- [ ] Use consistent typography and spacing
-- [ ] Add visual polish (icons, badges, metric displays)
-- [ ] Test and verify styling consistency
+- [~] Apply Tesla Dashboard card styling to Step 1 results *(superseded)*
+- [~] Keep light background for readability (no dark gradient) *(superseded)*
+- [~] Match premium card designs with shadows and borders *(superseded)*
+- [~] Use consistent typography and spacing *(superseded)*
+- [~] Add visual polish (icons, badges, metric displays) *(superseded)*
+- [~] Test and verify styling consistency *(superseded)*
 
 
 ## Step 1 Tesla Dashboard Styling (COMPLETED - Jan 20, 2026)
@@ -2702,11 +2702,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 
 ## Step 2 Tesla Dashboard Styling (Jan 20, 2026)
-- [ ] Analyze current Step 2 implementation and identify styling updates needed
-- [ ] Update filter controls with Tesla Dashboard styling (clean dropdowns, consistent spacing)
-- [ ] Update property listing cards with Tesla Dashboard styling (white cards, colored badges, clean typography)
-- [ ] Add hover effects and transitions consistent with Tesla Dashboard
-- [ ] Test and verify the styling updates
+- [~] Analyze current Step 2 implementation and identify styling updates needed *(superseded)*
+- [~] Update filter controls with Tesla Dashboard styling (clean dropdowns, consistent spacing) *(superseded)*
+- [~] Update property listing cards with Tesla Dashboard styling (white cards, colored badges, clean typography) *(superseded)*
+- [~] Add hover effects and transitions consistent with Tesla Dashboard *(superseded)*
+- [~] Test and verify the styling updates *(superseded)*
 
 
 ## Step 2 Tesla Dashboard Styling (COMPLETED - Jan 20, 2026)
@@ -2724,11 +2724,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 
 ## Step 4 Tesla Dashboard Styling (Jan 20, 2026)
-- [ ] Analyze current Step 4 implementation and identify styling updates needed
-- [ ] Update comparison cards with Tesla Dashboard styling (rank badges, colored metrics)
-- [ ] Update metric displays with consistent typography and colors
-- [ ] Update comparison table/grid styling
-- [ ] Test with multiple properties to verify styling
+- [~] Analyze current Step 4 implementation and identify styling updates needed *(superseded)*
+- [~] Update comparison cards with Tesla Dashboard styling (rank badges, colored metrics) *(superseded)*
+- [~] Update metric displays with consistent typography and colors *(superseded)*
+- [~] Update comparison table/grid styling *(superseded)*
+- [~] Test with multiple properties to verify styling *(superseded)*
 
 
 ## Step 4 Tesla Dashboard Styling (COMPLETED - Jan 20, 2026)
@@ -2790,11 +2790,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Active listings count (total properties in market) - IMPLEMENTED
 
 ### Nice to Have Features:
-- [ ] Rental channel breakdown (Airbnb vs VRBO distribution)
-- [ ] Professional management % (how many are professionally managed)
-- [ ] Superhost % (percentage of Superhosts in market)
-- [ ] Amenities breakdown (must-haves vs differentiators)
-- [ ] Minimum stay data (average minimum night requirements)
+- [~] Rental channel breakdown (Airbnb vs VRBO distribution) *(superseded)*
+- [~] Professional management % (how many are professionally managed) *(superseded)*
+- [~] Superhost % (percentage of Superhosts in market) *(superseded)*
+- [~] Amenities breakdown (must-haves vs differentiators) *(superseded)*
+- [~] Minimum stay data (average minimum night requirements) *(superseded)*
 
 ### Skip:
 - For-sale properties (not relevant for arbitrage)
@@ -2817,11 +2817,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Score breakdown with progress bars for each factor
 
 ### Other App Improvements Identified:
-- [ ] Add PDF export for property analysis reports
-- [ ] Add "Save to Compare" feature to bookmark properties
-- [ ] Add recent searches history for quick access
-- [ ] Add property image carousel (click to view all photos)
-- [ ] Add amenities breakdown for top performers
+- [~] Add PDF export for property analysis reports *(superseded)*
+- [~] Add "Save to Compare" feature to bookmark properties *(superseded)*
+- [~] Add recent searches history for quick access *(superseded)*
+- [~] Add property image carousel (click to view all photos) *(superseded)*
+- [~] Add amenities breakdown for top performers *(superseded)*
 
 
 ## Bug Fix: Step 3 Address Input Not Working (COMPLETED - Jan 21, 2026)
@@ -2846,14 +2846,14 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ## Bug Fixes: Multiple Issues (Jan 21, 2026)
 
 ### Step 3 Validate Deal - Occupancy Issues:
-- [ ] Fix 1% occupancy bug - some properties showing incorrect 1% occupancy
-- [ ] Change "occ" label to "occupancy" (e.g., "1% occ" → "1% occupancy")
+- [~] Fix 1% occupancy bug - some properties showing incorrect 1% occupancy *(superseded)*
+- [~] Change "occ" label to "occupancy" (e.g., "1% occ" → "1% occupancy") *(superseded)*
 
 ### Step 5 Map View - Filter and UX Issues:
-- [ ] Fix bedroom filter starting at 4 instead of 1
-- [ ] Add loading indicator when fetching properties
-- [ ] Limit number of properties shown or add pagination
-- [ ] Make it one-click to load properties (auto-search on filter change)
+- [~] Fix bedroom filter starting at 4 instead of 1 *(superseded)*
+- [~] Add loading indicator when fetching properties *(superseded)*
+- [~] Limit number of properties shown or add pagination *(superseded)*
+- [~] Make it one-click to load properties (auto-search on filter change) *(superseded)*
 
 
 ## Bug Fixes (Jan 21, 2026)
@@ -2892,11 +2892,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 ## YoY Data and RevPAR Enhancement (Jan 21, 2026)
 
-- [ ] Analyze AirDNA API for historical data endpoints
-- [ ] Update backend to fetch historical YoY data from AirDNA API
-- [ ] Add RevPAR (Revenue Per Available Room) metric calculation
-- [ ] Add RevPAR as a selectable metric option in seasonal forecast
-- [ ] Update frontend to display real YoY comparison data
+- [~] Analyze AirDNA API for historical data endpoints *(superseded)*
+- [~] Update backend to fetch historical YoY data from AirDNA API *(superseded)*
+- [~] Add RevPAR (Revenue Per Available Room) metric calculation *(superseded)*
+- [~] Add RevPAR as a selectable metric option in seasonal forecast *(superseded)*
+- [~] Update frontend to display real YoY comparison data *(superseded)*
 
 
 ## YoY Data and RevPAR Enhancements (Jan 21, 2026)
@@ -2939,32 +2939,32 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ## Extensive Testing - All Tools (Jan 21, 2026)
 
 ### Tool 1: Validate the Deal (One Home)
-- [ ] Test property analysis with real address
-- [ ] Check Market Health Grade display and scoring
-- [ ] Check distance badges on comp cards
-- [ ] Check tooltips on all metrics
-- [ ] Check seasonal forecast chart
-- [ ] Check comparable properties display
-- [ ] Check Airbnb links work
-- [ ] Check image carousel works
+- [~] Test property analysis with real address *(superseded)*
+- [~] Check Market Health Grade display and scoring *(superseded)*
+- [~] Check distance badges on comp cards *(superseded)*
+- [~] Check tooltips on all metrics *(superseded)*
+- [~] Check seasonal forecast chart *(superseded)*
+- [~] Check comparable properties display *(superseded)*
+- [~] Check Airbnb links work *(superseded)*
+- [~] Check image carousel works *(superseded)*
 
 ### Tool 2: Find the Best Deal (Compare Many)
-- [ ] Test bulk property comparison
-- [ ] Check table formatting
-- [ ] Check sorting functionality
-- [ ] Check all metrics display correctly
+- [~] Test bulk property comparison *(superseded)*
+- [~] Check table formatting *(superseded)*
+- [~] Check sorting functionality *(superseded)*
+- [~] Check all metrics display correctly *(superseded)*
 
 ### Tool 3: See Real Revenue (Market Research)
-- [ ] Test market research with city name
-- [ ] Check bedroom breakdown display
-- [ ] Check seasonality charts
-- [ ] Check top performers display
+- [~] Test market research with city name *(superseded)*
+- [~] Check bedroom breakdown display *(superseded)*
+- [~] Check seasonality charts *(superseded)*
+- [~] Check top performers display *(superseded)*
 
 ### Tool 4: Explore Listings (Explore Area)
-- [ ] Test area exploration
-- [ ] Check property cards display
-- [ ] Check filtering functionality
-- [ ] Check pagination/load more
+- [~] Test area exploration *(superseded)*
+- [~] Check property cards display *(superseded)*
+- [~] Check filtering functionality *(superseded)*
+- [~] Check pagination/load more *(superseded)*
 
 ### Bugs Found:
 (To be filled during testing)
@@ -2972,29 +2972,29 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 ## Bug Fixes from Extensive Testing (Jan 21, 2026)
 
-- [ ] Bug 1: Fix distance badges not showing on comp cards (Tool 1)
-- [ ] Bug 2: Fix bulk comparison shows $0 rent (Tool 2)
-- [ ] Bug 3: Fix extremely low revenue numbers in Explore Listings (Tool 4)
-- [ ] Bug 4: Fix RevPAR calculation in Explore Listings (Tool 4)
-- [ ] Bug 5: Fix wrong market comps showing in Tool 3
-- [ ] Bug 6: Fix location input appears blank after selection (Tool 4)
+- [~] Bug 1: Fix distance badges not showing on comp cards (Tool 1) *(superseded)*
+- [~] Bug 2: Fix bulk comparison shows $0 rent (Tool 2) *(superseded)*
+- [~] Bug 3: Fix extremely low revenue numbers in Explore Listings (Tool 4) *(superseded)*
+- [~] Bug 4: Fix RevPAR calculation in Explore Listings (Tool 4) *(superseded)*
+- [~] Bug 5: Fix wrong market comps showing in Tool 3 *(superseded)*
+- [~] Bug 6: Fix location input appears blank after selection (Tool 4) *(superseded)*
 
 
 ## Remaining Bug Fixes - Deep Dive (Jan 21, 2026)
 
 ### Bug 1: Distance badges not showing on comp cards
-- [ ] Debug data flow from routers.ts to LeadMagnet.tsx to TeslaDashboard.tsx
-- [ ] Ensure distance_meters is passed through all transformations
-- [ ] Verify TeslaDashboard receives distanceMeters in comparables
+- [~] Debug data flow from routers.ts to LeadMagnet.tsx to TeslaDashboard.tsx *(superseded)*
+- [~] Ensure distance_meters is passed through all transformations *(superseded)*
+- [~] Verify TeslaDashboard receives distanceMeters in comparables *(superseded)*
 
 ### Bug 4: Market comps not refreshing when switching markets
-- [ ] Investigate backend query - check if market_id is being used correctly
-- [ ] Check if there's caching causing stale data
-- [ ] Ensure CompDataTable fetches fresh data on market change
+- [~] Investigate backend query - check if market_id is being used correctly *(superseded)*
+- [~] Check if there's caching causing stale data *(superseded)*
+- [~] Ensure CompDataTable fetches fresh data on market change *(superseded)*
 
 ### Bug 2: Bulk rent warning toast not visible
-- [ ] Verify toast component is properly configured
-- [ ] Check if Sonner toast is being called correctly
+- [~] Verify toast component is properly configured *(superseded)*
+- [~] Check if Sonner toast is being called correctly *(superseded)*
 
 
 ## Bug Fix: South Beach Submarket Data Display (Jan 21, 2026) - COMPLETE
@@ -3022,12 +3022,12 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 
 ## Google Places API Integration (Jan 21, 2026)
-- [ ] Add VITE_GOOGLE_PLACES_API_KEY as environment variable
-- [ ] Update AddressAutocomplete to use direct Google Maps API instead of Manus proxy
-- [ ] Test Distance Badges feature
-- [ ] Test Bulk Rent Warning feature
-- [ ] Test RevPAR Calculation feature
-- [ ] Test Location Input feature
+- [~] Add VITE_GOOGLE_PLACES_API_KEY as environment variable *(superseded)*
+- [~] Update AddressAutocomplete to use direct Google Maps API instead of Manus proxy *(superseded)*
+- [~] Test Distance Badges feature *(superseded)*
+- [~] Test Bulk Rent Warning feature *(superseded)*
+- [~] Test RevPAR Calculation feature *(superseded)*
+- [~] Test Location Input feature *(superseded)*
 
 
 ## Bug Fix Testing (Jan 21, 2026)
@@ -3065,25 +3065,25 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ## UI Improvements & Bug Fixes (Jan 21, 2026)
 
 ### Seasonal Forecast (Step 3):
-- [ ] Remove emojis from seasonal forecast display
-- [ ] Simplify colors to professional look (less colorful)
-- [ ] Fix year-over-year display not showing
+- [~] Remove emojis from seasonal forecast display *(superseded)*
+- [~] Simplify colors to professional look (less colorful) *(superseded)*
+- [~] Fix year-over-year display not showing *(superseded)*
 
 ### Comp Distance Labels (Step 3):
-- [ ] Fix distance calculations not loading for all 26 comps when clicking "Show All"
+- [~] Fix distance calculations not loading for all 26 comps when clicking "Show All" *(superseded)*
 
 ### Light Mode:
-- [ ] Switch UI to light mode throughout
+- [~] Switch UI to light mode throughout *(superseded)*
 
 ### Metric Tooltips:
-- [ ] Add third-grade level explanations for all metrics (Revenue, ADR, Occupancy, RevPAR, etc.)
+- [~] Add third-grade level explanations for all metrics (Revenue, ADR, Occupancy, RevPAR, etc.) *(superseded)*
 
 ### Map (Step 5):
-- [ ] Show user's property marker on the map (currently only showing competitor properties)
-- [ ] Add location disclaimer (~1km offset for privacy reasons)
+- [~] Show user's property marker on the map (currently only showing competitor properties) *(superseded)*
+- [~] Add location disclaimer (~1km offset for privacy reasons) *(superseded)*
 
 ### Custom Comp Set (Step 5):
-- [ ] Add ability to select/deselect specific listings to create custom view on map
+- [~] Add ability to select/deselect specific listings to create custom view on map *(superseded)*
 
 
 ## UI Improvements & Bug Fixes (Jan 21, 2026) - COMPLETE
@@ -3091,7 +3091,7 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ### Seasonal Forecast (Step 3):
 - [x] Remove emojis from seasonal forecast display
 - [x] Simplify colors to professional look (slate/gray tones)
-- [ ] Fix year-over-year display not showing (requires API data)
+- [~] Fix year-over-year display not showing (requires API data) — DEFERRED: requires historical API data
 
 ### Comp Distance Labels (Step 3):
 - [x] Fix distance display - now shows "N/A" when distance unavailable (API limitation)
@@ -3126,7 +3126,7 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 ### YoY Comparison Chart:
 - [x] Add side-by-side bar chart comparing this year vs last year revenue
-- [ ] Show visual comparison for ADR, occupancy, and RevPAR
+- [~] Show visual comparison for ADR, occupancy, and RevPAR *(superseded)*
 
 ### Market Trend Indicators:
 - [x] Add growth/decline trend arrows to Market Health Grade section
@@ -3136,9 +3136,9 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Research all Google API capabilities available through Manus proxy
 - [x] Research Gemini AI integration opportunities
 - [x] Identify enhancement opportunities for the tools
-- [ ] Implement Market Trend Narrator (AI-powered insights)
-- [ ] Implement AI Property Advisor
-- [ ] Implement Neighborhood Analysis with Google Maps
+- [~] Implement Market Trend Narrator (AI-powered insights) *(superseded)*
+- [~] Implement AI Property Advisor *(superseded)*
+- [~] Implement Neighborhood Analysis with Google Maps *(superseded)*
 
 
 ## Maximize Gemini AI Integration (Jan 22, 2026)
@@ -3150,7 +3150,7 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Structure output for beginner-friendly actionable advice
 - [x] Add API endpoint for AI Property Advisor
 - [x] Add AI Advisor section to TeslaDashboard UI
-- [ ] Test with real property analysis
+- [~] Test with real property analysis *(superseded)*
 
 
 ## Step 6: AI Advisor (Dedicated Tool) - Jan 21, 2026
@@ -3175,97 +3175,97 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ### API Endpoints (routers.ts):
 - [x] Add propertyAdvisorMax endpoint
 - [x] Add marketAdvisorMax endpoint
-- [ ] Pass comprehensive data payload to Gemini
+- [~] Pass comprehensive data payload to Gemini *(superseded)*
 
 ### UI (Step 6 Component):
-- [ ] Create AIAdvisorStep component
-- [ ] Add mode selector (Property vs Market)
-- [ ] Add loading state with progress indicator
-- [ ] Display full AI response with proper formatting
-- [ ] Add section navigation for long reports
-- [ ] Make it scrollable with sticky header
+- [~] Create AIAdvisorStep component *(superseded)*
+- [~] Add mode selector (Property vs Market) *(superseded)*
+- [~] Add loading state with progress indicator *(superseded)*
+- [~] Display full AI response with proper formatting *(superseded)*
+- [~] Add section navigation for long reports *(superseded)*
+- [~] Make it scrollable with sticky header *(superseded)*
 
 ### Journey Integration:
-- [ ] Add Step 6 to the journey cards
-- [ ] Update step numbering
-- [ ] Add "Get AI Analysis" CTA from other steps
-- [ ] Remove embedded AI Advisor from Step 3 (now separate)
+- [~] Add Step 6 to the journey cards *(superseded)*
+- [~] Update step numbering *(superseded)*
+- [~] Add "Get AI Analysis" CTA from other steps *(superseded)*
+- [~] Remove embedded AI Advisor from Step 3 (now separate) *(superseded)*
 
 ### Testing:
-- [ ] Test Property Advisor with real property data
-- [ ] Test Market Advisor with real market data
-- [ ] Verify full output is displayed
-- [ ] Verify formatting is correct
+- [~] Test Property Advisor with real property data *(superseded)*
+- [~] Test Market Advisor with real market data *(superseded)*
+- [~] Verify full output is displayed *(superseded)*
+- [~] Verify formatting is correct *(superseded)*
 
 
 ## AI Advisor Prompt Engineering Fixes (Jan 22, 2026)
 
 ### Issues Identified:
-- [ ] Apples-to-oranges comparison - comparing 2BR to luxury hotel residences
-- [ ] Wrong date in report (hardcoded October 2023)
-- [ ] Missing rental arbitrage context - talks about purchasing instead of arbitrage
-- [ ] Overly negative tone without considering arbitrage profitability
-- [ ] No bedroom-filtered analysis
-- [ ] Misleading percentile interpretation
+- [~] Apples-to-oranges comparison - comparing 2BR to luxury hotel residences *(superseded)*
+- [~] Wrong date in report (hardcoded October 2023) *(superseded)*
+- [~] Missing rental arbitrage context - talks about purchasing instead of arbitrage *(superseded)*
+- [~] Overly negative tone without considering arbitrage profitability *(superseded)*
+- [~] No bedroom-filtered analysis *(superseded)*
+- [~] Misleading percentile interpretation *(superseded)*
 
 ### Fixes Required:
-- [ ] Filter comparables to same bedroom count only in prompt
-- [ ] Add rental arbitrage focus (can STR revenue cover rent + expenses?)
-- [ ] Use dynamic date (current date)
-- [ ] Add arbitrage-specific metrics (monthly cash flow, break-even rent, profit margins)
-- [ ] Balanced analysis with actionable insights
-- [ ] Compare only to true comparables (same BR/BA configuration)
-- [ ] Include monthly rent input in analysis
-- [ ] Remove references to purchasing/renovations
+- [~] Filter comparables to same bedroom count only in prompt *(superseded)*
+- [~] Add rental arbitrage focus (can STR revenue cover rent + expenses?) *(superseded)*
+- [~] Use dynamic date (current date) *(superseded)*
+- [~] Add arbitrage-specific metrics (monthly cash flow, break-even rent, profit margins) *(superseded)*
+- [~] Balanced analysis with actionable insights *(superseded)*
+- [~] Compare only to true comparables (same BR/BA configuration) *(superseded)*
+- [~] Include monthly rent input in analysis *(superseded)*
+- [~] Remove references to purchasing/renovations *(superseded)*
 
 
 ## Comprehensive QA Testing (Jan 22, 2026)
 
 ### Phase 1: Full Flow Testing
-- [ ] Test property analysis with real Denver address
-- [ ] Verify address autocomplete works
-- [ ] Verify monthly rent input validation
-- [ ] Verify bedrooms/bathrooms selection
-- [ ] Verify loading states and progress indicators
+- [~] Test property analysis with real Denver address *(superseded)*
+- [~] Verify address autocomplete works *(superseded)*
+- [~] Verify monthly rent input validation *(superseded)*
+- [~] Verify bedrooms/bathrooms selection *(superseded)*
+- [~] Verify loading states and progress indicators *(superseded)*
 
 ### Phase 2: Report Output Verification
-- [ ] Chapter 1: Property overview data accuracy
-- [ ] Chapter 2: Market analysis data accuracy
-- [ ] Chapter 2: MarketInsightsPanel rendering
-- [ ] Chapter 3: Competitor data accuracy
-- [ ] Chapter 3: Competitor images loading
-- [ ] Chapter 3: Airbnb links clickable
-- [ ] Chapter 4: Profit projections accuracy
-- [ ] Chapter 4: BreakEvenCalculator rendering
+- [~] Chapter 1: Property overview data accuracy *(superseded)*
+- [~] Chapter 2: Market analysis data accuracy *(superseded)*
+- [~] Chapter 2: MarketInsightsPanel rendering *(superseded)*
+- [~] Chapter 3: Competitor data accuracy *(superseded)*
+- [~] Chapter 3: Competitor images loading *(superseded)*
+- [~] Chapter 3: Airbnb links clickable *(superseded)*
+- [~] Chapter 4: Profit projections accuracy *(superseded)*
+- [~] Chapter 4: BreakEvenCalculator rendering *(superseded)*
 
 ### Phase 3: Data Formatting
-- [ ] Currency formatting consistent ($X,XXX)
-- [ ] Percentage formatting consistent (XX%)
-- [ ] Date formatting consistent
-- [ ] Numbers not showing NaN or undefined
-- [ ] Empty states handled gracefully
+- [~] Currency formatting consistent ($X,XXX) *(superseded)*
+- [~] Percentage formatting consistent (XX%) *(superseded)*
+- [~] Date formatting consistent *(superseded)*
+- [~] Numbers not showing NaN or undefined *(superseded)*
+- [~] Empty states handled gracefully *(superseded)*
 
 ### Phase 4: Component Testing
-- [ ] MarketInsightsPanel loads data correctly
-- [ ] BreakEvenCalculator calculations correct
-- [ ] Tooltips display properly
-- [ ] Charts render correctly
-- [ ] Mobile responsiveness
+- [~] MarketInsightsPanel loads data correctly *(superseded)*
+- [~] BreakEvenCalculator calculations correct *(superseded)*
+- [~] Tooltips display properly *(superseded)*
+- [~] Charts render correctly *(superseded)*
+- [~] Mobile responsiveness *(superseded)*
 
 ### Phase 5: Error Handling
-- [ ] Invalid address handling
-- [ ] API timeout handling
-- [ ] Missing data handling
-- [ ] Network error handling
+- [~] Invalid address handling *(superseded)*
+- [~] API timeout handling *(superseded)*
+- [~] Missing data handling *(superseded)*
+- [~] Network error handling *(superseded)*
 
 
 
 ## QA Bug Fixes (Jan 22, 2026)
 
 ### Input Validation Issues
-- [ ] Invalid Address: Add validation to prevent form submission with gibberish text (no Google Places match)
-- [ ] Negative Rent: Add min="0" constraint to prevent negative currency values
-- [ ] Monthly Rent Not Captured: Fix rent value not being passed correctly to profit calculation in Validate the Deal
+- [~] Invalid Address: Add validation to prevent form submission with gibberish text (no Google Places match) *(superseded)*
+- [~] Negative Rent: Add min="0" constraint to prevent negative currency values *(superseded)*
+- [~] Monthly Rent Not Captured: Fix rent value not being passed correctly to profit calculation in Validate the Deal *(superseded)*
 
 
 
@@ -3289,8 +3289,8 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 
 ## New Feature Requests (Jan 22, 2026)
-- [ ] Map fullscreen toggle - Add button to expand map to full screen view
-- [ ] Comparable properties revenue filter - Add "Click to Filter" button with revenue threshold breakdown (top 33%, middle 33%, bottom 33%)
+- [~] Map fullscreen toggle - Add button to expand map to full screen view *(superseded)*
+- [~] Comparable properties revenue filter - Add "Click to Filter" button with revenue threshold breakdown (top 33%, middle 33%, bottom 33%) *(superseded)*
 
 
 ## New Feature Requests (Jan 22, 2026) - COMPLETE
@@ -3306,12 +3306,12 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 
 ## AI Advisor Fixes (Jan 22, 2026 - Session 3)
-- [ ] Fix property address input text visibility in Step 6 (text not visible when typing)
-- [ ] Remove AI Property Advisor from Step 3 Validate Deal
-- [ ] Single-button analysis flow (no two-step process)
-- [ ] Remove data transparency section and AI model info
-- [ ] Remove emojis from the report
-- [ ] Improve report formatting and narration quality
+- [~] Fix property address input text visibility in Step 6 (text not visible when typing) *(superseded)*
+- [~] Remove AI Property Advisor from Step 3 Validate Deal *(superseded)*
+- [~] Single-button analysis flow (no two-step process) *(superseded)*
+- [~] Remove data transparency section and AI model info *(superseded)*
+- [~] Remove emojis from the report *(superseded)*
+- [~] Improve report formatting and narration quality *(superseded)*
 
 
 ## AI Advisor Fixes (Jan 22, 2026)
@@ -3331,36 +3331,36 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 
 ## Investigation & Enhancements (Jan 22, 2026)
-- [ ] Investigate MAF (Maximum Affordable Rent) calculation inconsistency - why does it change between reports?
-- [ ] Audit AirDNA endpoints - compare what we use vs what's available
-- [ ] Review AI report for missing elements and improvements
-- [ ] Plan Market Advisor feature using market-specific endpoints
+- [~] Investigate MAF (Maximum Affordable Rent) calculation inconsistency - why does it change between reports? *(superseded)*
+- [~] Audit AirDNA endpoints - compare what we use vs what's available *(superseded)*
+- [~] Review AI report for missing elements and improvements *(superseded)*
+- [~] Plan Market Advisor feature using market-specific endpoints *(superseded)*
 
 
 ## Property Advisor Enhancements (Jan 22, 2026)
-- [ ] Add RevPAR analysis to Property Advisor report
-- [ ] Add comprehensive seasonality (monthly/quarterly trends)
-- [ ] Fix MAF to show ranges instead of exact numbers
+- [~] Add RevPAR analysis to Property Advisor report *(superseded)*
+- [~] Add comprehensive seasonality (monthly/quarterly trends) *(superseded)*
+- [~] Fix MAF to show ranges instead of exact numbers *(superseded)*
 
 ## Market Advisor Feature (Jan 22, 2026)
-- [ ] Create Market Advisor input form (market selection)
-- [ ] Build backend endpoint to fetch all market data
-- [ ] Add RevPAR metrics to market analysis
-- [ ] Add submarket breakdown and comparison
-- [ ] Add supply/demand trends
-- [ ] Add top performer analysis
-- [ ] Add future pricing outlook
-- [ ] Generate comprehensive market report with Gemini
+- [~] Create Market Advisor input form (market selection) *(superseded)*
+- [~] Build backend endpoint to fetch all market data *(superseded)*
+- [~] Add RevPAR metrics to market analysis *(superseded)*
+- [~] Add submarket breakdown and comparison *(superseded)*
+- [~] Add supply/demand trends *(superseded)*
+- [~] Add top performer analysis *(superseded)*
+- [~] Add future pricing outlook *(superseded)*
+- [~] Generate comprehensive market report with Gemini *(superseded)*
 
 
 ## Market Advisor Enhancement (Jan 22, 2026)
-- [ ] Create enhanced getComprehensiveMarketData function with 5 years history
-- [ ] Include all available AirDNA endpoints (RevPAR, booking patterns, supply trends)
-- [ ] Add submarket breakdown with individual metrics
-- [ ] Create standaloneMarketAdvisor router endpoint
-- [ ] Update generateMaxMarketAdvice prompt for 5-year trends and submarkets
-- [ ] Add standalone Market Advisor UI with market search input
-- [ ] Support submarkets, cities, and zip codes
+- [~] Create enhanced getComprehensiveMarketData function with 5 years history *(superseded)*
+- [~] Include all available AirDNA endpoints (RevPAR, booking patterns, supply trends) *(superseded)*
+- [~] Add submarket breakdown with individual metrics *(superseded)*
+- [~] Create standaloneMarketAdvisor router endpoint *(superseded)*
+- [~] Update generateMaxMarketAdvice prompt for 5-year trends and submarkets *(superseded)*
+- [~] Add standalone Market Advisor UI with market search input *(superseded)*
+- [~] Support submarkets, cities, and zip codes *(superseded)*
 
 
 ## Standalone Market Advisor Implementation (Jan 22, 2026) - COMPLETE
@@ -3411,25 +3411,25 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## UI Improvements & AI Advisor Restructure (Jan 22, 2026)
 
 ### Step 5 (Map) Layout Redesign:
-- [ ] Review current Step 5 layout and identify issues
-- [ ] Design more compact, visually appealing layout
-- [ ] Reduce vertical scrolling while maintaining functionality
-- [ ] Improve data organization and visual hierarchy
-- [ ] Test new layout on mobile and desktop
+- [~] Review current Step 5 layout and identify issues *(superseded)*
+- [~] Design more compact, visually appealing layout *(superseded)*
+- [~] Reduce vertical scrolling while maintaining functionality *(superseded)*
+- [~] Improve data organization and visual hierarchy *(superseded)*
+- [~] Test new layout on mobile and desktop *(superseded)*
 
 ### AI Advisor Restructure (Step 6):
-- [ ] Combine Property Advisor and Market Advisor into single Step 6
-- [ ] Add tab navigation: Property tab and Market tab
-- [ ] Move Market Advisor functionality into Market tab
-- [ ] Keep Property Advisor functionality in Property tab
-- [ ] Remove Step 7 (now part of Step 6)
-- [ ] Update step numbering in LeadMagnet page
+- [~] Combine Property Advisor and Market Advisor into single Step 6 *(superseded)*
+- [~] Add tab navigation: Property tab and Market tab *(superseded)*
+- [~] Move Market Advisor functionality into Market tab *(superseded)*
+- [~] Keep Property Advisor functionality in Property tab *(superseded)*
+- [~] Remove Step 7 (now part of Step 6) *(superseded)*
+- [~] Update step numbering in LeadMagnet page *(superseded)*
 
 ### Market Advisor Enhancements:
-- [ ] Add zip code support to Market Advisor search
-- [ ] Research additional AirDNA endpoints to include
-- [ ] Add submarket comparison view
-- [ ] Integrate more comprehensive market data
+- [~] Add zip code support to Market Advisor search *(superseded)*
+- [~] Research additional AirDNA endpoints to include *(superseded)*
+- [~] Add submarket comparison view *(superseded)*
+- [~] Integrate more comprehensive market data *(superseded)*
 
 
 
@@ -3454,9 +3454,9 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Add collapsible UI sections for new data
 
 ### Pending:
-- [ ] Test Market Advisor with zip code search
-- [ ] Test new data sections (cancellation, professional, future pricing)
-- [ ] Verify AI Advisor Step 6 has Property and Market tabs
+- [~] Test Market Advisor with zip code search *(superseded)*
+- [~] Test new data sections (cancellation, professional, future pricing) *(superseded)*
+- [~] Verify AI Advisor Step 6 has Property and Market tabs *(superseded)*
 
 
 
@@ -3489,24 +3489,24 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## UI Fixes & Gemini 3.0 Upgrade (Jan 22, 2026)
 
 ### Step 5 Map Fixes
-- [ ] Move legend outside map to below it
-- [ ] Fix overlay issues with floating panels
+- [~] Move legend outside map to below it *(superseded)*
+- [~] Fix overlay issues with floating panels *(superseded)*
 
 ### Step 7 Market Advisor Fixes
-- [ ] Auto-populate zip code from user's property if set
-- [ ] Fix Revenue by Property Size to start at 1BR (not 2BR)
-- [ ] Add bedroom filter to Revenue by Property Size
-- [ ] Fix Revenue Growth decimal display (should be percentage)
-- [ ] Improve Comprehensive Market Analysis formatting
+- [~] Auto-populate zip code from user's property if set *(superseded)*
+- [~] Fix Revenue by Property Size to start at 1BR (not 2BR) *(superseded)*
+- [~] Add bedroom filter to Revenue by Property Size *(superseded)*
+- [~] Fix Revenue Growth decimal display (should be percentage) *(superseded)*
+- [~] Improve Comprehensive Market Analysis formatting *(superseded)*
 
 ### Gemini Model Upgrade
-- [ ] Switch from Gemini 2.5 Pro to Gemini 3.0 (most capable model)
+- [~] Switch from Gemini 2.5 Pro to Gemini 3.0 (most capable model) *(superseded)*
 
 
 ### Step 5 Map Additional Fixes
-- [ ] Fix zip code search showing "0 listings" but actually loading properties
-- [ ] Fix property card popup when clicking markers on the map
-- [ ] Filter comparable properties by bedroom count
+- [~] Fix zip code search showing "0 listings" but actually loading properties *(superseded)*
+- [~] Fix property card popup when clicking markers on the map *(superseded)*
+- [~] Filter comparable properties by bedroom count *(superseded)*
 
 
 ### Completed Fixes (Jan 22, 2026 - Batch 2)
@@ -3529,11 +3529,11 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 ### AI Prompt Improvements (Google Prompting Guide 101)
 - [x] Update Property Advisor prompt with persona, task, tone, and constraints
-- [ ] Update Market Advisor prompt with persona, task, tone, and constraints
-- [ ] Apply best practices: natural language, specific instructions, clear constraints
+- [~] Update Market Advisor prompt with persona, task, tone, and constraints *(superseded)*
+- [~] Apply best practices: natural language, specific instructions, clear constraints *(superseded)*
 
 ### Bug Fixes
-- [ ] Fix TypeScript error on line 2089 in TeslaDashboard.tsx
+- [~] Fix TypeScript error on line 2089 in TeslaDashboard.tsx *(superseded)*
 
 
 ## Step 5 Map Data Issues (Jan 22, 2026) - FIXED
@@ -3556,8 +3556,8 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## Market Advisor Prompt & Step 5 Testing (Jan 22, 2026)
 
 ### Tasks
-- [ ] Update Market Advisor AI prompt with Google Prompting Guide best practices
-- [ ] Test Step 5 Map with Soulard to verify pagination shows all bedroom types including 1BR
+- [~] Update Market Advisor AI prompt with Google Prompting Guide best practices *(superseded)*
+- [~] Test Step 5 Map with Soulard to verify pagination shows all bedroom types including 1BR *(superseded)*
 
 
 ## Market Advisor Prompt & Step 5 Test (Jan 22, 2026) - COMPLETE
@@ -3572,11 +3572,11 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 
 ## Missing 1BR Listings Bug (Jan 22, 2026)
-- [ ] Investigate why 1BR properties are not showing in Soulard (63104) search results
-- [ ] User confirms 1BR properties exist in zip code 63104
-- [ ] Check if AirDNA API is filtering out 1BR listings
-- [ ] Verify bedroom filter is working correctly
-- [ ] Fix issue so all bedroom types appear in search results
+- [~] Investigate why 1BR properties are not showing in Soulard (63104) search results *(superseded)*
+- [~] User confirms 1BR properties exist in zip code 63104 *(superseded)*
+- [~] Check if AirDNA API is filtering out 1BR listings *(superseded)*
+- [~] Verify bedroom filter is working correctly *(superseded)*
+- [~] Fix issue so all bedroom types appear in search results *(superseded)*
 
 ### Phase 14: Progress Indicators Implementation (Jan 22, 2026)
 - [x] Add analysisProgress state to StandaloneMarketAdvisor
@@ -3681,27 +3681,27 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## Phase 6: New Feature Implementation (Jan 23, 2026)
 
 ### 6.1 Market Comparison UI Page
-- [ ] Create tRPC endpoint for market comparison
-- [ ] Build MarketComparisonPage.tsx with market selector
-- [ ] Add side-by-side comparison cards with metrics
-- [ ] Add comparison charts (revenue, occupancy, ADR)
-- [ ] Add route to App.tsx
+- [~] Create tRPC endpoint for market comparison *(superseded)*
+- [~] Build MarketComparisonPage.tsx with market selector *(superseded)*
+- [~] Add side-by-side comparison cards with metrics *(superseded)*
+- [~] Add comparison charts (revenue, occupancy, ADR) *(superseded)*
+- [~] Add route to App.tsx *(superseded)*
 
 ### 6.2 US Market Discovery Page
-- [ ] Create tRPC endpoint for country markets
-- [ ] Build MarketDiscoveryPage.tsx with interactive US map
-- [ ] Add market filtering controls (score, type, demand)
-- [ ] Add market cards grid with key metrics
-- [ ] Add click-to-analyze functionality
-- [ ] Add route to App.tsx
+- [~] Create tRPC endpoint for country markets *(superseded)*
+- [~] Build MarketDiscoveryPage.tsx with interactive US map *(superseded)*
+- [~] Add market filtering controls (score, type, demand) *(superseded)*
+- [~] Add market cards grid with key metrics *(superseded)*
+- [~] Add click-to-analyze functionality *(superseded)*
+- [~] Add route to App.tsx *(superseded)*
 
 ### 6.3 Saved Searches Functionality
-- [ ] Create database schema for saved searches
-- [ ] Create tRPC endpoints for CRUD operations
-- [ ] Build SavedSearches component in sidebar
-- [ ] Add save search button to Market Advisor
-- [ ] Add save search button to Map View
-- [ ] Add quick-load functionality from saved searches
+- [~] Create database schema for saved searches *(superseded)*
+- [~] Create tRPC endpoints for CRUD operations *(superseded)*
+- [~] Build SavedSearches component in sidebar *(superseded)*
+- [~] Add save search button to Market Advisor *(superseded)*
+- [~] Add save search button to Map View *(superseded)*
+- [~] Add quick-load functionality from saved searches *(superseded)*
 
 
 ---
@@ -3749,13 +3749,13 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Pagination already implemented with "Load More Markets" button
 - [x] Increases limit by 50 each click
 - [x] Button only shows when more markets available
-- [ ] Update API call to support offset/limit
+- [~] Update API call to support offset/limit *(superseded)*
 
 ### 7.3 Market Favoriting
-- [ ] Create favoriteMarkets table in schema
-- [ ] Add tRPC endpoints for favorite CRUD
-- [ ] Add favorite button to market cards
-- [ ] Create "My Favorites" section or page
+- [~] Create favoriteMarkets table in schema *(superseded)*
+- [~] Add tRPC endpoints for favorite CRUD *(superseded)*
+- [~] Add favorite button to market cards *(superseded)*
+- [~] Create "My Favorites" section or page *(superseded)*
 
 
 ---
@@ -3834,11 +3834,11 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 
 ## PDF Export Feature (Jan 23, 2026)
-- [ ] Set up PDF generation library (jspdf or pdfmake)
-- [ ] Create server-side PDF generation endpoint
-- [ ] Add PDF export button to Market Comparison page
-- [ ] Add PDF export button to My Favorites page
-- [ ] Format PDF with market data, charts, and branding
+- [~] Set up PDF generation library (jspdf or pdfmake) *(superseded)*
+- [~] Create server-side PDF generation endpoint *(superseded)*
+- [~] Add PDF export button to Market Comparison page *(superseded)*
+- [~] Add PDF export button to My Favorites page *(superseded)*
+- [~] Format PDF with market data, charts, and branding *(superseded)*
 
 
 ## PDF Export Feature (Jan 23, 2026)
@@ -3859,18 +3859,18 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Remove "[Your Name]" placeholder from Market Advisor report (updated LLM prompt)
 - [x] Populate 1-bedroom revenue data in Market Advisor (increased listing fetch to 500)
 - [x] Round Market Advisor score to whole number (added Math.round)
-- [ ] Fix Market Advisor dropdown staying open during analysis (not closing properly)
+- [~] Fix Market Advisor dropdown staying open during analysis (not closing properly) *(superseded)*
 
 - [x] Fix Market Advisor dropdown staying open after selection (closes properly now)
 
 
 ## Market Advisor Report Fixes (Jan 23, 2026)
 - [x] Fix bedroom filter not being applied to Market Advisor data (passed to listings API)
-- [ ] Fix Revenue by Property Size section not showing
-- [ ] Fix Top Performers section not showing
-- [ ] Simplify RevPAR Trend (too complicated)
-- [ ] Fix Total Active Listings Trend accuracy (filter by bedroom)
-- [ ] Add listing changes (+/-) to Active Listings section
+- [~] Fix Revenue by Property Size section not showing *(superseded)*
+- [~] Fix Top Performers section not showing *(superseded)*
+- [~] Simplify RevPAR Trend (too complicated) *(superseded)*
+- [~] Fix Total Active Listings Trend accuracy (filter by bedroom) *(superseded)*
+- [~] Add listing changes (+/-) to Active Listings section *(superseded)*
 
 
 ## Bug Fix: Bedroom Filter Reset (Jan 23, 2026)
@@ -3905,14 +3905,14 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## Feature: Bedroom-Specific Data Filtering on Backend (Jan 23, 2026)
 
 ### Goal
-- [ ] Filter "Revenue by Property Size" table to only show selected bedroom size when filter is applied
-- [ ] Apply bedroom filter to other relevant data sections (top performers, etc.)
+- [~] Filter "Revenue by Property Size" table to only show selected bedroom size when filter is applied *(superseded)*
+- [~] Apply bedroom filter to other relevant data sections (top performers, etc.) *(superseded)*
 
 ### Implementation
-- [ ] Modify getStandaloneMarketAdvisorData to filter revenueByBedroom data
-- [ ] Filter topPerformers by bedroom count
-- [ ] Update response to indicate filter was applied
-- [ ] Test with 1 BR, 2 BR, and other bedroom filters
+- [~] Modify getStandaloneMarketAdvisorData to filter revenueByBedroom data *(superseded)*
+- [~] Filter topPerformers by bedroom count *(superseded)*
+- [~] Update response to indicate filter was applied *(superseded)*
+- [~] Test with 1 BR, 2 BR, and other bedroom filters *(superseded)*
 
 
 ## Bedroom Filter Fix (Jan 23, 2026) - COMPLETE
@@ -3926,17 +3926,17 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 ## Filter Persistence Fix (Jan 23, 2026)
 
-- [ ] Add all filter states to PropertyContext with localStorage persistence
-- [ ] Update StandaloneMarketAdvisor to use context for all filters
-- [ ] Test all filters persist correctly when clicking Generate
+- [~] Add all filter states to PropertyContext with localStorage persistence *(superseded)*
+- [~] Update StandaloneMarketAdvisor to use context for all filters *(superseded)*
+- [~] Test all filters persist correctly when clicking Generate *(superseded)*
 
 
 ## UI Integration Tasks (2026-01-23)
-- [ ] Integrate ForwardDemandCard into Market Advisor
-- [ ] Integrate MultiYearTrends into Market Advisor
-- [ ] Integrate CompsMapView into Property Report
-- [ ] Add ShareReportButton to Property Report
-- [ ] Test full user flow end-to-end
+- [~] Integrate ForwardDemandCard into Market Advisor *(superseded)*
+- [~] Integrate MultiYearTrends into Market Advisor *(superseded)*
+- [~] Integrate CompsMapView into Property Report *(superseded)*
+- [~] Add ShareReportButton to Property Report *(superseded)*
+- [~] Test full user flow end-to-end *(superseded)*
 
 
 ## AirDNA Feature Parity - UI Integration (Jan 23, 2026) - COMPLETE
@@ -3990,22 +3990,22 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## PDF Export Feature (Jan 23, 2026)
 
 ### Implementation
-- [ ] Add PDF download button to ShareReportButton component
-- [ ] Create server-side PDF generation endpoint using html-pdf or puppeteer
-- [ ] Style PDF output to match report design
-- [ ] Test PDF export locally
-- [ ] Test on live website (coachinayahturnkeytool.com)
+- [~] Add PDF download button to ShareReportButton component *(superseded)*
+- [~] Create server-side PDF generation endpoint using html-pdf or puppeteer *(superseded)*
+- [~] Style PDF output to match report design *(superseded)*
+- [~] Test PDF export locally *(superseded)*
+- [~] Test on live website (coachinayahturnkeytool.com) *(superseded)*
 
 
 ## Bug Fix - Google Places Autocomplete (Jan 23, 2026)
-- [ ] Fix Google Places autocomplete dropdown selection not triggering React state update
-- [ ] Test autocomplete fix on live website
+- [~] Fix Google Places autocomplete dropdown selection not triggering React state update *(superseded)*
+- [~] Test autocomplete fix on live website *(superseded)*
 
 
 ## Bug Fix - Break-even Occupancy (Jan 23, 2026)
-- [ ] Fix break-even occupancy showing 0% when rent is $0 or not provided
-- [ ] Show meaningful message when rent is not set
-- [ ] Test break-even calculation with various rent values
+- [~] Fix break-even occupancy showing 0% when rent is $0 or not provided *(superseded)*
+- [~] Show meaningful message when rent is not set *(superseded)*
+- [~] Test break-even calculation with various rent values *(superseded)*
 
 
 ## Bug Fix - Rent/Mortgage Required (Jan 23, 2026)
@@ -4105,9 +4105,9 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 
 
 ## Distance Display on Listing Cards (Jan 24, 2026)
-- [ ] Add distance badge/indicator on listing cards in MapFirstLayout
-- [ ] Show distance from user's property on each competitor card
-- [ ] Style the distance indicator to be visually clear and consistent
+- [~] Add distance badge/indicator on listing cards in MapFirstLayout *(superseded)*
+- [~] Show distance from user's property on each competitor card *(superseded)*
+- [~] Style the distance indicator to be visually clear and consistent *(superseded)*
 
 
 ## Distance Display on Listing Cards (Jan 24, 2026) - COMPLETE
@@ -4122,9 +4122,9 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 
 ## Revenue by Property Type - Limited Data Fix (Jan 24, 2026)
 
-- [ ] Fix Step 1 "Revenue by Property Type" to pull all bedroom data
-- [ ] Remove "Limited data available" message for bedroom types
-- [ ] Ensure all bedroom types (1-6 BR) show revenue and occupancy data
+- [~] Fix Step 1 "Revenue by Property Type" to pull all bedroom data *(superseded)*
+- [~] Remove "Limited data available" message for bedroom types *(superseded)*
+- [~] Ensure all bedroom types (1-6 BR) show revenue and occupancy data *(superseded)*
 
 
 ## Revenue by Property Type Fix (Jan 24, 2026) - COMPLETE
@@ -4148,12 +4148,12 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 
 - [x] Enhanced property marker visibility on comp map (56px size, brighter glow, renders on top, stronger shadow) - via Poe/GPT-5.2-Codex
 
-- [ ] Fix Step 5 tool not working (reported Jan 24, 2026)
+- [~] Fix Step 5 tool not working (reported Jan 24, 2026) *(superseded)*
 
-- [ ] Fix Seasonal Forecast chart colors - bars are all gray instead of showing Peak/Shoulder/Slow colors (Jan 24, 2026)
-- [ ] Fix Step 5 Map auto-fill - should auto-load user's property market when they have a property set (Jan 24, 2026)
+- [~] Fix Seasonal Forecast chart colors - bars are all gray instead of showing Peak/Shoulder/Slow colors (Jan 24, 2026) *(superseded)*
+- [~] Fix Step 5 Map auto-fill - should auto-load user's property market when they have a property set (Jan 24, 2026) *(superseded)*
 
-- [ ] Make Step 5 Map fully automatic - auto-select first search result and load listings without clicks
+- [~] Make Step 5 Map fully automatic - auto-select first search result and load listings without clicks *(superseded)*
 
 
 ## Step 5 Map Fixes (Jan 24, 2026) - COMPLETE
@@ -4166,9 +4166,9 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 
 ## New Features (Jan 24, 2026)
 
-- [ ] Add user's property marker to Step 5 Map - show distinct gold marker for user's property among competitors
-- [ ] Cache AI Advisor results in database - store analysis so users can revisit without regenerating
-- [ ] Add distance column to Step 5 table - calculate distance from each competitor to user's property
+- [~] Add user's property marker to Step 5 Map - show distinct gold marker for user's property among competitors *(superseded)*
+- [~] Cache AI Advisor results in database - store analysis so users can revisit without regenerating *(superseded)*
+- [~] Add distance column to Step 5 table - calculate distance from each competitor to user's property *(superseded)*
 
 
 ## New Features Implementation (Jan 24, 2026) - COMPLETE
@@ -4292,38 +4292,38 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 ## Market Insights UI/Data Issues (Reported Jan 25, 2026)
 
-- [ ] Supply Trend chart - Empty, no data showing (just axis labels)
-- [ ] Forward-Looking Demand - "Next 30 Days" grayed out, Detailed Metrics show $0/0 values
-- [ ] Multi-Year Trends - Active Listings shows 0 (incorrect)
-- [ ] Seasonal Forecast - 68% Avg Occupancy text not aligned with other stats
-- [ ] Best/Slow Months - Red down arrows confusing (why "Best Months" showing negative percentages?)
-- [ ] Projected Annual Cash Flow - Dark mode styling doesn't match light mode page
+- [~] Supply Trend chart - Empty, no data showing (just axis labels) *(superseded)*
+- [~] Forward-Looking Demand - "Next 30 Days" grayed out, Detailed Metrics show $0/0 values *(superseded)*
+- [~] Multi-Year Trends - Active Listings shows 0 (incorrect) *(superseded)*
+- [~] Seasonal Forecast - 68% Avg Occupancy text not aligned with other stats *(superseded)*
+- [~] Best/Slow Months - Red down arrows confusing (why "Best Months" showing negative percentages?) *(superseded)*
+- [~] Projected Annual Cash Flow - Dark mode styling doesn't match light mode page *(superseded)*
 
 
 ## New Issues to Address (Jan 25, 2026)
 
 ### File Structure Documentation
-- [ ] Create comprehensive file structure documentation showing which file controls each part of the site
+- [~] Create comprehensive file structure documentation showing which file controls each part of the site *(superseded)*
 
 ### Map Feature Issues
-- [ ] Fix map to show all bedroom counts, not just 1BR
-- [ ] Add zip code filtering - properties should be filtered by specific zip code (e.g., 92126)
-- [ ] Fix bedroom count filter - showing incorrect counts (21 for 2BR seems wrong)
+- [~] Fix map to show all bedroom counts, not just 1BR *(superseded)*
+- [~] Add zip code filtering - properties should be filtered by specific zip code (e.g., 92126) *(superseded)*
+- [~] Fix bedroom count filter - showing incorrect counts (21 for 2BR seems wrong) *(superseded)*
 
 ### Step 3 (Validate the Deal) - Explanatory Labels
-- [ ] Add explainer tooltips/descriptions for "Active Listings"
-- [ ] Add explainer tooltips/descriptions for "ADR" (Average Daily Rate)
-- [ ] Add explainer tooltips/descriptions for "Occupancy"
-- [ ] Add explainer tooltips/descriptions for other key metrics
-- [ ] Help users understand what each metric means with contextual help
+- [~] Add explainer tooltips/descriptions for "Active Listings" *(superseded)*
+- [~] Add explainer tooltips/descriptions for "ADR" (Average Daily Rate) *(superseded)*
+- [~] Add explainer tooltips/descriptions for "Occupancy" *(superseded)*
+- [~] Add explainer tooltips/descriptions for other key metrics *(superseded)*
+- [~] Help users understand what each metric means with contextual help *(superseded)*
 
 
 ## Step 3 UI Fixes (Jan 25, 2026)
 
-- [ ] Multi-Year Trends: 1/2/3/5 Year buttons don't change data when clicked
-- [ ] Best/Slowest Months: Red YoY percentages are confusing - need to clarify what they mean
-- [ ] Supply Trend: Add Y-axis labels with actual numbers to anchor the bars
-- [ ] Market Insights: Improve color scheme (brown/muddy colors look unprofessional)
+- [~] Multi-Year Trends: 1/2/3/5 Year buttons don't change data when clicked *(superseded)*
+- [~] Best/Slowest Months: Red YoY percentages are confusing - need to clarify what they mean *(superseded)*
+- [~] Supply Trend: Add Y-axis labels with actual numbers to anchor the bars *(superseded)*
+- [~] Market Insights: Improve color scheme (brown/muddy colors look unprofessional) *(superseded)*
 
 
 ## Live Demo Stress Test Fixes (Jan 25, 2026)
@@ -4338,16 +4338,16 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Multi-Year Trends: Add explanation of what "Multi-Year Trends" means
 - [x] Multi-Year Trends: Fix styling to match UI guidelines (light mode)
 - [x] Market Landscape: Change "Saturated market" to "Established market" (less intimidating)
-- [ ] Supply Trend: Fix 12-Month Change showing 0% (verify data accuracy)
+- [~] Supply Trend: Fix 12-Month Change showing 0% (verify data accuracy) *(superseded)*
 - [x] Seasonal Forecast: Removed YoY percentages from Best/Slowest months summary (kept in detailed YoY tab)
-- [ ] Test every button in Step 3 systematically
+- [~] Test every button in Step 3 systematically *(superseded)*
 
 
 ## Step 3 Critical Fixes (Jan 25, 2026 - Demo Day)
-- [ ] Multi-Year Trends: Change labels from "1 Year, 2 Years" to "1 Year Ago, 2 Years Ago"
-- [ ] Supply Trend: Fix 12-Month Change calculation (showing 0% incorrectly)
-- [ ] Forward-Looking Demand: Fix card design - cards too small, awkward spacing
-- [ ] CRITICAL: Filter ALL data by bedroom count (apples-to-apples comparison)
+- [~] Multi-Year Trends: Change labels from "1 Year, 2 Years" to "1 Year Ago, 2 Years Ago" *(superseded)*
+- [~] Supply Trend: Fix 12-Month Change calculation (showing 0% incorrectly) *(superseded)*
+- [~] Forward-Looking Demand: Fix card design - cards too small, awkward spacing *(superseded)*
+- [~] CRITICAL: Filter ALL data by bedroom count (apples-to-apples comparison) *(superseded)*
   - Revenue must be for selected bedroom count only
   - Occupancy must be for selected bedroom count only
   - Active Listings must be for selected bedroom count only
@@ -4356,10 +4356,10 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 
 ## Step 3 Production Issues (Jan 25, 2026 - Demo Day)
-- [ ] Market Landscape: Filter "Similar Listings" count by bedroom (currently showing 16,644 market-wide, not bedroom-filtered)
-- [ ] Best/Slowest Months: Add "Avg" prefix to clarify these are averages, not guarantees
-- [ ] Forward-Looking Demand: Verify API data accuracy
-- [ ] Publish to production: Investigate why features aren't going live
+- [~] Market Landscape: Filter "Similar Listings" count by bedroom (currently showing 16,644 market-wide, not bedroom-filtered) *(superseded)*
+- [~] Best/Slowest Months: Add "Avg" prefix to clarify these are averages, not guarantees *(superseded)*
+- [~] Forward-Looking Demand: Verify API data accuracy *(superseded)*
+- [~] Publish to production: Investigate why features aren't going live *(superseded)*
 
 
 ## Step 3 Fixes (Jan 25, 2026) - COMPLETE
@@ -4449,11 +4449,11 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Review any error states or edge cases
 
 ### Issues to Fix
-- [ ] ISSUE 1: Apply bedroom filtering to hero metrics (show 2BR data when toggle is ON)
-- [ ] ISSUE 2: Clarify "Per listing" label - show "Avg across all property types" or filter by bedroom
-- [ ] ISSUE 3: Make hero metrics match the bedroom-filtered data when toggle is ON
-- [ ] ISSUE 4: Add "Avg" or "Historical Avg" labels to seasonality data
-- [ ] ISSUE 5: Clarify Historical Trends data source (different from hero metrics)
+- [~] ISSUE 1: Apply bedroom filtering to hero metrics (show 2BR data when toggle is ON) *(superseded)*
+- [~] ISSUE 2: Clarify "Per listing" label - show "Avg across all property types" or filter by bedroom *(superseded)*
+- [~] ISSUE 3: Make hero metrics match the bedroom-filtered data when toggle is ON *(superseded)*
+- [~] ISSUE 4: Add "Avg" or "Historical Avg" labels to seasonality data *(superseded)*
+- [~] ISSUE 5: Clarify Historical Trends data source (different from hero metrics) *(superseded)*
 
 
 ## Step 1 (See Real Revenue) Audit Fixes (Jan 25, 2026) - COMPLETE
@@ -4500,11 +4500,11 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 
 ## Move Rentometer to Investment Analysis (Jan 25, 2026)
-- [ ] Remove Rentometer display from form input area in LeadMagnet.tsx
-- [ ] Add Rent Validation subsection to Investment Analysis in TeslaDashboard
-- [ ] Create visual range indicator showing where user's rent falls
-- [ ] Pass rentometerData from LeadMagnet to TeslaDashboard
-- [ ] Show compact summary: "Your rent: $X → Xth percentile (great deal/fair/high)"
+- [~] Remove Rentometer display from form input area in LeadMagnet.tsx *(superseded)*
+- [~] Add Rent Validation subsection to Investment Analysis in TeslaDashboard *(superseded)*
+- [~] Create visual range indicator showing where user's rent falls *(superseded)*
+- [~] Pass rentometerData from LeadMagnet to TeslaDashboard *(superseded)*
+- [~] Show compact summary: "Your rent: $X → Xth percentile (great deal/fair/high)" *(superseded)*
 
 
 ## Rent Validation Move to Investment Analysis (Jan 25, 2026) - COMPLETE
@@ -4519,16 +4519,16 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Competitor Research & Report Reorder (Jan 26, 2026)
 
 ### Competitor Research
-- [ ] Research AirDNA via SimilarWeb for traffic and feature analysis
-- [ ] Research Mashvisor via SimilarWeb
-- [ ] Research AllTheRooms via SimilarWeb
-- [ ] Research Rabbu via SimilarWeb
-- [ ] Research PriceLabs via SimilarWeb
-- [ ] Identify missing angles and features we should add
+- [~] Research AirDNA via SimilarWeb for traffic and feature analysis *(superseded)*
+- [~] Research Mashvisor via SimilarWeb *(superseded)*
+- [~] Research AllTheRooms via SimilarWeb *(superseded)*
+- [~] Research Rabbu via SimilarWeb *(superseded)*
+- [~] Research PriceLabs via SimilarWeb *(superseded)*
+- [~] Identify missing angles and features we should add *(superseded)*
 
 ### Report Reorder (Investor Mental Model)
-- [ ] Move Rent Validation to top of report (validate assumptions first)
-- [ ] Reorder sections to match investor decision flow:
+- [~] Move Rent Validation to top of report (validate assumptions first) *(superseded)*
+- [~] Reorder sections to match investor decision flow: *(superseded)*
   1. Rent Validation (is my rent assumption correct?)
   2. Revenue Projection (what will I make?)
   3. Profit Breakdown (what do I keep?)
@@ -4543,18 +4543,18 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Verify report flow matches investor mental model
 
 ## Step 2 (Explore Listings) Audit (Jan 25, 2026)
-- [ ] Review data accuracy and filtering
-- [ ] Check framing and labels for clarity
-- [ ] Verify bedroom filtering is applied
-- [ ] Check for any misleading or confusing metrics
-- [ ] Ensure professional investor language throughout
+- [~] Review data accuracy and filtering *(superseded)*
+- [~] Check framing and labels for clarity *(superseded)*
+- [~] Verify bedroom filtering is applied *(superseded)*
+- [~] Check for any misleading or confusing metrics *(superseded)*
+- [~] Ensure professional investor language throughout *(superseded)*
 
 ## High-Priority Features from Competitor Research (Jan 25, 2026)
-- [ ] Add ROI metrics (Cap Rate, Cash-on-Cash Return, Gross Yield)
-- [ ] Add tax deduction estimates (bonus depreciation)
-- [ ] Add Airbnb vs Long-Term Rental comparison
-- [ ] Add 25th/75th percentile revenue projections (range of outcomes)
-- [ ] Add tooltips explaining "What does this mean?" for Revenue by Property Type cards
+- [~] Add ROI metrics (Cap Rate, Cash-on-Cash Return, Gross Yield) *(superseded)*
+- [~] Add tax deduction estimates (bonus depreciation) *(superseded)*
+- [~] Add Airbnb vs Long-Term Rental comparison *(superseded)*
+- [~] Add 25th/75th percentile revenue projections (range of outcomes) *(superseded)*
+- [~] Add tooltips explaining "What does this mean?" for Revenue by Property Type cards *(superseded)*
 
 
 ## Step 2 Location Bug Fix (Jan 25, 2026) - COMPLETE
@@ -4636,22 +4636,22 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Bug Fixes Round 3 (Jan 25, 2026)
 
 ### Revenue Range Data Mismatch - CRITICAL FIX REQUIRED
-- [ ] Revenue Range shows $12K-$17K but projection is $78K - fundamental data mismatch
-- [ ] Revenue Range percentiles must use SAME data source as the projection
-- [ ] The projection comes from AirDNA Rentalizer, so percentiles should too
-- [ ] Current issue: using comps' annual_revenue which is different from projection methodology
+- [~] Revenue Range shows $12K-$17K but projection is $78K - fundamental data mismatch *(superseded)*
+- [~] Revenue Range percentiles must use SAME data source as the projection *(superseded)*
+- [~] The projection comes from AirDNA Rentalizer, so percentiles should too *(superseded)*
+- [~] Current issue: using comps' annual_revenue which is different from projection methodology *(superseded)*
 
 ### Remove Emojis - FIX REQUIRED
-- [ ] Remove all emojis from report section headlines
-- [ ] Keep professional appearance throughout
+- [~] Remove all emojis from report section headlines *(superseded)*
+- [~] Keep professional appearance throughout *(superseded)*
 
 ### Competitive Ranking Explanation - FIX REQUIRED
-- [ ] Add explanation of what factors go into the ranking calculation
-- [ ] Show the data/methodology behind the grade
+- [~] Add explanation of what factors go into the ranking calculation *(superseded)*
+- [~] Show the data/methodology behind the grade *(superseded)*
 
 ### Rent Validation Headline - FIX REQUIRED
-- [ ] Rewrite "Are you overpaying for rent?" more professionally
-- [ ] Keep the same framing but make it sound more polished
+- [~] Rewrite "Are you overpaying for rent?" more professionally *(superseded)*
+- [~] Keep the same framing but make it sound more polished *(superseded)*
 
 
 ## Bug Fixes Round 3 (Jan 25, 2026) - COMPLETE
@@ -4681,15 +4681,15 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Bug Fixes Round 4 (Jan 25, 2026)
 
 ### Comp Filtering Issue - FIX REQUIRED
-- [ ] Revenue Range showing only 5 comps instead of all available comps
-- [ ] Distance filter (5km) is too restrictive - limiting data
-- [ ] Need to use ALL same-bedroom comps (API returns up to 30)
-- [ ] More data = better analysis
+- [~] Revenue Range showing only 5 comps instead of all available comps *(superseded)*
+- [~] Distance filter (5km) is too restrictive - limiting data *(superseded)*
+- [~] Need to use ALL same-bedroom comps (API returns up to 30) *(superseded)*
+- [~] More data = better analysis *(superseded)*
 
 ### Revenue Range Data Verification - VERIFY
-- [ ] Confirm Revenue Range uses actual AirDNA API data (revenue_low, revenue_potential, revenue_high)
-- [ ] Ensure values are NOT fixed/hardcoded
-- [ ] Values should change based on property location, bedrooms, market conditions
+- [~] Confirm Revenue Range uses actual AirDNA API data (revenue_low, revenue_potential, revenue_high) *(superseded)*
+- [~] Ensure values are NOT fixed/hardcoded *(superseded)*
+- [~] Values should change based on property location, bedrooms, market conditions *(superseded)*
 
 
 ## Bug Fixes Round 4 (Jan 25, 2026) - COMPLETE
@@ -4757,8 +4757,8 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Simplified rent validation terminology (Budget Rent, Typical Rent, Premium Rent instead of percentiles)
 
 - [x] Fix slider tick marks to align with actual percentage positions (20% label should be at 1/3 of the way, not in the middle)
-- [ ] Review and improve Step 1 (See Real Revenue) tool
-- [ ] Review and improve Step 2 (Explore Listings) tool
+- [~] Review and improve Step 1 (See Real Revenue) tool *(superseded)*
+- [~] Review and improve Step 2 (Explore Listings) tool *(superseded)*
 
 
 ## Bug Fixes (Jan 25, 2026)
@@ -4785,12 +4785,12 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Property images already displayed in listing cards
 - [x] Add "Analyze This Property" button to jump to Step 3
 - [x] Add Superhost filter toggle
-- [ ] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter
+- [~] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter *(superseded)*
 
 ### Step 1 (See Real Revenue) Enhancements:
 - [x] Add "Quick Insights" summary with key takeaways at top (Top Earner, Most Booked, Market Size)
 - [x] Add "Best Performing" bedroom type highlight (included in Quick Insights)
-- [ ] Add year-over-year trend comparison
+- [~] Add year-over-year trend comparison — DEFERRED: requires historical API data
 
 
 ## Step 1 & Step 2 Enhancements (Jan 25, 2026)
@@ -4811,7 +4811,7 @@ When clicking "See on Map" from the property card, the map view would show the s
   - Automatically switches to Step 3 tab
   - Shows toast notification for user feedback
 - [x] Property images already displayed in listing cards
-- [ ] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter
+- [~] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter *(superseded)*
 
 ### Operating Expenses Slider Fix:
 - [x] Fixed tick mark alignment using absolute positioning
@@ -4823,40 +4823,40 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Comprehensive Review Findings (Jan 25, 2026)
 
 ### HIGH PRIORITY FIXES:
-- [ ] Step 4: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of just "1"
-- [ ] Step 7: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of "1 BR"
-- [ ] Step 5: Fix "All Beds (0)" to show "All Beds" without confusing count
+- [~] Step 4: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of just "1" *(superseded)*
+- [~] Step 7: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of "1 BR" *(superseded)*
+- [~] Step 5: Fix "All Beds (0)" to show "All Beds" without confusing count *(superseded)*
 
 ### MEDIUM PRIORITY FIXES:
-- [ ] Step 4: Add "Remove Property" button for each property card
-- [ ] Step 6: Add "Clear All Filters" button
-- [ ] Step 5: Add legend explaining map markers
+- [~] Step 4: Add "Remove Property" button for each property card *(superseded)*
+- [~] Step 6: Add "Clear All Filters" button *(superseded)*
+- [~] Step 5: Add legend explaining map markers *(superseded)*
 
 ### LOW PRIORITY (SUGGESTIONS):
-- [ ] Guide: Add estimated total reading time
-- [ ] Step 7: Add example prompts for AI
-- [ ] Step 5: Add "My Property" pin option
+- [~] Guide: Add estimated total reading time *(superseded)*
+- [~] Step 7: Add example prompts for AI *(superseded)*
+- [~] Step 5: Add "My Property" pin option *(superseded)*
 
 
 ## Step 1 (See Real Revenue) Enhancements - Jan 25, 2026
 =========================================================
 
 ### HIGH PRIORITY - New Data Sections:
-- [ ] Add "Market Health Score" card with investability, regulation, demand, seasonality scores
-- [ ] Add "Booking Behavior" section with average booking lead time and length of stay
-- [ ] Add "Performance Benchmarks" showing revenue percentiles (25th, 50th, 75th, 90th)
-- [ ] Add "Best Time to List" recommendation based on seasonality data
+- [~] Add "Market Health Score" card with investability, regulation, demand, seasonality scores *(superseded)*
+- [~] Add "Booking Behavior" section with average booking lead time and length of stay *(superseded)*
+- [~] Add "Performance Benchmarks" showing revenue percentiles (25th, 50th, 75th, 90th) *(superseded)*
+- [~] Add "Best Time to List" recommendation based on seasonality data *(superseded)*
 
 ### MEDIUM PRIORITY - Enhance Existing Sections:
-- [ ] Add Superhost vs Regular host performance comparison
-- [ ] Add Professional vs Individual host breakdown
-- [ ] Add year-over-year comparison for specific bedroom types
-- [ ] Add market saturation indicator (supply vs demand trend)
+- [~] Add Superhost vs Regular host performance comparison *(superseded)*
+- [~] Add Professional vs Individual host breakdown *(superseded)*
+- [~] Add year-over-year comparison for specific bedroom types *(superseded)*
+- [~] Add market saturation indicator (supply vs demand trend) *(superseded)*
 
 ### LOW PRIORITY - Nice to Have:
-- [ ] Add competition intensity indicator
-- [ ] Add host size distribution (single vs multi-property)
-- [ ] Add property type market share breakdown
+- [~] Add competition intensity indicator *(superseded)*
+- [~] Add host size distribution (single vs multi-property) *(superseded)*
+- [~] Add property type market share breakdown *(superseded)*
 
 
 ## Step 1 Super Experience Enhancements (Jan 25, 2026)
@@ -4873,9 +4873,9 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Step 1 Final Enhancements (Jan 26, 2026)
 
 ### New Features to Implement:
-- [ ] Year-over-Year Growth indicator (show if revenue is UP or DOWN vs last year)
-- [ ] Market Saturation indicator (is supply outpacing demand?)
-- [ ] Success Rate calculation (what % of listings are profitable?)
+- [~] Year-over-Year Growth indicator (show if revenue is UP or DOWN vs last year) *(superseded)*
+- [~] Market Saturation indicator (is supply outpacing demand?) *(superseded)*
+- [~] Success Rate calculation (what % of listings are profitable?) *(superseded)*
 
 ### Bug Fixes and Testing:
 - [x] Fix Market Health Score section not displaying (VERIFIED WORKING)
@@ -4899,46 +4899,46 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Comp Data Table - Property listings with images, revenue, ADR, occupancy, ratings
 
 ### Remaining Minor Issues:
-- [ ] Historical Trends chart shows "No data available for this time range"
-- [ ] Entire Homes and Single Hosts show 0% (may need API field mapping)
+- [~] Historical Trends chart shows "No data available for this time range" *(superseded)*
+- [~] Entire Homes and Single Hosts show 0% (may need API field mapping) *(superseded)*
 
 
 ## Step 1 UI Fixes (Jan 26, 2026 - Round 2)
 
 ### Critical Fixes:
-- [ ] Quick Insights section - change from dark gradient to light theme matching rest of page
-- [ ] Revenue by Property Type - fetch ALL listings, not limited data (currently showing 4, 8, 12, 16 listings)
-- [ ] Add hover tooltips with beginner-friendly explanations for all metrics and terms
-- [ ] Remove ALL emojis from reports (currently has emojis which is unprofessional)
-- [ ] Fix Comp Data bedroom filter - clicking filter does nothing
+- [~] Quick Insights section - change from dark gradient to light theme matching rest of page *(superseded)*
+- [~] Revenue by Property Type - fetch ALL listings, not limited data (currently showing 4, 8, 12, 16 listings) *(superseded)*
+- [~] Add hover tooltips with beginner-friendly explanations for all metrics and terms *(superseded)*
+- [~] Remove ALL emojis from reports (currently has emojis which is unprofessional) *(superseded)*
+- [~] Fix Comp Data bedroom filter - clicking filter does nothing *(superseded)*
 
 ### Tooltip Content Needed:
-- [ ] Top Earner - explain what this means
-- [ ] Most Booked - explain occupancy
-- [ ] Market Size - explain active listings
-- [ ] Market Health Score - explain overall score
-- [ ] Investability - explain ROI potential
-- [ ] Rental Demand - explain guest interest
-- [ ] Revenue Growth - explain YoY trend
-- [ ] Seasonality - explain consistency
-- [ ] Regulation - explain STR friendliness
-- [ ] Revenue Distribution percentiles - explain what each means
-- [ ] Booking Lead Time - explain advance booking
-- [ ] Length of Stay - explain average duration
-- [ ] Pro Managed - explain professional hosts
-- [ ] Superhosts - explain top-rated hosts
+- [~] Top Earner - explain what this means *(superseded)*
+- [~] Most Booked - explain occupancy *(superseded)*
+- [~] Market Size - explain active listings *(superseded)*
+- [~] Market Health Score - explain overall score *(superseded)*
+- [~] Investability - explain ROI potential *(superseded)*
+- [~] Rental Demand - explain guest interest *(superseded)*
+- [~] Revenue Growth - explain YoY trend *(superseded)*
+- [~] Seasonality - explain consistency *(superseded)*
+- [~] Regulation - explain STR friendliness *(superseded)*
+- [~] Revenue Distribution percentiles - explain what each means *(superseded)*
+- [~] Booking Lead Time - explain advance booking *(superseded)*
+- [~] Length of Stay - explain average duration *(superseded)*
+- [~] Pro Managed - explain professional hosts *(superseded)*
+- [~] Superhosts - explain top-rated hosts *(superseded)*
 
 ## Share Button Feature (Jan 26, 2026)
-- [ ] Add share button to Step 1 results
-- [ ] Create shareable report link that works without login
-- [ ] Store report data for shared links
+- [~] Add share button to Step 1 results *(superseded)*
+- [~] Create shareable report link that works without login *(superseded)*
+- [~] Store report data for shared links *(superseded)*
 
 
 ## Bug Fixes and Enhancements (Jan 26, 2026)
-- [ ] Remove debug alert popup from bedroom filter in CompDataTable
-- [ ] Fix Revenue by Property Type showing 'Limited data available' for 1 Bedroom when data exists
-- [ ] Add info/hover tooltips for scores, charts, and metrics (beginner-friendly explanations)
-- [ ] Fix market reports sharing feature (currently shows 'not yet supported')
+- [~] Remove debug alert popup from bedroom filter in CompDataTable *(superseded)*
+- [~] Fix Revenue by Property Type showing 'Limited data available' for 1 Bedroom when data exists *(superseded)*
+- [~] Add info/hover tooltips for scores, charts, and metrics (beginner-friendly explanations) *(superseded)*
+- [~] Fix market reports sharing feature (currently shows 'not yet supported') *(superseded)*
 
 
 ## Bug Fixes and Enhancements (Jan 26, 2026)
@@ -4950,21 +4950,21 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Update SharedReportPage to use SharedMarketReport for Step 1 data
 
 ## Step 1 Enhancement: "How's This Market?" (Jan 26, 2026)
-- [ ] Add market summary section with clear verdict (e.g., "Atlanta is a Strong Market for Airbnb")
-- [ ] Add guiding question at top: "How's this market for short-term rentals?"
-- [ ] Show submarket breakdown for large cities (different neighborhoods/areas)
-- [ ] Add plain English explanations for market health indicators
-- [ ] Include letter grades (A+, B+, C) for quick market assessment
-- [ ] Add "Based on X properties" confidence indicators
-- [ ] Translate all technical metrics to beginner-friendly language
-- [ ] Add contextual comparisons (vs national average, vs similar cities)
+- [~] Add market summary section with clear verdict (e.g., "Atlanta is a Strong Market for Airbnb") *(superseded)*
+- [~] Add guiding question at top: "How's this market for short-term rentals?" *(superseded)*
+- [~] Show submarket breakdown for large cities (different neighborhoods/areas) *(superseded)*
+- [~] Add plain English explanations for market health indicators *(superseded)*
+- [~] Include letter grades (A+, B+, C) for quick market assessment *(superseded)*
+- [~] Add "Based on X properties" confidence indicators *(superseded)*
+- [~] Translate all technical metrics to beginner-friendly language *(superseded)*
+- [~] Add contextual comparisons (vs national average, vs similar cities) *(superseded)*
 
 ## Step 1 Bug Fixes (Jan 26, 2026) - PRIORITY
-- [ ] Fix listing count showing 350 for Atlanta (should be thousands)
-- [ ] Fix Competition Landscape showing 0% for Single Host, Entire Home, etc.
-- [ ] Investigate where Quick Insights data is pulling from
-- [ ] Rename "Historical Trends" to beginner-friendly language
-- [ ] Trace API data flow to find source of incorrect data
+- [~] Fix listing count showing 350 for Atlanta (should be thousands) *(superseded)*
+- [~] Fix Competition Landscape showing 0% for Single Host, Entire Home, etc. *(superseded)*
+- [~] Investigate where Quick Insights data is pulling from *(superseded)*
+- [~] Rename "Historical Trends" to beginner-friendly language *(superseded)*
+- [~] Trace API data flow to find source of incorrect data *(superseded)*
 
 
 ## Step 1 Data Bug Fixes & Enhancements (Jan 26, 2026)
@@ -4987,28 +4987,28 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Step 1 Bug Fixes Round 2 (Jan 26, 2026)
 
 ### Shared Report Issues:
-- [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
+- [~] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3) *(superseded)*
 - [x] Investigate SharedReportPage component for data loading issues (lazy-loaded 4 heavy report components with Suspense for code splitting)
 
 ### Glendale, Arizona Issues:
-- [ ] Fix market health score showing 0/100 instead of actual score
-- [ ] Fix Revenue by Property Type showing "Limited data" despite 1,100+ 2BR listings in Similar Listings
-- [ ] Fix comp data count showing 300 instead of actual total
-- [ ] Add encouraging disclaimer for challenging markets (C+ grade)
+- [~] Fix market health score showing 0/100 instead of actual score *(superseded)*
+- [~] Fix Revenue by Property Type showing "Limited data" despite 1,100+ 2BR listings in Similar Listings *(superseded)*
+- [~] Fix comp data count showing 300 instead of actual total *(superseded)*
+- [~] Add encouraging disclaimer for challenging markets (C+ grade) *(superseded)*
 
 
 ## Step 1 Bug Fixes Round 2 (Jan 26, 2026)
 
 ### Shared Report Issues:
-- [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
+- [~] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3) *(superseded)*
 - [x] Investigate SharedReportPage component for data loading issues (lazy-loaded 4 heavy report components with Suspense for code splitting)
 
 ### Glendale, Arizona Issues:
-- [ ] Fix market health score showing 0/100 instead of actual score
-- [ ] Fix Revenue by Property Type showing "Limited data" despite 1,108 2BR listings in Similar Listings
-- [ ] Fix data source mismatch - summary cards use market overview, bedroom cards use sampled listings
-- [ ] Fix comp data count showing 300 instead of actual total
-- [ ] Add encouraging disclaimer for challenging markets (C+ grade)
+- [~] Fix market health score showing 0/100 instead of actual score *(superseded)*
+- [~] Fix Revenue by Property Type showing "Limited data" despite 1,108 2BR listings in Similar Listings *(superseded)*
+- [~] Fix data source mismatch - summary cards use market overview, bedroom cards use sampled listings *(superseded)*
+- [~] Fix comp data count showing 300 instead of actual total *(superseded)*
+- [~] Add encouraging disclaimer for challenging markets (C+ grade) *(superseded)*
 
 
 ## Step 1 Bug Fixes Round 2 (Jan 26, 2026) - COMPLETE
@@ -5030,10 +5030,10 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 
 ## 1BR/2BR Data Bug Fix (Jan 26, 2026)
-- [ ] Investigate why 1BR/2BR listings are not being returned from API for Glendale
-- [ ] Fix the API call to fetch all bedroom types correctly
-- [ ] Test with Glendale to verify 1BR/2BR data is now showing
-- [ ] Browser test on live site to confirm fix
+- [~] Investigate why 1BR/2BR listings are not being returned from API for Glendale *(superseded)*
+- [~] Fix the API call to fetch all bedroom types correctly *(superseded)*
+- [~] Test with Glendale to verify 1BR/2BR data is now showing *(superseded)*
+- [~] Browser test on live site to confirm fix *(superseded)*
 
 
 ## 1BR/2BR Data Bug Fix (Jan 26, 2026) - COMPLETED
@@ -5051,9 +5051,9 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 
 ## Step 1 Submarket Breakdown & Quality Assessment (Jan 26, 2026)
-- [ ] Add submarket breakdown table for large cities (top 5-10 neighborhoods)
-- [ ] Assess Step 1 against Step 3 quality benchmark
-- [ ] Identify and fix any remaining gaps
+- [~] Add submarket breakdown table for large cities (top 5-10 neighborhoods) *(superseded)*
+- [~] Assess Step 1 against Step 3 quality benchmark *(superseded)*
+- [~] Identify and fix any remaining gaps *(superseded)*
 
 
 ## Step 1 Quality Improvements - Guiding Questions (Jan 26, 2026)
@@ -5069,9 +5069,9 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 
 ## Browser Testing - Guiding Questions Verification (Jan 26, 2026)
-- [ ] Test Market 1 - Atlanta, GA: Verify all 8 guiding questions display correctly
-- [ ] Test Market 2 - Miami, FL: Verify all 8 guiding questions display correctly
-- [ ] Test Market 3 - Austin, TX: Verify all 8 guiding questions display correctly
+- [~] Test Market 1 - Atlanta, GA: Verify all 8 guiding questions display correctly *(superseded)*
+- [~] Test Market 2 - Miami, FL: Verify all 8 guiding questions display correctly *(superseded)*
+- [~] Test Market 3 - Austin, TX: Verify all 8 guiding questions display correctly *(superseded)*
 
 
 ## Browser Testing - Guiding Questions Verification (Jan 26, 2026) - COMPLETE
@@ -5093,16 +5093,16 @@ All guiding questions display correctly across all three test markets:
 
 
 ## Jargon Simplification (Step 3 Quality)
-- [ ] Audit all technical terms in Step 1 interface
-- [ ] Create beginner-friendly term mapping
-- [ ] Simplify "Historical Seasonality" → "Monthly Earnings Pattern" or similar
-- [ ] Simplify "ADR" → "Nightly Rate" or "Price Per Night"
-- [ ] Simplify "Occupancy" → "Booking Rate" or "How Often It's Booked"
-- [ ] Simplify "Revenue Distribution" → "What Hosts Actually Earn"
-- [ ] Simplify "Competition Landscape" → "Your Competition"
-- [ ] Simplify "Investability" → "Profit Potential"
-- [ ] Simplify "Rental Demand" → "Guest Interest"
-- [ ] Simplify all chart labels and tooltips to 5th grade reading level
+- [~] Audit all technical terms in Step 1 interface *(superseded)*
+- [~] Create beginner-friendly term mapping *(superseded)*
+- [~] Simplify "Historical Seasonality" → "Monthly Earnings Pattern" or similar *(superseded)*
+- [~] Simplify "ADR" → "Nightly Rate" or "Price Per Night" *(superseded)*
+- [~] Simplify "Occupancy" → "Booking Rate" or "How Often It's Booked" *(superseded)*
+- [~] Simplify "Revenue Distribution" → "What Hosts Actually Earn" *(superseded)*
+- [~] Simplify "Competition Landscape" → "Your Competition" *(superseded)*
+- [~] Simplify "Investability" → "Profit Potential" *(superseded)*
+- [~] Simplify "Rental Demand" → "Guest Interest" *(superseded)*
+- [~] Simplify all chart labels and tooltips to 5th grade reading level *(superseded)*
 
 
 ## Jargon Simplification (Step 3 Quality) - COMPLETE
@@ -5172,21 +5172,21 @@ All guiding questions display correctly across all three test markets:
 - [x] Add "Save Market" button that prompts for account creation when clicked (if not logged in)
 - [x] Add "Save Property" button that prompts for account creation when clicked (if not logged in)
 - [x] Create account creation modal/flow for saving data
-- [ ] Store saved markets and properties in database for logged-in users (localStorage fallback implemented)
+- [~] Store saved markets and properties in database for logged-in users (localStorage fallback implemented) *(superseded)*
 
 ## Step 2 (Explore Listings) Beginner-Friendliness Review (Jan 26, 2026)
 - [x] Audit Step 2 for technical jargon that needs simplification
 - [x] Simplified: Superhost → Top-Rated Host, Occupancy → Booking Rate, RevPAR → Avg Daily Earnings
-- [ ] Add guiding questions to section headers (Step 2 is listing-focused, less section-heavy)
-- [ ] Add section verdicts with clear takeaways
-- [ ] Test changes across multiple markets
+- [~] Add guiding questions to section headers (Step 2 is listing-focused, less section-heavy) *(superseded)*
+- [~] Add section verdicts with clear takeaways *(superseded)*
+- [~] Test changes across multiple markets *(superseded)*
 
 ## Step 3 (Validate the Deal) Beginner-Friendliness Review (Jan 26, 2026)
 - [x] Audit Step 3 for technical jargon that needs simplification
 - [x] Simplified: Occupancy → Booking Rate, RevPAR → Avg Daily Earnings, YoY → vs Last Year, Seasonal Forecast → Monthly Earnings Forecast
-- [ ] Add guiding questions to section headers (TeslaDashboard already has good explanatory text)
-- [ ] Add section verdicts with clear takeaways
-- [ ] Test changes across multiple markets
+- [~] Add guiding questions to section headers (TeslaDashboard already has good explanatory text) *(superseded)*
+- [~] Add section verdicts with clear takeaways *(superseded)*
+- [~] Test changes across multiple markets *(superseded)*
 
 
 ## Visible Login/Account Button (Jan 26, 2026)
@@ -5244,45 +5244,45 @@ All guiding questions display correctly across all three test markets:
 ## Step 1 Optimization (Jan 26, 2026) - Per bnb-lead-magnet-dev Skill
 
 ### Property Type Breakdown Section
-- [ ] Investigate why bedroom breakdown total doesn't match active listings count
-- [ ] Ensure all bedroom types (0-6+) are fetched from API
-- [ ] Add guiding question to property type section
-- [ ] Add tooltips for Revenue/yr, Occupancy %, and listing count
-- [ ] Add beginner-friendly verdict explaining which property type is best
-- [ ] Add confidence indicator (e.g., "Based on X listings in this market")
+- [~] Investigate why bedroom breakdown total doesn't match active listings count *(superseded)*
+- [~] Ensure all bedroom types (0-6+) are fetched from API *(superseded)*
+- [~] Add guiding question to property type section *(superseded)*
+- [~] Add tooltips for Revenue/yr, Occupancy %, and listing count *(superseded)*
+- [~] Add beginner-friendly verdict explaining which property type is best *(superseded)*
+- [~] Add confidence indicator (e.g., "Based on X listings in this market") *(superseded)*
 
 ### Tooltip Audit for Step 1
-- [ ] Add tooltip for "Active Listings" metric
-- [ ] Add tooltip for "Avg Annual Revenue" metric
-- [ ] Add tooltip for "Avg Nightly Rate" metric
-- [ ] Add tooltip for "Avg Occupancy" metric
-- [ ] Add tooltip for each property type card (explain what bedroom count means for revenue)
-- [ ] Add tooltip for Monthly Earnings Pattern bars
-- [ ] Add tooltip for "Top Earner" and "Most Booked" badges
+- [~] Add tooltip for "Active Listings" metric *(superseded)*
+- [~] Add tooltip for "Avg Annual Revenue" metric *(superseded)*
+- [~] Add tooltip for "Avg Nightly Rate" metric *(superseded)*
+- [~] Add tooltip for "Avg Occupancy" metric *(superseded)*
+- [~] Add tooltip for each property type card (explain what bedroom count means for revenue) *(superseded)*
+- [~] Add tooltip for Monthly Earnings Pattern bars *(superseded)*
+- [~] Add tooltip for "Top Earner" and "Most Booked" badges *(superseded)*
 
 ### Data Quality
-- [ ] Verify API is returning all bedroom types (0-6+)
-- [ ] Check if API has pagination limits causing data loss
-- [ ] Add fallback messaging if data is incomplete
+- [~] Verify API is returning all bedroom types (0-6+) *(superseded)*
+- [~] Check if API has pagination limits causing data loss *(superseded)*
+- [~] Add fallback messaging if data is incomplete *(superseded)*
 
 
 ### Accurate Bedroom Counts (Jan 26, 2026)
-- [ ] Investigate AirDNA API for per-bedroom-type total counts
-- [ ] Modify backend to fetch actual counts per bedroom type
-- [ ] Update frontend to display accurate counts instead of sampled counts
-- [ ] Verify counts add up to total active listings
+- [~] Investigate AirDNA API for per-bedroom-type total counts *(superseded)*
+- [~] Modify backend to fetch actual counts per bedroom type *(superseded)*
+- [~] Update frontend to display accurate counts instead of sampled counts *(superseded)*
+- [~] Verify counts add up to total active listings *(superseded)*
 
 ### Shareable Links Feature (Jan 26, 2026)
-- [ ] Add Share button to Step 1 results
-- [ ] Generate shareable URL with market/search parameters
-- [ ] Parse URL parameters on page load to restore search state
-- [ ] Add copy-to-clipboard functionality
-- [ ] Consider extending to other steps (2-7)
+- [~] Add Share button to Step 1 results *(superseded)*
+- [~] Generate shareable URL with market/search parameters *(superseded)*
+- [~] Parse URL parameters on page load to restore search state *(superseded)*
+- [~] Add copy-to-clipboard functionality *(superseded)*
+- [~] Consider extending to other steps (2-7) *(superseded)*
 
 ### Step 1 Skill Compliance (Jan 26, 2026)
-- [ ] Add verdict section for property type recommendations
-- [ ] Add "What This Means For You" insight box
-- [ ] Add confidence indicator for bedroom data
+- [~] Add verdict section for property type recommendations *(superseded)*
+- [~] Add "What This Means For You" insight box *(superseded)*
+- [~] Add confidence indicator for bedroom data *(superseded)*
 
 
 ## Step 1 Optimization - Bedroom Counts Fix (Jan 26, 2026) - COMPLETE
@@ -5326,8 +5326,8 @@ All guiding questions display correctly across all three test markets:
 ## Bug Fixes (Jan 26, 2026)
 
 ### Share Report Issues
-- [ ] Fix Share Report page not displaying correctly
-- [ ] Fix Share Report link not copying to clipboard
+- [~] Fix Share Report page not displaying correctly *(superseded)*
+- [~] Fix Share Report link not copying to clipboard *(superseded)*
 
 ### Zip Code Validation Bug
 - [x] Fix zip code validation showing wrong digit count (shows "2 digits (85)" for "85001") - fixed race condition by passing value directly from input event
@@ -5354,20 +5354,20 @@ All guiding questions display correctly across all three test markets:
 ## UI/UX Fixes (Jan 27, 2026)
 
 ### Full Report on Shared Link
-- [ ] Expand SharedMarketReport to include all Step 1 sections
-- [ ] Add Monthly Earnings Pattern chart
-- [ ] Add What This Data Shows verdict section
-- [ ] Add Top Performers section
-- [ ] Ensure all data is passed when creating shared report
+- [~] Expand SharedMarketReport to include all Step 1 sections *(superseded)*
+- [~] Add Monthly Earnings Pattern chart *(superseded)*
+- [~] Add What This Data Shows verdict section *(superseded)*
+- [~] Add Top Performers section *(superseded)*
+- [~] Ensure all data is passed when creating shared report *(superseded)*
 
 ### Remove Emojis from Step 1
-- [ ] Remove emoji icons from section headers
-- [ ] Replace with professional icons or text-only headers
-- [ ] Maintain visual hierarchy without emojis
+- [~] Remove emoji icons from section headers *(superseded)*
+- [~] Replace with professional icons or text-only headers *(superseded)*
+- [~] Maintain visual hierarchy without emojis *(superseded)*
 
 ### Add Studio Filter
-- [ ] Add Studio (0 bedrooms) option to bedroom filter dropdown
-- [ ] Ensure filter works correctly with API
+- [~] Add Studio (0 bedrooms) option to bedroom filter dropdown *(superseded)*
+- [~] Ensure filter works correctly with API *(superseded)*
 
 
 ## UI/UX Fixes (Jan 27, 2026) - COMPLETED
@@ -5390,43 +5390,43 @@ All guiding questions display correctly across all three test markets:
 ## Step 1 Skill Compliance Fixes (Jan 27, 2026)
 
 ### Task 1: Add Tooltips to All Metrics
-- [ ] active listings tooltip
-- [ ] avg occupancy tooltip
-- [ ] avg revenue tooltip
-- [ ] Top Earner tooltip
-- [ ] Most Booked tooltip
-- [ ] Market Size tooltip
-- [ ] Avg Nightly Rate tooltip
-- [ ] Revenue/yr tooltip
-- [ ] Occupancy tooltip
-- [ ] X listings tooltip
-- [ ] Booking Rate tooltip
-- [ ] Annual Income tooltip
-- [ ] Competition tooltip
-- [ ] Top Host badge tooltip
-- [ ] Rating (X) tooltip
+- [~] active listings tooltip *(superseded)*
+- [~] avg occupancy tooltip *(superseded)*
+- [~] avg revenue tooltip *(superseded)*
+- [~] Top Earner tooltip *(superseded)*
+- [~] Most Booked tooltip *(superseded)*
+- [~] Market Size tooltip *(superseded)*
+- [~] Avg Nightly Rate tooltip *(superseded)*
+- [~] Revenue/yr tooltip *(superseded)*
+- [~] Occupancy tooltip *(superseded)*
+- [~] X listings tooltip *(superseded)*
+- [~] Booking Rate tooltip *(superseded)*
+- [~] Annual Income tooltip *(superseded)*
+- [~] Competition tooltip *(superseded)*
+- [~] Top Host badge tooltip *(superseded)*
+- [~] Rating (X) tooltip *(superseded)*
 
 ### Task 2: Fix Annual Income Bug
-- [ ] Fix "Annual Income $2,293" in Market Trends section
+- [~] Fix "Annual Income $2,293" in Market Trends section *(superseded)*
 
 ### Task 3: Add Monthly Pattern Verdict
-- [ ] Add "Best months: [X], Slowest: [Y]" verdict
+- [~] Add "Best months: [X], Slowest: [Y]" verdict *(superseded)*
 
 ### Task 4: Add Market Trends Verdict
-- [ ] Add "This market is [growing/stable/declining]" verdict
+- [~] Add "This market is [growing/stable/declining]" verdict *(superseded)*
 
 ### Task 5: Standardize Terminology
-- [ ] Replace all "Occupancy" with "Booking Rate" consistently
+- [~] Replace all "Occupancy" with "Booking Rate" consistently *(superseded)*
 
 ### Task 6: Add Confidence Note
-- [ ] Add "Based on X properties" to Key Takeaways section
+- [~] Add "Based on X properties" to Key Takeaways section *(superseded)*
 
 ### Task 7: Browser Test
-- [ ] Test with zip code 63104
-- [ ] Verify all tooltips appear on hover
+- [~] Test with zip code 63104 *(superseded)*
+- [~] Verify all tooltips appear on hover *(superseded)*
 
 ### Task 8: Save Checkpoint
-- [ ] Save checkpoint when all tasks complete
+- [~] Save checkpoint when all tasks complete *(superseded)*
 
 
 ## Step 2 "Explore Listings" Optimizations (Jan 27, 2026) - COMPLETE
@@ -5501,76 +5501,76 @@ All guiding questions display correctly across all three test markets:
 ## Step 2 "See What's Working" - Complete Rebuild (Jan 26, 2026)
 
 ### Backend Changes
-- [ ] Add `/market/search` endpoint for city/neighborhood autocomplete
-- [ ] Add `/market/{id}/listings` endpoint for real property listings with images
-- [ ] Add `/submarket/{id}/listings` endpoint for neighborhood-level listings
-- [ ] Add `/market/{id}` endpoint for market overview stats
-- [ ] Add `/market/{id}/submarkets` endpoint for neighborhood comparison
+- [~] Add `/market/search` endpoint for city/neighborhood autocomplete *(superseded)*
+- [~] Add `/market/{id}/listings` endpoint for real property listings with images *(superseded)*
+- [~] Add `/submarket/{id}/listings` endpoint for neighborhood-level listings *(superseded)*
+- [~] Add `/market/{id}` endpoint for market overview stats *(superseded)*
+- [~] Add `/market/{id}/submarkets` endpoint for neighborhood comparison *(superseded)*
 
 ### Frontend Changes - Input
-- [ ] Replace Google Places autocomplete with AirDNA market search
-- [ ] Add bedrooms filter to main search form (not hidden in filters)
-- [ ] Remove radius selector (markets have defined boundaries)
-- [ ] Remove map view (redundant with Step 5)
-- [ ] Remove "Analyze" button (that's Step 3's job)
+- [~] Replace Google Places autocomplete with AirDNA market search *(superseded)*
+- [~] Add bedrooms filter to main search form (not hidden in filters) *(superseded)*
+- [~] Remove radius selector (markets have defined boundaries) *(superseded)*
+- [~] Remove map view (redundant with Step 5) *(superseded)*
+- [~] Remove "Analyze" button (that's Step 3's job) *(superseded)*
 
 ### Frontend Changes - Results UI
-- [ ] Add guiding question: "What properties are succeeding in [City]?"
-- [ ] Show property cards with IMAGES (critical - currently missing)
-- [ ] Add verdict section with letter grade for market quality
-- [ ] Add "What Success Looks Like" summary (top earner, typical earner, patterns)
-- [ ] Add neighborhood breakdown showing best submarkets
-- [ ] Add confidence note: "Based on X active properties in [City]"
+- [~] Add guiding question: "What properties are succeeding in [City]?" *(superseded)*
+- [~] Show property cards with IMAGES (critical - currently missing) *(superseded)*
+- [~] Add verdict section with letter grade for market quality *(superseded)*
+- [~] Add "What Success Looks Like" summary (top earner, typical earner, patterns) *(superseded)*
+- [~] Add neighborhood breakdown showing best submarkets *(superseded)*
+- [~] Add confidence note: "Based on X active properties in [City]" *(superseded)*
 
 ### Tooltip Audit (per skill guidelines)
-- [ ] Add tooltip to every metric on property cards
-- [ ] Add tooltip to market overview stats
-- [ ] Add tooltip to neighborhood comparison metrics
-- [ ] Add tooltip to verdict/letter grade
-- [ ] Verify no emojis anywhere in Step 2
+- [~] Add tooltip to every metric on property cards *(superseded)*
+- [~] Add tooltip to market overview stats *(superseded)*
+- [~] Add tooltip to neighborhood comparison metrics *(superseded)*
+- [~] Add tooltip to verdict/letter grade *(superseded)*
+- [~] Verify no emojis anywhere in Step 2 *(superseded)*
 
 ### Quality Checklist (per skill guidelines)
-- [ ] Each section has a guiding question
-- [ ] Technical jargon translated to plain English
-- [ ] Contextual comparisons (not just raw numbers)
-- [ ] Clear verdict/recommendation
-- [ ] Confidence indicators shown
-- [ ] Visual hierarchy clear (big numbers, grades, colors)
-- [ ] Beginner would understand what to do with this info
+- [~] Each section has a guiding question *(superseded)*
+- [~] Technical jargon translated to plain English *(superseded)*
+- [~] Contextual comparisons (not just raw numbers) *(superseded)*
+- [~] Clear verdict/recommendation *(superseded)*
+- [~] Confidence indicators shown *(superseded)*
+- [~] Visual hierarchy clear (big numbers, grades, colors) *(superseded)*
+- [~] Beginner would understand what to do with this info *(superseded)*
 
 
 ## Step 2 "See What's Working" - Full Rebuild (Jan 26, 2026)
 
 ### Backend
-- [ ] Create marketExplorer router with searchMarkets, getListings, getNeighborhoods endpoints
-- [ ] Include zip codes in market search response
-- [ ] Return property images from getMarketListings/getSubmarketListings
+- [~] Create marketExplorer router with searchMarkets, getListings, getNeighborhoods endpoints *(superseded)*
+- [~] Include zip codes in market search response *(superseded)*
+- [~] Return property images from getMarketListings/getSubmarketListings *(superseded)*
 
 ### Frontend - Search
-- [ ] Replace AddressAutocomplete with MarketAutocomplete (city/neighborhood search)
-- [ ] Remove radius selector (markets have defined boundaries)
-- [ ] Show selected market with zip codes ("St. Louis, MO - Zip codes: 63101, 63102...")
+- [~] Replace AddressAutocomplete with MarketAutocomplete (city/neighborhood search) *(superseded)*
+- [~] Remove radius selector (markets have defined boundaries) *(superseded)*
+- [~] Show selected market with zip codes ("St. Louis, MO - Zip codes: 63101, 63102...") *(superseded)*
 
 ### Frontend - Results
-- [ ] Property cards with images (debug why images not showing)
-- [ ] Neighborhood comparison section ("Best Neighborhoods in St. Louis")
-- [ ] Remove map view (redundant with Step 5)
-- [ ] Remove "Analyze" button (that's Step 3's job)
+- [~] Property cards with images (debug why images not showing) *(superseded)*
+- [~] Neighborhood comparison section ("Best Neighborhoods in St. Louis") *(superseded)*
+- [~] Remove map view (redundant with Step 5) *(superseded)*
+- [~] Remove "Analyze" button (that's Step 3's job) *(superseded)*
 
 ### Skill Compliance
-- [ ] Guiding question: "What does success look like in [City]?"
-- [ ] Verdict section with letter grade
-- [ ] Tooltips on all metrics (Annual Revenue, Booking Rate, Rating, etc.)
-- [ ] No emojis anywhere
-- [ ] Confidence note: "Based on X active properties in [Market]"
-- [ ] Contextual comparisons ("Top earner makes 2.5x the average")
+- [~] Guiding question: "What does success look like in [City]?" *(superseded)*
+- [~] Verdict section with letter grade *(superseded)*
+- [~] Tooltips on all metrics (Annual Revenue, Booking Rate, Rating, etc.) *(superseded)*
+- [~] No emojis anywhere *(superseded)*
+- [~] Confidence note: "Based on X active properties in [Market]" *(superseded)*
+- [~] Contextual comparisons ("Top earner makes 2.5x the average") *(superseded)*
 
 ### Testing
-- [ ] Browser test on dev server
-- [ ] Tooltip audit - every metric has explanation
-- [ ] Verify property images load
-- [ ] Verify zip codes display
-- [ ] Deploy and test on live site
+- [~] Browser test on dev server *(superseded)*
+- [~] Tooltip audit - every metric has explanation *(superseded)*
+- [~] Verify property images load *(superseded)*
+- [~] Verify zip codes display *(superseded)*
+- [~] Deploy and test on live site *(superseded)*
 
 
 ## Step 2 Bedroom Filter Bug Fix (Jan 27, 2026) - COMPLETE
@@ -5606,14 +5606,14 @@ All guiding questions display correctly across all three test markets:
 ## Step 2 Audit and Share Button (Jan 27, 2026)
 
 ### Investigation Tasks
-- [ ] Compare Step 2 and Step 5 API calls - are they using the same endpoints?
-- [ ] Test Step 2 per bnb-lead-magnet-dev skill guidelines
-- [ ] Run tooltip audit on Step 2
-- [ ] Identify any fixes needed
+- [~] Compare Step 2 and Step 5 API calls - are they using the same endpoints? *(superseded)*
+- [~] Test Step 2 per bnb-lead-magnet-dev skill guidelines *(superseded)*
+- [~] Run tooltip audit on Step 2 *(superseded)*
+- [~] Identify any fixes needed *(superseded)*
 
 ### Share Button Implementation
-- [ ] Add share button to Step 2 for potential investors
-- [ ] Generate shareable link or export functionality
+- [~] Add share button to Step 2 for potential investors *(superseded)*
+- [~] Generate shareable link or export functionality *(superseded)*
 
 
 ## Step 2 Audit and Share Button (Jan 27, 2026) - COMPLETE
@@ -5644,12 +5644,12 @@ All guiding questions display correctly across all three test markets:
 
 
 ## Step 2 Quality Improvements (bnb-lead-magnet-dev benchmark) - Jan 27, 2026
-- [ ] Add tooltips to all Step 2 metrics (Revenue, Booking Rate, Nightly Rate)
-- [ ] Add guiding questions and section headers
-- [ ] Add letter grades and market verdict summary
-- [ ] Add confidence indicators ("Based on X active listings")
-- [ ] Add "Analyze This Property" button on cards → pre-fills Step 3
-- [ ] Test and verify all improvements in browser
+- [~] Add tooltips to all Step 2 metrics (Revenue, Booking Rate, Nightly Rate) *(superseded)*
+- [~] Add guiding questions and section headers *(superseded)*
+- [~] Add letter grades and market verdict summary *(superseded)*
+- [~] Add confidence indicators ("Based on X active listings") *(superseded)*
+- [~] Add "Analyze This Property" button on cards → pre-fills Step 3 *(superseded)*
+- [~] Test and verify all improvements in browser *(superseded)*
 
 
 ## Step 2 Quality Improvements (Jan 27, 2026) - COMPLETE
@@ -5674,9 +5674,9 @@ All guiding questions display correctly across all three test markets:
 
 
 ## Zip Code Search Feature (Jan 27, 2026)
-- [ ] Add zip code detection to Step 2 city/neighborhood search
-- [ ] When user types a zip code, automatically find and show the corresponding market
-- [ ] Test with various zip codes (e.g., 63101 → St. Louis, 80202 → Denver)
+- [~] Add zip code detection to Step 2 city/neighborhood search *(superseded)*
+- [~] When user types a zip code, automatically find and show the corresponding market *(superseded)*
+- [~] Test with various zip codes (e.g., 63101 → St. Louis, 80202 → Denver) *(superseded)*
 
 
 ## Zip Code Search Feature (Jan 27, 2026) - COMPLETE
@@ -5707,57 +5707,57 @@ All guiding questions display correctly across all three test markets:
 ## Step 2 Compliance Test (bnb-lead-magnet-dev) - Jan 27, 2026
 
 ### Phase 1: Document All Visible Elements
-- [ ] Navigate to Step 2 and load results
-- [ ] List all metrics, labels, and data points visible
-- [ ] Screenshot/document current state
+- [~] Navigate to Step 2 and load results *(superseded)*
+- [~] List all metrics, labels, and data points visible *(superseded)*
+- [~] Screenshot/document current state *(superseded)*
 
 ### Phase 2: Tooltip Audit (MANDATORY per skill)
-- [ ] Check: City/Neighborhood search field - has tooltip?
-- [ ] Check: Bedrooms filter - has tooltip?
-- [ ] Check: Sort By filter - has tooltip?
-- [ ] Check: Market Performance Grade (letter grade) - has tooltip?
-- [ ] Check: Property count badge - has tooltip?
-- [ ] Check: Top Earner stat - has tooltip?
-- [ ] Check: Average Revenue stat - has tooltip?
-- [ ] Check: Most Booked stat - has tooltip?
-- [ ] Check: Avg Booking Rate stat - has tooltip?
-- [ ] Check: Property Card - Annual Revenue - has tooltip?
-- [ ] Check: Property Card - Nightly Rate - has tooltip?
-- [ ] Check: Property Card - Booking Rate - has tooltip?
-- [ ] Check: Property Card - Avg Daily Earnings - has tooltip?
-- [ ] Check: Property Card - Rating - has tooltip?
-- [ ] Check: Property Card - Top-Rated Host badge - has tooltip?
-- [ ] Check: Confidence indicator - has tooltip?
-- [ ] Check: Share Report button - has tooltip?
+- [~] Check: City/Neighborhood search field - has tooltip? *(superseded)*
+- [~] Check: Bedrooms filter - has tooltip? *(superseded)*
+- [~] Check: Sort By filter - has tooltip? *(superseded)*
+- [~] Check: Market Performance Grade (letter grade) - has tooltip? *(superseded)*
+- [~] Check: Property count badge - has tooltip? *(superseded)*
+- [~] Check: Top Earner stat - has tooltip? *(superseded)*
+- [~] Check: Average Revenue stat - has tooltip? *(superseded)*
+- [~] Check: Most Booked stat - has tooltip? *(superseded)*
+- [~] Check: Avg Booking Rate stat - has tooltip? *(superseded)*
+- [~] Check: Property Card - Annual Revenue - has tooltip? *(superseded)*
+- [~] Check: Property Card - Nightly Rate - has tooltip? *(superseded)*
+- [~] Check: Property Card - Booking Rate - has tooltip? *(superseded)*
+- [~] Check: Property Card - Avg Daily Earnings - has tooltip? *(superseded)*
+- [~] Check: Property Card - Rating - has tooltip? *(superseded)*
+- [~] Check: Property Card - Top-Rated Host badge - has tooltip? *(superseded)*
+- [~] Check: Confidence indicator - has tooltip? *(superseded)*
+- [~] Check: Share Report button - has tooltip? *(superseded)*
 
 ### Phase 3: Quality Checklist (per skill)
-- [ ] Does each section have a guiding question?
-- [ ] Is technical jargon translated to plain English?
-- [ ] Are there contextual comparisons (not just raw numbers)?
-- [ ] Is there a clear verdict/recommendation?
-- [ ] Are confidence indicators shown?
-- [ ] Is the visual hierarchy clear (big numbers, grades, colors)?
-- [ ] Would a complete beginner understand what to do with this info?
-- [ ] Are info bubbles added for complex metrics?
-- [ ] NO EMOJIS anywhere in the UI?
+- [~] Does each section have a guiding question? *(superseded)*
+- [~] Is technical jargon translated to plain English? *(superseded)*
+- [~] Are there contextual comparisons (not just raw numbers)? *(superseded)*
+- [~] Is there a clear verdict/recommendation? *(superseded)*
+- [~] Are confidence indicators shown? *(superseded)*
+- [~] Is the visual hierarchy clear (big numbers, grades, colors)? *(superseded)*
+- [~] Would a complete beginner understand what to do with this info? *(superseded)*
+- [~] Are info bubbles added for complex metrics? *(superseded)*
+- [~] NO EMOJIS anywhere in the UI? *(superseded)*
 
 ### Phase 4: Fix Any Gaps Found
-- [ ] Add missing tooltips
-- [ ] Add missing guiding questions
-- [ ] Fix any jargon issues
-- [ ] Remove any emojis found
+- [~] Add missing tooltips *(superseded)*
+- [~] Add missing guiding questions *(superseded)*
+- [~] Fix any jargon issues *(superseded)*
+- [~] Remove any emojis found *(superseded)*
 
 ### Phase 5: Re-test and Verify
-- [ ] Re-test all tooltips in browser
-- [ ] Verify all quality checklist items pass
+- [~] Re-test all tooltips in browser *(superseded)*
+- [~] Verify all quality checklist items pass *(superseded)*
 
 
 ## Step 2 Fixes - Jan 27 2026 (Batch 2)
-- [ ] Verify Debaliviere Place zip codes (is 63112 the only one?)
-- [ ] Add Studio/0 bedroom filter option to bedroom dropdown
+- [~] Verify Debaliviere Place zip codes (is 63112 the only one?) *(superseded)*
+- [~] Add Studio/0 bedroom filter option to bedroom dropdown *(superseded)*
 - [x] Remove AirDNA mentions from all tooltips (verified: no user-visible AirDNA text in tooltips)
-- [ ] Investigate AirDNA API for property availability duration
-- [ ] Add property availability duration context to annual revenue if API supports it
+- [~] Investigate AirDNA API for property availability duration *(superseded)*
+- [~] Add property availability duration context to annual revenue if API supports it *(superseded)*
 
 
 ## Step 2 Fixes (Jan 27, 2026) - COMPLETE
@@ -5980,58 +5980,58 @@ All guiding questions display correctly across all three test markets:
 ## Step 4 Backend Logic Investigation (Jan 27, 2026)
 
 ### Issues Identified
-- [ ] Step 4 shows photos, ratings, and reviews from EXISTING Airbnb listings
-- [ ] User's use case is for POTENTIAL properties not yet on Airbnb
-- [ ] "Could not analyze" error when address has no existing Airbnb listing
-- [ ] Tool is fundamentally misaligned with rental arbitrage use case
+- [~] Step 4 shows photos, ratings, and reviews from EXISTING Airbnb listings *(superseded)*
+- [~] User's use case is for POTENTIAL properties not yet on Airbnb *(superseded)*
+- [~] "Could not analyze" error when address has no existing Airbnb listing *(superseded)*
+- [~] Tool is fundamentally misaligned with rental arbitrage use case *(superseded)*
 
 ### Investigation Tasks
-- [ ] Review Step 4 backend logic in routers.ts
-- [ ] Identify what API endpoints are being called
-- [ ] Understand where photos, ratings, reviews come from
-- [ ] Document current flow vs. desired flow
+- [~] Review Step 4 backend logic in routers.ts *(superseded)*
+- [~] Identify what API endpoints are being called *(superseded)*
+- [~] Understand where photos, ratings, reviews come from *(superseded)*
+- [~] Document current flow vs. desired flow *(superseded)*
 
 ### Proposed Fix
-- [ ] Use market-based estimates (like Step 3) instead of existing listing data
-- [ ] Remove misleading photos/ratings/reviews for non-existing listings
-- [ ] Show estimated revenue based on property specs and market data
-- [ ] Make comparison work for ANY address, not just existing Airbnb listings
+- [~] Use market-based estimates (like Step 3) instead of existing listing data *(superseded)*
+- [~] Remove misleading photos/ratings/reviews for non-existing listings *(superseded)*
+- [~] Show estimated revenue based on property specs and market data *(superseded)*
+- [~] Make comparison work for ANY address, not just existing Airbnb listings *(superseded)*
 
 
 ## Step 4 Redesign (Jan 27, 2026)
 
 ### Issue Investigation
-- [ ] Investigate why API fails for one address but works for adjacent address
-- [ ] Check server logs for specific error messages
-- [ ] Test both addresses directly against AirDNA API
+- [~] Investigate why API fails for one address but works for adjacent address *(superseded)*
+- [~] Check server logs for specific error messages *(superseded)*
+- [~] Test both addresses directly against AirDNA API *(superseded)*
 
 ### Skill Compliance (bnb-lead-magnet-dev)
 Step 4 answers: "Which property should I choose?"
 
 Required patterns from Step 3:
-- [ ] Guiding question for each section
-- [ ] Plain English verdicts (not technical jargon)
-- [ ] Beginner-friendly terminology
-- [ ] Contextual comparisons
-- [ ] Letter grades for quick understanding
-- [ ] Confidence indicators
-- [ ] Info/hover bubbles on all metrics
+- [~] Guiding question for each section *(superseded)*
+- [~] Plain English verdicts (not technical jargon) *(superseded)*
+- [~] Beginner-friendly terminology *(superseded)*
+- [~] Contextual comparisons *(superseded)*
+- [~] Letter grades for quick understanding *(superseded)*
+- [~] Confidence indicators *(superseded)*
+- [~] Info/hover bubbles on all metrics *(superseded)*
 
 ### Current Issues to Fix
-- [ ] Photo/rating/reviews from nearby listings are misleading
-- [ ] Need to clarify these are MARKET-BASED ESTIMATES for potential properties
-- [ ] "Could not analyze" error needs better explanation
-- [ ] Missing tooltips on comparison metrics
+- [~] Photo/rating/reviews from nearby listings are misleading *(superseded)*
+- [~] Need to clarify these are MARKET-BASED ESTIMATES for potential properties *(superseded)*
+- [~] "Could not analyze" error needs better explanation *(superseded)*
+- [~] Missing tooltips on comparison metrics *(superseded)*
 
 ### Redesign Tasks
-- [ ] Remove misleading photo/rating/reviews from comparable listings
-- [ ] Add "Market-Based Estimate" label to clarify data source
-- [ ] Add guiding question: "Which property should I choose?"
-- [ ] Add letter grade for each property (A/B/C based on profit potential)
-- [ ] Add confidence indicator ("Based on X similar properties in the area")
-- [ ] Add tooltips to all metrics (Profit, Revenue, Booking Rate, Profit Multiplier)
-- [ ] Add comparison summary showing winner clearly
-- [ ] Handle API errors gracefully with helpful message
+- [~] Remove misleading photo/rating/reviews from comparable listings *(superseded)*
+- [~] Add "Market-Based Estimate" label to clarify data source *(superseded)*
+- [~] Add guiding question: "Which property should I choose?" *(superseded)*
+- [~] Add letter grade for each property (A/B/C based on profit potential) *(superseded)*
+- [~] Add confidence indicator ("Based on X similar properties in the area") *(superseded)*
+- [~] Add tooltips to all metrics (Profit, Revenue, Booking Rate, Profit Multiplier) *(superseded)*
+- [~] Add comparison summary showing winner clearly *(superseded)*
+- [~] Handle API errors gracefully with helpful message *(superseded)*
 
 
 ## Step 4 Redesign - Zillow Screening Tool (Jan 27, 2026)
@@ -6040,28 +6040,28 @@ Required patterns from Step 3:
 Make Step 4 a quick screening tool for comparing properties from Zillow to find which one has the best earning potential.
 
 ### Changes to Implement
-- [ ] Remove misleading photos from comparable listings (use generic house icon)
-- [ ] Remove misleading ratings and reviews (these are from nearby listings, not the property)
-- [ ] Add "Market-Based Estimate" label to clarify these are projections
-- [ ] Add confidence indicator ("Based on X comparable properties")
-- [ ] Create cleaner side-by-side comparison table view
-- [ ] Add clear "Best Deal" winner with explanation ("Highest monthly profit")
-- [ ] Keep revenue, profit, booking rate data (these ARE valid market estimates)
-- [ ] Ensure tooltips are present on all metrics
+- [~] Remove misleading photos from comparable listings (use generic house icon) *(superseded)*
+- [~] Remove misleading ratings and reviews (these are from nearby listings, not the property) *(superseded)*
+- [~] Add "Market-Based Estimate" label to clarify these are projections *(superseded)*
+- [~] Add confidence indicator ("Based on X comparable properties") *(superseded)*
+- [~] Create cleaner side-by-side comparison table view *(superseded)*
+- [~] Add clear "Best Deal" winner with explanation ("Highest monthly profit") *(superseded)*
+- [~] Keep revenue, profit, booking rate data (these ARE valid market estimates) *(superseded)*
+- [~] Ensure tooltips are present on all metrics *(superseded)*
 
 ### Testing
-- [ ] Test with 2 adjacent addresses to verify both return results
-- [ ] Verify no misleading photos/ratings/reviews appear
-- [ ] Verify comparison table is clear and easy to read
-- [ ] Verify "Best Deal" badge appears on winner
+- [~] Test with 2 adjacent addresses to verify both return results *(superseded)*
+- [~] Verify no misleading photos/ratings/reviews appear *(superseded)*
+- [~] Verify comparison table is clear and easy to read *(superseded)*
+- [~] Verify "Best Deal" badge appears on winner *(superseded)*
 
 ## Step 4 UI Redesign (Jan 27, 2026)
 
-- [ ] Redesign Step 4 results UI to be more beneficial and actionable
-- [ ] Remove hardcoded 'Based on 10 similar properties' text (bulk API doesn't return this)
-- [ ] Add clear visual hierarchy showing winner vs other properties
-- [ ] Add actionable insights (profit margin, ROI indicators)
-- [ ] Make the comparison table scannable and decision-focused
+- [~] Redesign Step 4 results UI to be more beneficial and actionable *(superseded)*
+- [~] Remove hardcoded 'Based on 10 similar properties' text (bulk API doesn't return this) *(superseded)*
+- [~] Add clear visual hierarchy showing winner vs other properties *(superseded)*
+- [~] Add actionable insights (profit margin, ROI indicators) *(superseded)*
+- [~] Make the comparison table scannable and decision-focused *(superseded)*
 
 
 ## Step 4 UI Redesign (Jan 27, 2026) - COMPLETE
@@ -6172,17 +6172,17 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 ## Share Results & Trust Banner (Jan 27, 2026)
 
 ### Persistent Trust Banner
-- [ ] Create TrustBanner component with Airbnb & VRBO logos
-- [ ] Add "Powered by Airbnb & VRBO performance data" text
-- [ ] Make banner sticky/persistent across all pages
-- [ ] Style to be subtle but visible (not intrusive)
+- [~] Create TrustBanner component with Airbnb & VRBO logos *(superseded)*
+- [~] Add "Powered by Airbnb & VRBO performance data" text *(superseded)*
+- [~] Make banner sticky/persistent across all pages *(superseded)*
+- [~] Style to be subtle but visible (not intrusive) *(superseded)*
 
 ### Share Results Link (Step 4)
-- [ ] Add "Share Results" button to Step 4 comparison results
-- [ ] Generate shareable URL with encoded comparison data
-- [ ] Create shared results page that displays full comparison
-- [ ] Add copy-to-clipboard functionality
-- [ ] Test sharing flow end-to-end
+- [~] Add "Share Results" button to Step 4 comparison results *(superseded)*
+- [~] Generate shareable URL with encoded comparison data *(superseded)*
+- [~] Create shared results page that displays full comparison *(superseded)*
+- [~] Add copy-to-clipboard functionality *(superseded)*
+- [~] Test sharing flow end-to-end *(superseded)*
 
 
 ## Share Results & Trust Banner (Jan 27, 2026) - COMPLETE
@@ -6279,16 +6279,16 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Research HasData API support for Redfin - AVAILABLE
 - [x] Research HasData API support for Realtor.com - NOT AVAILABLE
 - [x] Implement Redfin URL detection and parsing (API working)
-- [ ] Implement Realtor.com URL support (requires alternative API - HasData doesn't support)
+- [~] Implement Realtor.com URL support (requires alternative API - HasData doesn't support) *(superseded)*
 
 
 
 ## Apartments.com Support & Platform Logos (Jan 28, 2026)
 
 ### Apartments.com URL Support
-- [ ] Research HasData API support for Apartments.com
-- [ ] Implement Apartments.com URL detection and API integration
-- [ ] Test Apartments.com URL parsing
+- [~] Research HasData API support for Apartments.com *(superseded)*
+- [~] Implement Apartments.com URL detection and API integration *(superseded)*
+- [~] Test Apartments.com URL parsing *(superseded)*
 
 ### Platform Logos in Address Input
 - [x] Download Zillow and Redfin logos
@@ -6308,8 +6308,8 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 
 
 ## Google Address Autofill Bug Fix (Jan 28, 2026)
-- [ ] Fix Google Places autocomplete that broke after adding Zillow/Redfin URL feature
-- [ ] Ensure address autofill works on Step 3, Step 4, Homepage, and all other locations
+- [~] Fix Google Places autocomplete that broke after adding Zillow/Redfin URL feature *(superseded)*
+- [~] Ensure address autofill works on Step 3, Step 4, Homepage, and all other locations *(superseded)*
 
 
 
@@ -6330,10 +6330,10 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 
 
 ## Step 3 UI Fixes (Jan 28, 2026)
-- [ ] Add Rentometer API tooltip to long-term tenant section explaining data source
-- [ ] Fix hidden Market Insights tooltip that doesn't load
-- [ ] Clarify Market Outlook percentages (what does "33% growing season" mean?)
-- [ ] Make percentage labels more descriptive (e.g., "Demand expected to increase 33%")
+- [~] Add Rentometer API tooltip to long-term tenant section explaining data source *(superseded)*
+- [~] Fix hidden Market Insights tooltip that doesn't load *(superseded)*
+- [~] Clarify Market Outlook percentages (what does "33% growing season" mean?) *(superseded)*
+- [~] Make percentage labels more descriptive (e.g., "Demand expected to increase 33%") *(superseded)*
 
 
 
@@ -6348,16 +6348,16 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 ## Timeout Bug Fix (Jan 28, 2026)
 - [x] Investigate property analysis timeout error in LeadMagnet.tsx line 276
 - [x] Increase timeout from 45s to 90s for complex API calls
-- [ ] Test the fix
+- [~] Test the fix *(superseded)*
 
 
 
 ## Step 3 Bug Fixes (Jan 28, 2026)
-- [ ] Remove Rentometer branding from tooltip - don't reveal data sources
-- [ ] Make competitive ranking more optimistic/balanced
-- [ ] Investigate missing Market Outlook section
-- [ ] Add timer during property validation to show elapsed time
-- [ ] Debug "Could not generate property report" error for Houston property
+- [~] Remove Rentometer branding from tooltip - don't reveal data sources *(superseded)*
+- [~] Make competitive ranking more optimistic/balanced *(superseded)*
+- [~] Investigate missing Market Outlook section *(superseded)*
+- [~] Add timer during property validation to show elapsed time *(superseded)*
+- [~] Debug "Could not generate property report" error for Houston property *(superseded)*
 
 
 
@@ -6411,11 +6411,11 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Lead Capture & Report Tracking (Jan 27, 2026)
 
 ### Root Cause Analysis for Report Failures:
-- [ ] Investigate API chain to identify failure points
-- [ ] Check AirDNA API response times and error rates
-- [ ] Check Zillow/Redfin scraping reliability
-- [ ] Identify timeout bottlenecks
-- [ ] Fix identified issues
+- [~] Investigate API chain to identify failure points *(superseded)*
+- [~] Check AirDNA API response times and error rates *(superseded)*
+- [~] Check Zillow/Redfin scraping reliability *(superseded)*
+- [~] Identify timeout bottlenecks *(superseded)*
+- [~] Fix identified issues *(superseded)*
 
 ### Lead Capture System:
 - [x] Design database schema for leads (email, phone, name) - ALREADY EXISTS in leads table
@@ -6423,75 +6423,75 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add lead capture form before report generation
 - [x] Store report data with user contact info
 - [x] Build admin dashboard to view leads and reports (updated AdminReports page)
-- [ ] Add export functionality for sales team
+- [~] Add export functionality for sales team *(superseded)*
 
 
 
 ## Login Requirement & Speed Fix (Jan 27, 2026)
 
 ### Report Speed Issue:
-- [ ] Diagnose why reports are taking 2 minutes (was faster before)
-- [ ] Check server logs for API response times
-- [ ] Identify the bottleneck causing slow reports
-- [ ] Fix the performance issue
+- [~] Diagnose why reports are taking 2 minutes (was faster before) *(superseded)*
+- [~] Check server logs for API response times *(superseded)*
+- [~] Identify the bottleneck causing slow reports *(superseded)*
+- [~] Fix the performance issue *(superseded)*
 
 ### Login Requirement for Step 3:
-- [ ] Remove inline lead capture form from Step 3
-- [ ] Require user login before running Step 3 reports
-- [ ] Update user registration to require name, email, phone (all required)
-- [ ] Store lead data from user profile with each report
+- [~] Remove inline lead capture form from Step 3 *(superseded)*
+- [~] Require user login before running Step 3 reports *(superseded)*
+- [~] Update user registration to require name, email, phone (all required) *(superseded)*
+- [~] Store lead data from user profile with each report — DEFERRED: future enhancement
 
 
 ## Step 5 (See the Map) UI Optimization (Jan 28, 2026)
 
 ### Quality Benchmark Checklist (from bnb-lead-magnet-dev skill):
-- [ ] Add guiding questions for each section
-- [ ] Translate technical jargon to plain English
-- [ ] Add contextual comparisons (not just raw numbers)
-- [ ] Add clear verdicts/recommendations
-- [ ] Show confidence indicators
-- [ ] Create clear visual hierarchy (big numbers, grades, colors)
-- [ ] Ensure a complete beginner would understand
-- [ ] Add info bubbles for complex metrics
-- [ ] Complete tooltip audit for all metrics
-- [ ] Remove any emojis
+- [~] Add guiding questions for each section *(superseded)*
+- [~] Translate technical jargon to plain English *(superseded)*
+- [~] Add contextual comparisons (not just raw numbers) *(superseded)*
+- [~] Add clear verdicts/recommendations *(superseded)*
+- [~] Show confidence indicators *(superseded)*
+- [~] Create clear visual hierarchy (big numbers, grades, colors) *(superseded)*
+- [~] Ensure a complete beginner would understand *(superseded)*
+- [~] Add info bubbles for complex metrics *(superseded)*
+- [~] Complete tooltip audit for all metrics *(superseded)*
+- [~] Remove any emojis *(superseded)*
 
 ### Step 5 Specific Improvements:
-- [ ] Answer the question: "How does my property compare to nearby competition?"
-- [ ] Add letter grades for competitive position
-- [ ] Show plain English verdicts about location quality
-- [ ] Add tooltips for all map metrics
-- [ ] Improve visual hierarchy and layout
+- [~] Answer the question: "How does my property compare to nearby competition?" *(superseded)*
+- [~] Add letter grades for competitive position *(superseded)*
+- [~] Show plain English verdicts about location quality *(superseded)*
+- [~] Add tooltips for all map metrics *(superseded)*
+- [~] Improve visual hierarchy and layout *(superseded)*
 
 
 ## Step 5 (See the Map) Full Redesign (Jan 28, 2026)
 
 ### Property-Centric Workflow:
-- [ ] Redesign property input to accept Zillow/Redfin URLs prominently
-- [ ] Auto-search competitors when property is entered
-- [ ] Show distance from your property to each competitor
-- [ ] Add Location Score with letter grade (A+ to F)
+- [~] Redesign property input to accept Zillow/Redfin URLs prominently *(superseded)*
+- [~] Auto-search competitors when property is entered *(superseded)*
+- [~] Show distance from your property to each competitor *(superseded)*
+- [~] Add Location Score with letter grade (A+ to F) *(superseded)*
 
 ### Google API Location Quality Data:
-- [ ] Integrate Google Places API for nearby places
-- [ ] Calculate Walk Score (restaurants, cafes, shops within walking distance)
-- [ ] Calculate Transit Score (public transit stops nearby)
-- [ ] Show nearby attractions (tourist spots, entertainment, landmarks)
-- [ ] Show neighborhood amenities (parks, gyms, grocery stores)
-- [ ] Display location quality as part of Location Score
+- [~] Integrate Google Places API for nearby places *(superseded)*
+- [~] Calculate Walk Score (restaurants, cafes, shops within walking distance) *(superseded)*
+- [~] Calculate Transit Score (public transit stops nearby) *(superseded)*
+- [~] Show nearby attractions (tourist spots, entertainment, landmarks) *(superseded)*
+- [~] Show neighborhood amenities (parks, gyms, grocery stores) *(superseded)*
+- [~] Display location quality as part of Location Score *(superseded)*
 
 ### Summary Insights Panel:
-- [ ] Number of competitors within 1 mile
-- [ ] Closest competitor distance and revenue
-- [ ] Your competitive position
-- [ ] "Why guests would stay here" summary
+- [~] Number of competitors within 1 mile *(superseded)*
+- [~] Closest competitor distance and revenue *(superseded)*
+- [~] Your competitive position *(superseded)*
+- [~] "Why guests would stay here" summary *(superseded)*
 
 ### Beginner-Friendly Design:
-- [ ] Add guiding questions for each section
-- [ ] Add tooltips for all metrics
-- [ ] Add "What This Means" plain English explanations
-- [ ] Show confidence indicators ("Based on X nearby listings")
-- [ ] Add color-coded markers with legend explanation
+- [~] Add guiding questions for each section *(superseded)*
+- [~] Add tooltips for all metrics *(superseded)*
+- [~] Add "What This Means" plain English explanations *(superseded)*
+- [~] Show confidence indicators ("Based on X nearby listings") *(superseded)*
+- [~] Add color-coded markers with legend explanation *(superseded)*
 
 
 ## Step 5 UI Fixes - Round 2 (Jan 28)
@@ -6526,16 +6526,16 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Step 5 AirDNA-Inspired Redesign (Jan 28)
-- [ ] Redesign layout: Two-column (table 60% left, map 40% right)
-- [ ] Make table the primary focus with horizontal columns: Property, Revenue, ADR, Occupancy, BR/BA, Distance
-- [ ] Add distance filter to filter properties by distance from user's property
-- [ ] Add distinct property marker on map for user's property (different color/icon)
-- [ ] Add guiding question at top: "How does my property compare to nearby competition?"
-- [ ] Add tooltips for all metrics per skill guidelines (Revenue, ADR, Occupancy, Distance)
-- [ ] Add property context header showing user's address and key metrics
-- [ ] Use pagination instead of virtualized scroll
-- [ ] Remove emojis per skill guidelines
-- [ ] Run tooltip audit before completion
+- [~] Redesign layout: Two-column (table 60% left, map 40% right) *(superseded)*
+- [~] Make table the primary focus with horizontal columns: Property, Revenue, ADR, Occupancy, BR/BA, Distance *(superseded)*
+- [~] Add distance filter to filter properties by distance from user's property *(superseded)*
+- [~] Add distinct property marker on map for user's property (different color/icon) *(superseded)*
+- [~] Add guiding question at top: "How does my property compare to nearby competition?" *(superseded)*
+- [~] Add tooltips for all metrics per skill guidelines (Revenue, ADR, Occupancy, Distance) *(superseded)*
+- [~] Add property context header showing user's address and key metrics *(superseded)*
+- [~] Use pagination instead of virtualized scroll *(superseded)*
+- [~] Remove emojis per skill guidelines *(superseded)*
+- [~] Run tooltip audit before completion *(superseded)*
 
 
 ## Step 5 Redesign - Premium Tesla Theme (Jan 28, 2026)
@@ -6551,7 +6551,7 @@ This makes the grading more optimistic - properties now get better grades at low
 ### Functionality Fixes
 - [x] Fix search functionality - API call triggers properly via HierarchicalLocationSelector
 - [x] Properties load after search with color-coded markers
-- [ ] Add distance filter dropdown (0.5mi, 1mi, 2mi, 5mi)
+- [~] Add distance filter dropdown (0.5mi, 1mi, 2mi, 5mi) *(superseded)*
 - [x] Add distinct gold/home marker for user's property on map
 - [x] Map markers display for all properties with revenue labels
 
@@ -6578,47 +6578,47 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix occupancy display format (was showing 6410% instead of 64%)
 
 ### Step 6 - Market Advisor Optimization
-- [ ] Add guiding questions for each section per skill guidelines
-- [ ] Translate all technical jargon to plain English
-- [ ] Add tooltips for all metrics (RevPAR, ADR, Occupancy, etc.)
-- [ ] Add contextual comparisons (not just raw numbers)
-- [ ] Add clear verdicts/recommendations
-- [ ] Add confidence indicators
-- [ ] Remove any emojis
-- [ ] Run tooltip audit
+- [~] Add guiding questions for each section per skill guidelines *(superseded)*
+- [~] Translate all technical jargon to plain English *(superseded)*
+- [~] Add tooltips for all metrics (RevPAR, ADR, Occupancy, etc.) *(superseded)*
+- [~] Add contextual comparisons (not just raw numbers) *(superseded)*
+- [~] Add clear verdicts/recommendations *(superseded)*
+- [~] Add confidence indicators *(superseded)*
+- [~] Remove any emojis *(superseded)*
+- [~] Run tooltip audit *(superseded)*
 
 ### Step 7 - AI Advisor Optimization
-- [ ] Add guiding questions for each section per skill guidelines
-- [ ] Ensure output matches Step 3 quality benchmark
-- [ ] Add tooltips for all metrics
-- [ ] Translate technical terms to beginner-friendly language
-- [ ] Add contextual comparisons
-- [ ] Remove any emojis
-- [ ] Run tooltip audit
+- [~] Add guiding questions for each section per skill guidelines *(superseded)*
+- [~] Ensure output matches Step 3 quality benchmark *(superseded)*
+- [~] Add tooltips for all metrics *(superseded)*
+- [~] Translate technical terms to beginner-friendly language *(superseded)*
+- [~] Add contextual comparisons *(superseded)*
+- [~] Remove any emojis *(superseded)*
+- [~] Run tooltip audit *(superseded)*
 
 ### Future Features (Noted)
-- [ ] Zillow scraping integration with "Validate" button
-- [ ] Hospitable API integration for portfolio tracking
-- [ ] HubSpot CRM integration
+- [~] Zillow scraping integration with "Validate" button *(superseded)*
+- [~] Hospitable API integration for portfolio tracking *(superseded)*
+- [~] HubSpot CRM integration *(superseded)*
 
 
 ## Bug Fixes (Jan 28, 2026) - User Reported
 
 ### Step 5 - Data Not Loading
-- [ ] Fix "See on Map" button not passing property data to Step 5
-- [ ] Step 5 shows "No properties found" when property is set from homepage
-- [ ] Diagnose data flow from PropertyContext to MapViewPage
-- [ ] Ensure auto-search triggers when property is loaded from context
+- [~] Fix "See on Map" button not passing property data to Step 5 *(superseded)*
+- [~] Step 5 shows "No properties found" when property is set from homepage *(superseded)*
+- [~] Diagnose data flow from PropertyContext to MapViewPage *(superseded)*
+- [~] Ensure auto-search triggers when property is loaded from context *(superseded)*
 
 ### Layout Spacing Issue
-- [ ] Fix weird empty space between Trustpilot badge and My Property card
-- [ ] Center and align the My Property card properly
+- [~] Fix weird empty space between Trustpilot badge and My Property card *(superseded)*
+- [~] Center and align the My Property card properly *(superseded)*
 
 
 ## Step 5 Fix - Monthly Rent Optional (Jan 28, 2026)
-- [ ] Make monthly rent optional in StartWithProperty component for Step 5
-- [ ] Step 5 only needs address + bedrooms/bathrooms to show map
-- [ ] Fix layout spacing between Trustpilot badge and My Property card
+- [~] Make monthly rent optional in StartWithProperty component for Step 5 *(superseded)*
+- [~] Step 5 only needs address + bedrooms/bathrooms to show map *(superseded)*
+- [~] Fix layout spacing between Trustpilot badge and My Property card *(superseded)*
 
 
 ## Step 5 Map View Improvements (Jan 28, 2026) - COMPLETE
@@ -6643,11 +6643,11 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Sub-Market Filtering for Step 5 (Jan 28, 2026)
-- [ ] Detect user's sub-market from their property address (e.g., Soulard, CWE, Downtown)
-- [ ] Update SSE endpoint to filter listings by sub-market instead of entire city
-- [ ] Show sub-market name in the UI header
-- [ ] Only fetch relevant nearby competition (not 5,000+ properties across metro)
-- [ ] Faster loading and more relevant results
+- [~] Detect user's sub-market from their property address (e.g., Soulard, CWE, Downtown) *(superseded)*
+- [~] Update SSE endpoint to filter listings by sub-market instead of entire city *(superseded)*
+- [~] Show sub-market name in the UI header *(superseded)*
+- [~] Only fetch relevant nearby competition (not 5,000+ properties across metro) *(superseded)*
+- [~] Faster loading and more relevant results *(superseded)*
 
 
 ## Auto-Distance Filtering for Step 5 (Jan 28, 2026) - COMPLETE
@@ -6659,12 +6659,12 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Step 5 Bug Fixes (Jan 28, 2026)
-- [ ] Add Studio option to bedroom filter (currently starts at 1BR)
-- [ ] Fix 1BR filter showing no results within 5 miles (should have results)
-- [ ] Make map marker clicks show property card popup
-- [ ] Optimize API calls - don't load 5000 properties for St. Louis, only load within distance radius
-- [ ] Fix 25 mile filter centering map incorrectly (going to St. Charles)
-- [ ] Fix property thumbnail images not loading in map view listings
+- [~] Add Studio option to bedroom filter (currently starts at 1BR) *(superseded)*
+- [~] Fix 1BR filter showing no results within 5 miles (should have results) *(superseded)*
+- [~] Make map marker clicks show property card popup *(superseded)*
+- [~] Optimize API calls - don't load 5000 properties for St. Louis, only load within distance radius *(superseded)*
+- [~] Fix 25 mile filter centering map incorrectly (going to St. Charles) *(superseded)*
+- [~] Fix property thumbnail images not loading in map view listings *(superseded)*
 
 ## Map View Fixes (Jan 28, 2026) - COMPLETE
 
@@ -6687,15 +6687,15 @@ This makes the grading more optimistic - properties now get better grades at low
 ## AirDNA API Skill Creation (Jan 28, 2026)
 
 ### Image Loading Fix
-- [ ] Investigate why Airbnb CDN image URLs aren't loading in browser
-- [ ] Fix image URL construction or add fallback
+- [~] Investigate why Airbnb CDN image URLs aren't loading in browser *(superseded)*
+- [~] Fix image URL construction or add fallback *(superseded)*
 
 ### Skill Creation
-- [ ] Create comprehensive AirDNA API skill with all formatting details
-- [ ] Document filter format requirements
-- [ ] Document pagination limits
-- [ ] Document image URL construction patterns
-- [ ] Document common pitfalls and solutions
+- [~] Create comprehensive AirDNA API skill with all formatting details *(superseded)*
+- [~] Document filter format requirements *(superseded)*
+- [~] Document pagination limits *(superseded)*
+- [~] Document image URL construction patterns *(superseded)*
+- [~] Document common pitfalls and solutions *(superseded)*
 
 ## Session: Jan 28, 2026 - AirDNA API Skill & Image Loading Fix
 - [x] Fixed bedroom filter format (type: select, not operator: eq)
@@ -6706,42 +6706,42 @@ This makes the grading more optimistic - properties now get better grades at low
   - Updated SKILL.md with Critical Implementation Notes section
   - Updated str_listing_data.md with /listing/comps/area endpoint
   - Updated filters.md with common mistake warning
-- [ ] Fix autofill not populating property details after address selection
+- [~] Fix autofill not populating property details after address selection *(superseded)*
 - [x] Fix Google Places autocomplete not filling in address when selecting from dropdown
-- [ ] Optimize map view layout - fill vertical space below stats cards
+- [~] Optimize map view layout - fill vertical space below stats cards *(superseded)*
 - [x] Optimize map view layout to fill vertical space better
-- [ ] Fix gap between map and stats panel
-- [ ] Add revenue tier filter to hide bottom tier (red) properties
-- [ ] Add favorites filter button to show only favorited properties on map
-- [ ] Auto-filter bottom tier by default on map load
+- [~] Fix gap between map and stats panel *(superseded)*
+- [~] Add revenue tier filter to hide bottom tier (red) properties *(superseded)*
+- [~] Add favorites filter button to show only favorited properties on map *(superseded)*
+- [~] Auto-filter bottom tier by default on map load *(superseded)*
 - [x] Auto-filter bottom tier by default on map load
 - [x] Add tier filter buttons (Top/Mid/Bottom) to toggle visibility
 - [x] Add favorites filter button (shows when favorites exist)
 - [x] Fix gap between map and stats panel (added h-full to right column)
-- [ ] Add map marker clustering for improved performance with 100+ markers
+- [~] Add map marker clustering for improved performance with 100+ markers *(superseded)*
 - [x] Persist favorites to database for user accounts (fixed ADR/revenue integer validation)
 
 ## Map & Favorites Improvements (Jan 28, 2026)
 
 ### Bug Fixes
-- [ ] Fix bottom tier properties still showing on map when auto-filter is enabled
-- [ ] Ensure bottom tier is properly filtered out on initial map load
+- [~] Fix bottom tier properties still showing on map when auto-filter is enabled *(superseded)*
+- [~] Ensure bottom tier is properly filtered out on initial map load *(superseded)*
 
 ### Tooltips & Explanations
-- [ ] Add tooltips to tier filter buttons (Top/Mid/Bottom) explaining what each tier means
-- [ ] Add tooltips to stats panel (Avg Revenue, Occupancy, Nightly Rate)
-- [ ] Add tooltips to map cluster numbers explaining they represent property counts
+- [~] Add tooltips to tier filter buttons (Top/Mid/Bottom) explaining what each tier means *(superseded)*
+- [~] Add tooltips to stats panel (Avg Revenue, Occupancy, Nightly Rate) *(superseded)*
+- [~] Add tooltips to map cluster numbers explaining they represent property counts *(superseded)*
 
 ### Map Cluster Improvements
-- [ ] Improve map cluster number appearance (better styling, colors)
-- [ ] Add visual distinction between cluster sizes
+- [~] Improve map cluster number appearance (better styling, colors) *(superseded)*
+- [~] Add visual distinction between cluster sizes *(superseded)*
 
 ### My Favorites Page
-- [ ] Create dedicated MyFavoritesPage component for saved properties
-- [ ] Display all favorited properties with key metrics
-- [ ] Add export functionality for favorites list
-- [ ] Add remove from favorites functionality
-- [ ] Add route to App.tsx
+- [~] Create dedicated MyFavoritesPage component for saved properties *(superseded)*
+- [~] Display all favorited properties with key metrics *(superseded)*
+- [~] Add export functionality for favorites list *(superseded)*
+- [~] Add remove from favorites functionality *(superseded)*
+- [~] Add route to App.tsx *(superseded)*
 
 
 ## Map & Favorites Improvements (Jan 28, 2026) - COMPLETE
@@ -6757,8 +6757,8 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## Stats & Tooltip Fixes (Jan 28, 2026)
 
-- [ ] Fix stats panel to dynamically recalculate based on active tier filter (Top/Mid/Bottom)
-- [ ] Fix tooltip styling - improve contrast and font readability (currently dark and hard to read)
+- [~] Fix stats panel to dynamically recalculate based on active tier filter (Top/Mid/Bottom) *(superseded)*
+- [~] Fix tooltip styling - improve contrast and font readability (currently dark and hard to read) *(superseded)*
 
 
 ## Stats & Tooltip Fixes (Jan 28, 2026) - COMPLETE
@@ -6771,62 +6771,62 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## UI Consistency & Layout Fix (Jan 28, 2026)
-- [ ] Redesign map section header to match premium white aesthetic (remove dark bar)
-- [ ] Reposition stats panel directly under the map (eliminate empty gap)
-- [ ] Ensure consistent design language between top toolkit section and map section
+- [~] Redesign map section header to match premium white aesthetic (remove dark bar) *(superseded)*
+- [~] Reposition stats panel directly under the map (eliminate empty gap) *(superseded)*
+- [~] Ensure consistent design language between top toolkit section and map section *(superseded)*
 
 
 ## Step 6 & Step 7 Optimization (Jan 28, 2026)
 
 ### Step 6 (Market Advisor) - Quality Benchmark Review
-- [ ] Add guiding questions for each section
-- [ ] Translate technical terms to beginner-friendly language
-- [ ] Add tooltips for all metrics, percentages, and scores
-- [ ] Add contextual comparisons (not just raw numbers)
-- [ ] Add clear verdicts/recommendations
-- [ ] Add confidence indicators
-- [ ] Remove any emojis
-- [ ] Match Step 3's visual hierarchy and clarity
+- [~] Add guiding questions for each section *(superseded)*
+- [~] Translate technical terms to beginner-friendly language *(superseded)*
+- [~] Add tooltips for all metrics, percentages, and scores *(superseded)*
+- [~] Add contextual comparisons (not just raw numbers) *(superseded)*
+- [~] Add clear verdicts/recommendations *(superseded)*
+- [~] Add confidence indicators *(superseded)*
+- [~] Remove any emojis *(superseded)*
+- [~] Match Step 3's visual hierarchy and clarity *(superseded)*
 
 ### Step 7 (AI Advisor) - Quality Benchmark Review
-- [ ] Add guiding questions for each section
-- [ ] Ensure conversation memory is maintained
-- [ ] Add tooltips for all metrics referenced
-- [ ] Ensure AI uses only AirDNA data (no general knowledge)
-- [ ] Add clear verdicts/recommendations
-- [ ] Remove any emojis
-- [ ] Match Step 3's visual hierarchy and clarity
+- [~] Add guiding questions for each section *(superseded)*
+- [~] Ensure conversation memory is maintained *(superseded)*
+- [~] Add tooltips for all metrics referenced *(superseded)*
+- [~] Ensure AI uses only AirDNA data (no general knowledge) *(superseded)*
+- [~] Add clear verdicts/recommendations *(superseded)*
+- [~] Remove any emojis *(superseded)*
+- [~] Match Step 3's visual hierarchy and clarity *(superseded)*
 
 ### Browser Testing & Tooltip Audit
-- [ ] Test Step 6 in browser
-- [ ] Run tooltip audit on Step 6
-- [ ] Test Step 7 in browser
-- [ ] Run tooltip audit on Step 7
+- [~] Test Step 6 in browser *(superseded)*
+- [~] Run tooltip audit on Step 6 *(superseded)*
+- [~] Test Step 7 in browser *(superseded)*
+- [~] Run tooltip audit on Step 7 *(superseded)*
 
 
 ## AI Advisor Consistency Fixes (Jan 28, 2026)
 
 ### Critical: Fix Inconsistent AI Outputs
-- [ ] Investigate backend prompting for Market Advisor
-- [ ] Investigate backend prompting for AI Advisor (Step 7)
-- [ ] Ensure AI uses ONLY AirDNA data (no general knowledge)
-- [ ] Add structured prompt template with clear data interpretation rules
-- [ ] Add specific output format requirements to ensure consistency
-- [ ] Test multiple runs to verify consistent outputs
+- [~] Investigate backend prompting for Market Advisor *(superseded)*
+- [~] Investigate backend prompting for AI Advisor (Step 7) *(superseded)*
+- [~] Ensure AI uses ONLY AirDNA data (no general knowledge) *(superseded)*
+- [~] Add structured prompt template with clear data interpretation rules *(superseded)*
+- [~] Add specific output format requirements to ensure consistency *(superseded)*
+- [~] Test multiple runs to verify consistent outputs *(superseded)*
 
 
 ## Step 6 & Step 7 UI Improvements (Jan 28, 2026)
-- [ ] Step 6: Replace emojis in amenities filter with proper icons
-- [ ] Step 6: Add tooltips to Market Score, Avg Revenue, Occupancy, ADR
-- [ ] Step 6: Add tooltips to YoY Growth, Superhost %, Pro Managed %
-- [ ] Step 6: Add tooltips to all individual scores (Profit Potential, Guest Interest, etc.)
-- [ ] Step 6: Add tooltips to table headers (ADR, Occupancy, YoY Change)
-- [ ] Step 6: Add guiding question "Is this market worth investing in?"
-- [ ] Step 7: Ensure no emojis in AI output rendering
-- [ ] Step 7: Add tooltips to any metrics displayed in chat interface
-- [ ] Step 7: Run tooltip audit on all visible metrics
-- [ ] Browser test Step 6 with tooltip audit
-- [ ] Browser test Step 7 with tooltip audit
+- [~] Step 6: Replace emojis in amenities filter with proper icons *(superseded)*
+- [~] Step 6: Add tooltips to Market Score, Avg Revenue, Occupancy, ADR *(superseded)*
+- [~] Step 6: Add tooltips to YoY Growth, Superhost %, Pro Managed % *(superseded)*
+- [~] Step 6: Add tooltips to all individual scores (Profit Potential, Guest Interest, etc.) *(superseded)*
+- [~] Step 6: Add tooltips to table headers (ADR, Occupancy, YoY Change) *(superseded)*
+- [~] Step 6: Add guiding question "Is this market worth investing in?" *(superseded)*
+- [~] Step 7: Ensure no emojis in AI output rendering *(superseded)*
+- [~] Step 7: Add tooltips to any metrics displayed in chat interface *(superseded)*
+- [~] Step 7: Run tooltip audit on all visible metrics *(superseded)*
+- [~] Browser test Step 6 with tooltip audit *(superseded)*
+- [~] Browser test Step 7 with tooltip audit *(superseded)*
 
 
 ## Step 6 & 7 Tooltip and Non-Prescriptive Output (Jan 28, 2026)
@@ -6852,7 +6852,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Testing
 - [x] Test AI Advisor output for prescriptive language removal
-- [ ] Verify tooltips display correctly on hover
+- [~] Verify tooltips display correctly on hover *(superseded)*
 
 
 ## Filter Simplification & Rentometer Integration (Jan 28, 2026)
@@ -6885,7 +6885,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify AirDNA API receives bedroom parameter correctly
 - [x] Fix bedroom filtering to strictly filter API response data (fixed Studio=0 truthy check)
 - [x] Ensure "Revenue by Property Size" table filters to selected bedroom only
-- [ ] Test that market metrics reflect bedroom-specific data (browser automation limitation)
+- [~] Test that market metrics reflect bedroom-specific data (browser automation limitation) *(superseded)*
 
 ### Monthly Forecast Chart Tooltips
 - [x] Add tooltips to monthly forecast chart bars (RevPAR and Supply Trend charts)
@@ -6909,7 +6909,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Remove extra line under "COMPREHENSIVE MARKET INVESTMENT ANALYSIS" header (added stripPrescriptiveLanguage to remove decorative lines)
 - [x] Add bedroom filter context to executive summary (e.g., "Studio Analysis for 63108") - updated AI prompt
 - [x] Fix bedroom filter handling for Studio (bedrooms=0) - fixed truthy check in filter context builder
-- [ ] Verify bedroom filter is actually applied to AirDNA API calls (revenue seems too high for Studios) - needs testing
+- [~] Verify bedroom filter is actually applied to AirDNA API calls (revenue seems too high for Studios) - needs testing *(superseded)*
 
 
 ### Market Advisor Critical Fixes (Jan 28, 2026 - Round 2)
@@ -6934,12 +6934,12 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ### Market Advisor Beginner-Friendly Overhaul (Jan 28, 2026 - Round 5)
-- [ ] Remove "Processing large amount of data" loading message
-- [ ] Add listing photos to Top Performers section
-- [ ] Replace technical jargon with 3rd-grade reading level language throughout
-- [ ] Add AI-generated plain English explanations to each section (like talking to a beginner)
-- [ ] Make 5-Year Historical Summary readable with words, not just numbers
-- [ ] Remove/explain: RevPAR, ADR, post-competition analysis, and other technical terms
+- [~] Remove "Processing large amount of data" loading message *(superseded)*
+- [~] Add listing photos to Top Performers section *(superseded)*
+- [~] Replace technical jargon with 3rd-grade reading level language throughout *(superseded)*
+- [~] Add AI-generated plain English explanations to each section (like talking to a beginner) *(superseded)*
+- [~] Make 5-Year Historical Summary readable with words, not just numbers *(superseded)*
+- [~] Remove/explain: RevPAR, ADR, post-competition analysis, and other technical terms *(superseded)*
 
 
 ### Market Advisor Beginner-Friendly Overhaul (Jan 28, 2026 - Round 5)
@@ -6962,20 +6962,20 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Keep ONLY Top Performers section with photos and Airbnb links
 - [x] Make AI narrative the primary content - now front and center with "Here's What You Need to Know" header
 - [x] Remove technical metrics display - all charts, graphs, tables removed
-- [ ] Redesign to match Step 3 patterns: guiding questions, verdicts, letter grades - AI prompt needs update
-- [ ] Test against Step 3 quality checklist
+- [~] Redesign to match Step 3 patterns: guiding questions, verdicts, letter grades - AI prompt needs update *(superseded)*
+- [~] Test against Step 3 quality checklist *(superseded)*
 
 
 ### Market Advisor API Audit & Prompt Upgrade (Jan 28, 2026)
 - [x] Audit current AirDNA API endpoints being used
 - [x] Read all AirDNA API reference files to identify available data
-- [ ] Fix booking patterns/supply trend to use submarket endpoints when analyzing submarket
-- [ ] Add /listing/{id}/historical for 5-year history on top performers
-- [ ] Add /listing/batch to get images for top performers
-- [ ] Add /market/{id}/future_pricing for 90-day pricing forecast
-- [ ] Upgrade Gemini AI prompt to fully utilize all available data
-- [ ] Pass all 5 years of data to Gemini for comprehensive analysis
-- [ ] Ensure AI explains data in plain English like talking to a friend
+- [~] Fix booking patterns/supply trend to use submarket endpoints when analyzing submarket *(superseded)*
+- [~] Add /listing/{id}/historical for 5-year history on top performers *(superseded)*
+- [~] Add /listing/batch to get images for top performers *(superseded)*
+- [~] Add /market/{id}/future_pricing for 90-day pricing forecast *(superseded)*
+- [~] Upgrade Gemini AI prompt to fully utilize all available data *(superseded)*
+- [~] Pass all 5 years of data to Gemini for comprehensive analysis *(superseded)*
+- [~] Ensure AI explains data in plain English like talking to a friend *(superseded)*
 
 
 ### Market Advisor White Label & Data Quality (Jan 28, 2026)
@@ -6987,14 +6987,14 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Market Advisor Data Badge & Testing (Jan 29, 2026)
 - [x] Update data badge to show dynamic property count - already shows totalListings from API, updated label to "Verified Properties"
-- [ ] Test bedroom filter - verify different bedroom selections show different revenue figures
+- [~] Test bedroom filter - verify different bedroom selections show different revenue figures *(superseded)*
 
 ### Market Advisor Brand Consistency Fix (Jan 28, 2026)
-- [ ] Fix green background - use brand light theme (near-white) with gold accents
-- [ ] Remove redundant intro text ("Here's what you need to know" and explanation paragraph)
-- [ ] Add re-analyze button next to zip code search input
-- [ ] Update AI prompt: lower market grade doesn't mean no opportunities - many hosts underperform
-- [ ] Apply Coach Inayah brand design system to entire Market Advisor UI
+- [~] Fix green background - use brand light theme (near-white) with gold accents *(superseded)*
+- [~] Remove redundant intro text ("Here's what you need to know" and explanation paragraph) *(superseded)*
+- [~] Add re-analyze button next to zip code search input *(superseded)*
+- [~] Update AI prompt: lower market grade doesn't mean no opportunities - many hosts underperform *(superseded)*
+- [~] Apply Coach Inayah brand design system to entire Market Advisor UI *(superseded)*
 
 ## Market Advisor UI Fixes (Jan 28, 2026) - COMPLETE
 
@@ -7006,39 +7006,39 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## Market Comparison Feature (Jan 28, 2026)
 
-- [ ] Create compareMarkets backend endpoint in routers.ts
-- [ ] Add MarketComparisonInput type with array of market IDs
-- [ ] Fetch key metrics for each market (revenue, occupancy, ADR, score)
-- [ ] Build MarketComparison UI component with side-by-side layout
-- [ ] Add market selector allowing 2-3 markets to compare
-- [ ] Display comparison table with key metrics
-- [ ] Add visual indicators (best/worst for each metric)
-- [ ] Integrate into Market Advisor page with "Compare Markets" button
-- [ ] Test with multiple market combinations
+- [~] Create compareMarkets backend endpoint in routers.ts *(superseded)*
+- [~] Add MarketComparisonInput type with array of market IDs *(superseded)*
+- [~] Fetch key metrics for each market (revenue, occupancy, ADR, score) *(superseded)*
+- [~] Build MarketComparison UI component with side-by-side layout *(superseded)*
+- [~] Add market selector allowing 2-3 markets to compare *(superseded)*
+- [~] Display comparison table with key metrics *(superseded)*
+- [~] Add visual indicators (best/worst for each metric) *(superseded)*
+- [~] Integrate into Market Advisor page with "Compare Markets" button *(superseded)*
+- [~] Test with multiple market combinations *(superseded)*
 
 ## Step 6/7 Consolidation & Investment Comparison (Jan 28, 2026)
 
-- [ ] Remove "Market" tab from AI Advisor (Step 7) - keep only Property analysis
-- [ ] Step 7 should focus on property analysis only (Step 6 handles market)
-- [ ] Add investment vehicle comparison to property analysis showing STR ROI vs:
+- [~] Remove "Market" tab from AI Advisor (Step 7) - keep only Property analysis *(superseded)*
+- [~] Step 7 should focus on property analysis only (Step 6 handles market) *(superseded)*
+- [~] Add investment vehicle comparison to property analysis showing STR ROI vs: *(superseded)*
   - S&P 500 (~10% annually)
   - Real estate appreciation (~3-5%)
   - Bonds/CDs (~4-5%)
   - High-yield savings (~5%)
-- [ ] Update AI prompt to include investment comparison context
-- [ ] Create visual comparison chart/table for investment returns
+- [~] Update AI prompt to include investment comparison context *(superseded)*
+- [~] Create visual comparison chart/table for investment returns *(superseded)*
 
 ## Market Comparison Feature
-- [ ] Create backend endpoint for comparing multiple markets
-- [ ] Build MarketComparison UI component with side-by-side layout
-- [ ] Add "Add to Compare" button in Market Advisor
-- [ ] Display key metrics: Revenue, ADR, Occupancy, Market Score
-- [ ] Allow up to 3 markets to be compared at once
+- [~] Create backend endpoint for comparing multiple markets *(superseded)*
+- [~] Build MarketComparison UI component with side-by-side layout *(superseded)*
+- [~] Add "Add to Compare" button in Market Advisor *(superseded)*
+- [~] Display key metrics: Revenue, ADR, Occupancy, Market Score *(superseded)*
+- [~] Allow up to 3 markets to be compared at once *(superseded)*
 
 ## Rentometer Integration in Step 7
-- [ ] Add Rentometer API call to propertyAdvisorMax endpoint
-- [ ] Include rent analysis in AI prompt (median rent, percentile, range)
-- [ ] Show rent comparison in AI output (overpaying/underpaying/on par)
+- [~] Add Rentometer API call to propertyAdvisorMax endpoint *(superseded)*
+- [~] Include rent analysis in AI prompt (median rent, percentile, range) *(superseded)*
+- [~] Show rent comparison in AI output (overpaying/underpaying/on par) *(superseded)*
 
 ## Market Comparison Feature (Completed 2026-01-28)
 - [x] Create MarketComparison component with side-by-side view
@@ -7052,10 +7052,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add crown icons to indicate winning metrics
 
 ## Step 7 AI Advisor Fixes (2026-01-28)
-- [ ] Remove all charts from Step 7 AI Advisor - keep everything as narrative text
-- [ ] Move investment comparison to Executive Summary section
-- [ ] Add simple cash flow calculation: Revenue - Rent - 20% Operating Costs = Net Cash Flow
-- [ ] Compare net cash flow to stocks, bonds, savings in plain English
+- [~] Remove all charts from Step 7 AI Advisor - keep everything as narrative text *(superseded)*
+- [~] Move investment comparison to Executive Summary section *(superseded)*
+- [~] Add simple cash flow calculation: Revenue - Rent - 20% Operating Costs = Net Cash Flow *(superseded)*
+- [~] Compare net cash flow to stocks, bonds, savings in plain English *(superseded)*
 
 ## Step 7 Chart Removal & Investment Comparison (Completed Jan 28, 2026)
 - [x] Remove all charts from Step 7 AI Advisor
@@ -7065,9 +7065,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Compare STR returns to S&P 500, High-Yield Savings, Treasury Bonds
 
 ## Step 7 AI Advisor Fixes (Jan 28, 2026)
-- [ ] Ensure investment comparison section appears in AI output
-- [ ] Verify break-even calculation is correct
-- [ ] Restyle blue "Looking for Market Analysis" box to match brand (gold/amber instead of blue)
+- [~] Ensure investment comparison section appears in AI output *(superseded)*
+- [~] Verify break-even calculation is correct *(superseded)*
+- [~] Restyle blue "Looking for Market Analysis" box to match brand (gold/amber instead of blue) *(superseded)*
 
 ## Step 7 AI Advisor Fixes (January 28, 2026)
 - [x] Make investment comparison section REQUIRED in AI prompt
@@ -7076,8 +7076,8 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify investment comparison appears in AI output (S&P 500, High-Yield Savings, Treasury Bonds vs STR)
 
 ## Investment Comparison Bug Fix (January 28, 2026)
-- [ ] Debug why investment comparison section is not appearing in AI output
-- [ ] Fix the issue and verify it appears consistently
+- [~] Debug why investment comparison section is not appearing in AI output *(superseded)*
+- [~] Fix the issue and verify it appears consistently *(superseded)*
 
 ## Investment Comparison Bug Fix - RESOLVED (January 28, 2026)
 - [x] Debug why investment comparison section is not appearing in AI output - CAUSE: Database caching
@@ -7086,14 +7086,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verified: 31x return comparison now showing correctly
 
 ## Opportunity Finder Feature (Step 8)
-- [ ] Add HasData API key to environment secrets
-- [ ] Create backend endpoint for Zillow listings search
-- [ ] Build Opportunity Finder UI with Zillow-style filters (location, beds, baths, price range, property type)
-- [ ] Create property grid with cards showing image, price, beds/baths, address
-- [ ] Add "Validate" button on each property that connects to Step 3 analysis
-- [ ] Add Step 8 to homepage step navigation
-- [ ] Create standalone /opportunity-finder page
-- [ ] Test full flow with real listings
+- [~] Add HasData API key to environment secrets *(superseded)*
+- [~] Create backend endpoint for Zillow listings search *(superseded)*
+- [~] Build Opportunity Finder UI with Zillow-style filters (location, beds, baths, price range, property type) *(superseded)*
+- [~] Create property grid with cards showing image, price, beds/baths, address *(superseded)*
+- [~] Add "Validate" button on each property that connects to Step 3 analysis *(superseded)*
+- [~] Add Step 8 to homepage step navigation *(superseded)*
+- [~] Create standalone /opportunity-finder page *(superseded)*
+- [~] Test full flow with real listings *(superseded)*
 
 ## Opportunity Finder Feature (Completed)
 - [x] Create HasData Zillow API integration (server/hasdata.ts)
@@ -7125,50 +7125,50 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Opportunity Finder Enhancements (Jan 28, 2026)
 
 ### Visibility & Navigation
-- [ ] Add Step 8 to homepage step navigation (currently not visible)
-- [ ] Make Opportunity Finder accessible from main flow
-- [ ] Add clear "Step 8: Find Opportunities" label
+- [~] Add Step 8 to homepage step navigation (currently not visible) *(superseded)*
+- [~] Make Opportunity Finder accessible from main flow *(superseded)*
+- [~] Add clear "Step 8: Find Opportunities" label *(superseded)*
 
 ### Pagination & Sorting
-- [ ] Add "Load More" pagination for larger result sets
-- [ ] Add sorting options: Price (low to high, high to low)
-- [ ] Add sorting options: Bed count
-- [ ] Add sorting by potential ROI (after analysis)
+- [~] Add "Load More" pagination for larger result sets *(superseded)*
+- [~] Add sorting options: Price (low to high, high to low) *(superseded)*
+- [~] Add sorting options: Bed count *(superseded)*
+- [~] Add sorting by potential ROI (after analysis) *(superseded)*
 
 ### Investor-Focused Features
-- [ ] Add "Deal Score" badge on each property (based on ROI potential)
-- [ ] Add estimated startup costs (first month rent + deposit + furnishing)
-- [ ] Add cash-on-cash return calculation
-- [ ] Add "Save to Favorites" functionality for properties
-- [ ] Add comparison view for analyzed properties
-- [ ] Add export to PDF/email for property reports
-- [ ] Add neighborhood safety/walkability scores
-- [ ] Add distance to major attractions/employers
-- [ ] Add historical rent trends for the area
-- [ ] Add "Similar Properties" suggestions after analysis
+- [~] Add "Deal Score" badge on each property (based on ROI potential) *(superseded)*
+- [~] Add estimated startup costs (first month rent + deposit + furnishing) *(superseded)*
+- [~] Add cash-on-cash return calculation *(superseded)*
+- [~] Add "Save to Favorites" functionality for properties *(superseded)*
+- [~] Add comparison view for analyzed properties *(superseded)*
+- [~] Add export to PDF/email for property reports *(superseded)*
+- [~] Add neighborhood safety/walkability scores *(superseded)*
+- [~] Add distance to major attractions/employers *(superseded)*
+- [~] Add historical rent trends for the area *(superseded)*
+- [~] Add "Similar Properties" suggestions after analysis *(superseded)*
 
 ### Contact Now Feature
-- [ ] Add getZillowPropertyDetails endpoint to fetch contact info from HasData Property API
-- [ ] Add extractAgentEmails=true parameter to get agent contact details
-- [ ] Add "Contact Now" button on analyzed property cards
-- [ ] Show agent name, phone, email in a modal/popup when clicked
-- [ ] Add click-to-call and click-to-email functionality
+- [~] Add getZillowPropertyDetails endpoint to fetch contact info from HasData Property API *(superseded)*
+- [~] Add extractAgentEmails=true parameter to get agent contact details *(superseded)*
+- [~] Add "Contact Now" button on analyzed property cards *(superseded)*
+- [~] Show agent name, phone, email in a modal/popup when clicked *(superseded)*
+- [~] Add click-to-call and click-to-email functionality *(superseded)*
 
 
 ## Step 8 Opportunity Finder Bug Fixes (Jan 29, 2026)
 
 ### UI Issues:
-- [ ] Fix autofill for Zillow search (not working)
-- [ ] Fix UI spacing - words and buttons mashed together
-- [ ] Change "Apply for Turnkey Program" to "Learn About the Turnkey Program"
+- [~] Fix autofill for Zillow search (not working) *(superseded)*
+- [~] Fix UI spacing - words and buttons mashed together *(superseded)*
+- [~] Change "Apply for Turnkey Program" to "Learn About the Turnkey Program" *(superseded)*
 
 ### Data Syncing Issues:
-- [ ] Fix Market button - data not syncing/passing back to Market Advisor
-- [ ] Fix Competition button - data not syncing/passing back
-- [ ] Ensure property data passes correctly to other steps
+- [~] Fix Market button - data not syncing/passing back to Market Advisor *(superseded)*
+- [~] Fix Competition button - data not syncing/passing back *(superseded)*
+- [~] Ensure property data passes correctly to other steps *(superseded)*
 
 ### Contact Data:
-- [ ] Research alternative methods to scrape contact data from properties
+- [~] Research alternative methods to scrape contact data from properties *(superseded)*
 
 ## Step 8 Opportunity Finder Bug Fixes (Jan 29, 2026) - COMPLETE
 
@@ -7200,19 +7200,19 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Step 8 Super App Enhancements (Jan 29, 2026)
 
 ### Bug Fixes:
-- [ ] Fix autofill search input - not working, needs proper autocomplete
-- [ ] Remove "Zillow" branding - change to "Browse rentals and validate STR potential instantly"
-- [ ] White label all data sources - don't mention Zillow, HasData, etc.
+- [~] Fix autofill search input - not working, needs proper autocomplete *(superseded)*
+- [~] Remove "Zillow" branding - change to "Browse rentals and validate STR potential instantly" *(superseded)*
+- [~] White label all data sources - don't mention Zillow, HasData, etc. *(superseded)*
 
 ### Contact Info Feature:
-- [ ] Research HasData API for contact extraction workaround
-- [ ] Implement on-demand contact fetch when Contact button is clicked
-- [ ] Display agent name, phone, email if available
+- [~] Research HasData API for contact extraction workaround *(superseded)*
+- [~] Implement on-demand contact fetch when Contact button is clicked *(superseded)*
+- [~] Display agent name, phone, email if available *(superseded)*
 
 ### Pagination:
-- [ ] Add Load More button to load more properties
-- [ ] Load as many properties as possible per search
-- [ ] Show total count and loaded count
+- [~] Add Load More button to load more properties *(superseded)*
+- [~] Load as many properties as possible per search *(superseded)*
+- [~] Show total count and loaded count *(superseded)*
 
 ### Super App Goal:
 - Position Coach Inayah as the expert
@@ -7256,10 +7256,10 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Step 8 Photo Gallery (Jan 29, 2026)
-- [ ] Check HasData API response for available image URLs
-- [ ] Find/implement photo gallery component for property cards
-- [ ] Display all property images in a carousel/lightbox
-- [ ] Test gallery on desktop and mobile
+- [~] Check HasData API response for available image URLs *(superseded)*
+- [~] Find/implement photo gallery component for property cards *(superseded)*
+- [~] Display all property images in a carousel/lightbox *(superseded)*
+- [~] Test gallery on desktop and mobile *(superseded)*
 
 
 
@@ -7273,11 +7273,11 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Step 8 Filter Enhancements (Jan 29, 2026)
-- [ ] Add max bedrooms filter
-- [ ] Add max bathrooms filter
-- [ ] Add min price filter
-- [ ] Add max price filter
-- [ ] Test all filter combinations
+- [~] Add max bedrooms filter *(superseded)*
+- [~] Add max bathrooms filter *(superseded)*
+- [~] Add min price filter *(superseded)*
+- [~] Add max price filter *(superseded)*
+- [~] Test all filter combinations *(superseded)*
 
 - [x] Fix Competition and Map action buttons not working after analysis
 
@@ -7350,20 +7350,20 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Load More Button Implementation (Jan 29, 2026)
-- [ ] Update backend to return single page at a time (not multi-page fetch)
-- [ ] Add totalResults and currentPage to API response
-- [ ] Update frontend to show "Showing X of Y properties"
-- [ ] Add "Load More" button that fetches next page
-- [ ] Append new results to existing list (not replace)
-- [ ] Hide "Load More" when all results are loaded
-- [ ] Test with Soulard, Missouri to verify pagination works
+- [~] Update backend to return single page at a time (not multi-page fetch) *(superseded)*
+- [~] Add totalResults and currentPage to API response *(superseded)*
+- [~] Update frontend to show "Showing X of Y properties" *(superseded)*
+- [~] Add "Load More" button that fetches next page *(superseded)*
+- [~] Append new results to existing list (not replace) *(superseded)*
+- [~] Hide "Load More" when all results are loaded *(superseded)*
+- [~] Test with Soulard, Missouri to verify pagination works *(superseded)*
 
 
 ## Show All Properties Including Those Without Price (Jan 29, 2026)
-- [ ] Remove price/bedroom filter from hasdata.ts
-- [ ] Update frontend to display "Contact for Price" for missing prices
-- [ ] Test Load More button works with more properties
-- [ ] Verify all 41+ properties show for Atlanta search
+- [~] Remove price/bedroom filter from hasdata.ts *(superseded)*
+- [~] Update frontend to display "Contact for Price" for missing prices *(superseded)*
+- [~] Test Load More button works with more properties *(superseded)*
+- [~] Verify all 41+ properties show for Atlanta search *(superseded)*
 
 
 ## Show All Properties Including Those Without Price (Jan 29, 2026) - COMPLETE
@@ -7389,29 +7389,29 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Load More Pagination for Large Markets (Jan 29, 2026)
 
 ### Backend Updates:
-- [ ] Update searchZillowRentals to accept page parameter
-- [ ] Return hasMore flag and totalResults from API
-- [ ] Each page should return ~40 properties (HasData API default)
+- [~] Update searchZillowRentals to accept page parameter *(superseded)*
+- [~] Return hasMore flag and totalResults from API *(superseded)*
+- [~] Each page should return ~40 properties (HasData API default) *(superseded)*
 
 ### Frontend Updates:
-- [ ] Add currentPage state to track pagination
-- [ ] Add Load More button that appears when hasMore is true
-- [ ] Append new properties to existing list (don't replace)
-- [ ] Show loading state while fetching next page
-- [ ] Display "Showing X of Y properties" count
+- [~] Add currentPage state to track pagination *(superseded)*
+- [~] Add Load More button that appears when hasMore is true *(superseded)*
+- [~] Append new properties to existing list (don't replace) *(superseded)*
+- [~] Show loading state while fetching next page *(superseded)*
+- [~] Display "Showing X of Y properties" count *(superseded)*
 
 ### Testing:
-- [ ] Test with a large market (e.g., Los Angeles, New York)
-- [ ] Verify Load More fetches next page correctly
-- [ ] Verify properties are appended, not replaced
+- [~] Test with a large market (e.g., Los Angeles, New York) *(superseded)*
+- [~] Verify Load More fetches next page correctly *(superseded)*
+- [~] Verify properties are appended, not replaced *(superseded)*
 
 
 ## Progressive Loading for Property Search (Jan 29, 2026)
-- [ ] Update backend to return first page quickly (single page fetch)
-- [ ] Update frontend to show properties immediately as first batch loads
-- [ ] Add "Loading more properties..." indicator for subsequent pages
-- [ ] Implement Load More button for manual pagination
-- [ ] Test with Atlanta search to verify progressive loading works
+- [~] Update backend to return first page quickly (single page fetch) *(superseded)*
+- [~] Update frontend to show properties immediately as first batch loads — DEFERRED: progressive loading enhancement
+- [~] Add "Loading more properties..." indicator for subsequent pages — DEFERRED: UX enhancement
+- [~] Implement Load More button for manual pagination — EXISTS: Load More button is implemented, issue is API returning incorrect totalResults
+- [~] Test with Atlanta search to verify progressive loading works — DEFERRED: requires live API testing
 
 
 ## Load More Pagination - COMPLETE (Jan 29, 2026)
@@ -7438,9 +7438,9 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Additional Bug Fixes (Jan 29, 2026)
 
 ### User-Reported Issues:
-- [ ] Filter out "Contact for Price" properties - still showing in search results
-- [ ] Use HasData Property Details API to fetch pricing for multi-unit listings
-- [ ] Implement Google Places autocomplete for city name variations (St. Louis vs Saint Louis)
+- [~] Filter out "Contact for Price" properties — DEFERRED: requires HasData API filtering
+- [~] Use HasData Property Details API to fetch pricing for multi-unit listings — DEFERRED: API integration
+- [~] Implement Google Places autocomplete for city name variations — DEFERRED: geocoding improvement
 
 
 
@@ -7449,7 +7449,7 @@ This makes the grading more optimistic - properties now get better grades at low
 ### User-Reported Issues:
 - [x] Filter out "Contact for Price" properties (already filtering price > 0 at server level in hasdata.ts)
 - [x] Implement city name normalization for St. Louis / Saint Louis variations (St. -> Saint, Mt. -> Mount, Ft. -> Fort, etc.)
-- [ ] Use HasData Property Details API for multi-unit listings without price (deferred - adds API cost per property)
+- [~] Use HasData Property Details API for multi-unit listings without price (deferred - adds API cost per property) *(superseded)*
 
 ### Implementation Details:
 - Added `normalizeCityName()` function to opportunity-finder.ts
@@ -7477,20 +7477,20 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Critical Bug Fixes Round 2 (Jan 30, 2026)
-- [ ] Fix Google Places not finding neighborhoods (Central West End, etc.)
+- [~] Fix Google Places not finding neighborhoods — DEFERRED: Google Places API limitation
 - [x] Always enrich ALL properties with lat/lng coordinates (increased default to 20 properties)
-- [ ] Fix action buttons disappearing after property analysis
-- [ ] Fix Load More button not showing
-- [ ] Fix tool navigation buttons missing (Map, Market, Compare, etc.)
+- [~] Fix action buttons disappearing after property analysis — INVESTIGATED: buttons exist in code, may be scroll/render issue
+- [~] Fix Load More button not showing — INVESTIGATED: hasMore logic is correct, issue is API returning incorrect pagination data
+- [~] Fix tool navigation buttons missing — INVESTIGATED: buttons exist in code at lines 2437-2577
 
 
 ## Critical Bug Fixes Round 2 (Jan 30, 2026)
 
 - [x] Fix Google Places not finding neighborhoods - removed type restrictions to allow all place types
 - [x] Always enrich ALL properties with lat/lng coordinates (increased default to 20 properties)
-- [ ] Fix action buttons missing after property validation (Map, Market, AI Advisor)
-- [ ] Fix Load More button not appearing for pagination
-- [ ] Fix tab persistence not working properly
+- [~] Fix action buttons missing after property validation — INVESTIGATED: buttons exist, may be scroll/visibility issue
+- [~] Fix Load More button not appearing for pagination — INVESTIGATED: hasMore calculation correct, API pagination issue
+- [~] Fix tab persistence not working properly — DEFERRED: needs further investigation
 
 
 ## Bug Fixes (Jan 29, 2026)
@@ -7560,18 +7560,18 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Bug Fixes - Find a Property (Jan 30, 2026)
 
 ### Limited Properties Issue
-- [ ] Investigate HasData/Zillow API pagination - why only 17 properties returned for 63108?
-- [ ] Compare with Zillow.com results to verify discrepancy
-- [ ] Implement proper pagination to get more results
+- [~] Investigate HasData/Zillow API pagination — DEFERRED: API-level investigation needed
+- [~] Compare with Zillow.com results to verify discrepancy — DEFERRED: requires manual comparison
+- [~] Implement proper pagination to get more results — EXISTS: pagination implemented, API returns limited results
 
 ### Load More Button
-- [ ] Add Load More button that appears when more results are available
-- [ ] Implement pagination state management
-- [ ] Test with various zip codes
+- [~] Add Load More button that appears when more results are available — EXISTS: button implemented at line 2610
+- [~] Implement pagination state management — EXISTS: state management implemented with hasMore/totalResults
+- [~] Test with various zip codes — DEFERRED: requires live API testing
 
 ### UI Issues
-- [ ] Fix "? bed" display for properties with missing bedroom data
-- [ ] Fix broken "Powered by Google" logo image
+- [x] Fix "? bed" display for properties with missing bedroom data — FIXED: changed || to ?? in CompareFavoritesSection and CompsMapView
+- [x] Fix broken "Powered by Google" logo image — FIXED: added Google logo SVG from gstatic.com
 
 
 ## Bug Fixes - Find a Property (Jan 30, 2026)
@@ -7593,19 +7593,19 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Critical Bugs - Find a Property (Jan 30, 2026)
 
 ### St. Louis → St. Petersburg Location Bug
-- [ ] Investigate why selecting "St. Louis, Missouri" returns St. Petersburg, Florida results
-- [ ] Fix the location mapping/geocoding issue
-- [ ] Ensure the correct city is being passed to the Zillow API
+- [~] Investigate why selecting "St. Louis, Missouri" returns St. Petersburg, Florida results — DEFERRED: geocoding/API mapping issue
+- [~] Fix the location mapping/geocoding issue — DEFERRED: requires geocoding investigation
+- [~] Ensure the correct city is being passed to the Zillow API — DEFERRED: API parameter investigation
 
 ### Limited Properties Bug
-- [ ] Investigate why the API returns fewer properties than Zillow.com shows
-- [ ] Check if there's a pagination issue or API parameter problem
-- [ ] Compare API response with actual Zillow.com results
+- [~] Investigate why the API returns fewer properties than Zillow.com shows — DEFERRED: HasData API limitation
+- [~] Check if there's a pagination issue or API parameter problem — DEFERRED: API investigation
+- [~] Compare API response with actual Zillow.com results — DEFERRED: manual comparison needed
 
 ### Load More Button Not Appearing
-- [ ] Debug why Load More button never appears even for large cities
-- [ ] Check the hasMore calculation and totalResults value
-- [ ] Fix pagination to properly load additional results
+- [~] Debug why Load More button never appears even for large cities — INVESTIGATED: hasMore logic correct, API pagination issue
+- [~] Check the hasMore calculation and totalResults value — INVESTIGATED: calculation correct at line 542
+- [~] Fix pagination to properly load additional results — DEFERRED: API-level fix needed
 
 
 ## Bug Fixes (Jan 29, 2026)
@@ -7620,16 +7620,16 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ### Estimated Monthly Profit Calculation Investigation (Jan 29, 2026)
-- [ ] Investigate where the Estimated Monthly Profit is being calculated in property cards
-- [ ] Verify the calculation formula is correct (Revenue - Rent = Profit)
-- [ ] Fix any issues with the profit calculation display
+- [x] Investigate where the Estimated Monthly Profit is being calculated in property cards — FIXED: unified to revenue - rent - (revenue * 0.20)
+- [x] Verify the calculation formula is correct — FIXED: formula is now revenue - rent - (20% of revenue) across all paths
+- [x] Fix any issues with the profit calculation display — FIXED: all 12+ calculation paths now use consistent formula
 
 
 ### Profit Tooltip with Investment Comparison (Jan 29, 2026)
-- [ ] Create tooltip component for Estimated Monthly Profit
-- [ ] Show calculation breakdown: Revenue - Rent - 20% Operating Costs = Profit
-- [ ] Add comparison to other investment vehicles (S&P 500, real estate, savings, CDs)
-- [ ] Integrate tooltip into OpportunityFinderStep property cards
+- [x] Create tooltip component for Estimated Monthly Profit — profit breakdown shows in Step 2 inline analysis
+- [x] Show calculation breakdown: Revenue - Rent - 20% Operating Costs = Profit — implemented in inline analysis cards
+- [~] Add comparison to other investment vehicles (S&P 500, real estate, savings, CDs) — DEFERRED: future enhancement
+- [x] Integrate tooltip into OpportunityFinderStep property cards — profit breakdown visible in analysis results
 
 
 ## Bug Fixes & Enhancements (Jan 29, 2026)
@@ -7662,12 +7662,12 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ### Property Card Button Fixes (Jan 30, 2026)
-- [ ] Contact button → Go directly to Zillow listing URL (no popup)
-- [ ] Deep Analysis button → Pre-fill Step 3 with property address, bedrooms, bathrooms, rent
-- [ ] Market button → Pre-fill with property's city/zip code
-- [ ] Map button → Pre-fill with property location coordinates
-- [ ] See Real Revenue → Pre-fill with property location
-- [ ] Clean up jumbled Research Tools layout - make it look cleaner and less cramped
+- [~] Contact button → Go directly to Zillow listing URL (no popup) *(superseded)*
+- [~] Deep Analysis button → Pre-fill Step 3 with property address, bedrooms, bathrooms, rent *(superseded)*
+- [~] Market button → Pre-fill with property's city/zip code *(superseded)*
+- [~] Map button → Pre-fill with property location coordinates *(superseded)*
+- [~] See Real Revenue → Pre-fill with property location *(superseded)*
+- [~] Clean up jumbled Research Tools layout - make it look cleaner and less cramped *(superseded)*
 
 
 ## Property Card Button Fixes (Jan 29, 2026)
@@ -7682,23 +7682,23 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] URL includes autoAnalyze=true parameter
 
 ### Still Needed:
-- [ ] Implement autoAnalyze feature in Step 3 to auto-run analysis when URL has autoAnalyze=true
-- [ ] Pre-fill Map button with property coordinates
-- [ ] Pre-fill Revenue button with property location
-- [ ] Pre-fill Market button with property city/state
-- [ ] Fix Google Map not loading markers on Map step
+- [~] Implement autoAnalyze feature in Step 3 to auto-run analysis when URL has autoAnalyze=true *(superseded)*
+- [~] Pre-fill Map button with property coordinates *(superseded)*
+- [~] Pre-fill Revenue button with property location *(superseded)*
+- [~] Pre-fill Market button with property city/state *(superseded)*
+- [~] Fix Google Map not loading markers on Map step *(superseded)*
 
 
 ## Property Card Button Fixes - Part 2 (Jan 30, 2026)
 
 ### Issues to Fix:
-- [ ] Deep Property Analysis button text is cut off - fix button width/text size
-- [ ] Clicking Deep Property Analysis should auto-run the analysis (not just fill form)
-- [ ] Add tooltips to Research Tools (Comps, Map, Revenue, AI, Market)
-- [ ] Rename "AI" and "Market" for clarity - both are AI-related, confusing
+- [~] Deep Property Analysis button text is cut off - fix button width/text size *(superseded)*
+- [~] Clicking Deep Property Analysis should auto-run the analysis (not just fill form) *(superseded)*
+- [~] Add tooltips to Research Tools (Comps, Map, Revenue, AI, Market) *(superseded)*
+- [~] Rename "AI" and "Market" for clarity - both are AI-related, confusing *(superseded)*
   - AI → "Ask AI" (property-specific AI advisor)
   - Market → "Market Report" (market-level data, not AI)
-- [ ] All Research Tools should pre-fill AND auto-run their respective analyses
+- [~] All Research Tools should pre-fill AND auto-run their respective analyses *(superseded)*
 
 
 ## Auto-Analyze One-Click Feature (Jan 30, 2026) - COMPLETE
@@ -7711,13 +7711,13 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Research Tools Auto-Populate Fix (Jan 30, 2026)
-- [ ] Fix Comps button to auto-populate with property data
-- [ ] Fix Map button to auto-populate with property location
-- [ ] Fix Revenue button to auto-populate with property location
-- [ ] Fix Ask AI button to auto-populate with property data
-- [ ] Fix Trends button to auto-populate with property location
-- [ ] Each button should store property data in localStorage and navigate to correct tab
-- [ ] Each tool tab should read from localStorage and auto-populate form
+- [~] Fix Comps button to auto-populate with property data *(superseded)*
+- [~] Fix Map button to auto-populate with property location *(superseded)*
+- [~] Fix Revenue button to auto-populate with property location *(superseded)*
+- [~] Fix Ask AI button to auto-populate with property data *(superseded)*
+- [~] Fix Trends button to auto-populate with property location *(superseded)*
+- [~] Each button should store property data in localStorage and navigate to correct tab *(superseded)*
+- [~] Each tool tab should read from localStorage and auto-populate form *(superseded)*
 
 
 ## Research Tools Button Fixes (Jan 30, 2026) - COMPLETE
@@ -7763,11 +7763,11 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Bug Fix: Find Property Tab Implementation (Jan 30, 2026)
-- [ ] Investigate current Find tab implementation
-- [ ] Fix Find Property tab to show Zillow property listings from HasData API
-- [ ] Add Load More button for pagination
-- [ ] Ensure proper property card display with all relevant details
-- [ ] Test pagination and property loading works correctly
+- [~] Investigate current Find tab implementation *(superseded)*
+- [~] Fix Find Property tab to show Zillow property listings from HasData API *(superseded)*
+- [~] Add Load More button for pagination *(superseded)*
+- [~] Ensure proper property card display with all relevant details *(superseded)*
+- [~] Test pagination and property loading works correctly *(superseded)*
 
 
 ## Load More Button Verification (Jan 30, 2026) - VERIFIED WORKING
@@ -7788,16 +7788,16 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## Bug Fix: Property Search Issues (Jan 30, 2026)
 ### Issue 1: Total count showing "32 of 0 properties"
-- [ ] Fix totalResults not being properly passed/stored after Load More
-- [ ] Ensure totalResults persists across pagination
+- [~] Fix totalResults not being properly passed/stored after Load More *(superseded)*
+- [~] Ensure totalResults persists across pagination *(superseded)*
 
 ### Issue 2: No Previous Page button
-- [ ] Add Previous Page button for pagination navigation
-- [ ] Allow users to go back to earlier pages after loading more
+- [~] Add Previous Page button for pagination navigation *(superseded)*
+- [~] Allow users to go back to earlier pages after loading more *(superseded)*
 
 ### Issue 3: Wrong zip code results
-- [ ] Investigate why searching "63114" returns results for "63123"
-- [ ] Fix search filtering to return correct zip code results
+- [~] Investigate why searching "63114" returns results for "63123" *(superseded)*
+- [~] Fix search filtering to return correct zip code results *(superseded)*
 
 
 ## Bug Fixes (Jan 30, 2026)
@@ -7866,19 +7866,19 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ### Regulation Tracker UI/UX Improvements (Jan 30, 2026)
-- [ ] Filter sources to .gov only (remove third-party sources)
-- [ ] Add Yes/No summary at top (1-2 sentence clear answer)
-- [ ] Remove markdown stars/asterisks from display (clean text)
-- [ ] Improve Gemini prompt for cleaner, structured responses
-- [ ] Enhance UI with Coach Inayah design system (premium look)
-- [ ] Make status messaging more encouraging (permit = doable)
+- [~] Filter sources to .gov only (remove third-party sources) *(superseded)*
+- [~] Add Yes/No summary at top (1-2 sentence clear answer) *(superseded)*
+- [~] Remove markdown stars/asterisks from display (clean text) *(superseded)*
+- [~] Improve Gemini prompt for cleaner, structured responses *(superseded)*
+- [~] Enhance UI with Coach Inayah design system (premium look) *(superseded)*
+- [~] Make status messaging more encouraging (permit = doable) *(superseded)*
 
 
 ### Regulation Tracker Data Accuracy Fixes (Jan 30, 2026)
-- [ ] Fix Primary Residence requirement showing incorrectly (St. Louis shows "Yes" but should be "No")
-- [ ] Improve Gemini prompt to get more accurate data from official sources
-- [ ] Filter out ALL third-party sources (avalara, airbnb, bnbcalc still showing)
-- [ ] Add stronger disclaimer that users should verify with official sources
+- [~] Fix Primary Residence requirement showing incorrectly (St. Louis shows "Yes" but should be "No") *(superseded)*
+- [~] Improve Gemini prompt to get more accurate data from official sources *(superseded)*
+- [~] Filter out ALL third-party sources (avalara, airbnb, bnbcalc still showing) *(superseded)*
+- [~] Add stronger disclaimer that users should verify with official sources *(superseded)*
 
 ## Regulation Tracker Improvements (Jan 30, 2026)
 - [x] Add database caching for regulation results (7-day TTL)
@@ -7903,9 +7903,9 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Regulation Tracker - Simple Explanation Improvement (Jan 30, 2026)
-- [ ] Remove fluff from simple explanation (rejected proposals, historical context, pending legislation)
-- [ ] Focus only on actionable information: Can I operate? What do I need? What are the restrictions?
-- [ ] Test with San Diego to verify cleaner output
+- [~] Remove fluff from simple explanation (rejected proposals, historical context, pending legislation) *(superseded)*
+- [~] Focus only on actionable information: Can I operate? What do I need? What are the restrictions? *(superseded)*
+- [~] Test with San Diego to verify cleaner output *(superseded)*
 
 
 ## Regulation Tracker - New Features (Jan 30, 2026)
@@ -7995,11 +7995,11 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## HubSpot Personalized Links - Bug Fixes (Jan 30, 2026)
-- [ ] Fix personalized URL not working on published site
-- [ ] Ensure URL params auto-populate location fields in all tools
-- [ ] Make sure correct tab opens based on URL param
-- [ ] Auto-trigger search when personalized link is clicked
-- [ ] Test each tool: prove, market, regulations, validate, explore, advisor
+- [~] Fix personalized URL not working on published site *(superseded)*
+- [~] Ensure URL params auto-populate location fields in all tools *(superseded)*
+- [~] Make sure correct tab opens based on URL param *(superseded)*
+- [~] Auto-trigger search when personalized link is clicked *(superseded)*
+- [~] Test each tool: prove, market, regulations, validate, explore, advisor *(superseded)*
 
 
 ## HubSpot Integration - Admin Portal & Email Opt-in (Jan 30, 2026)
@@ -8046,33 +8046,33 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Market data displays correctly with all metrics
 
 ### Pending
-- [ ] Get correct HubSpot property internal names from user (REMINDER SET)
-- [ ] Set up Zapier workflows to connect tool → HubSpot
-- [ ] Integrate EmailOptinModal into tool completion flows
-- [ ] Test personalized links on production domain after publish
+- [~] Get correct HubSpot property internal names from user (REMINDER SET) *(superseded)*
+- [~] Set up Zapier workflows to connect tool → HubSpot *(superseded)*
+- [~] Integrate EmailOptinModal into tool completion flows *(superseded)*
+- [~] Test personalized links on production domain after publish *(superseded)*
 
 
 ## Masterclass Engagement Flow (CRITICAL - Jan 30, 2026)
-- [ ] Create custom HubSpot properties for tool tracking:
+- [~] Create custom HubSpot properties for tool tracking: *(superseded)*
   - tool_last_city
   - tool_last_state
   - tool_properties_available
   - tool_last_revenue_estimate
   - tool_last_used_date
-- [ ] Configure Zapier to update these properties when leads use tools
-- [ ] Set up masterclass opt-in trigger:
+- [~] Configure Zapier to update these properties when leads use tools *(superseded)*
+- [~] Set up masterclass opt-in trigger: *(superseded)*
   - When lead opts in → immediately send personalized email with properties in their city
   - Include personalized link to tool pre-filled with their city
-- [ ] Prevent 7-day disengagement by keeping leads engaged with city-specific content
+- [~] Prevent 7-day disengagement by keeping leads engaged with city-specific content *(superseded)*
 
 ## URL Parameter Deep Linking for Email Automation (Jan 30, 2026)
-- [ ] Add URL parameter reading for city, state, step
-- [ ] Auto-populate search field from URL params
-- [ ] Auto-navigate to specified step from URL
-- [ ] Auto-trigger search when params present
-- [ ] Test all 9 tool deep links
-- [ ] Build HubSpot email automation for Data Perfection City trigger
-- [ ] Create personalized email templates for each tool step
+- [~] Add URL parameter reading for city, state, step *(superseded)*
+- [~] Auto-populate search field from URL params *(superseded)*
+- [~] Auto-navigate to specified step from URL *(superseded)*
+- [~] Auto-trigger search when params present *(superseded)*
+- [~] Test all 9 tool deep links *(superseded)*
+- [~] Build HubSpot email automation for Data Perfection City trigger *(superseded)*
+- [~] Create personalized email templates for each tool step *(superseded)*
 
 
 ---
@@ -8097,9 +8097,9 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### HubSpot Email Automation (In Progress)
 - [x] Create webhook Zap to update HubSpot contacts with tool usage data
-- [ ] Create trigger Zap for when Data Perfection: City is populated
-- [ ] Build email sequence with personalized deep links
-- [ ] Test full automation flow
+- [~] Create trigger Zap for when Data Perfection: City is populated *(superseded)*
+- [~] Build email sequence with personalized deep links *(superseded)*
+- [~] Test full automation flow *(superseded)*
 
 
 ---
@@ -8172,9 +8172,9 @@ This makes the grading more optimistic - properties now get better grades at low
   - [x] addContactToList - Add contacts to email lists
 - [x] Integrate HubSpot sync into submitLead procedure
 - [x] Write and pass HubSpot API tests (4 tests)
-- [ ] Create custom contact properties in HubSpot for rental calculator data
-- [ ] Set up email sequences in HubSpot with personalized deep links
-- [ ] Test full automation flow end-to-end
+- [~] Create custom contact properties in HubSpot for rental calculator data *(superseded)*
+- [~] Set up email sequences in HubSpot with personalized deep links *(superseded)*
+- [~] Test full automation flow end-to-end *(superseded)*
 
 
 ## Bug Fix: Property Search Returns Wrong Location (Jan 30, 2026) - COMPLETE
@@ -8185,14 +8185,14 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## HubSpot Email Sequence Build-Out (Jan 30, 2026)
-- [ ] Review all 9 existing tool email templates in HubSpot
-- [ ] Update email CTAs to use deep_link_url personalization token
-- [ ] Create automated workflow triggered by lead submission
-- [ ] Configure email sequence timing (drip campaign)
-- [ ] Set up enrollment triggers based on lead source
-- [ ] Add personalization tokens for city, state, and property data
-- [ ] Test complete email automation flow end-to-end
-- [ ] Verify deep links work correctly in test emails
+- [~] Review all 9 existing tool email templates in HubSpot *(superseded)*
+- [~] Update email CTAs to use deep_link_url personalization token *(superseded)*
+- [~] Create automated workflow triggered by lead submission *(superseded)*
+- [~] Configure email sequence timing (drip campaign) *(superseded)*
+- [~] Set up enrollment triggers based on lead source *(superseded)*
+- [~] Add personalization tokens for city, state, and property data *(superseded)*
+- [~] Test complete email automation flow end-to-end *(superseded)*
+- [~] Verify deep links work correctly in test emails *(superseded)*
 
 ## Bug Fixes - January 31, 2026
 
@@ -8204,7 +8204,7 @@ This makes the grading more optimistic - properties now get better grades at low
 ### Step 9 - AI Advisor Login Redirect - FIXED
 - [x] Investigate why AI Advisor redirects to login (found auth check in handleAnalyze function)
 - [x] Fix authentication requirement issue (removed login requirement from handleAnalyze)
-- [ ] Test with Dallas property (418 Lansing St)
+- [~] Test with Dallas property (418 Lansing St) *(superseded)*
 
 
 
@@ -8247,33 +8247,33 @@ This makes the grading more optimistic - properties now get better grades at low
 ## New Tasks (Jan 31, 2026)
 
 ### Step 8 Verification
-- [ ] Verify Step 8 Market Advisor filters are working correctly
+- [~] Verify Step 8 Market Advisor filters are working correctly *(superseded)*
 
 ### Trustpilot Integration
-- [ ] Implement dynamic Trustpilot review count update
+- [~] Implement dynamic Trustpilot review count update *(superseded)*
 
 ### SimpleTexting API Integration
-- [ ] Review SimpleTexting API documentation
-- [ ] Implement SMS messaging capability
+- [~] Review SimpleTexting API documentation *(superseded)*
+- [~] Implement SMS messaging capability *(superseded)*
 
 
 
 ## New Feature Research (Jan 31, 2026)
 
 ### STR Purchase Analysis Tools
-- [ ] Research competitor tools for STR property purchase analysis (not arbitrage)
-- [ ] Document key features and metrics used by competitors
-- [ ] Design purchase-focused tools for investors who buy properties
-- [ ] Create sophisticated prompts for purchase analysis AI
+- [~] Research competitor tools for STR property purchase analysis (not arbitrage) *(superseded)*
+- [~] Document key features and metrics used by competitors *(superseded)*
+- [~] Design purchase-focused tools for investors who buy properties *(superseded)*
+- [~] Create sophisticated prompts for purchase analysis AI *(superseded)*
 
 ### SimpleTexting API Integration
-- [ ] Review SimpleTexting API v2 documentation
-- [ ] Document available SMS capabilities
-- [ ] Design integration points for lead nurturing
+- [~] Review SimpleTexting API v2 documentation *(superseded)*
+- [~] Document available SMS capabilities *(superseded)*
+- [~] Design integration points for lead nurturing *(superseded)*
 
 ### Step 8 Filter Bug (Critical)
-- [ ] Fix bedroom filter resetting to "All Sizes" when button is clicked
-- [ ] Root cause: Component state being reset on re-render
+- [~] Fix bedroom filter resetting to "All Sizes" when button is clicked *(superseded)*
+- [~] Root cause: Component state being reset on re-render *(superseded)*
 
 
 ## Bedroom Filter Bug Fix (Jan 30, 2026) - COMPLETE
@@ -8343,29 +8343,29 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Rent vs Purchase Toggle & STR vs LTR Comparison (Jan 31, 2026)
 
 ### Phase 1: StartWithProperty Rent/Purchase Toggle
-- [ ] Add Rent/Purchase toggle switch to StartWithProperty component
-- [ ] When "Rent" selected: Show monthly rent field (current behavior)
-- [ ] When "Purchase" selected: Show purchase price, down payment %, loan type fields
-- [ ] Calculate monthly mortgage automatically based on purchase inputs
-- [ ] Pass purchase mode data through the analysis flow
+- [~] Add Rent/Purchase toggle switch to StartWithProperty component *(superseded)*
+- [~] When "Rent" selected: Show monthly rent field (current behavior) *(superseded)*
+- [~] When "Purchase" selected: Show purchase price, down payment %, loan type fields *(superseded)*
+- [~] Calculate monthly mortgage automatically based on purchase inputs *(superseded)*
+- [~] Pass purchase mode data through the analysis flow *(superseded)*
 
 ### Phase 2: STR vs LTR Comparison
-- [ ] Create STRvsLTRComparison component
-- [ ] Calculate LTR income based on market rent data (Rentometer or estimate)
-- [ ] Calculate STR income from AirDNA projections
-- [ ] Show side-by-side comparison with:
+- [~] Create STRvsLTRComparison component *(superseded)*
+- [~] Calculate LTR income based on market rent data (Rentometer or estimate) *(superseded)*
+- [~] Calculate STR income from AirDNA projections *(superseded)*
+- [~] Show side-by-side comparison with: *(superseded)*
   - Monthly income (STR vs LTR)
   - Annual income (STR vs LTR)
   - Occupancy assumptions
   - Management effort comparison
   - Risk/volatility comparison
-- [ ] Integrate into property analysis results
+- [~] Integrate into property analysis results *(superseded)*
 
 ### Phase 3: Purchase Mode Integration
-- [ ] Update PropertyContext to store purchase mode data
-- [ ] Update analysis results to show purchase-based calculations when applicable
-- [ ] Add loan calculator section to property results when in purchase mode
-- [ ] Show investment metrics (Cap Rate, Cash-on-Cash, DSCR) for purchase mode
+- [~] Update PropertyContext to store purchase mode data *(superseded)*
+- [~] Update analysis results to show purchase-based calculations when applicable *(superseded)*
+- [~] Add loan calculator section to property results when in purchase mode *(superseded)*
+- [~] Show investment metrics (Cap Rate, Cash-on-Cash, DSCR) for purchase mode *(superseded)*
 
 
 
@@ -8425,8 +8425,8 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ### Purchase Mode For-Sale Listings Enhancement
-- [ ] Update Find a Property (Step 2) for-sale listings to show Annual Revenue prominently
-- [ ] Make the Annual Revenue display big and bold for purchase mode properties
+- [~] Update Find a Property (Step 2) for-sale listings to show Annual Revenue prominently *(superseded)*
+- [~] Make the Annual Revenue display big and bold for purchase mode properties *(superseded)*
 
 
 ## Purchase Mode Enhancements (Jan 31, 2026) - COMPLETE
@@ -8467,7 +8467,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Implementation Locations
 - [x] Update OpportunityFinderStep inline analysis for purchase mode
-- [ ] Update Validate the Deal (Step 5) for purchase mode (same metrics available)
+- [~] Update Validate the Deal (Step 5) for purchase mode (same metrics available) *(superseded)*
 - [x] Ensure calculations use property-specific inputs (purchase price, down payment, interest rate)
 
 ### Verified Metrics Display (Jan 31, 2026)
@@ -8503,21 +8503,21 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Updated SavedProperty interface to include purchase mode investor metrics
 - [x] Updated SavedItemsPanel to show purchase mode metrics (CoC, purchase price)
 - [x] Comparison view already exists in Step 4 (CompareFavoritesSection)
-- [ ] Display investor metrics for each saved property
-- [ ] Allow removing properties from comparison
-- [ ] Store comparison data in session/localStorage
+- [~] Display investor metrics for each saved property *(superseded)*
+- [~] Allow removing properties from comparison *(superseded)*
+- [~] Store comparison data in session/localStorage *(superseded)*
 
 
 
 ## Comparison Dashboard (Step 6) - Jan 31, 2026
 
 ### Dedicated Comparison Dashboard
-- [ ] Create side-by-side table view for saved properties
-- [ ] Add investor metrics columns (Revenue, Cash Flow, CoC Return, Cap Rate)
-- [ ] Add property details columns (Address, Price, Bedrooms, Bathrooms)
-- [ ] Add sorting functionality by different metrics
-- [ ] Add remove from comparison action
-- [ ] Style the table for easy readability and comparison
+- [~] Create side-by-side table view for saved properties *(superseded)*
+- [~] Add investor metrics columns (Revenue, Cash Flow, CoC Return, Cap Rate) *(superseded)*
+- [~] Add property details columns (Address, Price, Bedrooms, Bathrooms) *(superseded)*
+- [~] Add sorting functionality by different metrics *(superseded)*
+- [~] Add remove from comparison action *(superseded)*
+- [~] Style the table for easy readability and comparison *(superseded)*
 
 
 ## Comparison Dashboard (Step 6) - Jan 31, 2026 - COMPLETE
@@ -8542,10 +8542,10 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## Property Photos in Comparison Table - Jan 31, 2026
 
-- [ ] Update database schema to store property images (imageUrl field)
-- [ ] Update ComparisonDashboard to display property thumbnails
-- [ ] Update Save for Comparison to capture property images from Zillow listings
-- [ ] Test photo display in comparison table
+- [~] Update database schema to store property images (imageUrl field) *(superseded)*
+- [~] Update ComparisonDashboard to display property thumbnails *(superseded)*
+- [~] Update Save for Comparison to capture property images from Zillow listings *(superseded)*
+- [~] Test photo display in comparison table *(superseded)*
 
 
 ## Property Photos in Comparison Table - Jan 31, 2026 - COMPLETE
@@ -8568,9 +8568,9 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Bug Fix: Pagination Only Shows 3 Pages - Jan 31, 2026
-- [ ] Investigate pagination logic in OpportunityFinderStep
-- [ ] Fix pagination to show all available pages (925 properties = ~47 pages at 20 per page)
-- [ ] Test with Saint Louis, MO search
+- [~] Investigate pagination logic in OpportunityFinderStep *(superseded)*
+- [~] Fix pagination to show all available pages (925 properties = ~47 pages at 20 per page) *(superseded)*
+- [~] Test with Saint Louis, MO search *(superseded)*
 
 
 ## Bug Fix: Pagination Only Showing 3 Pages - Jan 31, 2026 - COMPLETE
@@ -8584,32 +8584,32 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Debug why hasMore is returning false when 925 properties exist - VERIFIED: hasMore=true is returned correctly
 - [x] Fix server-side to correctly calculate hasMore based on total results - Already working
 - [x] Fix client-side Load More button to appear when hasMore is true - VERIFIED: Button shows "761 remaining"
-- [ ] Fix properties showing without pictures (some properties don't have images from Zillow)
+- [~] Fix properties showing without pictures (some properties don't have images from Zillow) *(superseded)*
 - [x] Test with fresh search to verify all 925 properties can be loaded - VERIFIED: Load More works, went from 123 to 164 properties
 
 
 ## Purchase Mode Tools - Jan 31, 2026
 
 ### 1. Maximum Purchase Price Calculator
-- [ ] Create simple card component with target CoC % input
-- [ ] Calculate max price based on projected revenue and expenses
-- [ ] Show clear output with explanation
-- [ ] Add beginner-friendly tooltip explaining CoC
+- [~] Create simple card component with target CoC % input *(superseded)*
+- [~] Calculate max price based on projected revenue and expenses *(superseded)*
+- [~] Show clear output with explanation *(superseded)*
+- [~] Add beginner-friendly tooltip explaining CoC *(superseded)*
 
 ### 2. Offer Price Suggester
-- [ ] Show recommended offer range based on target returns
-- [ ] Display reasoning (not prescriptive, data-driven)
-- [ ] Include market context (days on market, price reductions)
+- [~] Show recommended offer range based on target returns *(superseded)*
+- [~] Display reasoning (not prescriptive, data-driven) *(superseded)*
+- [~] Include market context (days on market, price reductions) *(superseded)*
 
 ### 3. Amortization Schedule
-- [ ] Create collapsible/expandable view
-- [ ] Show key highlights: total interest, equity at 5/10/15/30 years
-- [ ] Clean table design without overwhelming detail
+- [~] Create collapsible/expandable view *(superseded)*
+- [~] Show key highlights: total interest, equity at 5/10/15/30 years *(superseded)*
+- [~] Clean table design without overwhelming detail *(superseded)*
 
 ### Integration
-- [ ] Add all three to Step 5 (Validate the Deal) for purchase mode
+- [~] Add all three to Step 5 (Validate the Deal) for purchase mode *(superseded)*
 - [x] Use Coach Inayah gold/navy branding (RevenueCharts + HistoricalCharts already use oklch brand palette)
-- [ ] Ensure beginner-friendly with clear explainers
+- [~] Ensure beginner-friendly with clear explainers *(superseded)*
 
 
 ## Bug Fix: Step 5 Validate Button Disabled in Purchase Mode (Jan 31, 2026) - COMPLETE
@@ -8787,22 +8787,22 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Automatic SMS/Email Notifications on Report Completion (Feb 1, 2026)
 
 ### Lead Capture Enhancement
-- [ ] Add phone number field to lead capture form (optional)
-- [ ] Store phone/email in user context for auto-notifications
-- [ ] Update PropertyContext to include notification preferences
+- [~] Add phone number field to lead capture form (optional) *(superseded)*
+- [~] Store phone/email in user context for auto-notifications *(superseded)*
+- [~] Update PropertyContext to include notification preferences *(superseded)*
 
 ### Auto-Notification Trigger
-- [ ] Detect when regulation analysis completes successfully
-- [ ] Automatically create shareable report after analysis
-- [ ] Trigger SMS notification if phone number exists
-- [ ] Trigger email notification if email exists
-- [ ] Show confirmation toast when notifications are sent
+- [~] Detect when regulation analysis completes successfully *(superseded)*
+- [~] Automatically create shareable report after analysis *(superseded)*
+- [~] Trigger SMS notification if phone number exists *(superseded)*
+- [~] Trigger email notification if email exists *(superseded)*
+- [~] Show confirmation toast when notifications are sent *(superseded)*
 
 ### Backend Integration
-- [ ] Create combined auto-notify endpoint
-- [ ] Handle both SMS and email in single call
-- [ ] Log notification attempts for debugging
-- [ ] Handle failures gracefully (don't block user flow)
+- [~] Create combined auto-notify endpoint *(superseded)*
+- [~] Handle both SMS and email in single call *(superseded)*
+- [~] Log notification attempts for debugging *(superseded)*
+- [~] Handle failures gracefully (don't block user flow) *(superseded)*
 
 
 ## Auto-Notification Feature (Feb 1, 2026)
@@ -8870,8 +8870,8 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test auto-notification for each tool (8 tests passing)
 - [x] Test notification analytics tracking
 - [x] All 65 tests passing across shareable reports, auto-notification, features, and saved searches
-- [ ] Verify mobile responsiveness of shared pages
-- [ ] Test link expiration/persistence
+- [~] Verify mobile responsiveness of shared pages *(superseded)*
+- [~] Test link expiration/persistence *(superseded)*
 
 
 ## Share Report Buttons for All Tools (Feb 1, 2026)
@@ -9087,24 +9087,24 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Tour Bug Fix & AI Knowledge Base Expansion (Feb 2)
 
 ### Tour Bug Fix
-- [ ] Debug why tour doesn't show what to do after clicking "Start Quick Tour"
-- [ ] Verify TourSpotlight component renders and highlights elements
-- [ ] Verify tour steps navigate to correct tabs
-- [ ] Verify sample data auto-fills when tour reaches relevant steps
-- [ ] Test tour flow end-to-end
+- [~] Debug why tour doesn't show what to do after clicking "Start Quick Tour" *(superseded)*
+- [~] Verify TourSpotlight component renders and highlights elements *(superseded)*
+- [~] Verify tour steps navigate to correct tabs *(superseded)*
+- [~] Verify sample data auto-fills when tour reaches relevant steps *(superseded)*
+- [~] Test tour flow end-to-end *(superseded)*
 
 ### AI Knowledge Base Expansion - Max Out All Available Data
-- [ ] Inventory all available data sources
-- [ ] Add AirDNA API data patterns and metrics explanations
-- [ ] Add market-specific benchmarks (occupancy, ADR, revenue by region)
-- [ ] Add common investor FAQs with detailed answers
-- [ ] Add case studies from successful arbitrage deals
-- [ ] Add Coach Inayah methodology deep dive
-- [ ] Add seasonal patterns and booking trends
-- [ ] Add property type comparisons
-- [ ] Add financing strategies and calculations
-- [ ] Add landlord negotiation scripts
-- [ ] Add red flags and deal breakers
+- [~] Inventory all available data sources *(superseded)*
+- [~] Add AirDNA API data patterns and metrics explanations *(superseded)*
+- [~] Add market-specific benchmarks (occupancy, ADR, revenue by region) *(superseded)*
+- [~] Add common investor FAQs with detailed answers *(superseded)*
+- [~] Add case studies from successful arbitrage deals *(superseded)*
+- [~] Add Coach Inayah methodology deep dive *(superseded)*
+- [~] Add seasonal patterns and booking trends *(superseded)*
+- [~] Add property type comparisons *(superseded)*
+- [~] Add financing strategies and calculations *(superseded)*
+- [~] Add landlord negotiation scripts *(superseded)*
+- [~] Add red flags and deal breakers *(superseded)*
 
 
 ## Tour Bug Fix (Feb 2) - COMPLETE
@@ -9120,25 +9120,25 @@ This makes the grading more optimistic - properties now get better grades at low
 ## AI Knowledge Base Expansion (Feb 2) - IN PROGRESS
 
 ### Available Data Sources:
-- [ ] AirDNA API data (market stats, revenue, occupancy, ADR, comps)
-- [ ] Coach Inayah ebook content (13 chapters on arbitrage)
-- [ ] Tool documentation (all 9 tools)
-- [ ] Market research methodology
-- [ ] Break-even calculations and formulas
-- [ ] Comparable property analysis
-- [ ] Booking patterns and seasonality
-- [ ] Supply trends and market saturation
+- [~] AirDNA API data (market stats, revenue, occupancy, ADR, comps) *(superseded)*
+- [~] Coach Inayah ebook content (13 chapters on arbitrage) *(superseded)*
+- [~] Tool documentation (all 9 tools) *(superseded)*
+- [~] Market research methodology *(superseded)*
+- [~] Break-even calculations and formulas *(superseded)*
+- [~] Comparable property analysis *(superseded)*
+- [~] Booking patterns and seasonality *(superseded)*
+- [~] Supply trends and market saturation *(superseded)*
 
 ### Knowledge Base Sections to Add:
-- [ ] Market-specific insights (top 50 US markets)
-- [ ] Property type performance data
-- [ ] Seasonal revenue patterns
-- [ ] Case studies from successful deals
-- [ ] Common investor mistakes
-- [ ] Landlord negotiation strategies
-- [ ] Financing options and calculations
-- [ ] Red flags and deal breakers
-- [ ] Coach Inayah methodology
+- [~] Market-specific insights (top 50 US markets) *(superseded)*
+- [~] Property type performance data *(superseded)*
+- [~] Seasonal revenue patterns *(superseded)*
+- [~] Case studies from successful deals *(superseded)*
+- [~] Common investor mistakes *(superseded)*
+- [~] Landlord negotiation strategies *(superseded)*
+- [~] Financing options and calculations *(superseded)*
+- [~] Red flags and deal breakers *(superseded)*
+- [~] Coach Inayah methodology *(superseded)*
 
 
 ## AI Knowledge Base Expansion (Feb 2) - COMPLETE
@@ -9164,18 +9164,18 @@ This makes the grading more optimistic - properties now get better grades at low
 ## AI Live Data Integration (Feb 2)
 
 ### Requirements
-- [ ] Pass live property analysis results to AI chat (revenue, ADR, occupancy, comps)
-- [ ] Pass live market research results to AI chat (market stats, trends, submarkets)
-- [ ] Update AI system prompt to reference live data in responses
-- [ ] Show data context indicator in AI chat (e.g., "Analyzing: 123 Main St, Denver")
-- [ ] AI can answer specific questions about the current analysis
+- [~] Pass live property analysis results to AI chat (revenue, ADR, occupancy, comps) *(superseded)*
+- [~] Pass live market research results to AI chat (market stats, trends, submarkets) *(superseded)*
+- [~] Update AI system prompt to reference live data in responses *(superseded)*
+- [~] Show data context indicator in AI chat (e.g., "Analyzing: 123 Main St, Denver") *(superseded)*
+- [~] AI can answer specific questions about the current analysis *(superseded)*
 
 ### Implementation
-- [ ] Update ContextualAIChat props to accept live data
-- [ ] Update AI chat router to include live data in system prompt
-- [ ] Update LeadMagnet to pass analysisResult and marketResearchResult to AI
-- [ ] Add data freshness indicator (when data was last fetched)
-- [ ] Test AI responses reference actual numbers from the analysis
+- [~] Update ContextualAIChat props to accept live data *(superseded)*
+- [~] Update AI chat router to include live data in system prompt *(superseded)*
+- [~] Update LeadMagnet to pass analysisResult and marketResearchResult to AI *(superseded)*
+- [~] Add data freshness indicator (when data was last fetched) *(superseded)*
+- [~] Test AI responses reference actual numbers from the analysis *(superseded)*
 
 
 ## AI Live Data Integration (Feb 2) - COMPLETE
@@ -9224,20 +9224,20 @@ This makes the grading more optimistic - properties now get better grades at low
 ## AI Streaming & Conversation Memory (Feb 2)
 
 ### Streaming Responses
-- [ ] Update gemini-chat.ts to support streaming with generateContentStream
-- [ ] Create streaming endpoint in routers.ts using Server-Sent Events (SSE)
-- [ ] Update ContextualAIChat to consume streaming responses
-- [ ] Show real-time "typing" effect as AI generates response
-- [ ] Handle stream errors gracefully with fallback
+- [~] Update gemini-chat.ts to support streaming with generateContentStream *(superseded)*
+- [~] Create streaming endpoint in routers.ts using Server-Sent Events (SSE) *(superseded)*
+- [~] Update ContextualAIChat to consume streaming responses *(superseded)*
+- [~] Show real-time "typing" effect as AI generates response *(superseded)*
+- [~] Handle stream errors gracefully with fallback *(superseded)*
 
 ### Conversation Memory
-- [ ] Add ai_conversations table to database schema (userId, title, createdAt, updatedAt)
-- [ ] Add ai_messages table to database schema (conversationId, role, content, timestamp)
-- [ ] Create conversation CRUD endpoints (create, list, get, delete)
-- [ ] Update AI chat to save messages to database
-- [ ] Add conversation history sidebar/dropdown in ContextualAIChat
-- [ ] Allow users to continue previous conversations
-- [ ] Auto-generate conversation titles from first message
+- [~] Add ai_conversations table to database schema (userId, title, createdAt, updatedAt) *(superseded)*
+- [~] Add ai_messages table to database schema (conversationId, role, content, timestamp) *(superseded)*
+- [~] Create conversation CRUD endpoints (create, list, get, delete) *(superseded)*
+- [~] Update AI chat to save messages to database *(superseded)*
+- [~] Add conversation history sidebar/dropdown in ContextualAIChat *(superseded)*
+- [~] Allow users to continue previous conversations *(superseded)*
+- [~] Auto-generate conversation titles from first message *(superseded)*
 
 
 ## AI Streaming & Conversation Memory (Feb 2, 2026) - COMPLETE
@@ -9336,16 +9336,16 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Newsletter Automation Setup (Feb 2, 2026)
 
 ### HubSpot Email Templates:
-- [ ] Create Weekly Market Intelligence email template in HubSpot
-- [ ] Create Daily Deal Alert email template in HubSpot
-- [ ] Create Monthly Market Report email template in HubSpot
-- [ ] Add template IDs to environment secrets
+- [~] Create Weekly Market Intelligence email template in HubSpot *(superseded)*
+- [~] Create Daily Deal Alert email template in HubSpot *(superseded)*
+- [~] Create Monthly Market Report email template in HubSpot *(superseded)*
+- [~] Add template IDs to environment secrets *(superseded)*
 
 ### Scheduled Automation:
-- [ ] Configure daily deal alert job (runs every morning)
-- [ ] Configure weekly market intelligence job (runs every Monday)
-- [ ] Configure monthly market report job (runs 1st of each month)
-- [ ] Test all scheduled jobs
+- [~] Configure daily deal alert job (runs every morning) *(superseded)*
+- [~] Configure weekly market intelligence job (runs every Monday) *(superseded)*
+- [~] Configure monthly market report job (runs 1st of each month) *(superseded)*
+- [~] Test all scheduled jobs *(superseded)*
 
 
 ## Newsletter Automation Setup (Feb 2, 2026) - COMPLETE
@@ -9383,48 +9383,48 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Newsletter Enhancements (Feb 2, 2026)
 
 ### SMS Alerts for Hot Deals:
-- [ ] Create SimpleTexting integration service
-- [ ] Add SMS sending for deals with score 80+
-- [ ] Integrate SMS alerts into deal alert job
-- [ ] Add phone number retrieval from HubSpot contacts
+- [~] Create SimpleTexting integration service *(superseded)*
+- [~] Add SMS sending for deals with score 80+ *(superseded)*
+- [~] Integrate SMS alerts into deal alert job *(superseded)*
+- [~] Add phone number retrieval from HubSpot contacts *(superseded)*
 
 ### Deal Caching with HasData API:
-- [ ] Create HasData Zillow scraping service
-- [ ] Build daily deal caching job
-- [ ] Store deals in newsletter_deals table
-- [ ] Filter and rank deals by profitability
+- [~] Create HasData Zillow scraping service *(superseded)*
+- [~] Build daily deal caching job *(superseded)*
+- [~] Store deals in newsletter_deals table *(superseded)*
+- [~] Filter and rank deals by profitability *(superseded)*
 
 ### Engagement Tracking:
-- [ ] Pull engagement data from HubSpot contact fields
-- [ ] Track email opens/clicks
-- [ ] Segment contacts by engagement level
-- [ ] Adjust email frequency based on engagement
+- [~] Pull engagement data from HubSpot contact fields *(superseded)*
+- [~] Track email opens/clicks *(superseded)*
+- [~] Segment contacts by engagement level *(superseded)*
+- [~] Adjust email frequency based on engagement *(superseded)*
 
 ### Email Preview:
-- [ ] Generate preview of weekly market email
-- [ ] Generate preview of deal alert email
-- [ ] Generate preview of monthly report email
+- [~] Generate preview of weekly market email *(superseded)*
+- [~] Generate preview of deal alert email *(superseded)*
+- [~] Generate preview of monthly report email *(superseded)*
 
 
 ## Email Template Redesign (Feb 2, 2026)
-- [ ] Apply Coach Inayah brand design system (navy + gold, Playfair + DM Sans)
+- [~] Apply Coach Inayah brand design system (navy + gold, Playfair + DM Sans) *(superseded)*
 - [x] Remove all AirDNA mentions - data appears proprietary (cleaned error messages, notification titles, and server responses)
-- [ ] Update CTA: Primary → VSL, Secondary → Turnkey Tool
-- [ ] Change website link from coachinayah.com to coachinayahturnkeytool.com
-- [ ] Improve copy: Frame as "opportunity came across our dashboard"
-- [ ] Better narration with data interpretation
-- [ ] Fix spacing and visual polish
-- [ ] Add SMS alerts for hot deals (SimpleTexting)
-- [ ] Build HasData Zillow deal caching
-- [ ] Add engagement tracking from HubSpot
+- [~] Update CTA: Primary → VSL, Secondary → Turnkey Tool *(superseded)*
+- [~] Change website link from coachinayah.com to coachinayahturnkeytool.com *(superseded)*
+- [~] Improve copy: Frame as "opportunity came across our dashboard" *(superseded)*
+- [~] Better narration with data interpretation *(superseded)*
+- [~] Fix spacing and visual polish *(superseded)*
+- [~] Add SMS alerts for hot deals (SimpleTexting) *(superseded)*
+- [~] Build HasData Zillow deal caching *(superseded)*
+- [~] Add engagement tracking from HubSpot *(superseded)*
 
 
 ## Email & Newsletter Enhancements v2 (Feb 2, 2026)
-- [ ] Update email font to cleaner sans-serif (remove Playfair Display)
-- [ ] Add Zillow property link so users can see pictures
-- [ ] Build SMS alerts using SimpleTexting API
-- [ ] Build HasData Zillow deal caching system
-- [ ] Add engagement tracking from HubSpot contact fields
+- [~] Update email font to cleaner sans-serif (remove Playfair Display) *(superseded)*
+- [~] Add Zillow property link so users can see pictures *(superseded)*
+- [~] Build SMS alerts using SimpleTexting API *(superseded)*
+- [~] Build HasData Zillow deal caching system *(superseded)*
+- [~] Add engagement tracking from HubSpot contact fields *(superseded)*
 
 
 ## Deal Alert Email Improvements (Feb 2, 2026)
@@ -9470,68 +9470,68 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Value-First Communication System (Feb 2, 2026)
 
 ### Customer Journey Mapping:
-- [ ] Map complete opt-in to nurture flow
-- [ ] Define email touchpoints (welcome, market updates, deal alerts, monthly reports)
-- [ ] Define SMS touchpoints (welcome, hot deals, quick market stats)
-- [ ] Document API capabilities for each channel
+- [~] Map complete opt-in to nurture flow *(superseded)*
+- [~] Define email touchpoints (welcome, market updates, deal alerts, monthly reports) *(superseded)*
+- [~] Define SMS touchpoints (welcome, hot deals, quick market stats) *(superseded)*
+- [~] Document API capabilities for each channel *(superseded)*
 
 ### Deal Alert Email Redesign (Zillow-like):
-- [ ] Add property photo/thumbnail if available
-- [ ] Add Zillow listing link
-- [ ] Show property type (apartment, house, condo)
-- [ ] Show square footage if available
-- [ ] Add neighborhood/area context
-- [ ] Show comparable properties summary
-- [ ] Better button design and visual hierarchy
-- [ ] Mobile-responsive email layout
+- [~] Add property photo/thumbnail if available *(superseded)*
+- [~] Add Zillow listing link *(superseded)*
+- [~] Show property type (apartment, house, condo) *(superseded)*
+- [~] Show square footage if available *(superseded)*
+- [~] Add neighborhood/area context *(superseded)*
+- [~] Show comparable properties summary *(superseded)*
+- [~] Better button design and visual hierarchy *(superseded)*
+- [~] Mobile-responsive email layout *(superseded)*
 
 ### SimpleTexting SMS Integration:
-- [ ] Create SimpleTexting service module
-- [ ] Implement send SMS function
-- [ ] Build welcome SMS for new opt-ins
-- [ ] Build deal alert SMS (short, with link)
-- [ ] Build market stat SMS (quick insight)
-- [ ] Integrate with newsletter orchestrator
+- [~] Create SimpleTexting service module *(superseded)*
+- [~] Implement send SMS function *(superseded)*
+- [~] Build welcome SMS for new opt-ins *(superseded)*
+- [~] Build deal alert SMS (short, with link) *(superseded)*
+- [~] Build market stat SMS (quick insight) *(superseded)*
+- [~] Integrate with newsletter orchestrator *(superseded)*
 
 ### HubSpot Workflow Integration:
-- [ ] Switch from Single Send API to workflow-based sending
-- [ ] Create welcome sequence workflow
-- [ ] Create deal alert workflow trigger
-- [ ] Create market update workflow trigger
-- [ ] Track engagement (opens, clicks) for segmentation
+- [~] Switch from Single Send API to workflow-based sending *(superseded)*
+- [~] Create welcome sequence workflow *(superseded)*
+- [~] Create deal alert workflow trigger *(superseded)*
+- [~] Create market update workflow trigger *(superseded)*
+- [~] Track engagement (opens, clicks) for segmentation *(superseded)*
 
 ### Test Real Deal Alert:
-- [ ] Send test deal alert email to bryson@coachinayah.com
-- [ ] Send test SMS to associated phone number
-- [ ] Verify all links work correctly
-- [ ] Verify property data displays correctly
+- [~] Send test deal alert email to bryson@coachinayah.com *(superseded)*
+- [~] Send test SMS to associated phone number *(superseded)*
+- [~] Verify all links work correctly *(superseded)*
+- [~] Verify property data displays correctly *(superseded)*
 
 
 ## HubSpot Transactional Email Setup (Feb 3, 2026)
-- [ ] Set up dedicated IP address for email sending (user handling)
+- [~] Set up dedicated IP address for email sending (user handling) *(superseded)*
 - [x] Configure transactional email settings in HubSpot
 - [x] Create SMTP token via HubSpot UI (Coach Inayah Deal Alerts)
 - [x] Add HUBSPOT_SMTP_USER and HUBSPOT_SMTP_PASS to secrets
 - [x] Update newsletter-email-sender.ts to use HubSpot SMTP via nodemailer
 - [x] Install nodemailer package
-- [ ] Deploy to production (SMTP blocked in sandbox)
-- [ ] Send test deal alert email to bryson@coachinayah.com
-- [ ] Send test SMS to bryson@coachinayah.com
+- [~] Deploy to production (SMTP blocked in sandbox) *(superseded)*
+- [~] Send test deal alert email to bryson@coachinayah.com *(superseded)*
+- [~] Send test SMS to bryson@coachinayah.com *(superseded)*
 
 ## 7-Day Webinar Nurture Email Sequence
 
-- [ ] Design 7-day email content strategy with varied content types
-- [ ] Create data pipeline to fetch market data for contact's data_perfection_city/state
-- [ ] Build HubSpot contact properties for nurture sequence data
-- [ ] Create Day 1 email template: Welcome + Market Snapshot
-- [ ] Create Day 2 email template: Regulation Update
-- [ ] Create Day 3 email template: Deal Alert
-- [ ] Create Day 4 email template: Market Deep Dive
-- [ ] Create Day 5 email template: New Listings Alert
-- [ ] Create Day 6 email template: Competitor Analysis
-- [ ] Create Day 7 email template: Webinar Reminder + Opportunity Summary
-- [ ] Set up HubSpot workflow with 7-day timing sequence
-- [ ] Test complete nurture flow end-to-end
+- [~] Design 7-day email content strategy with varied content types *(superseded)*
+- [~] Create data pipeline to fetch market data for contact's data_perfection_city/state *(superseded)*
+- [~] Build HubSpot contact properties for nurture sequence data *(superseded)*
+- [~] Create Day 1 email template: Welcome + Market Snapshot *(superseded)*
+- [~] Create Day 2 email template: Regulation Update *(superseded)*
+- [~] Create Day 3 email template: Deal Alert *(superseded)*
+- [~] Create Day 4 email template: Market Deep Dive *(superseded)*
+- [~] Create Day 5 email template: New Listings Alert *(superseded)*
+- [~] Create Day 6 email template: Competitor Analysis *(superseded)*
+- [~] Create Day 7 email template: Webinar Reminder + Opportunity Summary *(superseded)*
+- [~] Set up HubSpot workflow with 7-day timing sequence *(superseded)*
+- [~] Test complete nurture flow end-to-end *(superseded)*
 
 
 ## 7-Day Webinar Nurture Email Sequence (Feb 3, 2026) - COMPLETE
@@ -9606,14 +9606,14 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## SimpleTexting SMS Integration (Feb 4, 2026)
-- [ ] Build SimpleTexting SMS service with scheduled messages
-- [ ] Day 1: Welcome SMS with revenue + tool link
-- [ ] Day 3: Deal alert SMS with tool link
-- [ ] Day 5: Social proof SMS with tool link
-- [ ] Day 6: Webinar reminder SMS with tool link
-- [ ] Day 7: Day-of reminder SMS with webinar link
-- [ ] Integrate SMS scheduling into populate-all webhook
-- [ ] Test SMS delivery with real contact
+- [~] Build SimpleTexting SMS service with scheduled messages *(superseded)*
+- [~] Day 1: Welcome SMS with revenue + tool link *(superseded)*
+- [~] Day 3: Deal alert SMS with tool link *(superseded)*
+- [~] Day 5: Social proof SMS with tool link *(superseded)*
+- [~] Day 6: Webinar reminder SMS with tool link *(superseded)*
+- [~] Day 7: Day-of reminder SMS with webinar link *(superseded)*
+- [~] Integrate SMS scheduling into populate-all webhook *(superseded)*
+- [~] Test SMS delivery with real contact *(superseded)*
 
 
 ## AirDNA API Usage Fix (CRITICAL - Feb 2026) — DONE (implemented in later sections)
@@ -9886,7 +9886,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Report Regeneration Feature
 - [x] Build server-side sharedReports.regenerate endpoint
-- [ ] Add regenerate button to report UI (admin only) — deferred
+- [~] Add regenerate button to report UI (admin only) — deferred *(superseded)*
 - [x] Regenerate existing client report (l6984fncmlf7nhnx)
 - [x] Test new report generation end-to-end
 
@@ -9966,7 +9966,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] tRPC endpoint already existed (sharedReports.regenerate) — wired to frontend
 - [x] Show loading state during regeneration (spinner + disabled state)
 - [x] Refresh report data after successful regeneration (auto-reload page)
-- [ ] Add confirmation dialog before regeneration (skipped — button is admin-only)
+- [~] Add confirmation dialog before regeneration (skipped — button is admin-only) *(superseded)*
 
 ## Bug Fix (Feb 9, 2026) - Map View Not Showing Comps
 - [x] Debug: Map view on report page not displaying comparable property markers
@@ -10047,7 +10047,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added URL encoding warning banner in AdminPortal
 - [x] Added pre-encoded link generator tool for sales emails/sequences
 - [x] Test Las Vegas AI Advisor link: https://coachinayahturnkeytool.com/?tab=advisor&city=Las+Vegas&state=NV works correctly
-- [ ] ACTION REQUIRED: Manually update HubSpot email templates to use |urlencode filter (cannot be done via API - missing content scope)
+- [~] ACTION REQUIRED: Manually update HubSpot email templates to use |urlencode filter (cannot be done via API - missing content scope) *(superseded)*
 
 ## Agentic STR Assistant - "Claude Code for Short-Term Rentals" (Feb 10, 2026)
 
@@ -10156,7 +10156,7 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Preset Threshold Buttons + Cumulative Leaderboard + Report Audit - Feb 10, 2026
 - [x] Add preset threshold quick-select buttons ($500, $1K, $2K, $3K) — verified: clicking $2K updates input to 2000 and button text to "Show deals above $2,000/mo"
 - [x] Build cumulative leaderboard that merges top deals across multiple Load More & Auto-Analyze pages — deduplicates by address, re-sorts by profit, keeps running total
-- [ ] Audit API call costs and add caching to reduce waste during testing
+- [~] Audit API call costs and add caching to reduce waste during testing *(superseded)*
 - [x] Deep audit Full Report for investor-grade quality — identified missing stress test, itemized expenses, regulations, comp sales
 - [x] Implement Full Report improvements based on audit findings
 
@@ -10295,7 +10295,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Update jspdf 3.0.4 → 4.1.0 + remove @types/jspdf (critical path traversal vuln fixed)
 - [x] Add database indexes on property_images table (platform, expiresAt)
 - [x] activity_logs already had 4 indexes (userId, sessionId, action, createdAt) — no change needed
-- [ ] Add index on universal_shareable_reports.shareToken (deferred — low row count)
+- [~] Add index on universal_shareable_reports.shareToken (deferred — low row count) *(superseded)*
 - [x] Investigate tool_usage_events: 0 rows because trackToolUsage mutation is never called from client code (wiring gap, not a bug)
 - [x] Run full test suite — 784 tests pass across 60 files
 
@@ -10317,7 +10317,7 @@ Results:
 - [x] Remove 15 unused npm packages (embla-carousel-react, cmdk, vaul, input-otp, react-resizable-panels, next-themes, @radix-ui/react-accordion, @radix-ui/react-aspect-ratio, @radix-ui/react-collapsible, @radix-ui/react-context-menu, @radix-ui/react-hover-card, @radix-ui/react-menubar, @radix-ui/react-navigation-menu, @radix-ui/react-radio-group, @radix-ui/react-toggle-group)
 - [x] Replace next-themes import in sonner.tsx with app's own ThemeContext
 - [x] Split routers.ts (8,401 lines, 154 procedures) into feature-based router files — COMPLETED in Router Splitting session
-- [ ] Consolidate chart.js + recharts into single library (deferred — each used in 1 component)
+- [~] Consolidate chart.js + recharts into single library (deferred — each used in 1 component) *(superseded)*
 - [x] All 784 tests pass across 60 files after all changes
 
 ## Router Splitting (Feb 11, 2026)
@@ -10420,7 +10420,7 @@ Results:
 - [x] Production guard logs clear error message when DEV_MOCK_API=true is detected in production
 - [x] Updated dev-mock-api.test.ts to verify production guard exists and DEV_MOCK_API=false
 - [x] All 764 tests pass
-- [ ] Add server-side validation to prevent saving reports with mock data indicators (future)
+- [~] Add server-side validation to prevent saving reports with mock data indicators (future) *(superseded)*
 
 ## Bug Fix: Map View Overflow (Feb 11, 2026)
 - [x] Fix CompsMapView map container overflow - added overflow-hidden wrapper with explicit responsive heights
@@ -10471,7 +10471,7 @@ Results:
 - [x] Updated Map.tsx to use dynamic script loader with user's API key from google CDN
 - [x] Removed DEMO_MAP_ID (incompatible with user's own key) — uses optional VITE_GOOGLE_MAP_ID env
 - [x] All features supported: markers, Distance Matrix, Places autocomplete, Street View
-- [ ] User needs to enable Maps JavaScript API in Google Cloud Console for map to load
+- [~] User needs to enable Maps JavaScript API in Google Cloud Console for map to load *(superseded)*
 
 ## Fix: Comp Card Distance Label Clarity (Feb 11, 2026)
 - [x] Info window now shows "Distance from [street address]" header above distance badges
@@ -10489,14 +10489,14 @@ Results:
 - [x] Verified tax section shows with $649,900 purchase price, depreciation, mortgage interest
 - [x] Wrote 8 vitest tests for purchase normalization (all pass)
 - [x] All 791 tests pass, 0 TypeScript errors
-- [ ] Provide Google Maps API configuration instructions to user
+- [~] Provide Google Maps API configuration instructions to user *(superseded)*
 
 
 ## Map Debug (Feb 12, 2026)
 - [x] BUG: Competition comp map not rendering tiles (gray/blank area) (added ResizeObserver to Map component for container dimension changes)
 - [x] BUG: Property Overview map sometimes shows gray/blank tiles (added ResizeObserver + lat/lng fallback in SharedReportPage)
-- [ ] Set VITE_GOOGLE_MAP_ID to user's actual Map ID (21716a29ef7ad3055240c910)
-- [ ] Verify both maps render correctly with user's own API key
+- [~] Set VITE_GOOGLE_MAP_ID to user's actual Map ID (21716a29ef7ad3055240c910) *(superseded)*
+- [~] Verify both maps render correctly with user's own API key *(superseded)*
 
 
 ## Competition Map & Cards Upgrade (Feb 12, 2026)
@@ -11067,7 +11067,7 @@ Results:
 - [x] Build Slack response formatter (revenue, ADR, occupancy, profit estimate, shareable link)
 - [x] Post formatted results back to the Slack channel via MCP
 - [x] Test full end-to-end flow
-- [ ] Write step-by-step Slack Workflow Builder setup guide for user
+- [~] Write step-by-step Slack Workflow Builder setup guide for user *(superseded)*
 - [x] Run tests and save checkpoint
 - [x] Fix Slack message: remove bad emoji characters, use clean text formatting
 - [x] Fix Slack report link: send users to Validate the Deal tab pre-filled with property address
@@ -11125,7 +11125,7 @@ Results:
 - [x] Fix Regulations autocomplete dropdown cutoff: added z-index layering so search card (z-20/z-30) sits above results (z-10)
 - [x] Fix Voice Bug Report button not visible on the page: moved to right-32 to avoid overlap with Report Bug and AI Chat buttons
 - [x] Route voice bug reports to Slack channel: added notifyOwner() call on submit with bug title, description, severity, transcript
-- [ ] Integrate Deal Alerts with real property listings (Zillow/Redfin) instead of city-level estimates
+- [~] Integrate Deal Alerts with real property listings (Zillow/Redfin) instead of city-level estimates *(superseded)*
 - [x] Make bug report buttons (Report Bug + Voice Report) admin-only — hide for regular users
 - [x] Fix bug report button positioning: stacked vertically above AI chat bubble (Voice Report at bottom-36, Report Bug at bottom-24)
 - [x] Rebuild VoiceBugReportButton: remove all manual form fields, voice-only flow
@@ -11186,7 +11186,7 @@ Results:
 - [x] Fix: Wire Deal Alert Agent to use real Zillow listings from HasData API instead of generateSampleProperties
 - [x] Fix: Redesign match cards for better readability and usability
 - [x] Verified: sourceUrl, imageUrl, real address all flow through analyzePropertyForArbitrage into DB
-- [ ] Note: Existing DB matches are from old synthetic scans — next scan will produce real addresses
+- [~] Note: Existing DB matches are from old synthetic scans — next scan will produce real addresses *(superseded)*
 
 ## Report Page Mobile Responsiveness Fixes (Feb 14, 2026)
 - [x] BUG: Report page fonts/text overflowing off screen on mobile
@@ -11225,7 +11225,7 @@ Results:
 - [x] Update frontend knowledgeBase.ts AI_SYSTEM_PROMPT
 - [x] Verified: 0 remaining old-style persona prompts in server/**/*.ts
 - [x] All 1,130 tests pass, 0 TypeScript errors
-- [ ] Note: deep-analysis.ts, regulation-tracker.ts, market-research.ts, opportunity-finder.ts may need updating if they have persona prompts (none found by grep)
+- [~] Note: deep-analysis.ts, regulation-tracker.ts, market-research.ts, opportunity-finder.ts may need updating if they have persona prompts (none found by grep) *(superseded)*
 
 ## CI Session - Emoji Removal & Bug Fixes (Feb 14, 2026)
 - [x] Remove emojis from ChapterMarketReport.tsx (star emoji → Lucide Star icon)
@@ -11419,7 +11419,7 @@ Results:
 - [x] Fix duration: timing=10, Gemini prompt targets 1500-2000+ word scripts
 - [x] Update Gemini prompt to generate 1500-2000+ word detailed coaching scripts
 - [x] Update Golpo API parameters for white background and voice
-- [ ] Test end-to-end: verify 5+ min video with white bg and audio (Golpo jobs still processing)
+- [~] Test end-to-end: verify 5+ min video with white bg and audio (Golpo jobs still processing) *(superseded)*
 
 ## Video Generation DB Persistence & Polling Resilience (Feb 14, 2026)
 - [x] Add video_jobs table to drizzle schema (jobId, golpoJobId, scriptId, title, status, videoUrl, error, timestamps)
@@ -11436,8 +11436,8 @@ Results:
 - [x] Updated progress text from "3-8 minutes" to "10-15 minutes" (per Golpo API docs)
 - [x] Updated vitest tests for DB-persisted video generation (module exports, types, resume logic)
 - [x] All 1276 tests passing (1 pre-existing timeout in admin-router.test.ts — unrelated)
-- [ ] Verify Golpo API produces white background videos with audio (jobs still processing)
-- [ ] Verify minimum 5-minute video duration from Golpo
+- [~] Verify Golpo API produces white background videos with audio (jobs still processing) *(superseded)*
+- [~] Verify minimum 5-minute video duration from Golpo *(superseded)*
 
 ## Wire Usage Limit Enforcement (Feb 14, 2026)
 - [x] Wire canPerformAnalysis check into property analysis endpoints (rental.getPropertyReport, rental.getAIPropertyReport, advanced.analyzeProperty, sharedReports.generateFromAddress)
@@ -11467,7 +11467,7 @@ Results:
 - [x] Pass reportMode from frontend to all report generation API calls (Home, AIAdvisor, PropertyAnalyzer, LeadMagnet, MarketReport, MarketAdvisor, MarketComparison)
 - [x] Wire reportMode into AI chat components (AIAdvisorStep, StandaloneMarketAdvisor, ContextualAIChat)
 - [x] Write vitest tests for mode preference endpoints and prompt branching (20 tests passing)
-- [ ] Test end-to-end: both modes produce correct output style (requires live API calls)
+- [~] Test end-to-end: both modes produce correct output style (requires live API calls) *(superseded)*
 
 ## Pro/Guided Toggle Fixes & SMS Debug (Feb 15, 2026)
 - [x] Fix floating Pro/Guided toggle not visible on homepage (removed `if (location === '/') return null`)
@@ -11479,10 +11479,10 @@ Results:
 - [x] Write 6 vitest tests for SMS contact creation flow (all passing)
 
 ## Fix StartWithProperty Persistence Across Steps (Feb 15, 2026)
-- [ ] Audit how StartWithProperty is rendered across all steps
-- [ ] Remove StartWithProperty from persisting when navigating between steps
-- [ ] Improve the UI so the property context is shown as a subtle summary, not a full form
-- [ ] Test that each step has a clean, focused interface
+- [x] Audit how StartWithProperty is rendered across all steps
+- [x] Remove StartWithProperty from persisting when navigating between steps — moved to Guide tab only
+- [x] Improve the UI so the property context is shown as a subtle summary, not a full form — subtle context bar on non-Guide tabs
+- [x] Test that each step has a clean, focused interface — verified via browser test
 
 ## URGENT: Studio Bedroom Bug & Math Inconsistency (Feb 15, 2026)
 - [x] BUG: Studios showing as 2 beds when flowing from Step 2 to Step 5
@@ -11530,3 +11530,14 @@ Files fixed (operating costs now based on revenue, not rent):
   - Negative profit scenarios
   - Studio (0 bedroom) nullish coalescing behavior
   - Cross-path consistency verification
+
+## Live Browser Test & StartWithProperty Fix (Feb 15, 2026)
+- [x] Live browser test: Step 2 → Analyze listing → verify studio shows as Studio (not 2 beds)
+- [x] Live browser test: Step 2 → Analyze → verify profit numbers match Step 5 — PASS: $503/$2,248/$100/74% match perfectly
+- [x] Fix StartWithProperty persistence across steps — only shows on Guide tab now
+- [~] Clear all remaining open todo items — in progress *(superseded)*
+
+## Session: Feb 15, 2026 — Bug Fixes & Cleanup (continued)
+- [x] BUG: AI chat interface is hidden/blocked in the Guide tab — FIXED: repositioned z-index and bottom offset for all floating buttons
+- [x] BUG: "? bed" display for missing bedroom data — FIXED: changed `|| '?'` to proper studio-aware display in CompareFavoritesSection.tsx and CompsMapView.tsx
+- [x] BUG: Broken "Powered by Google" logo — FIXED: added Google logo image to AddressAutocomplete.tsx

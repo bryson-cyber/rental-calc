@@ -407,11 +407,11 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                 <div className="flex items-center gap-3 text-xs text-[oklch(0.45_0_0)] mb-3">
                   <span className="flex items-center gap-1">
                     <BedDouble className="w-3.5 h-3.5" />
-                    {fav.bedrooms || '?'} bed
+                    {fav.bedrooms === 0 ? 'Studio' : (fav.bedrooms ?? '?') + ' bed'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Bath className="w-3.5 h-3.5" />
-                    {fav.bathrooms || '?'} bath
+                    {(fav.bathrooms ?? '?')} bath
                   </span>
                 </div>
                 

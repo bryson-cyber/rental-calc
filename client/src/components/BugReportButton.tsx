@@ -138,7 +138,7 @@ export function BugReportButton({
         <Button
           variant="outline"
           size="sm"
-          className="fixed bottom-24 sm:bottom-20 right-4 z-50 bg-white shadow-lg hover:bg-gray-50 border-gray-200"
+          className="fixed bottom-24 sm:bottom-[8.5rem] right-4 sm:right-6 z-50 bg-white shadow-lg hover:bg-gray-50 border-gray-200"
         >
           <Bug className="w-4 h-4 mr-2" />
           Report Bug
