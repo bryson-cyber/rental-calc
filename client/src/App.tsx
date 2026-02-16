@@ -148,17 +148,14 @@ function Router() {
         {/* Content Studio - Script Generator */}
         {/* Content Studio is now in admin portal at /admin/dashboard?tab=content-studio */}
         
-        {/* Legacy/admin routes */}
+        {/* Analysis routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />
         <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
-        <Route path={"/admin"} component={AdminDashboard} />
-        <Route path={"/admin/reports"} component={AdminReports} />
-        <Route path={"/admin/hubspot"} component={AdminPortal} />
-        <Route path={"/admin/notifications"} component={NotificationAnalytics} />
-        <Route path={"/admin/newsletter"} component={NewsletterDashboard} />
-        <Route path={"/admin/api-usage"} component={ApiUsageDashboard} />
-        <Route path={"/admin/users"} component={AdminUsers} />
+        
+        {/* Unified Admin Dashboard - all admin functionality in one place */}
         <Route path={"/admin/dashboard"} component={UnifiedAdmin} />
+        <Route path={"/admin"}>{() => { window.location.replace('/admin/dashboard'); return null; }}</Route>
+        <Route path={"/admin/:rest*"}>{() => { window.location.replace('/admin/dashboard'); return null; }}</Route>
         
         {/* 404 */}
         <Route path={"/404"} component={NotFound} />

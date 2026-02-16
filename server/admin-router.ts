@@ -419,6 +419,7 @@ export const adminRouter = router({
       z.object({
         search: z.string().optional(),
         role: z.enum(['all', 'user', 'admin']).default('all'),
+        sortBy: z.enum(['lastActive', 'usageToday']).default('lastActive'),
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
       })
@@ -499,8 +500,13 @@ export const adminRouter = router({
           })
         );
 
+        // Sort by usage if requested
+        const sortedUsers = input.sortBy === 'usageToday'
+          ? usersWithStats.sort((a, b) => (b.usageToday.apiCalls || 0) - (a.usageToday.apiCalls || 0))
+          : usersWithStats;
+
         return {
-          users: usersWithStats,
+          users: sortedUsers,
           total: totalResult?.count || 0,
           limit: input.limit,
           offset: input.offset,

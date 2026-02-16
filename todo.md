@@ -11739,3 +11739,31 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added recordApiCallsUsage to searchMarkets (1 call), getSubmarkets (1-3 calls), getZipcodesInSubmarket (1-7 calls)
 - [x] advanced.ts and shared-reports.ts already had tracking
 - [x] TypeScript compiles clean, all 1397 tests passing
+
+## BUG: Admin Portal User Usage Not Showing (February 16, 2026)
+- [ ] Activities > Overview > Users section not displaying user API usage data
+- [ ] Need to be able to sort today's users from highest to lowest usage
+- [ ] Trace full data flow: admin UI → tRPC route → DB query → userUsage table
+- [ ] Check if userUsage table has any records at all
+- [ ] Fix the broken data flow
+
+## Consolidate Admin Dashboards (February 16, 2026)
+- [ ] Redirect /admin to /admin/dashboard (UnifiedAdmin)
+- [ ] Remove legacy admin routes (/admin/reports, /admin/hubspot, /admin/notifications, /admin/newsletter, /admin/api-usage, /admin/users)
+- [ ] Ensure UnifiedAdmin has all functionality from legacy pages
+- [ ] Fix user usage display: show today's API calls with sorting (highest to lowest)
+- [ ] Verify no broken links after consolidation
+
+## CRITICAL USER BUG: Phoenix Property Shows San Diego Location (February 16, 2026)
+- [ ] BUG: "411 N 32nd Pl, Phoenix, AZ 85008" shows Location: "San Diego, CA" instead of Phoenix
+- [ ] BUG: Map shows San Diego instead of Phoenix
+- [ ] BUG: Market correctly shows "Phoenix/Scottsdale" but Location field is wrong
+- [ ] Diagnose: Location field is likely pulling cached/stale data from previous search
+- [ ] Fix the location data source to use the property's actual geocoded location
+
+## CRITICAL USER BUG: ADR Projection Too Low ($75 vs $125+ actual) (February 16, 2026)
+- [ ] BUG: Tool projects $75 ADR for Phoenix 2BR when Airbnb shows $125+ minimum
+- [ ] Investigate: Is AirDNA returning low ADR or is the display wrong?
+- [ ] Investigate: Are the property parameters (2BR/1BA/4 guests) pulling down estimates?
+- [ ] Fix: Ensure ADR projection aligns with actual market rates
+- [x] Fix comp filtering to show exact same size (bedroom AND bathroom) comps in reports, not just same-bedroom

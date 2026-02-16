@@ -85,11 +85,12 @@ export default function UnifiedAdmin() {
   // ============================================
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin'>('all');
+  const [userSortBy, setUserSortBy] = useState<'lastActive' | 'usageToday'>('usageToday');
   const [userPage, setUserPage] = useState(0);
   const userLimit = 15;
   
   const usersQuery = trpc.admin.getUsers.useQuery(
-    { search: userSearch || undefined, role: roleFilter, limit: userLimit, offset: userPage * userLimit },
+    { search: userSearch || undefined, role: roleFilter, sortBy: userSortBy, limit: userLimit, offset: userPage * userLimit },
     { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'users' }
   );
   
@@ -718,6 +719,15 @@ export default function UnifiedAdmin() {
                       <SelectItem value="admin">Admins Only</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={userSortBy} onValueChange={(v: 'lastActive' | 'usageToday') => { setUserSortBy(v); setUserPage(0); }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="usageToday">Most Active Today</SelectItem>
+                      <SelectItem value="lastActive">Last Active</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -771,8 +781,10 @@ export default function UnifiedAdmin() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <p className="text-sm text-foreground">{u.usageToday?.propertyAnalyses || 0} analyses</p>
-                              <p className="text-xs text-muted-foreground">{u.usageToday?.marketResearches || 0} market searches</p>
+                              <div className="space-y-0.5">
+                                <p className="text-sm font-medium text-foreground">{u.usageToday?.apiCalls || 0} API calls</p>
+                                <p className="text-xs text-muted-foreground">{u.usageToday?.propertyAnalyses || 0} analyses · {u.usageToday?.marketResearches || 0} market</p>
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">{formatDate(u.lastSignedIn)}</TableCell>
                             <TableCell className="text-right">

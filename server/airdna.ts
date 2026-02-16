@@ -2819,6 +2819,7 @@ export async function getComprehensivePropertyReport(
   }
   
   const propertyBedrooms = bedrooms || propertyEstimate.property.bedrooms;
+  const propertyBathrooms = bathrooms || propertyEstimate.property.bathrooms;
   
   // Step 2: Find market ID
   let marketId = propertyEstimate.property.market_id;
@@ -3369,16 +3370,58 @@ export async function getComprehensivePropertyReport(
     distance_meters: comp.distance_meters,
   }));
   
-  // Filter to same bedroom count
-  const sameBedroomRentalizerComps = rentalizerComps.filter(c => c.bedrooms === propertyBedrooms);
+  // Filter to same bedroom count AND same bathroom count for apples-to-apples comparison
+  // Bathroom match uses a tolerance of ±0.5 to handle half-bath differences (e.g., 1 BA matches 1.5 BA)
+  const matchesBathrooms = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
+  
+  const exactMatchRentalizerComps = rentalizerComps.filter(
+    c => c.bedrooms === propertyBedrooms && matchesBathrooms(c.bathrooms, propertyBathrooms)
+  );
+  const sameBedroomOnlyRentalizerComps = rentalizerComps.filter(
+    c => c.bedrooms === propertyBedrooms && !matchesBathrooms(c.bathrooms, propertyBathrooms)
+  );
+  
+  console.log(`[Comps] Rentalizer: ${exactMatchRentalizerComps.length} exact BR+BA match, ${sameBedroomOnlyRentalizerComps.length} same-BR only (${propertyBedrooms}BR/${propertyBathrooms}BA)`);
   
   // Get additional comps from radius search (these don't have images but may have more listings)
   // For high-BR properties (5+), expand radius since they're rarer
   const compSearchRadius = propertyBedrooms >= 5 ? 8000 : propertyBedrooms >= 4 ? 5000 : 3000;
-  const radiusComps = await exploreListingsInRadius(address, compSearchRadius, {
+  
+  // First try: search with BOTH bedroom AND bathroom filter for exact matches
+  let radiusComps = await exploreListingsInRadius(address, compSearchRadius, {
     bedrooms: propertyBedrooms,
-    minRevenue: 5000, // Lower threshold to find more comps
+    bathrooms: propertyBathrooms,
+    minRevenue: 5000,
   }, 50);
+  
+  // If exact match yields too few results, fall back to bedroom-only search
+  // and filter bathrooms client-side with tolerance
+  let radiusCompsBedroomOnly: ListingData[] = [];
+  if (radiusComps.length < 10) {
+    console.log(`[Comps] Only ${radiusComps.length} exact BR+BA radius comps, fetching bedroom-only to supplement`);
+    const allBedroomRadiusComps = await exploreListingsInRadius(address, compSearchRadius, {
+      bedrooms: propertyBedrooms,
+      minRevenue: 5000,
+    }, 50);
+    
+    // Separate into exact BA match and different BA
+    const exactRadiusIds = new Set(radiusComps.map(c => c.id));
+    const additionalExact: ListingData[] = [];
+    const differentBa: ListingData[] = [];
+    
+    for (const c of allBedroomRadiusComps) {
+      if (exactRadiusIds.has(c.id)) continue; // Already in exact results
+      if (matchesBathrooms(c.bathrooms, propertyBathrooms)) {
+        additionalExact.push(c);
+      } else {
+        differentBa.push(c);
+      }
+    }
+    
+    radiusComps = [...radiusComps, ...additionalExact];
+    radiusCompsBedroomOnly = differentBa; // Keep as fallback, tagged differently
+    console.log(`[Comps] After BR-only supplement: ${radiusComps.length} exact BA match, ${radiusCompsBedroomOnly.length} different BA`);
+  }
   
   // For high-BR properties, also search for adjacent bedroom counts to supplement
   let adjacentBrComps: ListingData[] = [];
@@ -3402,40 +3445,51 @@ export async function getComprehensivePropertyReport(
     console.log(`[Comps] Found ${adjacentBrComps.length} adjacent BR comps to supplement ${radiusComps.length} same-BR comps`);
   }
   
-  // Merge: prioritize rentalizer comps (with images), then add radius comps that aren't duplicates
-  // Use multiple identifiers for deduplication: ID, title, and Airbnb URL
-  const seenIds = new Set(sameBedroomRentalizerComps.map(c => c.id));
-  const seenTitles = new Set(sameBedroomRentalizerComps.map(c => c.title.toLowerCase().trim()));
-  const seenUrls = new Set(sameBedroomRentalizerComps.map(c => c.airbnb_url).filter(Boolean));
+  // Merge: prioritize exact BR+BA matches first, then same-BR-only, then adjacent-BR
+  // Use rentalizer comps with exact match as the base (they have images)
+  const seenIds = new Set(exactMatchRentalizerComps.map(c => c.id));
+  const seenTitles = new Set(exactMatchRentalizerComps.map(c => c.title.toLowerCase().trim()));
+  const seenUrls = new Set(exactMatchRentalizerComps.map(c => c.airbnb_url).filter(Boolean));
   
-  // Combine same-BR radius comps with adjacent-BR comps (tagged)
-  const allRadiusComps = [
-    ...radiusComps,
-    ...adjacentBrComps.map(c => ({ ...c, is_adjacent_br: true })), // Tag adjacent BR comps so UI can label them
-  ];
-  
-  const additionalRadiusComps = allRadiusComps.filter(c => {
-    // Check if this listing is a duplicate by ID, title, or URL
+  const dedup = (c: ListingData) => {
     const isDuplicateById = seenIds.has(c.id);
     const isDuplicateByTitle = seenTitles.has(c.title.toLowerCase().trim());
     const isDuplicateByUrl = c.airbnb_url && seenUrls.has(c.airbnb_url);
-    
-    if (isDuplicateById || isDuplicateByTitle || isDuplicateByUrl) {
-      return false;
-    }
-    
-    // Add to seen sets to prevent duplicates within radius comps too
+    if (isDuplicateById || isDuplicateByTitle || isDuplicateByUrl) return false;
     seenIds.add(c.id);
     seenTitles.add(c.title.toLowerCase().trim());
     if (c.airbnb_url) seenUrls.add(c.airbnb_url);
-    
     return true;
-  });
+  };
   
-  // Combine and sort by revenue
-  let sameBedroomComps = [...sameBedroomRentalizerComps, ...additionalRadiusComps]
-    .sort((a, b) => b.annual_revenue - a.annual_revenue)
+  // Layer 1: Exact BR+BA radius comps
+  const dedupedRadiusExact = radiusComps.filter(dedup);
+  // Layer 2: Same-BR-only rentalizer comps (different BA, but from rentalizer so they have images)
+  const dedupedSameBrOnly = sameBedroomOnlyRentalizerComps.filter(dedup);
+  // Layer 3: Same-BR-only radius comps (different BA)
+  const dedupedRadiusBrOnly = radiusCompsBedroomOnly.filter(dedup);
+  // Layer 4: Adjacent BR comps (tagged)
+  const dedupedAdjacentBr = adjacentBrComps.map(c => ({ ...c, is_adjacent_br: true })).filter(dedup);
+  
+  // Combine in priority order: exact match first, then same-BR, then adjacent
+  let sameBedroomComps = [
+    ...exactMatchRentalizerComps,
+    ...dedupedRadiusExact,
+    ...dedupedSameBrOnly,
+    ...dedupedRadiusBrOnly,
+    ...dedupedAdjacentBr,
+  ]
+    .sort((a, b) => {
+      // Primary sort: exact BA match first
+      const aExact = matchesBathrooms(a.bathrooms, propertyBathrooms) ? 0 : 1;
+      const bExact = matchesBathrooms(b.bathrooms, propertyBathrooms) ? 0 : 1;
+      if (aExact !== bExact) return aExact - bExact;
+      // Secondary sort: by revenue descending
+      return b.annual_revenue - a.annual_revenue;
+    })
     .slice(0, 30);
+  
+  console.log(`[Comps] Final: ${sameBedroomComps.filter(c => matchesBathrooms(c.bathrooms, propertyBathrooms)).length} exact BA match, ${sameBedroomComps.filter(c => !matchesBathrooms(c.bathrooms, propertyBathrooms)).length} different BA out of ${sameBedroomComps.length} total`);
   
   // Enrich listings that don't have images (radius comps)
   // Uses /listing/batch endpoint (100 per request) instead of individual calls

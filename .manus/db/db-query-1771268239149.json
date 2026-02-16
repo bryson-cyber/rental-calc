@@ -1,0 +1,130 @@
+{
+  "query": "SELECT * FROM user_usage WHERE date = CURDATE() LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM user_usage WHERE date = CURDATE() LIMIT 10;",
+  "rows": [
+    {
+      "id": "240003",
+      "userId": "13530119",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:42:26",
+      "updatedAt": "2026-02-16 00:42:26"
+    },
+    {
+      "id": "240004",
+      "userId": "13530166",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:44:44",
+      "updatedAt": "2026-02-16 00:44:44"
+    },
+    {
+      "id": "240005",
+      "userId": "13530041",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:44:48",
+      "updatedAt": "2026-02-16 00:44:48"
+    },
+    {
+      "id": "240006",
+      "userId": "13530190",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:45:45",
+      "updatedAt": "2026-02-16 00:45:45"
+    },
+    {
+      "id": "240007",
+      "userId": "13530208",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:46:20",
+      "updatedAt": "2026-02-16 00:46:20"
+    },
+    {
+      "id": "240008",
+      "userId": "13530314",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 00:52:50",
+      "updatedAt": "2026-02-16 00:52:50"
+    },
+    {
+      "id": "240009",
+      "userId": "13530579",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "3",
+      "marketResearches": "0",
+      "apiCallsCount": "45",
+      "createdAt": "2026-02-16 01:12:15",
+      "updatedAt": "2026-02-16 01:19:27"
+    },
+    {
+      "id": "240010",
+      "userId": "13530702",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 01:26:29",
+      "updatedAt": "2026-02-16 01:26:29"
+    },
+    {
+      "id": "240011",
+      "userId": "13500392",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "createdAt": "2026-02-16 01:37:48",
+      "updatedAt": "2026-02-16 01:37:48"
+    },
+    {
+      "id": "240012",
+      "userId": "12781223",
+      "sessionId": "NULL",
+      "ipAddress": "::ffff:169.254.169.126",
+      "date": "2026-02-16",
+      "propertyAnalyses": "1",
+      "marketResearches": "0",
+      "apiCallsCount": "15",
+      "createdAt": "2026-02-16 01:40:47",
+      "updatedAt": "2026-02-16 02:32:41"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tsessionId\tipAddress\tdate\tpropertyAnalyses\tmarketResearches\tapiCallsCount\tcreatedAt\tupdatedAt\n240003\t13530119\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:42:26\t2026-02-16 00:42:26\n240004\t13530166\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:44:44\t2026-02-16 00:44:44\n240005\t13530041\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:44:48\t2026-02-16 00:44:48\n240006\t13530190\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:45:45\t2026-02-16 00:45:45\n240007\t13530208\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:46:20\t2026-02-16 00:46:20\n240008\t13530314\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 00:52:50\t2026-02-16 00:52:50\n240009\t13530579\tNULL\t::ffff:169.254.169.126\t2026-02-16\t3\t0\t45\t2026-02-16 01:12:15\t2026-02-16 01:19:27\n240010\t13530702\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 01:26:29\t2026-02-16 01:26:29\n240011\t13500392\tNULL\t::ffff:169.254.169.126\t2026-02-16\t0\t0\t0\t2026-02-16 01:37:48\t2026-02-16 01:37:48\n240012\t12781223\tNULL\t::ffff:169.254.169.126\t2026-02-16\t1\t0\t15\t2026-02-16 01:40:47\t2026-02-16 02:32:41\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}
