@@ -89,7 +89,7 @@ function transformValidatorToFullReportData(reportData: any, dbRecord: any): Ful
     zipCode = stateZipParts[1] || '';
   }
 
-  const bedrooms = dbRecord.bedrooms || 2;
+  const bedrooms = dbRecord.bedrooms ?? 2;
   const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
   const monthlyRent = dbRecord.monthlyRent || 0;
 
@@ -219,7 +219,7 @@ function transformRevenueToFullReportData(reportData: any, dbRecord: any): FullR
     zipCode = stateZipParts[1] || '';
   }
 
-  const bedrooms = dbRecord.bedrooms || 2;
+  const bedrooms = dbRecord.bedrooms ?? 2;
   const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
 
   const est = reportData.estimates || {};

@@ -136,8 +136,8 @@ export function ShareReportButton({
       const propertyAddress = reportData?.property?.address || address || 'Property Report';
       const propertyCity = reportData?.property?.city || '';
       const propertyState = reportData?.property?.state || '';
-      const propertyBedrooms = reportData?.property?.bedrooms || bedrooms || 0;
-      const propertyBathrooms = reportData?.property?.bathrooms || bathrooms || 0;
+      const propertyBedrooms = reportData?.property?.bedrooms ?? bedrooms ?? 0;
+      const propertyBathrooms = reportData?.property?.bathrooms ?? bathrooms ?? 0;
       const propertyAccommodates = reportData?.property?.accommodates || 0;
       const marketDataName = reportData?.market_data?.name || marketName || '';
       const marketMetrics = reportData?.market_data?.metrics || {};

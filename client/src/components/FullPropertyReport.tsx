@@ -927,7 +927,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     const rent = rental_arbitrage.monthlyRent;
     const startup = rental_arbitrage.startupCosts || (8000 + property.bedrooms * 4000);
     const monthlyRevenue = revenue_estimate.monthly;
-    const monthlyProfit = monthlyRevenue - rent;
+    const operatingCosts = monthlyRevenue * 0.20;
+    const monthlyProfit = monthlyRevenue - rent - operatingCosts;
     const annualProfit = monthlyProfit * 12;
     const breakEvenOccupancy = rent / (revenue_estimate.nightly * 30);
     const breakEvenADR = rent / ((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 30);
@@ -2698,7 +2699,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     revenue: revenue_estimate.nightly * Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95) * 365,
                   },
                 ].map((scenario, i) => {
-                  const annualProfit = scenario.revenue - rentalCalcs.rent * 12;
+                  const annualOperatingCosts = scenario.revenue * 0.20;
+                  const annualProfit = scenario.revenue - rentalCalcs.rent * 12 - annualOperatingCosts;
                   return (
                     <div key={i} className={`rounded-xl p-4 border ${i === 1 ? 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5' : 'border-[oklch(0.90_0_0)]'}`}>
                       <p className="font-semibold text-[oklch(0.15_0_0)] text-sm">{scenario.label}</p>

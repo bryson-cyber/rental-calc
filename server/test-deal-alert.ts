@@ -145,7 +145,8 @@ export async function sendTestDealAlert(params: TestDealAlertParams): Promise<Te
   
   const annualRevenue = monthlyRevenue * 12;
   const averageDailyRate = Math.round(monthlyRevenue / (30 * occupancyRate));
-  const monthlyProfit = monthlyRevenue - monthlyRent;
+  const operatingCosts = monthlyRevenue * 0.20;
+  const monthlyProfit = monthlyRevenue - monthlyRent - operatingCosts;
   
   result.propertyData = {
     address: `${address}, ${city}, ${state}`,

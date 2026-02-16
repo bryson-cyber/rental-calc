@@ -843,8 +843,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
           try {
             const result = await getEstimateMutation.mutateAsync({
               address: myProperty.address,
-              bedrooms: myProperty.bedrooms || 2,
-              bathrooms: myProperty.bathrooms || 1,
+              bedrooms: myProperty.bedrooms ?? 2,
+              bathrooms: myProperty.bathrooms ?? 1,
             });
             
             if (result.success && result.data?.property?.submarket_id) {
@@ -927,8 +927,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       try {
         const result = await getEstimateMutation.mutateAsync({
           address: myProperty.address,
-          bedrooms: myProperty.bedrooms || 2,
-          bathrooms: myProperty.bathrooms || 1,
+          bedrooms: myProperty.bedrooms ?? 2,
+          bathrooms: myProperty.bathrooms ?? 1,
         });
         
         if (result.success && result.data?.property?.submarket_id) {

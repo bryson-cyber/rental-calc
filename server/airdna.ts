@@ -1747,8 +1747,8 @@ export async function getMarketListings(
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
       image_url: r.images?.[0] || '',
-      bedrooms: r.bedrooms || 0,
-      bathrooms: r.bathrooms || 0,
+      bedrooms: r.bedrooms ?? 0,
+      bathrooms: r.bathrooms ?? 0,
       accommodates: r.accommodates || 0,
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
@@ -1987,8 +1987,8 @@ export async function getSubmarketListings(
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
       image_url: r.images?.[0] || '',
-      bedrooms: r.bedrooms || 0,
-      bathrooms: r.bathrooms || 0,
+      bedrooms: r.bedrooms ?? 0,
+      bathrooms: r.bathrooms ?? 0,
       accommodates: r.accommodates || 0,
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
@@ -2389,8 +2389,8 @@ export async function exploreListingsInRadius(
         title: r.title || 'Untitled Listing',
         airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
         image_url: imageUrl,
-        bedrooms: r.bedrooms || 0,
-        bathrooms: r.bathrooms || 0,
+        bedrooms: r.bedrooms ?? 0,
+        bathrooms: r.bathrooms ?? 0,
         accommodates: r.accommodates || 0,
         property_type: r.property_type || 'Unknown',
         rating: r.rating ?? null,
@@ -2455,7 +2455,7 @@ export async function getRentalizerEstimate(
     request.bathrooms,
     request.bathrooms === 1 ? 2 : request.bathrooms, // Try 2 baths if 1 fails
     request.bathrooms === 1 ? 1.5 : request.bathrooms, // Try 1.5 baths if 1 fails
-    Math.max(1, (request.bedrooms || 2) - 1), // Try bedrooms - 1 baths
+    Math.max(1, (request.bedrooms ?? 2) - 1), // Try bedrooms - 1 baths
   ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
   
   for (const bathrooms of bathroomOptions) {
@@ -2742,9 +2742,9 @@ export async function getComprehensivePropertyReport(
     console.error("[Property Report] Property estimate missing .property object, creating defaults");
     propertyEstimate.property = {
       address: address,
-      bedrooms: bedrooms || 0,
-      bathrooms: bathrooms || 0,
-      accommodates: accommodates || 0,
+      bedrooms: bedrooms ?? 0,
+      bathrooms: bathrooms ?? 0,
+      accommodates: accommodates ?? 0,
     };
   }
   
@@ -3350,8 +3350,8 @@ export async function getComprehensivePropertyReport(
     title: comp.title || 'Untitled Listing',
     airbnb_url: comp.airbnb_url || '',
     image_url: comp.image_url || '', // This has the real image URL from rentalizer API
-    bedrooms: comp.bedrooms || 0,
-    bathrooms: comp.bathrooms || 0,
+    bedrooms: comp.bedrooms ?? 0,
+    bathrooms: comp.bathrooms ?? 0,
     accommodates: comp.accommodates || 0,
     property_type: comp.property_type || 'Unknown',
     rating: comp.rating ?? null,
@@ -4890,8 +4890,8 @@ export async function getListingsInRadius(
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
-      bedrooms: r.bedrooms || 0,
-      bathrooms: r.bathrooms || 0,
+      bedrooms: r.bedrooms ?? 0,
+      bathrooms: r.bathrooms ?? 0,
       accommodates: r.accommodates || 0,
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
@@ -5107,7 +5107,7 @@ export async function getTopPerformers(
       const allFilteredListings: ListingData[] = [];
       // Start at a smarter offset for smaller bedroom counts (they appear later in revenue-sorted results)
       // Top earners in Austin are 5+ bedrooms, so 4BR starts around offset 0, 3BR around offset 175
-      const bedroomCount = options.filters!.bedrooms || 3;
+      const bedroomCount = options.filters!.bedrooms ?? 3;
       const startOffset = bedroomCount <= 2 ? 250 : bedroomCount === 3 ? 175 : 0;
       let offset = startOffset;
       const maxPages = 15; // Limit pages to prevent timeout
@@ -5156,8 +5156,8 @@ export async function getTopPerformers(
             id: r.property_id || '',
             title: r.title || 'Untitled Listing',
             airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
-            bedrooms: r.bedrooms || 0,
-            bathrooms: r.bathrooms || 0,
+            bedrooms: r.bedrooms ?? 0,
+            bathrooms: r.bathrooms ?? 0,
             accommodates: r.accommodates || 0,
             property_type: r.property_type || 'Unknown',
             rating: r.rating ?? null,
@@ -5236,8 +5236,8 @@ export async function getTopPerformers(
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
-      bedrooms: r.bedrooms || 0,
-      bathrooms: r.bathrooms || 0,
+      bedrooms: r.bedrooms ?? 0,
+      bathrooms: r.bathrooms ?? 0,
       accommodates: r.accommodates || 0,
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
@@ -5656,8 +5656,8 @@ export async function getListingComps(
     return responseListings.map((l: any) => ({
       listing_id: l.id || l.listing_id,
       title: l.title || l.name || "Untitled",
-      bedrooms: l.bedrooms || 0,
-      bathrooms: l.bathrooms || 0,
+      bedrooms: l.bedrooms ?? 0,
+      bathrooms: l.bathrooms ?? 0,
       accommodates: l.accommodates || l.bedrooms * 2,
       property_type: l.property_type || "unknown",
       annual_revenue: l.revenue_ltm || l.annual_revenue || 0,
@@ -5836,8 +5836,8 @@ export async function getRentalizerComps(
       comps: comps.map((c: any) => ({
         listing_id: c.id || c.listing_id,
         title: c.title || c.name || "Untitled",
-        bedrooms: c.bedrooms || 0,
-        bathrooms: c.bathrooms || 0,
+        bedrooms: c.bedrooms ?? 0,
+        bathrooms: c.bathrooms ?? 0,
         annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
         adr: c.adr_ltm || c.adr || 0,
         occupancy: c.occupancy_rate_ltm || c.occupancy || 0,
@@ -5931,9 +5931,9 @@ export async function getEnhancedRentalizerEstimate(
         address: details.address || request.address,
         address_lookup: details.address_lookup || "",
         zipcode: details.zipcode || "",
-        bedrooms: details.bedrooms || request.bedrooms || 0,
-        bathrooms: details.bathrooms || request.bathrooms || 0,
-        accommodates: details.accommodates || (details.bedrooms || 0) * 2,
+        bedrooms: (details.bedrooms ?? request.bedrooms) ?? 0,
+        bathrooms: (details.bathrooms ?? request.bathrooms) ?? 0,
+        accommodates: details.accommodates || (details.bedrooms ?? 0) * 2,
         latitude: details.location?.lat || 0,
         longitude: details.location?.lng || 0,
         market_id: details.location?.market_id,
@@ -5956,8 +5956,8 @@ export async function getEnhancedRentalizerEstimate(
       })),
       comps: (payload.comps || []).map((c: any) => ({
         title: c.title || c.name || "Untitled",
-        bedrooms: c.bedrooms || 0,
-        bathrooms: c.bathrooms || 0,
+        bedrooms: c.bedrooms ?? 0,
+        bathrooms: c.bathrooms ?? 0,
         rating: c.rating || null,
         reviews: c.review_count || c.reviews || 0,
         annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
@@ -6142,9 +6142,9 @@ export async function getFilteredMarketListings(
     return responseListings.map((l: any) => ({
       id: l.id || l.listing_id,
       title: l.title || l.name || "Untitled",
-      bedrooms: l.bedrooms || 0,
-      bathrooms: l.bathrooms || 0,
-      accommodates: l.accommodates || (l.bedrooms || 0) * 2,
+      bedrooms: l.bedrooms ?? 0,
+      bathrooms: l.bathrooms ?? 0,
+      accommodates: l.accommodates || (l.bedrooms ?? 0) * 2,
       property_type: l.property_type || "unknown",
       listing_type: l.listing_type || "entire_home",
       annual_revenue: l.revenue_ltm || 0,
@@ -6944,8 +6944,8 @@ export async function getListingsByArea(
     const listings: AreaListing[] = (response.payload.listings || []).map(listing => ({
       id: listing.property_id || listing.airbnb_property_id || '',
       title: listing.title || 'Untitled Listing',
-      bedrooms: listing.bedrooms || 0,
-      bathrooms: listing.bathrooms || 0,
+      bedrooms: listing.bedrooms ?? 0,
+      bathrooms: listing.bathrooms ?? 0,
       accommodates: listing.accommodates || 0,
       property_type: listing.property_type || 'Unknown',
       rating: listing.rating || null,
@@ -7960,8 +7960,8 @@ export async function getBulkListings(
           airbnb_url: listing.platforms?.airbnb?.url || listing.airbnb_url,
           image_url: listing.image_url || listing.thumbnail_url,
           images: listing.images || [],
-          bedrooms: listing.bedrooms || 0,
-          bathrooms: listing.bathrooms || 0,
+          bedrooms: listing.bedrooms ?? 0,
+          bathrooms: listing.bathrooms ?? 0,
           accommodates: listing.accommodates || 0,
           property_type: listing.property_type || 'Unknown',
           rating: listing.rating || null,

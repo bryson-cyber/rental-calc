@@ -363,7 +363,7 @@ function generatePDFHTML(analysis: AnalysisData): string {
       </div>
       <div class="info-item">
         <span class="info-label">Configuration</span>
-        <span class="info-value">${property?.bedrooms || 0} BR / ${property?.bathrooms || 0} BA</span>
+        <span class="info-value">${property?.bedrooms ?? 0} BR / ${property?.bathrooms ?? 0} BA</span>
       </div>
       <div class="info-item">
         <span class="info-label">Monthly Rent</span>

@@ -11477,3 +11477,56 @@ Results:
 - [x] Handle unsubscribed contacts gracefully (STOP opt-out detection)
 - [x] Switch SMS mode from SINGLE_SMS_STRICTLY to AUTO for better delivery
 - [x] Write 6 vitest tests for SMS contact creation flow (all passing)
+
+## Fix StartWithProperty Persistence Across Steps (Feb 15, 2026)
+- [ ] Audit how StartWithProperty is rendered across all steps
+- [ ] Remove StartWithProperty from persisting when navigating between steps
+- [ ] Improve the UI so the property context is shown as a subtle summary, not a full form
+- [ ] Test that each step has a clean, focused interface
+
+## URGENT: Studio Bedroom Bug & Math Inconsistency (Feb 15, 2026)
+- [x] BUG: Studios showing as 2 beds when flowing from Step 2 to Step 5
+- [x] BUG: Math/revenue numbers inconsistent between Step 2 analysis and Step 5 validation
+- [x] Trace bedroom count flow from Step 2 (Opportunity Finder) to Step 5 (Validate Deal)
+- [x] Trace revenue/math data flow from Step 2 to Step 5
+- [x] Fix studio bedroom mapping — changed all `bedrooms || X` to `bedrooms ?? X` across 15+ files (50+ occurrences)
+- [x] Fix math consistency between steps — unified profit formula to `revenue - rent - (revenue * 0.20)` across all 12+ calculation paths
+### Studio Fix Details
+Files fixed (bedrooms || X → bedrooms ?? X):
+- server/airdna.ts (32 occurrences)
+- server/opportunity-finder.ts
+- server/sop-reports.ts
+- server/deep-analysis.ts
+- server/newsletter-orchestrator.ts
+- server/nurture-sequence-service.ts
+- server/routers/rental.ts
+- server/routers/shared-reports.ts
+- server/comp-data.ts
+- client/src/components/FullPropertyReport.tsx
+- client/src/components/ShareReportButton.tsx
+- client/src/components/TeslaDashboard.tsx
+- client/src/components/OpportunityFinderStep.tsx
+- client/src/pages/LeadMagnet.tsx
+
+### Math Consistency Fix Details
+Unified profit formula: `profit = revenue - rent - (revenue * 0.20)`
+Files fixed (operating costs now based on revenue, not rent):
+- server/opportunity-finder.ts (batch validate + single validate + opportunity scan)
+- server/newsletter-deal-finder.ts
+- server/newsletter-email-sender.ts
+- server/newsletter-sms.ts
+- server/nurture-sequence-service.ts
+- server/test-deal-alert.ts
+- server/gemini-analyzer.ts (action plan expenses)
+- client/src/pages/LeadMagnet.tsx (cashFlow + inline analysis)
+- client/src/components/FullPropertyReport.tsx (rentalCalcs + scenario analysis)
+- client/src/components/CompareFavoritesSection.tsx
+
+### Tests Added
+- server/profit-calculation.test.ts — 16 tests covering:
+  - Canonical profit formula correctness
+  - Operating costs based on revenue NOT rent
+  - Zero rent / zero revenue edge cases
+  - Negative profit scenarios
+  - Studio (0 bedroom) nullish coalescing behavior
+  - Cross-path consistency verification

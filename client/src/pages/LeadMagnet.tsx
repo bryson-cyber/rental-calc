@@ -555,8 +555,8 @@ export default function LeadMagnet() {
             
             setMyProperty({
               address: data.address,
-              bedrooms: data.bedrooms || 2,
-              bathrooms: data.bathrooms || 1,
+              bedrooms: data.bedrooms ?? 2,
+              bathrooms: data.bathrooms ?? 1,
               monthlyRent: data.rent,
               zipCode: data.zipCode,
               ...(hasValidCoords ? { latitude: data.lat, longitude: data.lng } : {}),
@@ -576,8 +576,8 @@ export default function LeadMagnet() {
               ...myProperty,
               zipCode: data.zipCode,
               address: data.address || myProperty?.address || '',
-              bedrooms: data.bedrooms || myProperty?.bedrooms || 2,
-              bathrooms: data.bathrooms || myProperty?.bathrooms || 1,
+              bedrooms: data.bedrooms ?? myProperty?.bedrooms ?? 2,
+              bathrooms: data.bathrooms ?? myProperty?.bathrooms ?? 1,
             });
           }
           
@@ -1359,7 +1359,7 @@ export default function LeadMagnet() {
         cashFlow: {
           monthlyRevenue,
           monthlyRent: effectiveRent,
-          monthlyProfit: monthlyRevenue - effectiveRent,
+          monthlyProfit: monthlyRevenue - effectiveRent - (monthlyRevenue * 0.20),
         },
         forecast: (data.property?.monthly_forecast || []).map((m: any) => ({
           month: m.month,
@@ -1643,7 +1643,8 @@ export default function LeadMagnet() {
         const data = response.data;
         const annualRevenue = data.property?.estimates?.annual_revenue || 0;
         const monthlyRevenue = annualRevenue / 12;
-        const profit = monthlyRevenue - prop.rent;
+        const operatingCosts = monthlyRevenue * 0.20;
+        const profit = monthlyRevenue - prop.rent - operatingCosts;
         
         // Get property type and comparable count for confidence indicator
         const firstComp = data.property?.comps?.[0];

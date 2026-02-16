@@ -280,8 +280,8 @@ export async function runDealAlertJob(params?: {
               state,
               deal: {
                 address: topDeal?.address || 'Property in ' + city,
-                bedrooms: topDeal?.bedrooms || 3,
-                bathrooms: topDeal?.bathrooms || 2,
+                bedrooms: topDeal?.bedrooms ?? 3,
+                bathrooms: topDeal?.bathrooms ?? 2,
                 monthlyRevenue: topDeal?.projectedMonthlyRevenue || 0,
                 annualRevenue: topDeal?.projectedAnnualRevenue || 0,
                 occupancyRate: topDeal?.projectedOccupancy || 0,

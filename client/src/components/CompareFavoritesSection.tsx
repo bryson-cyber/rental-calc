@@ -182,7 +182,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
         address: fav.address,
         city: fav.city,
         state: fav.state,
-        bedrooms: fav.bedrooms || 0,
+        bedrooms: fav.bedrooms ?? 0,
         bathrooms: parseFloat(fav.bathrooms || '0'),
         annualRevenue,
         occupancy: parseFloat(fav.occupancyRate || '0') * 100,
@@ -305,7 +305,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
             city: fav.city,
             state: fav.state,
             zipCode: fav.zipCode,
-            bedrooms: fav.bedrooms || 0,
+            bedrooms: fav.bedrooms ?? 0,
             bathrooms: fav.bathrooms || '0',
             annualRevenue: fav.annualRevenue || 0,
             occupancyRate: fav.occupancyRate || '0',
@@ -366,7 +366,8 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
           const monthlyRent = rentInputs[fav.id] || fav.monthlyRent || 0;
           const annualRevenue = fav.annualRevenue || 0;
           const monthlyRevenue = annualRevenue / 12;
-          const monthlyProfit = monthlyRevenue * 0.8 - monthlyRent;
+          const operatingCosts = monthlyRevenue * 0.20;
+          const monthlyProfit = monthlyRevenue - monthlyRent - operatingCosts;
           const profitRatio = monthlyRent > 0 ? monthlyRevenue / monthlyRent : 0;
           const grade = getGrade(profitRatio);
           
@@ -425,7 +426,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                       </div>
                     </div>
                     <Link 
-                      href={`/?tab=validate&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&bathrooms=${fav.bathrooms || 1}`}
+                      href={`/?tab=validate&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms ?? 0}&bathrooms=${fav.bathrooms ?? 1}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Button 
@@ -481,7 +482,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
               {/* Action buttons */}
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[oklch(0.92_0_0)]">
                 <Link 
-                  href={`/?tab=map&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&autoAnalyze=true`}
+                  href={`/?tab=map&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms ?? 0}&autoAnalyze=true`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Button variant="outline" size="sm" className="h-8 text-xs px-2">
@@ -490,7 +491,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                   </Button>
                 </Link>
                 <Link 
-                  href={`/?tab=compare&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&autoAnalyze=true`}
+                  href={`/?tab=compare&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms ?? 0}&autoAnalyze=true`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Button variant="outline" size="sm" className="h-8 text-xs px-2">

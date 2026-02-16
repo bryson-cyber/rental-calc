@@ -371,7 +371,7 @@ export async function getTopPerformers(city: string, state: string, limit: numbe
 
     return result.listings.map((l: any) => ({
       title: l.title || 'Untitled Listing',
-      bedrooms: l.bedrooms || 0,
+      bedrooms: l.bedrooms ?? 0,
       monthlyRevenue: Math.round((l.annual_revenue || 0) / 12),
       annualRevenue: l.annual_revenue || 0,
       occupancy: l.occupancy || 0,
@@ -421,7 +421,8 @@ export async function findDealOpportunity(city: string, state: string): Promise<
 
     // Estimate rent (typically 40-50% of revenue for arbitrage)
     const monthlyRent = Math.round(monthlyRevenue * 0.55);
-    const monthlyProfit = monthlyRevenue - monthlyRent;
+    const operatingCosts = monthlyRevenue * 0.20;
+    const monthlyProfit = monthlyRevenue - monthlyRent - operatingCosts;
 
     // Build analysis URL
     const analysisUrl = `https://coachinayahturnkeytool.com?step=5&address=${encodeURIComponent(sampleAddress)}&bedrooms=3&bathrooms=2&rent=${monthlyRent}&autoAnalyze=true`;
@@ -957,8 +958,8 @@ export async function prepareAllNurtureData(contactId: string): Promise<{
 
       // Day 3: Deal Alert
       deal_address: deal?.address || `${city}, ${state}`,
-      deal_bedrooms: deal?.bedrooms || 3,
-      deal_bathrooms: deal?.bathrooms || 2,
+      deal_bedrooms: deal?.bedrooms ?? 3,
+      deal_bathrooms: deal?.bathrooms ?? 2,
       deal_monthly_revenue: deal?.monthlyRevenue || 0,
       deal_monthly_rent: deal?.monthlyRent || 0,
       deal_monthly_profit: deal?.monthlyProfit || 0,

@@ -150,8 +150,8 @@ export default function MyFavorites() {
     const headers = ['Title', 'Bedrooms', 'Bathrooms', 'Annual Revenue', 'Nightly Rate', 'Occupancy', 'Rating', 'Airbnb URL'];
     const rows = (favoritesQuery.data.data as FavoriteListing[]).map((f: FavoriteListing) => [
       `"${(f.title || '').replace(/"/g, '""')}"`,
-      f.bedrooms || 0,
-      f.bathrooms || 0,
+      f.bedrooms ?? 0,
+      f.bathrooms ?? 0,
       f.revenue || 0,
       f.adr || 0,
       `${Math.round(parseFloat(String(f.occupancy || 0)) * 100)}%`,

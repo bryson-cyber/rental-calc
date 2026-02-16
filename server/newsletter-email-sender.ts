@@ -939,7 +939,8 @@ export async function sendDealAlertEmail(params: {
   
   // Calculate profit if we have rent data
   const hasRentData = deal.monthlyRent && deal.monthlyRent > 0;
-  const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! : 0;
+  const operatingCosts = deal.monthlyRevenue * 0.20;
+  const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! - operatingCosts : 0;
   const annualProfit = monthlyProfit * 12;
   const profitMargin = hasRentData && deal.monthlyRevenue > 0 ? (monthlyProfit / deal.monthlyRevenue) * 100 : 0;
   

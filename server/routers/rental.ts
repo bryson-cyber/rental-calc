@@ -1173,7 +1173,7 @@ export const rentalRouter = router({
           const marketId = baseReport.market?.id || baseReport.property.property?.market_id;
           console.log('[getAIPropertyReport] baseReport.market:', JSON.stringify(baseReport.market, null, 2));
           console.log('[getAIPropertyReport] marketId:', marketId);
-          const bedrooms = input.bedrooms || baseReport.property.property?.bedrooms || 2;
+          const bedrooms = (input.bedrooms ?? baseReport.property.property?.bedrooms) ?? 2;
           
           // Fetch ALL qualifying competitors from Market Charts API
           let allCompetitors: typeof baseReport.same_bedroom_comps = [];
@@ -1344,7 +1344,7 @@ export const rentalRouter = router({
               neighborhood,
               propertyType: input.propertyType || 'House',
               bedrooms,
-              bathrooms: input.bathrooms || baseReport.property.property?.bathrooms || 1,
+              bathrooms: (input.bathrooms ?? baseReport.property.property?.bathrooms) ?? 1,
               squareFootage: input.squareFootage,
               monthlyRent: input.monthlyRent,
             },

@@ -1266,8 +1266,8 @@ export async function generateFullArbitrageAnalysis(
   }
   
   // Use property estimate data or defaults
-  const actualBedrooms = property_estimate?.property.bedrooms || bedrooms || 3;
-  const actualBathrooms = property_estimate?.property.bathrooms || bathrooms || 2;
+  const actualBedrooms = (property_estimate?.property.bedrooms ?? bedrooms) ?? 3;
+  const actualBathrooms = (property_estimate?.property.bathrooms ?? bathrooms) ?? 2;
   const zipcode = property_estimate?.property.zipcode;
   
   // Step 2: Get market data and ALL available listings
@@ -1345,7 +1345,7 @@ export async function generateFullArbitrageAnalysis(
   // Filter to same bedroom count for apples-to-apples comparison
   const sameBedroomListings = listings.filter(l => l.bedrooms === actualBedrooms);
   // Also get ±1 bedroom as secondary pool
-  const nearBedroomListings = listings.filter(l => Math.abs((l.bedrooms || 0) - actualBedrooms) <= 1);
+  const nearBedroomListings = listings.filter(l => Math.abs((l.bedrooms ?? 0) - actualBedrooms) <= 1);
   console.log(`[ArbitrageAnalysis] Same bedroom (${actualBedrooms}BR) listings: ${sameBedroomListings.length}, ±1BR: ${nearBedroomListings.length}`);
   
   // Use same-bedroom listings if we have enough, then ±1BR, then all
@@ -1464,7 +1464,7 @@ export async function generateFullArbitrageAnalysis(
   // Calculate bedroom performance from all listings
   const bedroomPerformanceMap = new Map<number, { count: number; totalRevenue: number; totalAdr: number; totalOccupancy: number }>();
   listings.forEach(l => {
-    const br = l.bedrooms || 0;
+    const br = l.bedrooms ?? 0;
     const existing = bedroomPerformanceMap.get(br) || { count: 0, totalRevenue: 0, totalAdr: 0, totalOccupancy: 0 };
     existing.count++;
     existing.totalRevenue += l.annual_revenue || 0;
@@ -2230,7 +2230,7 @@ export async function generateFullArbitrageAnalysis(
         // Calculate bedroom distribution
         const bedroomCounts = new Map<number, number>();
         allListings.forEach(l => {
-          const br = l.bedrooms || 0;
+          const br = l.bedrooms ?? 0;
           bedroomCounts.set(br, (bedroomCounts.get(br) || 0) + 1);
         });
         const bedroomDistribution = Array.from(bedroomCounts.entries())

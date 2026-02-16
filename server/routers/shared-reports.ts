@@ -92,9 +92,9 @@ export const sharedReportsRouter = router({
                 address: input.address || reportData.property?.address || 'Unknown Address',
                 city: reportData.property?.city,
                 state: reportData.property?.state,
-                bedrooms: input.bedrooms || reportData.property?.bedrooms || 0,
-                bathrooms: input.bathrooms || reportData.property?.bathrooms || 0,
-                accommodates: input.accommodates || reportData.property?.accommodates || 0,
+                bedrooms: (input.bedrooms ?? reportData.property?.bedrooms) ?? 0,
+                bathrooms: (input.bathrooms ?? reportData.property?.bathrooms) ?? 0,
+                accommodates: (input.accommodates ?? reportData.property?.accommodates) ?? 0,
               },
               revenue: {
                 annual: reportData.revenue_estimate?.annual || 0,
@@ -153,7 +153,7 @@ export const sharedReportsRouter = router({
         // === POST-PROCESSING: Ensure stress_test, regulation, and expense_breakdown are always populated ===
         if (input.reportType === 'full' && reportData && typeof reportData === 'object') {
           const revEstimate = reportData.revenue_estimate;
-          const bedrooms = input.bedrooms || reportData.property?.bedrooms || 2;
+          const bedrooms = (input.bedrooms ?? reportData.property?.bedrooms) ?? 2;
           const annualRev = revEstimate?.annual || 0;
           const occRate = revEstimate?.occupancy ? (revEstimate.occupancy > 1 ? revEstimate.occupancy / 100 : revEstimate.occupancy) : 0.5;
           const adr = revEstimate?.nightly || 0;
@@ -481,7 +481,7 @@ export const sharedReportsRouter = router({
           return { success: false, error: 'No address found for this report' };
         }
         
-        const bedrooms = report.bedrooms || 3;
+        const bedrooms = report.bedrooms ?? 3;
         const bathrooms = report.bathrooms ? parseFloat(report.bathrooms) : 2;
         const accommodates = report.accommodates || bedrooms * 2;
         
@@ -1299,8 +1299,8 @@ export const sharedReportsRouter = router({
               comparableSales: reportData.comparable_sales?.properties?.slice(0, 10).map((c: any) => ({
                 address: c.address || 'Unknown',
                 price: c.price || 0,
-                bedrooms: c.bedrooms || 0,
-                bathrooms: c.bathrooms || 0,
+                bedrooms: c.bedrooms ?? 0,
+                bathrooms: c.bathrooms ?? 0,
                 sqft: c.sqft,
               })),
               supplyTrend: reportData.supply_trend?.length > 0 ? reportData.supply_trend : undefined,

@@ -472,8 +472,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                 variant="success"
               />
               <HighlightBox
-                title={`${bestBedroom?.bedrooms || 2}-Bedroom Properties Lead`}
-                content={`${bestBedroom?.bedrooms || 2}-bedroom properties show the highest occupancy rates (${formatPercent(bestBedroom?.avg_occupancy || avgOccupancy)}), signaling strong demand from ${bestBedroom?.bedrooms === 1 ? 'couples and business travelers' : bestBedroom?.bedrooms === 4 ? 'families and groups' : 'small families and groups'}.`}
+                title={`${bestBedroom?.bedrooms ?? 2}-Bedroom Properties Lead`}
+                content={`${bestBedroom?.bedrooms ?? 2}-bedroom properties show the highest occupancy rates (${formatPercent(bestBedroom?.avg_occupancy || avgOccupancy)}), signaling strong demand from ${bestBedroom?.bedrooms === 1 ? 'couples and business travelers' : bestBedroom?.bedrooms === 4 ? 'families and groups' : 'small families and groups'}.`}
                 variant="info"
               />
               <HighlightBox
@@ -858,7 +858,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                       <p className="font-semibold text-[oklch(0.15_0.02_265)] text-lg">Key Takeaway</p>
                       <p className="text-[oklch(0.15_0.02_265)]/70">
                         While all property sizes are viable in {marketInfo.name}, focusing on a{' '}
-                        <strong>{bestBedroom?.bedrooms || 2}-bedroom property</strong> gives you the best chance to
+                        <strong>{bestBedroom?.bedrooms ?? 2}-bedroom property</strong> gives you the best chance to
                         maximize occupancy and align with the strongest segment of market demand.
                       </p>
                     </div>
@@ -993,7 +993,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                       <div>
                         <p className="font-semibold text-[oklch(0.15_0.02_265)]">Property Size</p>
                         <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
-                          Look for a {bestBedroom?.bedrooms || 2}-bedroom property. This aligns with the strongest demand segment.
+                          Look for a {bestBedroom?.bedrooms ?? 2}-bedroom property. This aligns with the strongest demand segment.
                         </p>
                       </div>
                     </li>

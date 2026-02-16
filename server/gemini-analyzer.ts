@@ -1321,8 +1321,8 @@ export async function generateActionPlan(
   // Calculate ONLY what we actually know - monthly operating costs
   // We do NOT know startup costs (furniture, photos, supplies vary wildly by situation)
   const monthlyRevenueAtBase = pricingStrategy.base_rate * 30 * 0.6; // 60% occupancy estimate
-  const estimatedUtilities = Math.round(property.monthly_rent * 0.15); // ~15% of rent for utilities
-  const monthlyExpenses = property.monthly_rent + estimatedUtilities;
+  const operatingCosts = monthlyRevenueAtBase * 0.20; // 20% of revenue for operating costs
+  const monthlyExpenses = property.monthly_rent + operatingCosts;
   const monthlyProfit = monthlyRevenueAtBase - monthlyExpenses;
   
   // Break-even occupancy (what % occupancy needed to cover monthly costs)
@@ -1353,7 +1353,7 @@ PRICING STRATEGY:
 
 MONTHLY OPERATING COSTS (what we actually know):
 - Monthly Rent: $${property.monthly_rent.toLocaleString()}
-- Estimated Utilities: $${estimatedUtilities.toLocaleString()} (~15% of rent)
+- Operating Costs (20% of revenue): $${Math.round(operatingCosts).toLocaleString()}
 - Total Monthly Expenses: $${Math.round(monthlyExpenses).toLocaleString()}
 - Monthly Revenue (at 60% occ): $${Math.round(monthlyRevenueAtBase).toLocaleString()}
 - Monthly Profit (at 60% occ): $${Math.round(monthlyProfit).toLocaleString()}

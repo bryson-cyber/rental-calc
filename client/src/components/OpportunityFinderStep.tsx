@@ -669,8 +669,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       const result = await validateProperty.mutateAsync({
         address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
         rent: property.price,
-        bedrooms: property.bedrooms || 2,
-        bathrooms: property.bathrooms || 1,
+        bedrooms: property.bedrooms ?? 2,
+        bathrooms: property.bathrooms ?? 1,
         zillowUrl: property.url,
         image: property.image,
       });
@@ -684,8 +684,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       if (onSelectProperty && result.success) {
         onSelectProperty({
           address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
-          bedrooms: property.bedrooms || 2,
-          bathrooms: property.bathrooms || 1,
+          bedrooms: property.bedrooms ?? 2,
+          bathrooms: property.bathrooms ?? 1,
           monthlyRent: property.price,
         });
       }
@@ -731,8 +731,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         id: p.id,
         address: p.address,
         rent: p.price,
-        bedrooms: p.bedrooms || 2,
-        bathrooms: p.bathrooms || 1,
+        bedrooms: p.bedrooms ?? 2,
+        bathrooms: p.bathrooms ?? 1,
         zillowUrl: p.url,
         image: p.image,
         city: p.city,
@@ -927,8 +927,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           id: p.id,
           address: p.address,
           rent: p.price,
-          bedrooms: p.bedrooms || 2,
-          bathrooms: p.bathrooms || 1,
+          bedrooms: p.bedrooms ?? 2,
+          bathrooms: p.bathrooms ?? 1,
           zillowUrl: p.url,
           image: p.image,
           city: p.city,
@@ -1035,8 +1035,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   const buildPropertyUrl = (property: ZillowProperty, path: string = '/') => {
     const params = new URLSearchParams({
       address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
-      bedrooms: String(property.bedrooms || 2),
-      bathrooms: String(property.bathrooms || 1),
+      bedrooms: String(property.bedrooms ?? 2),
+      bathrooms: String(property.bathrooms ?? 1),
       rent: String(property.price),
     });
     return `${path}?${params.toString()}`;
@@ -1807,7 +1807,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     : null;
                   
                   // Calculate startup costs
-                  const startupCosts = calculateStartupCosts(property.price, property.bedrooms || 2);
+                  const startupCosts = calculateStartupCosts(property.price, property.bedrooms ?? 2);
                   
                   return (
                     <motion.div
@@ -2268,7 +2268,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                         {/* The Kicker - Honest comparison */}
                                         <div className="mt-3 p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.1)', border: '1px solid oklch(0.55 0.15 145 / 0.2)' }}>
                                           <p className="text-xs font-medium" style={{ color: 'oklch(0.35 0.10 145)' }}>
-                                            STR startup: ~{formatCurrency(property.price * 3 + (property.bedrooms || 1) * 5000)} (deposit + furniture). Still far less than {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} for the same monthly return.
+                                            STR startup: ~{formatCurrency(property.price * 3 + (property.bedrooms ?? 1) * 5000)} (deposit + furniture). Still far less than {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} for the same monthly return.
                                           </p>
                                         </div>
                                       </div>

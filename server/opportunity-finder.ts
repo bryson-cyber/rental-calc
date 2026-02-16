@@ -414,13 +414,13 @@ export const opportunityFinderRouter = router({
           
           const estimate = await getAirDNAEstimate(
             rental.address,
-            rental.bedrooms || 2,
-            rental.bathrooms || 1
+            rental.bedrooms ?? 2,
+            rental.bathrooms ?? 1
           );
           
           if (estimate && estimate.revenue > 0) {
             const monthlyRevenue = estimate.revenue / 12;
-            const estimatedExpenses = rental.rent * 0.15; // ~15% for utilities, supplies, etc.
+            const estimatedExpenses = monthlyRevenue * 0.20; // 20% of revenue for operating costs
             const profit = monthlyRevenue - rental.rent - estimatedExpenses;
             
             opportunities.push({
@@ -806,7 +806,7 @@ export const opportunityFinderRouter = router({
         
         // Calculate profitability
         const monthlyRevenue = estimate.revenue / 12;
-        const operatingCosts = input.rent * 0.20; // 20% for utilities, supplies, cleaning, etc.
+        const operatingCosts = monthlyRevenue * 0.20; // 20% for utilities, supplies, cleaning, etc.
         const monthlyProfit = monthlyRevenue - input.rent - operatingCosts;
         const annualProfit = monthlyProfit * 12;
         const roi = (annualProfit / (input.rent * 12)) * 100;
@@ -930,7 +930,7 @@ export const opportunityFinderRouter = router({
               }
 
               const monthlyRevenue = estimate.revenue / 12;
-              const operatingCosts = prop.rent * 0.20;
+              const operatingCosts = monthlyRevenue * 0.20;
               const monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
               const annualProfit = monthlyProfit * 12;
               const roi = (annualProfit / (prop.rent * 12)) * 100;

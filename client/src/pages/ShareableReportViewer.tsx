@@ -56,7 +56,7 @@ function transformValidatorToFullReportData(
     zipCode = stateZipParts[1] || '';
   }
 
-  const bedrooms = dbRecord.bedrooms || 2;
+  const bedrooms = dbRecord.bedrooms ?? 2;
   const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
   const monthlyRent = dbRecord.monthlyRent || 0;
 
@@ -196,7 +196,7 @@ function transformRevenueToFullReportData(
     zipCode = stateZipParts[1] || '';
   }
 
-  const bedrooms = dbRecord.bedrooms || 2;
+  const bedrooms = dbRecord.bedrooms ?? 2;
   const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
 
   const est = reportData.estimates || {};
@@ -553,7 +553,7 @@ export default function ShareableReportViewer() {
     // The reportData IS the AnalysisResult object — pass it directly to TeslaDashboard
     // Extract embedded metadata that was stored alongside the result
     const validatorAddress = report.address || '';
-    const validatorBedrooms = report.bedrooms || 2;
+    const validatorBedrooms = report.bedrooms ?? 2;
     const validatorBathrooms = report.bathrooms ? parseFloat(String(report.bathrooms)) : 1;
     const validatorMonthlyRent = report.monthlyRent || undefined;
     

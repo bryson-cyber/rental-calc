@@ -112,7 +112,7 @@ export async function gatherContentData(): Promise<ContentDataBundle> {
       address: r.address,
       city: r.city || 'Unknown',
       state: r.state || '',
-      bedrooms: r.bedrooms || 0,
+      bedrooms: r.bedrooms ?? 0,
       bathrooms: Number(r.bathrooms) || 0,
       annualRevenue: r.annualRevenueRealistic || 0,
       annualRevenueRange: {

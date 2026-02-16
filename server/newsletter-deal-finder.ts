@@ -102,7 +102,8 @@ export async function analyzePropertyForArbitrage(params: {
     
     // Calculate profitability
     const monthlyRevenue = estimate.estimates.annual_revenue / 12;
-    const monthlyProfit = monthlyRevenue - params.monthlyRent;
+    const operatingCosts = monthlyRevenue * 0.20;
+    const monthlyProfit = monthlyRevenue - params.monthlyRent - operatingCosts;
     const annualProfit = monthlyProfit * 12;
     const profitMargin = monthlyProfit / monthlyRevenue;
     

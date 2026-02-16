@@ -145,7 +145,8 @@ export async function sendDealAlertSMS(params: DealAlertSMSParams): Promise<Send
   
   // Calculate profit if we have rent data
   const hasRentData = deal.monthlyRent && deal.monthlyRent > 0;
-  const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! : 0;
+  const operatingCosts = deal.monthlyRevenue * 0.20;
+  const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! - operatingCosts : 0;
   
   // Build message based on available data
   let message = `${recipient.firstName}, new ${city} opportunity!\n\n`;

@@ -225,8 +225,8 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
     
     const extractedData = {
       address: reportData.address || fullData?.address || 'Unknown',
-      bedrooms: reportData.bedrooms || propertyEstimate?.bedrooms || 0,
-      bathrooms: reportData.bathrooms || propertyEstimate?.bathrooms || 0,
+      bedrooms: (reportData.bedrooms ?? propertyEstimate?.bedrooms) ?? 0,
+      bathrooms: (reportData.bathrooms ?? propertyEstimate?.bathrooms) ?? 0,
       monthlyRent: monthlyRent,
       marketName: reportData.marketName || propertyEstimate?.market_name || 'Unknown',
       annualRevenueRealistic: reportData.annualRevenueRealistic || profitability?.scenarios?.realistic?.projected_revenue || propertyEstimate?.revenue || 0,

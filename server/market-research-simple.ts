@@ -273,7 +273,7 @@ export const marketResearchSimpleRouter = router({
       const performersList = Array.isArray(topPerformers) ? topPerformers : (topPerformers as any)?.listings || [];
       const processedTopPerformers = performersList.slice(0, 10).map((p: any) => ({
         title: p.title || `${p.bedrooms}BR ${p.property_type || 'Property'}`,
-        bedrooms: p.bedrooms || 0,
+        bedrooms: p.bedrooms ?? 0,
         revenue: p.annual_revenue || p.revenue || 0,
         // FIX: Properly handle occupancy for top performers too
         occupancy: (p.occupancy || 0) > 1 ? p.occupancy : Math.round((p.occupancy || 0) * 100),
@@ -619,7 +619,7 @@ export const marketResearchSimpleRouter = router({
           const occ = comp.occupancy || 0;
           return {
             title: comp.title || `${comp.bedrooms}BR Property`,
-            bedrooms: comp.bedrooms || 0,
+            bedrooms: comp.bedrooms ?? 0,
             revenue: comp.annual_revenue || 0,
             occupancy: occ > 1 ? occ : Math.round(occ * 100),
             adr: comp.adr || 0,
