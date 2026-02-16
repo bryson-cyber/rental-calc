@@ -11711,10 +11711,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verified: 91109 now returns 86 properties (1,016 in market)
 
 ## Investigate API Usage Not Showing in User Dashboard (February 16, 2026)
-- [ ] API calls made today but user usage dashboard shows nothing
-- [ ] Check how usage is tracked (rate limiter vs user-facing dashboard)
-- [ ] Identify if tracking is per-user or global
-- [ ] Fix any gaps in usage tracking
+- [x] API calls made today but user usage dashboard shows nothing
+- [x] Root cause: Admin users had early return in all 3 recording functions
+- [x] Fix: Removed admin bypass from recording (kept in limit enforcement)
+- [x] All gaps in usage tracking identified and fixed across all routers
 
 ## Fix Admin Usage Not Tracked in Dashboard (February 16, 2026)
 - [x] Remove admin bypass in recordAnalysisUsage so admin usage is recorded (but not limited)
@@ -11730,3 +11730,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add recordAnalysisUsage for batchValidateProperties (N AirDNA calls per batch)
 - [x] Only tracking AirDNA calls per user request (not HasData/Zillow searches)
 - [x] All 1397 tests passing
+
+## Add AirDNA Usage Tracking to comp-data and market-research-simple routers (February 16, 2026)
+- [x] Audit comp-data router: 4 procedures (getListings, getAllListings, getHistoricalData, getListingsByZipcode)
+- [x] Added recordApiCallsUsage to all 4 comp-data procedures with page-count estimation
+- [x] Audit market-research-simple router: 6 procedures (searchMarkets, getMarketReport, getMarketReportByLocation, getSubmarketReport, getSubmarkets, getZipcodesInSubmarket)
+- [x] Added recordMarketResearchUsage to getMarketReport (~10 calls), getMarketReportByLocation (5 calls), getSubmarketReport (~5 calls)
+- [x] Added recordApiCallsUsage to searchMarkets (1 call), getSubmarkets (1-3 calls), getZipcodesInSubmarket (1-7 calls)
+- [x] advanced.ts and shared-reports.ts already had tracking
+- [x] TypeScript compiles clean, all 1397 tests passing

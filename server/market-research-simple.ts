@@ -10,6 +10,7 @@
  */
 
 import { router, publicProcedure } from './_core/trpc';
+import { recordMarketResearchUsage, recordApiCallsUsage } from './usage-limits';
 import { z } from 'zod';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 import {
@@ -138,8 +139,10 @@ export const marketResearchSimpleRouter = router({
     .input(z.object({
       query: z.string().min(2)
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const searchQuery = input.query.trim();
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
       
       console.log(`[searchMarkets] Searching for: "${searchQuery}"`);
       
@@ -149,6 +152,10 @@ export const marketResearchSimpleRouter = router({
       
       if (apiResults.length > 0) {
         console.log(`[searchMarkets] Found ${apiResults.length} results from AirDNA API`);
+        // Record API usage (1 search call)
+        await recordApiCallsUsage(userId, undefined, ipAddress, 1).catch(err =>
+          console.error('[searchMarkets] Error recording usage:', err)
+        );
         return apiResults.map((r: MarketSearchResult) => ({
           id: r.id,
           name: r.name,
@@ -169,6 +176,11 @@ export const marketResearchSimpleRouter = router({
       console.log(`[searchMarkets] No API results, falling back to market list search`);
       const fallbackResults = await searchMarkets(searchQuery, 15);
       
+      // Record API usage (1 search call)
+      await recordApiCallsUsage(userId, undefined, ipAddress, 1).catch(err =>
+        console.error('[searchMarkets] Error recording usage:', err)
+      );
+
       return fallbackResults.map((r: MarketSearchResult) => ({
         id: r.id,
         name: r.name,
@@ -186,8 +198,10 @@ export const marketResearchSimpleRouter = router({
       marketName: z.string(),
       reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
-    .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
+    .mutation(async ({ input, ctx }): Promise<SimplifiedMarketReport> => {
       const { marketId, marketName } = input;
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
 
       console.log(`[getMarketReport] Starting for marketId: ${marketId}, marketName: ${marketName}`);
       
@@ -384,6 +398,11 @@ export const marketResearchSimpleRouter = router({
         p90: marketInsights.revenue_percentiles.p90,
       } : undefined;
 
+      // Record market research usage (~10 AirDNA API calls)
+      await recordMarketResearchUsage(userId, undefined, ipAddress, 10).catch(err =>
+        console.error('[getMarketReport] Error recording usage:', err)
+      );
+
       return {
         market: {
           id: marketId,
@@ -412,8 +431,10 @@ export const marketResearchSimpleRouter = router({
       location: z.string().min(2), // City name, address, or zip code
       reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
-    .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
+    .mutation(async ({ input, ctx }): Promise<SimplifiedMarketReport> => {
       const { location } = input;
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
       
       console.log(`[getMarketReportByLocation] Getting market data for: ${location}`);
       
@@ -646,6 +667,11 @@ export const marketResearchSimpleRouter = router({
       // Generate insights
       const insights = generateInsights(overview, seasonalityData, topPerformers, bedroomBreakdown);
       
+      // Record market research usage (5 Rentalizer calls)
+      await recordMarketResearchUsage(userId, undefined, ipAddress, 5).catch(err =>
+        console.error('[getMarketReportByLocation] Error recording usage:', err)
+      );
+
       return {
         market: {
           id: 'location-based',
@@ -669,10 +695,12 @@ export const marketResearchSimpleRouter = router({
       submarketName: z.string(),
       reportMode: z.enum(['pro', 'guided']).default('guided'),
     }))
-    .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
+    .mutation(async ({ input, ctx }): Promise<SimplifiedMarketReport> => {
       const { submarketId, submarketName } = input;
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
       
-      console.log(`[getSubmarketReport] Fetching report for submarket: ${submarketId} (${submarketName})`);
+      console.log(`[getSubmarketReport] Fetching report for submarket: ${submarketId} (${submarketName}`);
       
       // Import the comprehensive submarket report function
       const { getComprehensiveSubmarketReport } = await import('./airdna');
@@ -741,6 +769,11 @@ export const marketResearchSimpleRouter = router({
       // Generate insights
       const insights = generateInsights(overview, seasonalityData, topPerformers, bedroomBreakdown);
       
+      // Record market research usage (~5 AirDNA API calls)
+      await recordMarketResearchUsage(userId, undefined, ipAddress, 5).catch(err =>
+        console.error('[getSubmarketReport] Error recording usage:', err)
+      );
+
       return {
         market: {
           id: submarketId,
@@ -769,8 +802,10 @@ export const marketResearchSimpleRouter = router({
       marketId: z.string(),
       expectedState: z.string().optional() // State name to validate submarkets against
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { marketId, expectedState } = input;
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
       console.log(`[getSubmarkets] Getting submarkets for market ${marketId}${expectedState ? ` (expected state: ${expectedState})` : ''}`);
       
       // Check in-memory cache (30 min TTL)
@@ -862,6 +897,13 @@ export const marketResearchSimpleRouter = router({
         }));
         // Cache the result
         mrCache.set(smCacheKey, { data: result, timestamp: Date.now() });
+
+        // Record API usage (1-3 paginated calls)
+        const pagesUsed = Math.ceil(allSubmarkets.length / 25);
+        await recordApiCallsUsage(userId, undefined, ipAddress, pagesUsed).catch(err =>
+          console.error('[getSubmarkets] Error recording usage:', err)
+        );
+
         return result;
       } catch (error) {
         console.error(`[getSubmarkets] Error:`, error);
@@ -881,8 +923,10 @@ export const marketResearchSimpleRouter = router({
       marketId: z.string().optional(), // For fallback to market-level listings
       submarketListingCount: z.number().optional() // Total listings in submarket for accurate calculation
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { submarketId, marketId, submarketListingCount } = input;
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
       const startTime = Date.now();
       console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId} (total: ${submarketListingCount || 'unknown'})`);
       
@@ -1018,6 +1062,12 @@ export const marketResearchSimpleRouter = router({
         console.log(`[getZipcodesInSubmarket] Found ${zipcodesWithCounts.length} unique zip codes with estimated counts in ${Date.now() - startTime}ms`);
         console.log(`[getZipcodesInSubmarket] Top zip codes:`, zipcodesWithCounts.slice(0, 5));
         
+        // Record API usage (1-7 paginated calls)
+        const pagesUsed = Math.ceil(allListings.length / pageSize);
+        await recordApiCallsUsage(userId, undefined, ipAddress, pagesUsed).catch(err =>
+          console.error('[getZipcodesInSubmarket] Error recording usage:', err)
+        );
+
         return zipcodesWithCounts;
       } catch (error) {
         console.error(`[getZipcodesInSubmarket] Error:`, error);

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getAllMarketListings, getAllSubmarketListings, getMarketHistoricalData, getMarketListings, getSubmarketListings } from "../airdna";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
+import { recordApiCallsUsage } from "../usage-limits";
 
 export const compDataRouter = router({
     getListings: publicProcedure
@@ -14,7 +15,7 @@ export const compDataRouter = router({
         orderDirection: z.enum(['asc', 'desc']).default('desc'),
         bedrooms: z.number().int().min(1).max(20).optional(), // Filter by specific bedroom count
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           const offset = (input.page - 1) * input.pageSize;
           
@@ -71,6 +72,13 @@ export const compDataRouter = router({
             exact_location: listing.exact_location || false,
           }));
 
+          // Record AirDNA API usage
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          await recordApiCallsUsage(userId, undefined, ipAddress, 1).catch(err =>
+            console.error('[CompData.getListings] Error recording usage:', err)
+          );
+
           return {
             success: true,
             listings,
@@ -95,7 +103,7 @@ export const compDataRouter = router({
         maxListings: z.number().int().min(25).max(500).default(200),
         bedrooms: z.number().int().min(1).max(20).optional(),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           console.log(`\n========================================`);
           console.log(`[CompData.getAllListings] REQUEST RECEIVED`);
@@ -149,6 +157,14 @@ export const compDataRouter = router({
             exact_location: listing.exact_location || false,
           }));
 
+          // Record AirDNA API usage (multiple pages fetched)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const pagesEstimate = Math.ceil(listings.length / 25);
+          await recordApiCallsUsage(userId, undefined, ipAddress, pagesEstimate).catch(err =>
+            console.error('[CompData.getAllListings] Error recording usage:', err)
+          );
+
           return {
             success: true,
             listings,
@@ -172,7 +188,7 @@ export const compDataRouter = router({
         marketId: z.string(),
         numMonths: z.number().int().min(12).max(60).default(24),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           const result = await getMarketHistoricalData(input.marketId, input.numMonths);
 
@@ -195,6 +211,13 @@ export const compDataRouter = router({
               month: d.month || d.date || '',
               value: (d.value || d.avg || 0) * multiplier,
             }));
+
+          // Record AirDNA API usage (4 metric types fetched)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          await recordApiCallsUsage(userId, undefined, ipAddress, 4).catch(err =>
+            console.error('[CompData.getHistoricalData] Error recording usage:', err)
+          );
 
           return {
             success: true,
@@ -227,7 +250,7 @@ export const compDataRouter = router({
         zipcode: z.string().length(5),
         pageSize: z.number().int().min(1).max(100).default(50),
       }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           console.log(`[CompData.getListingsByZipcode] Looking up zip code: ${input.zipcode}`);
           
@@ -312,6 +335,14 @@ export const compDataRouter = router({
           
           console.log(`[CompData.getListingsByZipcode] Found ${listings.length} listings for zip ${input.zipcode}`);
           
+          // Record AirDNA API usage (geocode + listing pages)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const pagesEstimate = Math.ceil(listings.length / 25) + 1; // +1 for geocode
+          await recordApiCallsUsage(userId, undefined, ipAddress, pagesEstimate).catch(err =>
+            console.error('[CompData.getListingsByZipcode] Error recording usage:', err)
+          );
+
           return {
             success: true,
             listings,
