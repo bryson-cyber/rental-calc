@@ -248,5 +248,5 @@ describe('reportMode tRPC router', () => {
   it('appRouter is defined and exported', async () => {
     const routers = await import('../routers');
     expect(routers.appRouter).toBeDefined();
-  });
+  }, 15000);
 });

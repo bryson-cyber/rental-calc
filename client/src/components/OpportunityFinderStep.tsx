@@ -325,6 +325,13 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     }
   }, [initialLocation]);
   
+  // Re-search when searchType changes (For Rent / For Sale toggle)
+  useEffect(() => {
+    if (location.trim() && hasSearched) {
+      handleSearch(1, false);
+    }
+  }, [searchType]);
+  
   // Notify parent when location changes (for share button)
   useEffect(() => {
     if (onLocationChange && location) {

@@ -11583,3 +11583,24 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix OnboardingTour.tsx Step 4 title from "Explore Listings" to "Explore Competitors"
 - [x] Update knowledge-base.test.ts assertions to match new 9-step naming
 - [x] All 1333 tests passing
+
+## QA Testing Round - Steps 1 & 2 (February 16, 2026)
+
+### Step 1: Check Regulations
+- [x] Test city search with Google Places autocomplete
+- [x] Test regulation results display (Miami: Unknown, Nashville: Allowed with detailed data)
+- [x] Test all buttons and interactive elements (Save, Sources tab, Comments tab)
+- [x] Test loading states and error handling
+- [x] Verify data accuracy and formatting
+- [x] Test View Saved Regulations page
+
+### Step 2: Find a Property (Opportunity Finder)
+- [x] Test city/zip search input (Denver CO autocomplete works)
+- [x] Test property listing results display (15,863 properties found)
+- [x] Test individual property analysis (inline analysis with grade, profit, metrics)
+- [x] Test all buttons and interactive elements (Filters, Sort, Pagination)
+- [x] Test loading states and error handling
+- [x] Verify data accuracy and formatting
+- [x] Fix: For Sale toggle now auto-re-searches instead of keeping stale For Rent results
+- [x] Fix: report-mode test timeout increased from 5s to 15s for appRouter import test
+- [x] All 1333 tests passing
