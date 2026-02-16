@@ -693,3 +693,219 @@ describe("Cache Comp-Median Re-application (stale cache handling)", () => {
     expect(cached.property._original_rentalizer.annual_revenue).toBe(20889);
   });
 });
+
+describe("P75 Fallback (when <3 exact-match comps)", () => {
+  // Simulates the P75 fallback logic: when fewer than 3 exact-match comps,
+  // use P75 of ALL same-bedroom comps with a 1.5x Rentalizer cap
+  function applyP75Fallback(
+    estimates: MockEstimate,
+    forecast: MockForecast[],
+    sameBedroomComps: Array<{ annual_revenue: number; adr: number; occupancy: number }>
+  ) {
+    const result = {
+      adjusted: false,
+      method: 'none' as 'none' | 'p75_fallback',
+      estimates: { ...estimates },
+      monthly_forecast: forecast.map(m => ({ ...m })),
+      _original_rentalizer: null as MockEstimate | null,
+    };
+
+    const p75Comps = sameBedroomComps.filter(c => c.annual_revenue > 0);
+
+    if (p75Comps.length < 3) {
+      return result; // Not enough comps for any adjustment
+    }
+
+    const sortedRevenues = p75Comps.map(c => c.annual_revenue).sort((a, b) => a - b);
+    const sortedAdrs = p75Comps.map(c => c.adr).sort((a, b) => a - b);
+    const sortedOccs = p75Comps.map(c => c.occupancy).sort((a, b) => a - b);
+
+    const p75Revenue = getPercentile(sortedRevenues, 75);
+    const p75Adr = getPercentile(sortedAdrs, 75);
+    const p75Occ = getPercentile(sortedOccs, 75);
+    const medianRevenue = getPercentile(sortedRevenues, 50);
+    const rentalizerRevenue = estimates.annual_revenue;
+
+    // Cap at 1.5x Rentalizer
+    const cap = Math.floor(rentalizerRevenue * 1.5);
+    const targetRevenue = Math.min(p75Revenue, cap);
+
+    // Only adjust upward
+    if (targetRevenue > rentalizerRevenue) {
+      const scaleFactor = targetRevenue / rentalizerRevenue;
+
+      result.adjusted = true;
+      result.method = 'p75_fallback';
+      result._original_rentalizer = { ...estimates };
+      result.estimates.annual_revenue = targetRevenue;
+      result.estimates.average_daily_rate = p75Adr;
+      result.estimates.occupancy_rate = p75Occ > 1 ? p75Occ / 100 : p75Occ;
+      result.estimates.annual_revenue_low = medianRevenue;
+      result.estimates.annual_revenue_high = p75Revenue;
+
+      result.monthly_forecast = forecast.map(m => ({
+        ...m,
+        revenue: Math.round(m.revenue * scaleFactor),
+        adr: Math.round(m.adr * scaleFactor),
+      }));
+    }
+
+    return result;
+  }
+
+  const baseEstimates: MockEstimate = {
+    annual_revenue: 20889,
+    annual_revenue_low: 19000,
+    annual_revenue_high: 22000,
+    average_daily_rate: 75,
+    occupancy_rate: 0.73,
+  };
+
+  const baseForecast: MockForecast[] = [
+    { month: "2025-01", revenue: 1500, adr: 95, occupancy: 0.75 },
+    { month: "2025-02", revenue: 1800, adr: 100, occupancy: 0.80 },
+    { month: "2025-03", revenue: 2200, adr: 110, occupancy: 0.85 },
+  ];
+
+  it("applies P75 with 1.5x cap when <3 exact-match but 3+ same-bedroom comps", () => {
+    // These are same-bedroom comps (different BA counts, so they wouldn't be exact-match)
+    const sameBedroomComps = [
+      { annual_revenue: 25000, adr: 130, occupancy: 0.72 },
+      { annual_revenue: 30000, adr: 150, occupancy: 0.78 },
+      { annual_revenue: 35000, adr: 170, occupancy: 0.82 },
+      { annual_revenue: 40000, adr: 190, occupancy: 0.88 },
+      { annual_revenue: 50000, adr: 220, occupancy: 0.92 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    expect(result.method).toBe('p75_fallback');
+    // P75 of [25K, 30K, 35K, 40K, 50K] = 40000
+    // Cap = floor(20889 * 1.5) = 31333
+    // Target = min(40000, 31333) = 31333
+    expect(result.estimates.annual_revenue).toBe(31333);
+    expect(result._original_rentalizer?.annual_revenue).toBe(20889);
+  });
+
+  it("uses P75 directly when it's below the 1.5x cap", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 20000, adr: 110, occupancy: 0.70 },
+      { annual_revenue: 22000, adr: 120, occupancy: 0.73 },
+      { annual_revenue: 24000, adr: 130, occupancy: 0.76 },
+      { annual_revenue: 26000, adr: 140, occupancy: 0.80 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    // P75 of [20K, 22K, 24K, 26K] = 24000
+    // Cap = floor(20889 * 1.5) = 31333
+    // Target = min(24000, 31333) = 24000 (P75 is below cap)
+    expect(result.estimates.annual_revenue).toBe(24000);
+  });
+
+  it("does NOT adjust when P75 is below Rentalizer", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 10000, adr: 60, occupancy: 0.50 },
+      { annual_revenue: 12000, adr: 70, occupancy: 0.55 },
+      { annual_revenue: 15000, adr: 80, occupancy: 0.60 },
+      { annual_revenue: 18000, adr: 90, occupancy: 0.65 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    // P75 of [10K, 12K, 15K, 18K] = 15000
+    // Cap = floor(20889 * 1.5) = 31333
+    // Target = min(15000, 31333) = 15000 — below Rentalizer $20889
+    expect(result.adjusted).toBe(false);
+    expect(result.estimates.annual_revenue).toBe(20889);
+  });
+
+  it("does NOT adjust when fewer than 3 same-bedroom comps", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 30000, adr: 150, occupancy: 0.78 },
+      { annual_revenue: 40000, adr: 190, occupancy: 0.85 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(false);
+    expect(result.estimates.annual_revenue).toBe(20889);
+  });
+
+  it("sets revenue range: low = median, high = P75", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 25000, adr: 130, occupancy: 0.72 },
+      { annual_revenue: 30000, adr: 150, occupancy: 0.78 },
+      { annual_revenue: 35000, adr: 170, occupancy: 0.82 },
+      { annual_revenue: 40000, adr: 190, occupancy: 0.88 },
+      { annual_revenue: 50000, adr: 220, occupancy: 0.92 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    // Median (P50) of [25K, 30K, 35K, 40K, 50K] = 35000
+    expect(result.estimates.annual_revenue_low).toBe(35000);
+    // P75 of [25K, 30K, 35K, 40K, 50K] = 40000
+    expect(result.estimates.annual_revenue_high).toBe(40000);
+  });
+
+  it("scales monthly forecast proportionally", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 25000, adr: 130, occupancy: 0.72 },
+      { annual_revenue: 30000, adr: 150, occupancy: 0.78 },
+      { annual_revenue: 35000, adr: 170, occupancy: 0.82 },
+      { annual_revenue: 40000, adr: 190, occupancy: 0.88 },
+      { annual_revenue: 50000, adr: 220, occupancy: 0.92 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    // Target = 31333, scale = 31333 / 20889 ≈ 1.5
+    const scaleFactor = 31333 / 20889;
+    expect(result.monthly_forecast[0].revenue).toBe(Math.round(1500 * scaleFactor));
+    expect(result.monthly_forecast[2].revenue).toBe(Math.round(2200 * scaleFactor));
+    // Occupancy unchanged
+    expect(result.monthly_forecast[0].occupancy).toBe(0.75);
+  });
+
+  it("normalizes P75 occupancy from percentage to decimal", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 25000, adr: 130, occupancy: 72 }, // percentage format
+      { annual_revenue: 30000, adr: 150, occupancy: 78 },
+      { annual_revenue: 35000, adr: 170, occupancy: 82 },
+      { annual_revenue: 40000, adr: 190, occupancy: 88 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    // P75 of [72, 78, 82, 88]: idx = ceil(0.75*4)-1 = 2, so P75 = 82, normalized to 0.82
+    expect(result.estimates.occupancy_rate).toBe(0.82);
+    expect(result.estimates.occupancy_rate).toBeLessThanOrEqual(1);
+  });
+
+  it("1.5x cap prevents extreme uplift", () => {
+    const sameBedroomComps = [
+      { annual_revenue: 50000, adr: 200, occupancy: 0.85 },
+      { annual_revenue: 60000, adr: 250, occupancy: 0.88 },
+      { annual_revenue: 70000, adr: 300, occupancy: 0.90 },
+      { annual_revenue: 80000, adr: 350, occupancy: 0.92 },
+      { annual_revenue: 100000, adr: 400, occupancy: 0.95 },
+    ];
+
+    const result = applyP75Fallback(baseEstimates, baseForecast, sameBedroomComps);
+
+    expect(result.adjusted).toBe(true);
+    // P75 of [50K, 60K, 70K, 80K, 100K] = 80000
+    // Cap = floor(20889 * 1.5) = 31333
+    // Target = min(80000, 31333) = 31333 (capped!)
+    expect(result.estimates.annual_revenue).toBe(31333);
+    // Uplift should be exactly 50% (1.5x cap)
+    const uplift = (result.estimates.annual_revenue - 20889) / 20889;
+    expect(uplift).toBeCloseTo(0.5, 1);
+  });
+});

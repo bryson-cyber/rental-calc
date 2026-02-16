@@ -11830,3 +11830,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] All 1,495 tests passing
 - [x] Clear stale cache entries
 - [ ] Run live integration tests on 5+ addresses (pending API rate limit reset)
+
+## P75 Fallback for <3 Comps (February 16, 2026)
+- [x] When <3 exact-match comps: use P75 adjustment with 1.5x cap (instead of raw Rentalizer)
+- [x] When 3+ exact-match comps: keep comp-median as headline (no change)
+- [x] Update cache re-application logic for P75 fallback
+- [x] Added 8 new P75 fallback tests (cap enforcement, edge cases, scaling, normalization)
+- [x] All 1,503 tests passing
