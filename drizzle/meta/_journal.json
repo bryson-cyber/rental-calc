@@ -190,6 +190,13 @@
       "when": 1771096370153,
       "tag": "0026_purple_ezekiel_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1771246090096,
+      "tag": "0027_huge_christian_walker",
+      "breakpoints": true
     }
   ]
 }

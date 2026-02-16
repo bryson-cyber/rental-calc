@@ -468,6 +468,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           propertyType: property.homeType,
           // For Sale properties: store price as purchasePrice, not monthlyRent
           monthlyRent: searchType === 'forRent' ? property.price : undefined,
+          purchasePrice: searchType === 'forSale' ? property.price : undefined,
           zillowUrl: property.url,
           imageUrl: property.image, // Property thumbnail image
           // Include analysis data if available
@@ -824,11 +825,13 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           state: deal.state,
           bedrooms: deal.bedrooms ?? undefined,
           bathrooms: deal.bathrooms ?? undefined,
-          monthlyRent: deal.rent,
+          // For Sale properties: store price as purchasePrice, not monthlyRent
+          monthlyRent: searchType === 'forRent' ? deal.rent : undefined,
+          purchasePrice: searchType === 'forSale' ? deal.rent : undefined,
           zillowUrl: deal.zillowUrl,
           imageUrl: deal.image,
-          annualRevenue: deal.annualRevenue ?? Math.round(deal.annualProfit + deal.rent * 12),
-          monthlyRevenue: deal.monthlyRevenue ?? Math.round((deal.annualProfit + deal.rent * 12) / 12),
+          annualRevenue: deal.annualRevenue ?? Math.round(deal.annualProfit + (searchType === 'forRent' ? deal.rent * 12 : 0)),
+          monthlyRevenue: deal.monthlyRevenue ?? Math.round((deal.annualProfit + (searchType === 'forRent' ? deal.rent * 12 : 0)) / 12),
           occupancyRate: deal.occupancy,
           averageDailyRate: deal.adr,
           estimatedProfit: deal.annualProfit,

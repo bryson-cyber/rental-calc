@@ -300,10 +300,12 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
       {viewMode === 'table' && (
         <ComparisonDashboard
           properties={favorites.map(fav => {
-            // Detect For Sale properties: if monthlyRent > 20,000, it's likely a purchase price stored incorrectly
-            const isLikelyForSale = (fav.monthlyRent ?? 0) > 20000;
-            const effectiveMonthlyRent = isLikelyForSale ? null : fav.monthlyRent;
-            const effectivePurchasePrice = isLikelyForSale ? fav.monthlyRent : ((fav as unknown as { purchasePrice?: number }).purchasePrice || null);
+            // Handle legacy data: if monthlyRent > 20,000 and no purchasePrice, it was likely a sale price stored incorrectly
+            const hasLegacyPriceIssue = (fav.monthlyRent ?? 0) > 20000 && !(fav as any).purchasePrice;
+            const effectiveMonthlyRent = hasLegacyPriceIssue ? null : fav.monthlyRent;
+            const effectivePurchasePrice = hasLegacyPriceIssue 
+              ? fav.monthlyRent 
+              : ((fav as any).purchasePrice || null);
             
             return {
               id: fav.id,
@@ -318,12 +320,12 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
               averageDailyRate: fav.averageDailyRate || 0,
               monthlyRent: effectiveMonthlyRent,
               zillowUrl: fav.zillowUrl,
-              imageUrl: fav.imageUrl, // Pass property thumbnail image
+              imageUrl: fav.imageUrl,
               // Purchase mode fields
               purchasePrice: effectivePurchasePrice,
-              loanType: (fav as unknown as { loanType?: string }).loanType || null,
-              downPaymentPercent: (fav as unknown as { downPaymentPercent?: number }).downPaymentPercent || null,
-              interestRate: (fav as unknown as { interestRate?: number }).interestRate || null,
+              loanType: (fav as any).loanType || null,
+              downPaymentPercent: (fav as any).downPaymentPercent || null,
+              interestRate: (fav as any).interestRate || null,
             };
           })}
           onRemove={(id) => handleRemove(id)}

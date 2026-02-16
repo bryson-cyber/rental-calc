@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "f3d6eb0f-21e6-449e-9b78-3d075d59f2b9",
-  "prevId": "f8a627e0-fc9d-493f-a575-feceb6c62e69",
+  "id": "c14a4240-583a-4d5f-b7c1-56d1822709bd",
+  "prevId": "f3d6eb0f-21e6-449e-9b78-3d075d59f2b9",
   "tables": {
     "activity_logs": {
       "name": "activity_logs",
@@ -2992,6 +2992,13 @@
         },
         "estimatedProfit": {
           "name": "estimatedProfit",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchasePrice": {
+          "name": "purchasePrice",
           "type": "int",
           "primaryKey": false,
           "notNull": false,

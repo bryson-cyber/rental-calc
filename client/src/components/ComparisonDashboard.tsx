@@ -592,6 +592,16 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
                           <p className="text-xs text-slate-500">
                             {property.city}, {property.state} • {property.bedrooms} bed, {property.bathrooms} bath
                           </p>
+                          {property.purchasePrice && property.purchasePrice > 0 && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-100">
+                                For Sale
+                              </span>
+                              <span className="text-[11px] text-blue-600 font-medium">
+                                {formatCurrency(property.purchasePrice)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>

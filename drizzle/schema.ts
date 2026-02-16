@@ -161,6 +161,9 @@ export const favoriteProperties = mysqlTable("favorite_properties", {
   monthlyRent: int("monthlyRent"),
   estimatedProfit: int("estimatedProfit"),
   
+  // Purchase price for For Sale properties
+  purchasePrice: int("purchasePrice"),
+  
   // User notes
   notes: text("notes"),
   

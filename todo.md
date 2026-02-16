@@ -11632,3 +11632,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: OpportunityFinder save handler now only stores price as monthlyRent for For Rent properties
 - [x] Fix: Property images now display correctly in comparison table (imageUrl passed through)
 - [x] All fixes verified in browser
+
+## Add Purchase Price Column to Compare Favorites (February 16, 2026)
+- [x] Add purchasePrice column to favorite_properties schema
+- [x] Update OpportunityFinder save handler to store purchase price for For Sale properties
+- [x] Update favorites.add tRPC procedure to accept purchasePrice
+- [x] ComparisonDashboard already supports purchase mode with Price/CashFlow/CoC/CapRate columns
+- [x] Added "For Sale" badge + purchase price display under property address in rent mode
+- [x] Updated CompareFavoritesSection to pass purchasePrice through with legacy data handling
+- [x] Added vitest test suite (12 tests) for purchasePrice schema, metrics, and legacy handling
+- [ ] Test in browser with For Sale and For Rent properties mixed
