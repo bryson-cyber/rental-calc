@@ -11770,3 +11770,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Implement Option B: Use comp median as headline revenue instead of raw Rentalizer estimate
 - [x] Adjust monthly forecast/seasonality data to be consistent with comp-median headline
 - [x] Add Data Policy page to admin portal with simple 3rd-grade-level explanation
+
+## Testing & Location Bug Fix (February 16, 2026)
+- [ ] Test Phoenix address fresh report to verify comp-median adjustment produces $35K-$38K range
+- [ ] Fix location bug: Phoenix property showing "San Diego, CA" instead of Phoenix, AZ

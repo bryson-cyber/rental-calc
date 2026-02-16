@@ -1008,6 +1008,15 @@ export default function RentalEstimator() {
     // Transform data for ChapterPropertyReport component
     // Extract city from market name or address
     const extractCity = () => {
+      // Priority 1: Use geocoded city from Google Maps (most accurate)
+      if ((propertyInfo as any)._geocoded_city) {
+        return (propertyInfo as any)._geocoded_city;
+      }
+      // Priority 2: Extract from address_lookup (e.g., "Phoenix, AZ")
+      if (propertyInfo.address_lookup) {
+        return propertyInfo.address_lookup.split(',')[0].trim();
+      }
+      // Priority 3: Market name (may be stale from previous search)
       if (market?.name && market.name !== 'Unknown') {
         return market.name.split(',')[0].trim();
       }
@@ -1018,12 +1027,28 @@ export default function RentalEstimator() {
       }
       return 'Local Area';
     };
+
+    const extractState = () => {
+      // Priority 1: Use geocoded state from Google Maps (most accurate)
+      if ((propertyInfo as any)._geocoded_state) {
+        return (propertyInfo as any)._geocoded_state;
+      }
+      // Priority 2: Extract from address_lookup (e.g., "Phoenix, AZ")
+      if (propertyInfo.address_lookup) {
+        const parts = propertyInfo.address_lookup.split(',');
+        if (parts.length >= 2) {
+          return parts[1].trim();
+        }
+      }
+      // Fallback: extract from address
+      return propertyInfo.address.split(',').slice(-1)[0]?.trim().split(' ')[0] || '';
+    };
     
     const chapterReportData = {
       property: {
         address: propertyInfo.address,
         city: extractCity(),
-        state: propertyInfo.address.split(',').slice(-1)[0]?.trim().split(' ')[0] || '',
+        state: extractState(),
         zipCode: propertyInfo.address.match(/\d{5}/)?.[0] || '',
         bedrooms: propertyInfo.bedrooms,
         bathrooms: propertyInfo.bathrooms,
