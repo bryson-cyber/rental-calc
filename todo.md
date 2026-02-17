@@ -12043,3 +12043,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update tests to reflect Forge removal (deep-analysis.test.ts updated)
 - [x] Verify no BUILT_IN_FORGE references remain in LLM paths (only non-LLM platform services remain)
 - [x] Run vitest and save checkpoint (104 files, 1495 tests passed)
+
+## Bug: Bug report not reaching Slack
+- [x] Investigate bug report submission flow and Slack delivery code
+- [x] Check server logs for errors during bug report submission
+- [x] Fix the issue: text bug-reports.ts had NO Slack integration; voice-bug-report.ts used invokeLLM (Forge) which was broken
+- [x] Added full Slack pipeline to bug-reports.ts (AI triage + post to #bug-triage)
+- [x] Converted voice-bug-report.ts invokeLLM calls to callLLM (direct Claude)
+- [ ] Test and verify bug reports reach Slack (user to test live)
