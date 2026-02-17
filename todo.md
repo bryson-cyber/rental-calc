@@ -11973,3 +11973,21 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] 0 Gemini references in source code (excluding node_modules)
 - [x] 104 test files passing, 1495 tests passing
 - [x] Dev server running clean
+
+## Claude Prompt Best Practices & Retry Fix (Feb 17, 2026)
+- [x] Fix SocketError retry logic in llm-provider.ts (socket/network errors now retryable)
+- [x] Add Connection: keep-alive header to Claude API fetch requests
+- [x] Extract persona from generateMaxPropertyAdvice into Claude system prompt
+- [x] Extract persona from generateMaxMarketAdvice into Claude system prompt
+- [x] Extract persona from generateFullReportSummary into Claude system prompt
+- [x] Extract persona from getInvestmentAdvice into Claude system prompt
+- [x] Extract persona from generateEnhancedPropertyReport into Claude system prompt
+- [x] Extract persona from generateEnhancedMarketReport into Claude system prompt
+- [x] Extract persona from generateMarketTrendNarrative into Claude system prompt
+- [x] Extract persona from generateComprehensivePropertyAdvice into Claude system prompt
+- [x] Fix callAnalyzer in ai-analyzer.ts to pass systemInstruction as systemPrompt even with responseSchema
+- [x] Fix deal-alert-agent.ts to remove duplicate persona from user prompt (already in system message)
+- [x] Remove last Gemini reference in drizzle/schema.ts comment
+- [x] All 1,495 tests passing across 104 files
+- [x] Zero Gemini references remaining in codebase
+- [x] Zero TypeScript errors

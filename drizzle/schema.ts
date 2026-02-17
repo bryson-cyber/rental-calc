@@ -793,7 +793,7 @@ export type InsertFavoriteListing = typeof favoriteListings.$inferInsert;
 
 /**
  * Regulation Cache table for storing STR regulation lookup results
- * Caches Gemini API responses to reduce API calls and improve response time
+ * Caches AI API responses to reduce API calls and improve response time
  * TTL: 7 days (regulations don't change frequently)
  */
 export const regulationCache = mysqlTable("regulation_cache", {

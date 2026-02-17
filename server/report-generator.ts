@@ -185,12 +185,11 @@ export async function getInvestmentAdvice(
     ? `\n\nConversation History:\n${conversationHistory.map(m => `${m.role === 'user' ? 'User' : 'Advisor'}: ${m.content}`).join('\n')}`
     : '';
 
-  // PTCF-structured prompt
-  const prompt = `<persona>
-You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon, warm but direct.
-</persona>
+  // System prompt with persona (Claude best practice: separate system from user content)
+  const systemPrompt = `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon, warm but direct.`;
 
-<task>
+  // PTCF-structured prompt
+  const prompt = `<task>
 Answer the user's question about short-term rental markets. This is a live chat conversation — the user is actively researching markets and needs clear, data-grounded answers to make investment decisions.
 </task>
 ${marketContext}${historyText}
@@ -210,6 +209,7 @@ User Question: ${question}`;
     const response = await callLLM(prompt, { 
       model: 'flash',
       thinkingLevel: 'low',
+      systemPrompt,
     });
     return response.trim();
   } catch (error) {
@@ -227,11 +227,13 @@ export async function generateEnhancedPropertyReport(
   const proOverride = getProModeOverride(reportMode, 'property');
   const audience = getAudienceDescription(reportMode);
   
+  // System prompt with persona (Claude best practice)
+  const systemPrompt = reportMode === 'pro' 
+    ? 'You are a senior real estate investment analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.'
+    : 'You are a real estate analyst who explains Airbnb investment opportunities in plain, beginner-friendly language.';
+
   // PTCF-structured prompt for property reports
-  const prompt = `<persona>
-${reportMode === 'pro' ? 'You are a senior real estate investment analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate analyst who explains Airbnb investment opportunities in plain, beginner-friendly language.'}
-</persona>
-${proOverride}
+  const prompt = `${proOverride}
 
 <task>
 Generate a brief property analysis summary for the address: ${address}
@@ -249,7 +251,8 @@ Write 2-3 paragraphs. Use plain language and explain financial terms inline. Foc
   try {
     const response = await callLLM(prompt, { 
       maxTokens: 2048,
-      thinkingLevel: 'low'
+      thinkingLevel: 'low',
+      systemPrompt,
     });
     return response.trim();
   } catch (error) {
@@ -267,11 +270,13 @@ export async function generateEnhancedMarketReport(
   const { getProModeOverride } = await import('./pro-mode-prompts');
   const proOverride = getProModeOverride(reportMode, 'market');
   
+  // System prompt with persona (Claude best practice)
+  const systemPrompt = reportMode === 'pro'
+    ? 'You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.'
+    : 'You are a real estate market analyst who explains Airbnb market conditions in plain, beginner-friendly language.';
+
   // PTCF-structured prompt for market reports
-  const prompt = `<persona>
-${reportMode === 'pro' ? 'You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate market analyst who explains Airbnb market conditions in plain, beginner-friendly language.'}
-</persona>
-${proOverride}
+  const prompt = `${proOverride}
 
 <task>
 Generate a brief market analysis summary for: ${marketName}
@@ -289,7 +294,8 @@ Write 2-3 paragraphs. Use plain language and explain financial terms inline. Foc
   try {
     const response = await callLLM(prompt, { 
       maxTokens: 2048,
-      thinkingLevel: 'low'
+      thinkingLevel: 'low',
+      systemPrompt,
     });
     return response.trim();
   } catch (error) {
@@ -321,12 +327,13 @@ export async function generateMarketTrendNarrative(
 ): Promise<string> {
   const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore, reportMode = 'guided' } = input;
   
-  // PTCF-structured prompt for trend analysis
-  const prompt = `<persona>
-${reportMode === 'pro' ? 'You are a quantitative market analyst who produces concise, benchmark-driven trend assessments for institutional investors.' : 'You are a data analyst who explains market trends in plain, easy-to-understand language.'}
-</persona>
+  // System prompt with persona (Claude best practice)
+  const trendSystemPrompt = reportMode === 'pro'
+    ? 'You are a quantitative market analyst who produces concise, benchmark-driven trend assessments for institutional investors.'
+    : 'You are a data analyst who explains market trends in plain, easy-to-understand language.';
 
-<task>
+  // PTCF-structured prompt for trend analysis
+  const prompt = `<task>
 Analyze the market trend data for ${marketName} and explain what it means for someone considering entering this market.
 </task>
 
@@ -350,7 +357,8 @@ Write 1-2 paragraphs. Identify the trend direction (growing, declining, stable).
   try {
     const response = await callLLM(prompt, { 
       maxTokens: 1024,
-      thinkingLevel: 'low'
+      thinkingLevel: 'low',
+      systemPrompt: trendSystemPrompt,
     });
     return response.trim();
   } catch (error) {
@@ -533,13 +541,13 @@ Profit Margin: ${cashFlow?.profitMargin.toFixed(1) || 'N/A'}%
 Revenue-to-Rent Ratio: ${cashFlow ? (cashFlow.monthlyRevenue / cashFlow.monthlyRent).toFixed(2) : 'N/A'}x
 ` : '';
 
+  // System prompt with persona (Claude best practice: separate system from user content)
+  const systemPrompt = isPurchaseMode 
+    ? `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You evaluate properties for purchase using Cap Rate, Cash-on-Cash Return, and DSCR.${reportMode === 'pro' ? ' You speak to the reader as a peer investor with precise financial language.' : ' You use the "story before the stats" approach and analogy over jargon — like talking to a friend considering their first investment property.'}`
+    : `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets.${reportMode === 'pro' ? ' You evaluate rental arbitrage opportunities with precise financial metrics and market benchmarks.' : ' You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend curious about Airbnb investing.'}`;
+
   // PTCF-structured comprehensive prompt
-  const prompt = `<persona>
-${isPurchaseMode 
-  ? `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You evaluate properties for purchase using Cap Rate, Cash-on-Cash Return, and DSCR.${reportMode === 'pro' ? ' You speak to the reader as a peer investor with precise financial language.' : ' You use the "story before the stats" approach and analogy over jargon — like talking to a friend considering their first investment property.'}`
-  : `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets.${reportMode === 'pro' ? ' You evaluate rental arbitrage opportunities with precise financial metrics and market benchmarks.' : ' You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend curious about Airbnb investing.'}`}
-</persona>
-${proOverride}
+  const prompt = `${proOverride}
 
 <task>
 ${isPurchaseMode
@@ -651,8 +659,8 @@ ${isPurchaseMode ? `Focus on Cap Rate, Cash-on-Cash Return, DSCR, and monthly ca
   try {
     const response = await callLLM(prompt, { 
       maxTokens: 8192, 
-
-      thinkingLevel: 'high'
+      thinkingLevel: 'high',
+      systemPrompt,
     });
     return response.trim();
   } catch (error) {
@@ -959,8 +967,8 @@ export async function generateMaxPropertyAdvice(
     };
   }
 
-  // PTCF-structured maximum capacity prompt - MODE AWARE
-  const personaSection = isPurchaseMode ? `<persona>
+  // System prompt with persona (Claude best practice: separate system from user content)
+  const personaSection = isPurchaseMode ? `
 ${reportMode === 'pro' 
     ? `You are a world-class real estate investment analyst who produces institutional-grade property purchase assessments. You speak to the reader as a peer investor with precise financial language.
 
@@ -974,8 +982,7 @@ Your communication style:
 - Be friendly and encouraging, like talking to a friend
 - Always explain the "so what?" for every number
 - Focus on investment returns: Cap Rate, Cash-on-Cash, DSCR`}
-</persona>
-${proOverride}` : `<persona>
+${proOverride}` : `
 ${reportMode === 'pro'
     ? `You are a world-class rental arbitrage analyst who produces institutional-grade opportunity assessments with precise financial metrics and market benchmarks.
 
@@ -988,7 +995,6 @@ Your communication style:
 - Use real-life comparisons ("Think of it like..." or "Imagine if...")
 - Be friendly and encouraging, like talking to a friend
 - Always explain the "so what?" for every number`}
-</persona>
 ${proOverride}`;
 
   const taskSection = isPurchaseMode ? `<task>
@@ -1299,7 +1305,7 @@ Base every claim on the data provided above. Compare exclusively to ${property.b
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt);
+    const response = await callLLMMax(prompt, 3, { systemPrompt: personaSection });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -1562,20 +1568,20 @@ export async function generateMaxMarketAdvice(
     ? ((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 100)
     : 0;
 
-  // PTCF-structured maximum capacity market prompt
-  const prompt = `<persona>
-${reportMode === 'pro' 
+  // System prompt with persona (Claude best practice: separate system from user content)
+  const marketSystemPrompt = reportMode === 'pro' 
     ? `You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments. You speak to the reader as a peer investor evaluating market opportunities.
 
 Your communication style:
 ${commStyle}`
     : `You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart friend who's curious but has no background in real estate. Your communication style is:
 - Super simple language (if a word is confusing, explain it or use a simpler word)
-- Use real-life comparisons ("Think of it like..." or "Imagine if...")`}
+- Use real-life comparisons ("Think of it like..." or "Imagine if...")
 - Friendly and encouraging (like talking to a friend over coffee)
-- Always explain the "so what?" - why does this number matter?
-</persona>
-${proOverride}
+- Always explain the "so what?" - why does this number matter?`;
+
+  // PTCF-structured maximum capacity market prompt
+  const prompt = `${proOverride}
 
 <task>
 ${reportMode === 'pro' ? 'Analyze the market data below and produce an INSTITUTIONAL-GRADE MARKET REPORT with precise benchmarks and financial metrics.' : 'Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT.'} This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand.
@@ -1810,7 +1816,7 @@ Use simple, conversational language and explain what every number means in pract
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt);
+    const response = await callLLMMax(prompt, 3, { systemPrompt: marketSystemPrompt });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -2049,12 +2055,12 @@ HISTORICAL TRENDS:
 - Market Trend: ${trend}`;
   }
 
-  const prompt = `<persona>
-${reportMode === 'pro' 
+  // System prompt with persona (Claude best practice: separate system from user content)
+  const summarySystemPrompt = reportMode === 'pro' 
     ? `You are David Wei Chen, a senior real estate investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You write institutional-grade executive summaries with precise financial metrics, benchmarks, and quantitative analysis. Your communication style: data-first with exact figures, industry-standard terminology (Cap Rate, DSCR, RevPAR, NOI), and benchmark comparisons. Your tone is authoritative and direct — like a managing director presenting to an investment committee. You never give prescriptive investment advice but present data with analytical rigor.`
-    : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do. You never sugarcoat risks but always empower.`}
-</persona>
-${proOverride}
+    : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do. You never sugarcoat risks but always empower.`;
+
+  const prompt = `${proOverride}
 
 <task>
 Write a comprehensive Executive Summary for a Full Property Investment Analysis Report.${preparedFor ? ` This report is prepared for ${preparedFor}.` : ''}
@@ -2175,13 +2181,13 @@ Present data and observations only — let the reader draw their own conclusions
 </format>`;
 
   try {
-    const response = await callLLMMax(prompt);
+    const response = await callLLMMax(prompt, 3, { systemPrompt: summarySystemPrompt });
     return response.trim();
   } catch (error) {
     console.error('Error generating full report summary:', error);
     // Fallback to the simpler function
     try {
-      const fallbackResponse = await callLLM(prompt, { maxTokens: 4096, thinkingLevel: 'low' });
+      const fallbackResponse = await callLLM(prompt, { maxTokens: 4096, thinkingLevel: 'low', systemPrompt: summarySystemPrompt });
       return fallbackResponse.trim();
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError);

@@ -123,6 +123,7 @@ async function callClaude(prompt: string, options?: LLMCallOptions): Promise<str
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -242,6 +243,7 @@ export async function callLLMWithVision(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -339,6 +341,7 @@ export async function callLLMWithTools(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -427,6 +430,7 @@ export async function* callLLMStreaming(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -669,7 +673,13 @@ export async function callLLMMax(prompt: string, maxRetries: number = 3, options
                           errorMsg.includes('500') || 
                           errorMsg.includes('overloaded') ||
                           errorMsg.includes('aborterror') ||
-                          errorMsg.includes('rate_limit');
+                          errorMsg.includes('rate_limit') ||
+                          errorMsg.includes('fetch failed') ||
+                          errorMsg.includes('socket') ||
+                          errorMsg.includes('econnreset') ||
+                          errorMsg.includes('econnrefused') ||
+                          errorMsg.includes('etimedout') ||
+                          errorMsg.includes('network');
       
       if (!isRetryable && attempt === 0) {
         throw lastError;

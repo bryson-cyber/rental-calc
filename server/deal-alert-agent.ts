@@ -649,7 +649,7 @@ async function generateDealAlertNarrative(
   try {
     const bestMatch = matches.sort((a, b) => (b.dealScore ?? 0) - (a.dealScore ?? 0))[0];
     
-    const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, writing on behalf of Coach Inayah's team. Write a brief, personalized email paragraph (2-3 sentences) about a deal alert for ${criteria.firstName || 'there'}. Use the "story before the stats" approach — lead with a compelling narrative, then back it with specific numbers. Be warm but direct.
+    const prompt = `Write a brief, personalized email paragraph (2-3 sentences) about a deal alert for ${criteria.firstName || 'there'}. Use the "story before the stats" approach — lead with a compelling narrative, then back it with specific numbers. Be warm but direct.
 
 Market: ${criteria.city}, ${criteria.state}
 Property: ${bestMatch.bedrooms}BR/${bestMatch.bathrooms}BA

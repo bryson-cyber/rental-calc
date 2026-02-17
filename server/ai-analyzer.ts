@@ -244,10 +244,8 @@ async function callAnalyzer(
 
   // If responseSchema is provided, ask Claude for JSON
   if (opts.responseSchema) {
-    const jsonPrompt = opts.systemInstruction
-      ? `${opts.systemInstruction}\n\n${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`
-      : `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`;
-    return callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high' });
+    const jsonPrompt = `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`;
+    return callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt: opts.systemInstruction });
   }
 
   return callLLM(prompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt: opts.systemInstruction });
