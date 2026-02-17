@@ -11873,3 +11873,103 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Apply Claude-specific prompt optimizations (remove anti-laziness, add XML structure)
 - [ ] Clear cached reports so new Claude narratives generate fresh
 - [ ] Test full report generation end-to-end with Claude provider
+
+## Switch to Claude + Filter Management Companies (February 17, 2026)
+- [x] Switch LLM_PROVIDER env var from 'gemini' to 'anthropic'
+- [ ] Filter out management company properties from HasData API results
+- [ ] Only show individual owner/host listings (exclude listings where contact info says management company)
+- [ ] Write vitest tests for management company filter
+- [ ] Save checkpoint
+
+## Claude Prompt Optimization (February 17, 2026)
+- [x] Audit all prompt-containing files and catalog every prompt (17 files, 40+ prompts cataloged)
+- [ ] Update prompts in gemini.ts (7 report narrative functions)
+- [ ] Update prompts in gemini-analyzer.ts
+- [ ] Update prompts in gemini-analyzer-enhanced.ts
+- [ ] Update prompts in gemini-streaming.ts
+- [ ] Update prompts in ai-advisor.ts
+- [ ] Update prompts in ai-fallback.ts
+- [ ] Update prompts in content-studio.ts
+- [ ] Update prompts in newsletter-content-generator.ts
+- [ ] Update prompts in regulation-tracker.ts
+- [ ] Migrate all files to use callLLM/callLLMMax from llm-provider.ts
+- [ ] Run full test suite
+- [ ] Save checkpoint
+
+## Switch to Sonnet 4.6 (February 17, 2026)
+- [x] Switch primary model from Opus 4.6 to Sonnet 4.6 (user preference)
+- [x] Update llm-provider.ts model mapping: pro → sonnet-4-6, flash → sonnet-4-6 (Sonnet for everything)
+- [x] Update callLLMMax to use sonnet-4-6 as default model (inherits from pro tier)
+- [ ] Update MAX prompts (generateMaxPropertyAdvice, generateMaxMarketAdvice, generateFullReportSummary) for Claude best practices
+- [ ] Run tests and save checkpoint
+
+## Hybrid Opus/Sonnet Model Routing (February 17, 2026)
+- [x] Read extended-thinking skill for correct adaptive thinking API
+- [x] Revert llm-provider.ts: pro → claude-opus-4-6, flash → claude-sonnet-4-6
+- [x] Update Opus timeout to 5 min (deeper reasoning takes longer)
+- [x] Clamp maxTokens to model max (128K Opus, 64K Sonnet)
+- [x] Remove temperature setting when thinking is enabled (per skill Section 12)
+- [x] Save model-routing-strategy.md to docs/
+- [ ] Update gemini.ts MAX functions to use model: 'pro' (Opus for deep reports)
+- [ ] Update gemini.ts simple functions to use model: 'flash' (Sonnet for UI text)
+- [ ] Finish cleaning up decorative separators and CONSTRAINTS in MAX prompts
+- [ ] Migrate remaining server files to callLLM with correct model routing
+- [ ] Run tests and save checkpoint
+
+## Complete Gemini Removal — Claude Sonnet 4.6 Only (February 17, 2026)
+- [ ] Remove Gemini provider from llm-provider.ts (Claude-only, no dual-provider)
+- [ ] Rewrite gemini-analyzer.ts — replace callGemini/callGeminiWithImage/callGeminiStructured with Claude
+- [ ] Rewrite gemini-analyzer-enhanced.ts — replace callGeminiWithRetry with Claude
+- [ ] Rewrite ai-fallback.ts — remove Gemini direct fallback, use Claude
+- [ ] Rewrite ai-advisor.ts — replace Gemini function calling with Claude tool_use
+- [ ] Rewrite ai-advisor-enhanced.ts — remove Gemini, use Claude
+- [ ] Rewrite gemini-streaming.ts — replace Gemini SSE streaming with Claude streaming
+- [ ] Rewrite content-studio.ts — remove Gemini, use Claude
+- [ ] Rewrite newsletter-content-generator.ts — remove Gemini, use Claude
+- [ ] Rewrite regulation-tracker.ts — remove Gemini, use Claude
+- [ ] Remove all GEMINI_API_URL constants across codebase
+- [ ] Remove all ENV.geminiApiKey references
+- [ ] Clean up all Gemini comments and naming
+- [ ] TypeScript clean — zero errors
+- [ ] All tests passing
+- [ ] Save checkpoint
+
+## Gemini-to-Claude Codebase Cleanup (Feb 17, 2026) - COMPLETE
+
+### File Renames
+- [x] Rename server/gemini-streaming.ts → server/ai-streaming.ts
+- [x] Rename server/gemini.ts → server/report-generator.ts
+- [x] Rename server/gemini-analyzer.ts → server/ai-analyzer.ts
+- [x] Rename server/gemini-analyzer-enhanced.ts → server/ai-analyzer-enhanced.ts
+- [x] Rename test files to match new source file names
+
+### Function Renames
+- [x] Rename callGeminiStructured → callLLMStructured in all files
+
+### Import Updates
+- [x] Update all imports from gemini-streaming → ai-streaming
+- [x] Update all imports from ../gemini → ../report-generator
+- [x] Update all imports from gemini-analyzer → ai-analyzer
+- [x] Update all imports from gemini-analyzer-enhanced → ai-analyzer-enhanced
+
+### Comment/Documentation Cleanup
+- [x] Replace all "Gemini" references in source code comments with "Claude AI"
+- [x] Replace all "Gemini" references in UI-visible text with "Claude AI"
+- [x] Update persona.ts references
+- [x] Fix NewsletterDashboard.tsx geminiConfigured → llmConfigured
+- [x] Remove geminiApiKey and llmProvider from env.ts
+- [x] Remove old research docs (gemini-api-audit.md, etc.)
+
+### Test Updates
+- [x] Rewrite anthropic.test.ts for Claude API
+- [x] Rewrite llm-provider.test.ts to match Claude-only exports
+- [x] Rewrite ai-streaming.test.ts to mock llm-provider instead of raw fetch
+- [x] Rewrite content-studio.test.ts to match actual exports
+- [x] Fix ai-retry-cache.test.ts retry assertions
+- [x] Update all test describe/it labels from "Gemini" to "Claude/AI"
+
+### Verification
+- [x] 0 TypeScript errors
+- [x] 0 Gemini references in source code (excluding node_modules)
+- [x] 104 test files passing, 1495 tests passing
+- [x] Dev server running clean

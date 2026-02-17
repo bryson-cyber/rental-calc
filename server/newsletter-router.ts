@@ -296,7 +296,7 @@ export const newsletterRouter = router({
       dealAlertEmailTemplateId: process.env.HUBSPOT_DEAL_ALERT_EMAIL_ID || 'Not configured',
       hubspotConfigured: !!process.env.HUBSPOT_API_KEY,
       airdnaConfigured: !!process.env.AIRDNA_API_KEY,
-      geminiConfigured: !!process.env.GEMINI_API_KEY
+      llmConfigured: !!process.env.ANTHROPIC_API_KEY
     };
   }),
   

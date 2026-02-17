@@ -1,206 +1,154 @@
 /**
  * Unit tests for AI Streaming and Conversation Memory features
  * 
- * Updated for Gemini 3 REST API (no deprecated SDK)
+ * Updated for Claude API via llm-provider.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock fetch globally for the REST API calls
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
+// Mock the llm-provider module
+const mockCallLLM = vi.fn().mockResolvedValue('This is a test response from Claude.');
+const mockCallLLMStreaming = vi.fn();
 
-// Mock ENV
-vi.mock('../_core/env', () => ({
-  ENV: {
-    geminiApiKey: 'test-api-key',
-  },
+vi.mock('../llm-provider', () => ({
+  callLLM: (...args: any[]) => mockCallLLM(...args),
+  callLLMStreaming: (...args: any[]) => mockCallLLMStreaming(...args),
 }));
 
-function createMockResponse(text: string, ok = true) {
-  return {
-    ok,
-    status: ok ? 200 : 400,
-    json: vi.fn().mockResolvedValue({
-      candidates: [{
-        content: {
-          parts: [{ text }]
-        }
-      }]
-    }),
-    text: vi.fn().mockResolvedValue(text),
-  };
-}
-
-function createMockStreamResponse(chunks: string[]) {
-  const sseData = chunks.map(c => `data: ${JSON.stringify({
-    candidates: [{ content: { parts: [{ text: c }] } }]
-  })}\n\n`).join('');
-
-  const encoder = new TextEncoder();
-  const encoded = encoder.encode(sseData);
-  let read = false;
-
-  return {
-    ok: true,
-    status: 200,
-    body: {
-      getReader: () => ({
-        read: vi.fn().mockImplementation(() => {
-          if (!read) {
-            read = true;
-            return Promise.resolve({ done: false, value: encoded });
-          }
-          return Promise.resolve({ done: true, value: undefined });
-        }),
-      }),
-    },
-    text: vi.fn().mockResolvedValue(''),
-  };
-}
-
-describe('Gemini Streaming Integration', () => {
+describe('AI Streaming Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCallLLM.mockResolvedValue('This is a test response from Claude.');
+    mockCallLLMStreaming.mockImplementation(async function* () {
+      yield 'Hello';
+      yield ' there!';
+      yield ' How can I help?';
+    });
   });
 
-  describe('geminiChat function', () => {
-    it('should export geminiChat function', async () => {
-      const { geminiChat } = await import('../gemini-streaming');
-      expect(typeof geminiChat).toBe('function');
+  describe('claudeChat function', () => {
+    it('should export claudeChat function', async () => {
+      const { claudeChat } = await import('../ai-streaming');
+      expect(typeof claudeChat).toBe('function');
     });
 
     it('should handle basic chat messages', async () => {
-      mockFetch.mockResolvedValueOnce(createMockResponse('This is a test response from Gemini.'));
+      const { claudeChat } = await import('../ai-streaming');
       
-      const { geminiChat } = await import('../gemini-streaming');
-      
-      const response = await geminiChat([
+      const response = await claudeChat([
         { role: 'user', content: 'Hello, how are you?' },
       ]);
       
       expect(typeof response).toBe('string');
       expect(response.length).toBeGreaterThan(0);
+      expect(mockCallLLM).toHaveBeenCalledTimes(1);
     });
 
     it('should handle system prompts', async () => {
-      mockFetch.mockResolvedValueOnce(createMockResponse('I am Coach Inayah\'s AI assistant.'));
+      const { claudeChat } = await import('../ai-streaming');
       
-      const { geminiChat } = await import('../gemini-streaming');
-      
-      const response = await geminiChat(
+      const response = await claudeChat(
         [{ role: 'user', content: 'What can you help me with?' }],
         'You are Coach Inayah\'s AI assistant for rental arbitrage.'
       );
       
       expect(typeof response).toBe('string');
-      
-      // Verify systemInstruction was sent in the request body
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.systemInstruction).toBeDefined();
-      expect(body.systemInstruction.parts[0].text).toContain('Coach Inayah');
+      // Verify systemPrompt was passed to callLLM
+      expect(mockCallLLM).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          systemPrompt: expect.stringContaining('Coach Inayah'),
+        })
+      );
     });
 
     it('should handle conversation history', async () => {
-      mockFetch.mockResolvedValueOnce(createMockResponse('Here is how to get started with rental arbitrage.'));
+      const { claudeChat } = await import('../ai-streaming');
       
-      const { geminiChat } = await import('../gemini-streaming');
-      
-      const response = await geminiChat([
+      const response = await claudeChat([
         { role: 'user', content: 'What is rental arbitrage?' },
-        { role: 'assistant', content: 'Rental arbitrage is a strategy where you rent a property and then sublease it on platforms like Airbnb.' },
+        { role: 'assistant', content: 'Rental arbitrage is a strategy...' },
         { role: 'user', content: 'How do I get started?' },
       ]);
       
       expect(typeof response).toBe('string');
-      
-      // Verify conversation history was sent correctly
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.contents.length).toBe(3);
-      expect(body.contents[0].role).toBe('user');
-      expect(body.contents[1].role).toBe('model'); // assistant -> model
-      expect(body.contents[2].role).toBe('user');
+      // Verify the prompt includes conversation history
+      const prompt = mockCallLLM.mock.calls[0][0];
+      expect(prompt).toContain('rental arbitrage');
+      expect(prompt).toContain('How do I get started');
     });
 
-    it('should use correct Gemini 3 model and thinkingConfig', async () => {
-      mockFetch.mockResolvedValueOnce(createMockResponse('Test'));
+    it('should return error message when no user message found', async () => {
+      const { claudeChat } = await import('../ai-streaming');
       
-      const { geminiChat } = await import('../gemini-streaming');
-      await geminiChat([{ role: 'user', content: 'test' }]);
+      // claudeChat catches the error and returns an error message string
+      const response = await claudeChat([]);
       
-      const callArgs = mockFetch.mock.calls[0];
-      const url = callArgs[0] as string;
-      const body = JSON.parse(callArgs[1].body);
-      
-      // Should use gemini-3-flash-preview model
-      expect(url).toContain('gemini-3-flash-preview');
-      
-      // Should have thinkingConfig inside generationConfig
-      expect(body.generationConfig.thinkingConfig).toBeDefined();
-      expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe('low');
-      
-      // Temperature should be 1.0 for thinking models
-      expect(body.generationConfig.temperature).toBe(1.0);
+      expect(typeof response).toBe('string');
+      expect(response.length).toBeGreaterThan(0);
+      // Should return a user-friendly error, not throw
+      expect(response).toContain('error');
     });
   });
 
-  describe('streamGeminiChat function', () => {
-    it('should export streamGeminiChat function', async () => {
-      const { streamGeminiChat } = await import('../gemini-streaming');
-      expect(typeof streamGeminiChat).toBe('function');
+  describe('streamClaudeChat function', () => {
+    it('should export streamClaudeChat function', async () => {
+      const { streamClaudeChat } = await import('../ai-streaming');
+      expect(typeof streamClaudeChat).toBe('function');
     });
 
     it('should call onChunk and onComplete callbacks', async () => {
-      mockFetch.mockResolvedValueOnce(createMockStreamResponse(['Hello', ' there!', ' How can I help?']));
-      
-      const { streamGeminiChat } = await import('../gemini-streaming');
+      const { streamClaudeChat } = await import('../ai-streaming');
       
       const chunks: string[] = [];
       let finalResponse = '';
       
-      await streamGeminiChat({
+      await streamClaudeChat({
         messages: [{ role: 'user', content: 'Hello!' }],
         onChunk: (chunk) => chunks.push(chunk),
         onComplete: (response) => { finalResponse = response; },
         onError: (error) => { throw error; },
       });
       
-      expect(chunks.length).toBeGreaterThan(0);
-      expect(finalResponse.length).toBeGreaterThan(0);
+      expect(chunks.length).toBe(3);
+      expect(chunks).toEqual(['Hello', ' there!', ' How can I help?']);
+      expect(finalResponse).toBe('Hello there! How can I help?');
     });
 
-    it('should use streaming endpoint with alt=sse', async () => {
-      mockFetch.mockResolvedValueOnce(createMockStreamResponse(['Test']));
+    it('should call onError when no user message found', async () => {
+      const { streamClaudeChat } = await import('../ai-streaming');
       
-      const { streamGeminiChat } = await import('../gemini-streaming');
+      let caughtError: Error | null = null;
       
-      await streamGeminiChat({
-        messages: [{ role: 'user', content: 'Hello!' }],
+      await streamClaudeChat({
+        messages: [],
         onChunk: () => {},
         onComplete: () => {},
-        onError: (error) => { throw error; },
+        onError: (error) => { caughtError = error; },
       });
       
-      const callArgs = mockFetch.mock.calls[0];
-      const url = callArgs[0] as string;
-      expect(url).toContain('streamGenerateContent');
-      expect(url).toContain('alt=sse');
+      expect(caughtError).not.toBeNull();
+      expect(caughtError!.message).toContain('No user message');
     });
   });
 
-  describe('checkGeminiHealth function', () => {
-    it('should export checkGeminiHealth function', async () => {
-      const { checkGeminiHealth } = await import('../gemini-streaming');
-      expect(typeof checkGeminiHealth).toBe('function');
+  describe('checkClaudeHealth function', () => {
+    it('should export checkClaudeHealth function', async () => {
+      const { checkClaudeHealth } = await import('../ai-streaming');
+      expect(typeof checkClaudeHealth).toBe('function');
     });
 
-    it('should return boolean', async () => {
-      mockFetch.mockResolvedValueOnce(createMockResponse('OK'));
-      
-      const { checkGeminiHealth } = await import('../gemini-streaming');
-      const result = await checkGeminiHealth();
-      expect(typeof result).toBe('boolean');
+    it('should return true when Claude responds with ok', async () => {
+      mockCallLLM.mockResolvedValueOnce('OK');
+      const { checkClaudeHealth } = await import('../ai-streaming');
+      const result = await checkClaudeHealth();
+      expect(result).toBe(true);
+    });
+
+    it('should return false when Claude API fails', async () => {
+      mockCallLLM.mockRejectedValueOnce(new Error('API error'));
+      const { checkClaudeHealth } = await import('../ai-streaming');
+      const result = await checkClaudeHealth();
+      expect(result).toBe(false);
     });
   });
 });

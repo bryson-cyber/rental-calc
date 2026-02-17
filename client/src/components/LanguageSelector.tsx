@@ -2,7 +2,7 @@
  * Language Selector Component
  * 
  * A dropdown that lets users choose their preferred language.
- * Triggers Gemini-powered translation of all website content.
+ * Triggers AI-powered translation of all website content.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -161,7 +161,7 @@ export default function LanguageSelector() {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-[#0F172A]/5 bg-[#0F172A]/[0.02]">
             <p className="text-xs text-[#0F172A]/40 text-center">
-              Powered by Gemini AI Translation
+              Powered by AI Translation
             </p>
           </div>
         </div>

@@ -7,7 +7,7 @@
  * Features:
  * - Google Places autocomplete for city selection
  * - Smart jurisdiction resolution for small towns
- * - Real-time regulation lookup via Gemini with Google Search
+ * - Real-time regulation lookup via Claude AI with Google Search
  * - Simple explanation (3rd-grade level) and full details
  * - Links to official government sources
  * - Save regulations to favorites

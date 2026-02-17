@@ -36,7 +36,8 @@
 - Opus 4.6 uses adaptive thinking: `thinking: {type: "adaptive"}`
 - Use effort parameter: "high" for quality, "medium" for balance, "low" for speed
 - Set large max_tokens (64k recommended) at medium/high effort
-- For our reports (~5K input / ~8K output), "medium" effort should suffice
+- For our Max reports (large context), use "high" effort for comprehensive analysis
+- For quick reports and chat, use "medium" or "low" effort
 
 ### 8. Avoid Overengineering
 - Keep solutions simple and focused
@@ -56,7 +57,7 @@
 ```python
 # For narrative report generation (~5K input, ~8K output)
 client.messages.create(
-    model="claude-opus-4-6",  # or "claude-sonnet-4-6" for cost savings
+    model="claude-sonnet-4-6",  # primary model for all reports
     max_tokens=16384,
     thinking={"type": "adaptive"},
     output_config={"effort": "medium"},  # medium for balance of quality/cost
@@ -67,6 +68,6 @@ client.messages.create(
 ```
 
 ## Recommended Model Strings
-- Opus 4.6: `claude-opus-4-6`
-- Sonnet 4.6: `claude-sonnet-4-6`
-- Haiku 4.5: `claude-haiku-4-5`
+- Sonnet 4.6: `claude-sonnet-4-6` (used for ALL calls — reports, chat, everything)
+- Opus 4.6: `claude-opus-4-6` (available but not used)
+- Haiku 4.5: `claude-haiku-4-5` (available but not used)

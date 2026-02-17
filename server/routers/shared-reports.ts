@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { sharedReports } from "../../drizzle/schema";
 import { eq, desc, or } from "drizzle-orm";
 import { getComprehensivePropertyReport } from "../airdna";
-import { generateFullReportSummary, type FullReportSummaryInput } from "../gemini";
+import { generateFullReportSummary, type FullReportSummaryInput } from "../report-generator";
 import { getRegulationInfo } from "../regulation-tracker";
 import { searchZillowListings } from "../hasdata";
 import { checkReportRateLimit, incrementReportCount } from "../rate-limiter";
@@ -86,7 +86,7 @@ export const sharedReportsRouter = router({
         let reportData = typeof input.reportData === 'object' ? input.reportData : (typeof input.reportData === 'string' ? JSON.parse(input.reportData) : input.reportData);
         if (input.reportType === 'full' && reportData && !reportData.ai_summary) {
           try {
-            console.log('[SharedReport] Generating comprehensive AI summary via Gemini 3 Pro...');
+            console.log('[SharedReport] Generating comprehensive AI summary via Claude Sonnet 4.6...');
             const summaryInput: FullReportSummaryInput = {
               property: {
                 address: input.address || reportData.property?.address || 'Unknown Address',
@@ -443,7 +443,7 @@ export const sharedReportsRouter = router({
         return { success: true, selectedCount: input.selectedCompIds.length };
       }),
 
-    // Regenerate a shared report with fresh data from AirDNA + Gemini 3
+    // Regenerate a shared report with fresh data from AirDNA + Claude AI
     regenerate: protectedProcedure
       .input(z.object({
         shareId: z.string(),
@@ -658,7 +658,7 @@ export const sharedReportsRouter = router({
             purchase: existingData.purchase,
             rental_arbitrage: existingData.rental_arbitrage,
             prepared_for: existingData.prepared_for,
-            // Revenue source metadata for Gemini narrative framing
+            // Revenue source metadata for AI narrative framing
             _revenue_source: (prop as any)?._revenue_source || 'rentalizer',
             _exact_match_comp_count: (prop as any)?._exact_match_comp_count || 0,
             // Supply trend and submarket data
@@ -780,8 +780,8 @@ export const sharedReportsRouter = router({
             }
           }
 
-          // Step 3: Generate comprehensive AI summary via Gemini 3 Pro
-          console.log('[Regenerate] Generating AI summary via Gemini 3 Pro...');
+          // Step 3: Generate comprehensive AI summary via Claude Sonnet 4.6
+          console.log('[Regenerate] Generating AI summary via Claude Sonnet 4.6...');
           try {
             const summaryInput: FullReportSummaryInput = {
               property: newReportData.property,
@@ -1059,7 +1059,7 @@ export const sharedReportsRouter = router({
               longitude: c.longitude || null,
             })),
             prepared_for: preparedFor || ctx.user?.name || undefined,
-            // Revenue source metadata for Gemini narrative framing
+            // Revenue source metadata for AI narrative framing
             _revenue_source: (prop as any)?._revenue_source || 'rentalizer',
             _exact_match_comp_count: (prop as any)?._exact_match_comp_count || 0,
             // Supply trend and submarket data
@@ -1265,7 +1265,7 @@ export const sharedReportsRouter = router({
           }
           
           // Step 3: Generate AI summary
-          console.log('[GenerateFromAddress] Generating AI summary via Gemini 3 Pro...');
+          console.log('[GenerateFromAddress] Generating AI summary via Claude Sonnet 4.6...');
           try {
             const summaryInput: FullReportSummaryInput = {
               property: reportData.property,

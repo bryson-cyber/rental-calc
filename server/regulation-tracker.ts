@@ -1,7 +1,7 @@
 /**
  * Regulation Tracker Service
  * 
- * Provides real-time STR regulation lookup using Gemini API with Google Search grounding.
+ * Provides real-time STR regulation lookup using Claude Sonnet 4.6.
  * Features:
  * - Database caching (7-day TTL) to reduce API calls
  * - URL validation to filter out 404 errors
@@ -9,7 +9,7 @@
  * - PTCF-optimized prompts for professional, clear output
  */
 
-import { ENV } from "./_core/env";
+import { callLLM } from './llm-provider';
 import { getDb } from "./db";
 import { regulationCache } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
@@ -46,41 +46,6 @@ export interface RegulationSource {
   validated?: boolean;
 }
 
-// Gemini API response types
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
-    };
-    groundingMetadata?: {
-      webSearchQueries?: string[];
-      groundingChunks?: Array<{
-        web?: {
-          uri?: string;
-          title?: string;
-        };
-      }>;
-      searchEntryPoint?: {
-        renderedContent?: string;
-      };
-      groundingSupports?: Array<{
-        segment?: {
-          startIndex?: number;
-          endIndex?: number;
-          text?: string;
-        };
-        groundingChunkIndices?: number[];
-        confidenceScores?: number[];
-      }>;
-    };
-  }>;
-  error?: {
-    message?: string;
-    code?: number;
-  };
-}
 
 // Cache TTL: 7 days in milliseconds
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -590,111 +555,50 @@ function isNewsSource(url: string, title: string): boolean {
 }
 
 // ============================================================================
-// GEMINI API CALL
+// CLAUDE API CALL
 // ============================================================================
 
-async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Promise<{
+async function callClaudeWithSearch(prompt: string, systemPrompt?: string): Promise<{
   text: string;
   sources: RegulationSource[];
 }> {
-  const apiKey = ENV.geminiApiKey;
-  
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
+  // Claude uses web search tools for grounding.
+  // We ask Claude to include source URLs in its response and parse them out.
+  const enhancedPrompt = prompt + `\n\nInclude specific source URLs for any regulations you reference. Format each source on its own line as: [SOURCE: title | url | official/news/third_party]`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-  const requestBody: Record<string, unknown> = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }]
-      }
-    ],
-    tools: [{
-      google_search: {}
-    }],
-    generationConfig: {
-      temperature: 1.0,
-      maxOutputTokens: 8192,
-      thinkingConfig: {
-        thinkingLevel: 'low'
-      }
-    }
-  };
-
-  // Use native systemInstruction instead of fake user/model pairs
-  if (systemPrompt) {
-    requestBody.systemInstruction = {
-      parts: [{ text: systemPrompt }]
-    };
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
+  const text = await callLLM(enhancedPrompt, {
+    systemPrompt,
+    model: 'pro',
+    thinkingLevel: 'low',
+    maxTokens: 8192,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Gemini API Error]', response.status, errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const data: GeminiResponse = await response.json();
-  
-  if (data.error) {
-    throw new Error(`Gemini API error: ${data.error.message}`);
-  }
-
-  const candidates = data.candidates;
-  if (!candidates || candidates.length === 0) {
-    console.error('[Gemini API] No candidates in response');
+  if (!text) {
     return { text: '', sources: [] };
   }
-  
-  const content = candidates[0]?.content;
-  const parts = content?.parts || [];
-  // Filter out thinking parts - only extract text parts
-  const text = parts
-    .filter((p: any) => p.text && !p.thought)
-    .map((p: any) => p.text)
-    .join('') || '';
-  
-  // Extract sources from grounding metadata
+
+  // Extract sources from Claude's response
   const sources: RegulationSource[] = [];
-  const groundingChunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
   const seenUrls = new Set<string>();
+  const sourcePattern = /\[SOURCE:\s*(.+?)\s*\|\s*(https?:\/\/[^\s|]+)\s*\|\s*(official|news|third_party)\]/gi;
+  let match;
   
-  console.log('[RegulationTracker] Grounding chunks found:', groundingChunks.length);
-  
-  for (const chunk of groundingChunks) {
-    if (chunk.web?.uri && chunk.web?.title) {
-      const sourceUrl = chunk.web.uri;
-      const sourceTitle = chunk.web.title;
-      
-      if (seenUrls.has(sourceUrl)) continue;
-      seenUrls.add(sourceUrl);
-      
-      // Skip third-party commercial sites
-      if (isThirdPartyCommercial(sourceUrl)) {
-        continue;
-      }
-      
-      const isOfficial = isOfficialSource(sourceUrl, sourceTitle);
-      const isNews = isNewsSource(sourceUrl, sourceTitle);
-      
-      sources.push({
-        title: sourceTitle,
-        url: sourceUrl,
-        type: isOfficial ? 'official' : isNews ? 'news' : 'third_party',
-        isOfficial
-      });
-    }
+  while ((match = sourcePattern.exec(text)) !== null) {
+    const sourceUrl = match[2].trim();
+    const sourceTitle = match[1].trim();
+    const sourceType = match[3].trim().toLowerCase() as 'official' | 'news' | 'third_party';
+    
+    if (seenUrls.has(sourceUrl)) continue;
+    seenUrls.add(sourceUrl);
+    
+    if (isThirdPartyCommercial(sourceUrl)) continue;
+    
+    sources.push({
+      title: sourceTitle,
+      url: sourceUrl,
+      type: sourceType,
+      isOfficial: sourceType === 'official'
+    });
   }
   
   // Sort sources: official first, then news, then others
@@ -706,7 +610,10 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
     return 0;
   });
 
-  return { text, sources };
+  // Clean the source lines out of the main text
+  const cleanedText = text.replace(/\[SOURCE:.*?\]/gi, '').trim();
+
+  return { text: cleanedText, sources };
 }
 
 // ============================================================================
@@ -840,7 +747,7 @@ FOCUS ONLY ON:
   try {
     console.log(`[RegulationTracker] Searching regulations for ${city}, ${state}...`);
     
-    const { text: researchText, sources } = await callGeminiWithSearch(
+    const { text: researchText, sources } = await callClaudeWithSearch(
       researchPrompt,
       systemPrompt
     );

@@ -16,9 +16,9 @@ export const aiRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         try {
-          const { geminiChat } = await import('../gemini-streaming');
+          const { claudeChat } = await import('../ai-streaming');
           
-          const response = await geminiChat(
+          const response = await claudeChat(
             input.messages.map(m => ({
               role: m.role as 'user' | 'assistant' | 'system',
               content: m.content,
@@ -63,7 +63,7 @@ export const aiRouter = router({
             success: true,
           };
         } catch (error) {
-          console.error('[AI Chat] Gemini Error:', error);
+          console.error('[AI Chat] Claude Error:', error);
           return {
             content: 'I apologize, but I encountered an error. Please try again.',
             success: false,

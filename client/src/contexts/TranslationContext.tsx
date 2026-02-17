@@ -5,7 +5,7 @@
  * Uses a two-tier caching strategy:
  *   1. Server-side persistent cache (DB) — pre-translated UI strings loaded on language change
  *   2. Client-side in-memory cache — avoids redundant tRPC calls within a session
- * Falls back to Gemini API via tRPC only for cache misses.
+ * Falls back to AI API via tRPC only for cache misses.
  * Persists language preference in localStorage.
  */
 
@@ -41,7 +41,7 @@ const STORAGE_KEY = 'rental-calc-language';
 
 // Client-side translation cache to avoid redundant tRPC calls.
 // This is populated from the server cache on language change, then
-// augmented with Gemini translations for cache misses.
+// augmented with AI translations for cache misses.
 const clientCache = new Map<string, string>();
 
 function getClientCacheKey(text: string, lang: string): string {
@@ -103,8 +103,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     } else if (getFullCacheMutation.isLoading) {
       setIsCacheReady(false);
     } else if (getFullCacheMutation.isError) {
-      // If cache load fails, still allow translation to proceed via Gemini
-      console.warn('[TranslationCache] Failed to load server cache, falling back to Gemini');
+      // If cache load fails, still allow translation to proceed via AI
+      console.warn('[TranslationCache] Failed to load server cache, falling back to AI');
       setIsCacheReady(true);
     }
   }, [currentLanguage, getFullCacheMutation.data, getFullCacheMutation.isLoading, getFullCacheMutation.isError]);

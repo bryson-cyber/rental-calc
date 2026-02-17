@@ -1,5 +1,5 @@
 /**
- * Enhanced AI Investment Advisor with Advanced Gemini Features
+ * Enhanced AI Investment Advisor with Advanced Claude Features
  * 
  * This module extends the base AI advisor with:
  * - Multi-market comparison and synthesis
@@ -9,7 +9,6 @@
  * - Investment decision framework
  */
 
-import { ENV } from './_core/env';
 import { 
   searchMarkets, 
   getComprehensiveMarketReport,
@@ -27,7 +26,7 @@ import {
 } from './airdna';
 import { makeRequest, GeocodingResult } from './_core/map';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
+// All LLM calls route through llm-provider.ts (Claude Sonnet 4.6)
 
 // ============================================
 // ENHANCED FUNCTION DECLARATIONS

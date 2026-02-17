@@ -1,7 +1,7 @@
 /**
  * AI Investment Advisor - Dynamic Data Fetching
  * 
- * This component uses Gemini function calling to dynamically fetch
+ * This component uses Claude function calling to dynamically fetch
  * market data based on user questions. No pre-loaded data needed.
  */
 
@@ -101,7 +101,7 @@ export default function AIAdvisor() {
     setIsLoading(true);
 
     try {
-      // The backend now handles dynamic data fetching via Gemini function calling
+      // The backend now handles dynamic data fetching via Claude function calling
       // No need to pass market context - it fetches fresh data for any market asked about
       const result = await advisorMutation.mutateAsync({
         question: messageText,

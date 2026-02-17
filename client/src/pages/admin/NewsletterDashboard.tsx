@@ -550,8 +550,8 @@ export default function NewsletterDashboard() {
                     
                     <div className="p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">Gemini API</span>
-                        {config.data.geminiConfigured ? (
+                        <span className="font-medium">Claude AI</span>
+                        {config.data.llmConfigured ? (
                           <Badge variant="default" className="bg-green-500">Connected</Badge>
                         ) : (
                           <Badge variant="destructive">Not Configured</Badge>

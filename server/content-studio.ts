@@ -2,7 +2,7 @@
  * Content Studio v2 — Fully Autonomous Script Generation
  *
  * One-click generates complete ready-to-film narration scripts using
- * Coach Inayah's persona via the Gemini API (user's own key).
+ * Coach Inayah's persona via Claude Sonnet 4.6.
  *
  * The AI autonomously:
  *   1. Pulls real platform data (recent analyses, trending markets, stats)
@@ -13,16 +13,12 @@
  * Zero user effort required — just press "Generate."
  */
 
-import { ENV } from './_core/env';
+import { callLLM } from './llm-provider';
 import {
   gatherContentData,
   formatDataForPrompt,
   type ContentDataBundle,
 } from './content-data-pipeline';
-
-// ── Gemini REST endpoint ─────────────────────────────────────────────────────
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview';
 
 // ── Format specifications ────────────────────────────────────────────────────
 export const FORMAT_SPECS: Record<
@@ -304,11 +300,6 @@ export interface GeneratedScript {
 export async function generateAutonomousScript(
   overrideFormat?: string,
 ): Promise<{ script: GeneratedScript; dataBundle: ContentDataBundle }> {
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured. Please add your Gemini API key in Settings → Secrets.');
-  }
-
   // 1. Gather real data from the platform
   console.log('[Content Studio] Gathering platform data...');
   const dataBundle = await gatherContentData();
@@ -324,48 +315,20 @@ export async function generateAutonomousScript(
   const systemPrompt = buildSystemPrompt(formattedData);
   const userPrompt = buildAutonomousPrompt(dataBundle, formattedData, overrideFormat);
 
-  // 3. Call Gemini
-  const body = {
-    contents: [
-      { role: 'user', parts: [{ text: userPrompt }] },
-    ],
-    systemInstruction: {
-      parts: [{ text: systemPrompt }],
-    },
-    generationConfig: {
-      temperature: 0.95,
-      maxOutputTokens: 16384,
-      responseMimeType: 'application/json',
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-    ],
-  };
-
-  console.log('[Content Studio] Calling Gemini API...');
-  const response = await fetch(
-    `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
+  // 3. Call Claude
+  console.log('[Content Studio] Calling Claude API...');
+  const rawText = await callLLM(
+    userPrompt + '\n\nRespond with valid JSON only, no markdown fences.',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      systemPrompt,
+      model: 'pro',
+      thinkingLevel: 'low',
+      maxTokens: 16384,
     },
   );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Content Studio] Gemini API error:', response.status, errorText);
-    throw new Error(`Gemini API error (${response.status}): ${errorText.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
   if (!rawText) {
-    throw new Error('Gemini returned an empty response. Please try again.');
+    throw new Error('Claude returned an empty response. Please try again.');
   }
 
   // Parse JSON — handle potential markdown fences
@@ -412,11 +375,6 @@ export async function generateContentScript(
   format: string,
   marketData?: string,
 ): Promise<GeneratedScript> {
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
-
   const spec = FORMAT_SPECS[format];
   if (!spec) {
     throw new Error(`Invalid format "${format}".`);
@@ -448,45 +406,18 @@ Return a JSON object with these fields:
 
 Return ONLY valid JSON. No markdown code fences. No extra text.`;
 
-  const body = {
-    contents: [
-      { role: 'user', parts: [{ text: userPrompt }] },
-    ],
-    systemInstruction: {
-      parts: [{ text: systemPrompt }],
-    },
-    generationConfig: {
-      temperature: 0.9,
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-    ],
-  };
-
-  const response = await fetch(
-    `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
+  const rawText = await callLLM(
+    userPrompt,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      systemPrompt,
+      model: 'pro',
+      thinkingLevel: 'low',
+      maxTokens: 4096,
     },
   );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${errorText.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
   if (!rawText) {
-    throw new Error('Gemini returned an empty response.');
+    throw new Error('Claude returned an empty response.');
   }
 
   let cleaned = rawText.trim();

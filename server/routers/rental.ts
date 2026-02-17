@@ -22,7 +22,7 @@ import {
 } from "../airdna";
 import { batchScrapeAirbnbImages } from "../airbnb-scraper";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../report-generator";
 import { getLocationQuality } from "../location-quality";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { upsertContact, generateDeepLink } from "../hubspot";

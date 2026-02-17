@@ -1,19 +1,17 @@
 /**
- * Translation Service using Gemini 3 Flash API
+ * Translation Service using Claude Sonnet 4.6 via llm-provider
  * 
  * Provides on-demand translation of text content to any language
- * supported by Gemini. Uses caching to avoid redundant API calls.
+ * supported by the LLM. Uses caching to avoid redundant API calls.
  * 
  * Architecture:
- * - Server-side translation via Gemini REST API
+ * - Server-side translation via the centralized callLLM abstraction
  * - In-memory cache with TTL for frequently requested translations
  * - Batch translation support for translating multiple strings at once
  * - Structured JSON output for reliable parsing
  */
 
-import { ENV } from './_core/env';
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview';
+import { callLLM } from './llm-provider';
 
 // Supported languages with their display names
 export const SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -111,60 +109,20 @@ export async function translateText(
   const cached = getCachedTranslation(text, targetLang);
   if (cached) return cached;
   
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    console.warn('[Translation] GEMINI_API_KEY not configured, returning original text');
-    return text;
-  }
-
   const languageName = SUPPORTED_LANGUAGES[targetLang] || targetLang;
   
-  const systemPrompt = `You are a professional translator. Translate the given text to ${languageName}.
-
-Rules:
-- Preserve all formatting (markdown, HTML tags, line breaks)
-- Preserve all numbers, currency symbols, and units exactly as-is
-- Preserve all proper nouns (company names, brand names, place names) unless they have well-known translations
-- Preserve all URLs, email addresses, and code snippets exactly as-is
-- Do NOT add any explanations or notes — return ONLY the translated text
-- Maintain the same tone and register as the original
-- For real estate and financial terminology, use the standard terms in the target language
-${context ? `\nContext: This text is from ${context}` : ''}`;
+  const systemPrompt = `You are a professional translator. Translate the given text to ${languageName}.\n\nRules:\n- Preserve all formatting (markdown, HTML tags, line breaks)\n- Preserve all numbers, currency symbols, and units exactly as-is\n- Preserve all proper nouns (company names, brand names, place names) unless they have well-known translations\n- Preserve all URLs, email addresses, and code snippets exactly as-is\n- Do NOT add any explanations or notes — return ONLY the translated text\n- Maintain the same tone and register as the original\n- For real estate and financial terminology, use the standard terms in the target language\n${context ? `\nContext: This text is from ${context}` : ''}`;
 
   try {
-    const response = await fetch(
-      `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text }] }],
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent translations
-            maxOutputTokens: 8192,
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-          ],
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Translation] Gemini API error: ${response.status} - ${errorText}`);
-      return text; // Fallback to original text
-    }
-
-    const data = await response.json();
-    const translatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const translatedText = await callLLM(text, {
+      systemPrompt,
+      model: 'flash', // Use faster model for quick translations
+      maxTokens: 8192,
+      thinkingLevel: 'low',
+    });
     
     if (!translatedText) {
-      console.error('[Translation] No translation returned from Gemini');
+      console.error('[Translation] No translation returned from Claude');
       return text;
     }
 
@@ -172,7 +130,7 @@ ${context ? `\nContext: This text is from ${context}` : ''}`;
     setCachedTranslation(text, targetLang, translatedText.trim());
     return translatedText.trim();
   } catch (error) {
-    console.error('[Translation] Error:', error);
+    console.error('[Translation] Error calling callLLM:', error);
     return text; // Fallback to original text
   }
 }
@@ -189,12 +147,6 @@ export async function translateBatch(
   // Skip translation if target is English
   if (targetLang === 'en') return texts;
   
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    console.warn('[Translation] GEMINI_API_KEY not configured, returning original texts');
-    return texts;
-  }
-
   // Check cache for each text, collect uncached ones
   const result: Record<string, string> = {};
   const uncachedKeys: string[] = [];
@@ -215,58 +167,18 @@ export async function translateBatch(
   
   const languageName = SUPPORTED_LANGUAGES[targetLang] || targetLang;
   
-  const systemPrompt = `You are a professional translator. Translate all values in the given JSON object to ${languageName}.
-
-Rules:
-- Return a valid JSON object with the same keys but translated values
-- Preserve all formatting (markdown, HTML tags, line breaks) within values
-- Preserve all numbers, currency symbols, and units exactly as-is
-- Preserve all proper nouns unless they have well-known translations
-- Preserve all URLs, email addresses, and code snippets exactly as-is
-- Do NOT translate the JSON keys — only translate the values
-- Maintain the same tone and register as the original
-- For real estate and financial terminology, use standard terms in the target language
-${context ? `\nContext: This text is from ${context}` : ''}`;
+  const systemPrompt = `You are a professional translator. Translate all values in the given JSON object to ${languageName}.\n\nRules:\n- Return a valid JSON object with the same keys but translated values. The response MUST be ONLY the JSON object, with no surrounding text or markdown code blocks.\n- Preserve all formatting (markdown, HTML tags, line breaks) within values\n- Preserve all numbers, currency symbols, and units exactly as-is\n- Preserve all proper nouns unless they have well-known translations\n- Preserve all URLs, email addresses, and code snippets exactly as-is\n- Do NOT translate the JSON keys — only translate the values\n- Maintain the same tone and register as the original\n- For real estate and financial terminology, use standard terms in the target language\n${context ? `\nContext: This text is from ${context}` : ''}`;
 
   try {
-    const response = await fetch(
-      `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: JSON.stringify(uncachedTexts) }] }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 16384,
-            responseMimeType: 'application/json',
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-          ],
-        }),
-      }
-    );
+    const responseText = await callLLM(JSON.stringify(uncachedTexts), {
+      systemPrompt,
+      model: 'flash',
+      maxTokens: 16384,
+      thinkingLevel: 'low',
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Translation] Batch Gemini API error: ${response.status} - ${errorText}`);
-      // Fallback: return original texts for uncached items
-      for (const key of uncachedKeys) {
-        result[key] = uncachedTexts[key];
-      }
-      return result;
-    }
-
-    const data = await response.json();
-    const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
     if (!responseText) {
-      console.error('[Translation] No batch translation returned from Gemini');
+      console.error('[Translation] No batch translation returned from Claude');
       for (const key of uncachedKeys) {
         result[key] = uncachedTexts[key];
       }
@@ -286,7 +198,7 @@ ${context ? `\nContext: This text is from ${context}` : ''}`;
         }
       }
     } catch (parseError) {
-      console.error('[Translation] Failed to parse batch response:', parseError);
+      console.error('[Translation] Failed to parse batch response from Claude:', parseError, '\nResponse was:\n', responseText);
       for (const key of uncachedKeys) {
         result[key] = uncachedTexts[key];
       }
@@ -294,7 +206,7 @@ ${context ? `\nContext: This text is from ${context}` : ''}`;
 
     return result;
   } catch (error) {
-    console.error('[Translation] Batch error:', error);
+    console.error('[Translation] Batch error calling callLLM:', error);
     for (const key of uncachedKeys) {
       result[key] = uncachedTexts[key];
     }

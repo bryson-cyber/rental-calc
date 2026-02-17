@@ -498,7 +498,7 @@ export default function GlobalAutoTranslator() {
   // ── React to language changes ──
   // Wait for server cache to be loaded before starting translation.
   // This ensures pre-translated strings are available in the client cache
-  // so they resolve instantly without hitting Gemini API.
+  // so they resolve instantly without hitting the AI API.
   useEffect(() => {
     if (prevLang.current === currentLanguage && !isCacheReady) return;
     if (prevLang.current !== currentLanguage) {

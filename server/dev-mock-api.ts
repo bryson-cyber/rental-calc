@@ -415,20 +415,19 @@ const MOCK_RENTOMETER_RESPONSE = {
   token: "mock-token",
 };
 
-const MOCK_GEMINI_RESPONSE = {
-  candidates: [
+const MOCK_CLAUDE_RESPONSE = {
+  id: "msg_mock_001",
+  type: "message",
+  role: "assistant",
+  content: [
     {
-      content: {
-        parts: [
-          {
-            text: `## Executive Summary\n\nThe subject property at **1234 Mock St, Richardson, TX 75082** presents a compelling short-term rental opportunity in the Dallas metropolitan area. This 3-bedroom, 2-bathroom property with capacity for 6 guests is projected to generate **$85,000 in annual revenue** with an average daily rate of **$285** and an occupancy rate of **68%**.\n\n### Revenue Outlook\n\nThe property's projected annual revenue of **$85,000** places it well above the market average of **$44,000**, suggesting strong earning potential. The revenue range spans from **$72,000** to **$98,000**, providing a reasonable confidence interval. Peak revenue months are projected for June-August, with the strongest month generating approximately **$9,500** in revenue at a **90% occupancy rate**.\n\n### Market Position\n\nThe Dallas market hosts approximately **11,500 active listings** with a market score of **72/100**. The market average occupancy of **62%** is notably lower than this property's projected **68%**, indicating above-average performance potential. The 3-bedroom segment in this market generates an average revenue of **$49,800**, making this property's **$85,000** projection approximately **71% above** the bedroom-type average.\n\n### Competitive Landscape\n\n**5 comparable properties** were analyzed within the immediate vicinity. The top performer generates **$92,000** annually, while the average comp revenue is **$75,000**. The subject property's projected revenue of **$85,000** positions it in the **upper quartile** of comparable properties. Average competitor ratings hover around **4.7 stars**, indicating a high-quality competitive environment.\n\n### Key Takeaways\n\n- The property's projected **$85,000 annual revenue** significantly outperforms the market average of **$44,000**\n- At **68% projected occupancy**, the property exceeds the market average of **62%** by 6 percentage points\n- The **$285 average daily rate** is competitive with top-performing comparables in the area\n- Seasonal variation shows a **$4,300 spread** between peak and trough months, suggesting manageable seasonality\n\n*Note: This is mock data generated for development purposes.*`,
-          },
-        ],
-        role: "model",
-      },
-      finishReason: "STOP",
+      type: "text",
+      text: `## Executive Summary\n\nThe subject property at **1234 Mock St, Richardson, TX 75082** presents a compelling short-term rental opportunity in the Dallas metropolitan area. This 3-bedroom, 2-bathroom property with capacity for 6 guests is projected to generate **$85,000 in annual revenue** with an average daily rate of **$285** and an occupancy rate of **68%**.\n\n### Revenue Outlook\n\nThe property's projected annual revenue of **$85,000** places it well above the market average of **$44,000**, suggesting strong earning potential. The revenue range spans from **$72,000** to **$98,000**, providing a reasonable confidence interval. Peak revenue months are projected for June-August, with the strongest month generating approximately **$9,500** in revenue at a **90% occupancy rate**.\n\n### Market Position\n\nThe Dallas market hosts approximately **11,500 active listings** with a market score of **72/100**. The market average occupancy of **62%** is notably lower than this property's projected **68%**, indicating above-average performance potential. The 3-bedroom segment in this market generates an average revenue of **$49,800**, making this property's **$85,000** projection approximately **71% above** the bedroom-type average.\n\n### Competitive Landscape\n\n**5 comparable properties** were analyzed within the immediate vicinity. The top performer generates **$92,000** annually, while the average comp revenue is **$75,000**. The subject property's projected revenue of **$85,000** positions it in the **upper quartile** of comparable properties. Average competitor ratings hover around **4.7 stars**, indicating a high-quality competitive environment.\n\n### Key Takeaways\n\n- The property's projected **$85,000 annual revenue** significantly outperforms the market average of **$44,000**\n- At **68% projected occupancy**, the property exceeds the market average of **62%** by 6 percentage points\n- The **$285 average daily rate** is competitive with top-performing comparables in the area\n- Seasonal variation shows a **$4,300 spread** between peak and trough months, suggesting manageable seasonality\n\n*Note: This is mock data generated for development purposes.*`,
     },
   ],
+  model: "claude-sonnet-4-6",
+  stop_reason: "end_turn",
+  usage: { input_tokens: 500, output_tokens: 800 },
 };
 
 const MOCK_HUBSPOT_CONTACT_RESPONSE = {
@@ -609,16 +608,16 @@ const mockRoutes: MockRoute[] = [
       body: MOCK_RENTOMETER_RESPONSE,
     }),
   },
-  // Gemini AI
+  // AI (Claude)
   {
-    service: "Gemini AI",
-    match: (url) => url.includes("generativelanguage.googleapis.com"),
-    fixtureKey: (url) => "gemini",
+    service: "Claude AI",
+    match: (url) => url.includes("api.anthropic.com"),
+    fixtureKey: (url) => "claude",
     defaultResponse: () => ({
       status: 200,
       statusText: "OK",
       headers: { "content-type": "application/json" },
-      body: MOCK_GEMINI_RESPONSE,
+      body: MOCK_CLAUDE_RESPONSE,
     }),
   },
   // HubSpot

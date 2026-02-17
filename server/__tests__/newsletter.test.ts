@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock environment variables
 vi.stubEnv('HUBSPOT_API_KEY', 'test-hubspot-key');
 vi.stubEnv('AIRDNA_API_KEY', 'test-airdna-key');
-vi.stubEnv('GEMINI_API_KEY', 'test-gemini-key');
+vi.stubEnv('ANTHROPIC_API_KEY', 'test-anthropic-key');
 
 // Mock the HubSpot module
 vi.mock('../hubspot', () => ({

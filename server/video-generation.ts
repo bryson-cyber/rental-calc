@@ -15,7 +15,7 @@
  *   - White background (white_bg=true, use_color=false)
  *   - AI voiceover enabled (tts_model=accurate, style=solo-female)
  *   - 5-10 minute videos (timing=10, long-form coaching scripts 1500-2000+ words)
- *   - new_script parameter passes the full Gemini-generated narration directly
+ *   - new_script parameter passes the full AI-generated narration directly
  *
  * Flow:
  *   1. Client calls startVideoGeneration → gets jobId immediately (saved to DB)

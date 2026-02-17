@@ -13,10 +13,11 @@ describe('Anthropic API Key Validation', () => {
     expect(key!.startsWith('sk-ant-')).toBe(true);
   });
 
-  it('should have LLM_PROVIDER set in environment', () => {
-    const provider = process.env.LLM_PROVIDER;
-    expect(provider).toBeDefined();
-    expect(['gemini', 'anthropic']).toContain(provider);
+  it('should use Claude as the LLM provider', () => {
+    // LLM_PROVIDER is no longer needed — Claude is the only provider
+    // This test just confirms the key is set
+    const key = process.env.ANTHROPIC_API_KEY;
+    expect(key).toBeDefined();
   });
 
   it('should successfully authenticate with Anthropic API', async () => {

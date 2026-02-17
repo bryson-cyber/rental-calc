@@ -2,7 +2,7 @@
  * Custom hook for streaming AI chat responses
  * 
  * Uses Server-Sent Events (SSE) to receive real-time streaming responses
- * from the Gemini-powered AI assistant.
+ * from the Claude-powered AI assistant.
  */
 
 import { useState, useCallback, useRef } from 'react';

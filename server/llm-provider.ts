@@ -1,199 +1,120 @@
 /**
- * LLM Provider Abstraction Layer
+ * LLM Provider — Claude Sonnet 4.6 Only
  * 
- * Centralizes all LLM API calls behind a single interface that supports
- * multiple providers (Gemini, Anthropic Claude). The active provider is
- * controlled by the LLM_PROVIDER environment variable.
+ * All LLM calls route through Claude Sonnet 4.6 via the Anthropic Messages API.
+ * Claude-only, no dual-provider, no fallback.
  * 
- * Provider: "gemini"    → Google Gemini 3 Pro/Flash (default)
- * Provider: "anthropic" → Anthropic Claude Opus 4.6 / Sonnet 4.6
+ * MODEL: claude-sonnet-4-6 for everything
+ * - model: 'pro'   → high effort (deep analysis, reports)
+ * - model: 'flash' → low effort (quick tasks, chat)
  * 
- * CLAUDE 4.6 API CONFIGURATION (per official Anthropic docs, Feb 2026):
- * - Model IDs: claude-opus-4-6, claude-sonnet-4-6
- * - Adaptive thinking: thinking: {type: "adaptive"} (recommended, replaces budget_tokens)
- * - Effort parameter: output_config: {effort: "low"|"medium"|"high"|"max"} (GA, no beta header)
+ * CLAUDE 4.6 API CONFIGURATION (per extended-thinking skill):
+ * - Adaptive thinking: thinking: {type: "adaptive"}
+ * - Effort parameter: output_config.effort = "low"|"medium"|"high"
+ * - temperature CANNOT be modified when thinking is enabled
  * - No assistant prefills (returns 400 on 4.6)
  * - No anti-laziness prompts (amplify already-proactive behavior)
- * - max_tokens: up to 128K for Opus 4.6, 64K for Sonnet 4.6
+ * - Max output: 64K tokens
  */
 
 import { ENV } from './_core/env';
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ---------------------------------------------------------------------------
 // TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export type LLMProvider = 'gemini' | 'anthropic';
+// ---------------------------------------------------------------------------
 
 export interface LLMCallOptions {
   /** Maximum output tokens. Default: 8192 */
   maxTokens?: number;
-  /** Temperature for generation. Default: 1.0 for Gemini, 1.0 for Claude */
-  temperature?: number;
   /** 
    * Reasoning intensity.
-   * Gemini: maps to thinkingLevel 'low' | 'high'
-   * Claude: maps to effort 'low' | 'medium' | 'high' via CLAUDE_EFFORT_MAP
+   * 'high' → effort: high (deep reasoning for reports)
+   * 'low'  → effort: medium (balanced for routine tasks)
    */
   thinkingLevel?: 'low' | 'high';
   /** 
-   * Model tier.
-   * Gemini: 'pro' (gemini-3-pro-preview) | 'flash' (gemini-3-flash-preview)
-   * Claude: 'pro' (claude-opus-4-6) | 'flash' (claude-sonnet-4-6)
+   * Model tier — controls effort level.
+   * 'pro'   → high effort (deep analysis, full reports)
+   * 'flash' → low effort (quick responses, chat, summaries)
    */
   model?: 'pro' | 'flash';
-  /** Override the provider for this specific call */
-  provider?: LLMProvider;
+  /** System prompt to prepend. Claude supports system messages natively. */
+  systemPrompt?: string;
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string; thought?: boolean }>;
-      role: string;
-    };
-    finishReason: string;
-  }>;
-}
+// ---------------------------------------------------------------------------
+// CONFIGURATION
+// ---------------------------------------------------------------------------
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROVIDER CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const GEMINI_3_PRO_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
-const GEMINI_3_FLASH_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
-
-// Claude 4.6 model IDs (per official Anthropic docs, Feb 2026)
-const CLAUDE_MODELS = {
-  pro: 'claude-opus-4-6',
-  flash: 'claude-sonnet-4-6',
-} as const;
+const MODEL_ID = 'claude-sonnet-4-6';
+const MAX_OUTPUT_TOKENS = 64000;
 
 // Effort mapping: our thinkingLevel → Claude effort parameter
-// Per Anthropic docs:
-//   - 'high' effort = default, complex reasoning (maps from our thinkingLevel 'high')
-//   - 'medium' effort = balanced speed/cost/performance (maps from our thinkingLevel 'low')
-//   - 'low' effort = most efficient, simple tasks (used for flash/chat)
-const CLAUDE_EFFORT_MAP: Record<string, 'low' | 'medium' | 'high'> = {
-  low: 'medium',   // Our 'low' thinking = Claude 'medium' effort (balanced)
-  high: 'high',    // Our 'high' thinking = Claude 'high' effort (deep reasoning)
+const EFFORT_MAP: Record<string, 'low' | 'medium' | 'high'> = {
+  low: 'medium',   // Our 'low' = Claude 'medium' (balanced)
+  high: 'high',    // Our 'high' = Claude 'high' (deep reasoning)
 };
 
-/** Get the currently active LLM provider */
-export function getActiveProvider(): LLMProvider {
-  return ENV.llmProvider;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
+// ---------------------------------------------------------------------------
 // UTILITY
-// ═══════════════════════════════════════════════════════════════════════════════
+// ---------------------------------------------------------------------------
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// GEMINI PROVIDER
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function callGeminiProvider(prompt: string, options?: LLMCallOptions): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min timeout
-  
-  const model = options?.model ?? 'pro';
-  const apiUrl = model === 'flash' ? GEMINI_3_FLASH_URL : GEMINI_3_PRO_URL;
-  const temperature = options?.temperature ?? 1.0;
-  const thinkingLevel = options?.thinkingLevel ?? 'high';
-  
-  try {
-    const response = await fetch(`${apiUrl}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: options?.maxTokens ?? 8192,
-          thinkingConfig: { thinkingLevel },
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data: GeminiResponse = await response.json();
-    const parts = data.candidates[0]?.content?.parts || [];
-    return parts
-      .filter((p) => p.text && !p.thought)
-      .map((p) => p.text)
-      .join('') || '';
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ANTHROPIC PROVIDER (Claude 4.6)
-// ═══════════════════════════════════════════════════════════════════════════════
+// ---------------------------------------------------------------------------
+// CORE CLAUDE CALL
+// ---------------------------------------------------------------------------
 
 /**
- * Calls the Anthropic Messages API using the REST endpoint directly.
+ * Calls the Anthropic Messages API directly.
  * 
- * Uses Claude 4.6 features:
- * - Adaptive thinking: thinking: {type: "adaptive"} (Claude decides when/how much to think)
- * - Effort parameter: output_config.effort controls thinking depth
- * - No prefills (not supported on 4.6)
- * - anthropic-version: 2023-06-01 (stable API version)
+ * Key API rules (per extended-thinking skill):
+ * - Adaptive thinking: thinking: {type: "adaptive"} — Claude decides when/how much to think
+ * - Effort: output_config.effort controls thinking depth
+ * - temperature CANNOT be modified when thinking is enabled
+ * - max_tokens is a STRICT limit
+ * - Sonnet 4.6: adaptive + manual thinking, max 64K output
  */
-async function callAnthropicProvider(prompt: string, options?: LLMCallOptions): Promise<string> {
+async function callClaude(prompt: string, options?: LLMCallOptions): Promise<string> {
   const apiKey = ENV.anthropicApiKey;
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not set. Cannot use Anthropic provider.');
+    throw new Error('ANTHROPIC_API_KEY is not set.');
   }
 
-  const model = options?.model ?? 'pro';
-  const modelId = CLAUDE_MODELS[model];
-  const maxTokens = options?.maxTokens ?? 8192;
+  const modelTier = options?.model ?? 'pro';
+  const requestedMaxTokens = options?.maxTokens ?? 8192;
+  const maxTokens = Math.min(requestedMaxTokens, MAX_OUTPUT_TOKENS);
+  
   const thinkingLevel = options?.thinkingLevel ?? 'high';
-  const effort = CLAUDE_EFFORT_MAP[thinkingLevel];
+  const effort = EFFORT_MAP[thinkingLevel];
+  const effectiveEffort = modelTier === 'flash' ? 'low' : effort;
 
-  // For flash model (Sonnet), use lower effort for speed
-  const effectiveEffort = model === 'flash' ? 'low' : effort;
-
-  const providerLabel = model === 'pro' ? 'Claude Opus 4.6' : 'Claude Sonnet 4.6';
-  console.log(`[${providerLabel}] Calling ${modelId} (effort: ${effectiveEffort}, maxTokens: ${maxTokens})...`);
+  const label = `Claude Sonnet 4.6 (${modelTier})`;
+  console.log(`[${label}] effort: ${effectiveEffort}, maxTokens: ${maxTokens}`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min timeout
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
 
   try {
-    // Build the request body per Claude 4.6 API docs
+    // Build messages array
+    const messages: Array<{ role: string; content: string }> = [
+      { role: 'user', content: prompt },
+    ];
+
+    // Build request body
     const requestBody: Record<string, unknown> = {
-      model: modelId,
+      model: MODEL_ID,
       max_tokens: maxTokens,
-      // Adaptive thinking: Claude dynamically decides when and how much to think
-      // At high effort, Claude almost always thinks deeply
-      // At lower effort, it may skip thinking for simpler problems
       thinking: { type: 'adaptive' },
-      // Effort parameter (GA, no beta header needed)
-      // Controls overall token spend including thinking, text, and tool calls
       output_config: { effort: effectiveEffort },
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      messages,
     };
 
-    // Only set temperature if not using adaptive thinking with effort
-    // Per docs: temperature works alongside thinking but effort is the primary control
-    if (options?.temperature !== undefined && options.temperature !== 1.0) {
-      requestBody.temperature = options.temperature;
+    // Add system prompt if provided
+    if (options?.systemPrompt) {
+      requestBody.system = options.systemPrompt;
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -210,7 +131,7 @@ async function callAnthropicProvider(prompt: string, options?: LLMCallOptions): 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
       const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`Anthropic API error (${response.status}): ${errorMessage}`);
+      throw new Error(`Claude API error (${response.status}): ${errorMessage}`);
     }
 
     const data = await response.json() as {
@@ -219,14 +140,14 @@ async function callAnthropicProvider(prompt: string, options?: LLMCallOptions): 
       stop_reason: string;
     };
 
-    // Extract text blocks from the response (skip thinking blocks)
+    // Extract text blocks (skip thinking blocks)
     const textBlocks = data.content.filter(
       (block) => block.type === 'text' && block.text
     );
 
     const result = textBlocks.map((block) => block.text).join('');
     
-    console.log(`[${providerLabel}] Success — ${data.usage.input_tokens} input, ${data.usage.output_tokens} output tokens (stop: ${data.stop_reason})`);
+    console.log(`[${label}] ${data.usage.input_tokens} in, ${data.usage.output_tokens} out (stop: ${data.stop_reason})`);
     
     return result;
   } finally {
@@ -234,69 +155,514 @@ async function callAnthropicProvider(prompt: string, options?: LLMCallOptions): 
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUBLIC API
-// ═══════════════════════════════════════════════════════════════════════════════
+// ---------------------------------------------------------------------------
+// CLAUDE WITH VISION (images, PDFs)
+// ---------------------------------------------------------------------------
+
+export interface VisionContent {
+  type: 'image';
+  source: {
+    type: 'base64' | 'url';
+    media_type?: string; // e.g., 'image/jpeg', 'image/png', 'application/pdf'
+    data?: string;       // base64 data
+    url?: string;        // URL for url type
+  };
+}
 
 /**
- * Core LLM call function — routes to the active provider.
+ * Call Claude with vision capabilities (images, PDFs).
+ * Supports base64-encoded images and URLs.
+ */
+export async function callLLMWithVision(
+  prompt: string,
+  images: VisionContent[],
+  options?: LLMCallOptions
+): Promise<string> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set.');
+  }
+
+  const modelTier = options?.model ?? 'pro';
+  const requestedMaxTokens = options?.maxTokens ?? 8192;
+  const maxTokens = Math.min(requestedMaxTokens, MAX_OUTPUT_TOKENS);
+  const thinkingLevel = options?.thinkingLevel ?? 'high';
+  const effort = EFFORT_MAP[thinkingLevel];
+  const effectiveEffort = modelTier === 'flash' ? 'low' : effort;
+
+  const label = `Claude Vision (${modelTier})`;
+  console.log(`[${label}] ${images.length} image(s), effort: ${effectiveEffort}`);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+  try {
+    // Build multimodal content array
+    const contentParts: Array<Record<string, unknown>> = [];
+    
+    for (const img of images) {
+      if (img.source.type === 'base64') {
+        contentParts.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.source.media_type || 'image/jpeg',
+            data: img.source.data,
+          },
+        });
+      } else if (img.source.type === 'url') {
+        contentParts.push({
+          type: 'image',
+          source: {
+            type: 'url',
+            url: img.source.url,
+          },
+        });
+      }
+    }
+    
+    // Add text prompt after images
+    contentParts.push({ type: 'text', text: prompt });
+
+    const requestBody: Record<string, unknown> = {
+      model: MODEL_ID,
+      max_tokens: maxTokens,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: effectiveEffort },
+      messages: [{ role: 'user', content: contentParts }],
+    };
+
+    if (options?.systemPrompt) {
+      requestBody.system = options.systemPrompt;
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+      const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Claude Vision API error (${response.status}): ${errorMessage}`);
+    }
+
+    const data = await response.json() as {
+      content: Array<{ type: string; text?: string }>;
+      usage: { input_tokens: number; output_tokens: number };
+      stop_reason: string;
+    };
+
+    const textBlocks = data.content.filter(
+      (block) => block.type === 'text' && block.text
+    );
+
+    const result = textBlocks.map((block) => block.text).join('');
+    console.log(`[${label}] ${data.usage.input_tokens} in, ${data.usage.output_tokens} out`);
+    return result;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLAUDE WITH TOOL USE (function calling)
+// ---------------------------------------------------------------------------
+
+export interface ClaudeTool {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+export interface ToolUseResult {
+  text: string;
+  toolCalls: Array<{
+    id: string;
+    name: string;
+    input: Record<string, unknown>;
+  }>;
+}
+
+/**
+ * Call Claude with tool use (function calling).
+ * Returns both text response and any tool calls.
+ */
+export async function callLLMWithTools(
+  prompt: string,
+  tools: ClaudeTool[],
+  options?: LLMCallOptions
+): Promise<ToolUseResult> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set.');
+  }
+
+  const modelTier = options?.model ?? 'pro';
+  const requestedMaxTokens = options?.maxTokens ?? 8192;
+  const maxTokens = Math.min(requestedMaxTokens, MAX_OUTPUT_TOKENS);
+  const thinkingLevel = options?.thinkingLevel ?? 'high';
+  const effort = EFFORT_MAP[thinkingLevel];
+  const effectiveEffort = modelTier === 'flash' ? 'low' : effort;
+
+  const label = `Claude Tools (${modelTier})`;
+  console.log(`[${label}] ${tools.length} tool(s), effort: ${effectiveEffort}`);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+  try {
+    const requestBody: Record<string, unknown> = {
+      model: MODEL_ID,
+      max_tokens: maxTokens,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: effectiveEffort },
+      tools,
+      // tool_choice must be "auto" when thinking is enabled
+      tool_choice: { type: 'auto' },
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    if (options?.systemPrompt) {
+      requestBody.system = options.systemPrompt;
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+      const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Claude Tools API error (${response.status}): ${errorMessage}`);
+    }
+
+    const data = await response.json() as {
+      content: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
+      usage: { input_tokens: number; output_tokens: number };
+      stop_reason: string;
+    };
+
+    const text = data.content
+      .filter((block) => block.type === 'text' && block.text)
+      .map((block) => block.text)
+      .join('');
+
+    const toolCalls = data.content
+      .filter((block) => block.type === 'tool_use')
+      .map((block) => ({
+        id: block.id!,
+        name: block.name!,
+        input: block.input!,
+      }));
+
+    console.log(`[${label}] ${data.usage.input_tokens} in, ${data.usage.output_tokens} out, ${toolCalls.length} tool call(s)`);
+
+    return { text, toolCalls };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLAUDE STREAMING
+// ---------------------------------------------------------------------------
+
+/**
+ * Call Claude with streaming response.
+ * Returns an async generator that yields text chunks.
+ */
+export async function* callLLMStreaming(
+  prompt: string,
+  options?: LLMCallOptions
+): AsyncGenerator<string, void, unknown> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set.');
+  }
+
+  const modelTier = options?.model ?? 'pro';
+  const requestedMaxTokens = options?.maxTokens ?? 8192;
+  const maxTokens = Math.min(requestedMaxTokens, MAX_OUTPUT_TOKENS);
+  const thinkingLevel = options?.thinkingLevel ?? 'high';
+  const effort = EFFORT_MAP[thinkingLevel];
+  const effectiveEffort = modelTier === 'flash' ? 'low' : effort;
+
+  const label = `Claude Stream (${modelTier})`;
+  console.log(`[${label}] effort: ${effectiveEffort}, maxTokens: ${maxTokens}`);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+  try {
+    const requestBody: Record<string, unknown> = {
+      model: MODEL_ID,
+      max_tokens: maxTokens,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: effectiveEffort },
+      stream: true,
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    if (options?.systemPrompt) {
+      requestBody.system = options.systemPrompt;
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+      const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Claude Streaming API error (${response.status}): ${errorMessage}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body for streaming');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') return;
+
+        try {
+          const event = JSON.parse(data);
+          
+          // Only yield text content deltas (skip thinking deltas)
+          if (event.type === 'content_block_delta' && 
+              event.delta?.type === 'text_delta' && 
+              event.delta?.text) {
+            yield event.delta.text;
+          }
+        } catch {
+          // Skip malformed JSON
+        }
+      }
+    }
+  } finally {
+    clearTimeout(timeoutId);
+    controller.abort();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLAUDE MULTI-TURN TOOL USE LOOP
+// ---------------------------------------------------------------------------
+
+export interface ToolExecutor {
+  (name: string, args: Record<string, unknown>): Promise<unknown>;
+}
+
+/**
+ * Multi-turn tool use loop — Claude calls tools, we execute them, and feed results back.
+ * Loops until Claude gives a final text response or maxIterations is reached.
  * 
- * Drop-in replacement for the old callGemini() function.
- * Same signature, same return type, but provider-aware.
+ * This replaces the legacy function calling loop in ai-advisor.ts.
+ */
+export async function callLLMWithToolLoop(
+  prompt: string,
+  tools: ClaudeTool[],
+  executeFunction: ToolExecutor,
+  options?: LLMCallOptions & { maxIterations?: number; conversationHistory?: Array<{ role: string; content: unknown }> }
+): Promise<string> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set.');
+
+  const modelTier = options?.model ?? 'pro';
+  const requestedMaxTokens = options?.maxTokens ?? 8192;
+  const maxTokens = Math.min(requestedMaxTokens, MAX_OUTPUT_TOKENS);
+  const thinkingLevel = options?.thinkingLevel ?? 'high';
+  const effort = EFFORT_MAP[thinkingLevel];
+  const effectiveEffort = modelTier === 'flash' ? 'low' : effort;
+  const maxIterations = options?.maxIterations ?? 10;
+
+  const label = `Claude ToolLoop (${modelTier})`;
+  console.log(`[${label}] ${tools.length} tool(s), effort: ${effectiveEffort}, maxIter: ${maxIterations}`);
+
+  // Build initial messages
+  const messages: Array<{ role: string; content: unknown }> = [
+    ...(options?.conversationHistory || []),
+    { role: 'user', content: prompt },
+  ];
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+    try {
+      const requestBody: Record<string, unknown> = {
+        model: MODEL_ID,
+        max_tokens: maxTokens,
+        thinking: { type: 'adaptive' },
+        output_config: { effort: effectiveEffort },
+        tools,
+        tool_choice: { type: 'auto' },
+        messages,
+      };
+
+      if (options?.systemPrompt) {
+        requestBody.system = options.systemPrompt;
+      }
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+        const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
+        throw new Error(`Claude ToolLoop API error (${response.status}): ${errorMessage}`);
+      }
+
+      const data = await response.json() as {
+        content: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
+        usage: { input_tokens: number; output_tokens: number };
+        stop_reason: string;
+      };
+
+      console.log(`[${label}] Iter ${iteration + 1}: ${data.usage.input_tokens} in, ${data.usage.output_tokens} out, stop: ${data.stop_reason}`);
+
+      // Check for tool calls
+      const toolCalls = data.content.filter((block) => block.type === 'tool_use');
+
+      if (toolCalls.length === 0 || data.stop_reason === 'end_turn') {
+        // No tool calls — extract final text response
+        const textBlocks = data.content.filter((block) => block.type === 'text' && block.text);
+        const result = textBlocks.map((block) => block.text).join('');
+        return result || "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
+      }
+
+      // Add assistant's response (with tool_use blocks) to conversation
+      messages.push({ role: 'assistant', content: data.content });
+
+      // Execute each tool call and collect results
+      const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = [];
+      for (const tc of toolCalls) {
+        try {
+          const result = await executeFunction(tc.name!, tc.input || {});
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: tc.id!,
+            content: JSON.stringify(result),
+          });
+        } catch (error) {
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: tc.id!,
+            content: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+          });
+        }
+      }
+
+      // Add tool results to conversation
+      messages.push({ role: 'user', content: toolResults });
+
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  return "I apologize, but I'm having trouble processing your question. Please try a simpler query.";
+}
+
+// ---------------------------------------------------------------------------
+// PUBLIC API
+// ---------------------------------------------------------------------------
+
+/**
+ * Core LLM call — routes to Claude Sonnet 4.6.
+ * 
+ * Standard LLM call with default settings.
+ * 
+ * Default: model='pro' (high effort for deep analysis)
+ * Use model='flash' for fast, routine tasks (low effort)
  */
 export async function callLLM(prompt: string, options?: LLMCallOptions): Promise<string> {
-  const provider = options?.provider ?? getActiveProvider();
-  
-  if (provider === 'anthropic') {
-    return callAnthropicProvider(prompt, options);
-  }
-  return callGeminiProvider(prompt, options);
+  return callClaude(prompt, options);
 }
 
 /**
  * Extended capacity LLM call with retry logic.
  * 
- * Drop-in replacement for the old callGeminiMax() function.
- * Uses higher token limits and exponential backoff retries.
+ * High-capacity LLM call with maximum output tokens.
+ * Uses maximum output tokens (64K) and high effort by default.
+ * 
+ * Exponential backoff retries (2s, 4s, 8s) on transient errors.
  */
 export async function callLLMMax(prompt: string, maxRetries: number = 3, options?: LLMCallOptions): Promise<string> {
-  const provider = options?.provider ?? getActiveProvider();
   let lastError: Error | null = null;
   
-  const providerLabel = provider === 'anthropic' ? 'Claude Max' : 'Gemini Max';
+  const modelTier = options?.model ?? 'pro';
+  const label = `Claude Max (${modelTier})`;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      console.log(`[${providerLabel}] Attempt ${attempt + 1}/${maxRetries}...`);
+      console.log(`[${label}] Attempt ${attempt + 1}/${maxRetries}...`);
       
-      const result = await callLLM(prompt, {
+      const result = await callClaude(prompt, {
         ...options,
-        maxTokens: options?.maxTokens ?? 16384,
-        thinkingLevel: options?.thinkingLevel ?? 'low',
-        model: options?.model ?? 'pro',
-        provider,
+        maxTokens: options?.maxTokens ?? MAX_OUTPUT_TOKENS,
+        thinkingLevel: options?.thinkingLevel ?? 'high',
+        model: modelTier,
       });
       
       if (result) {
-        console.log(`[${providerLabel}] Success on attempt ${attempt + 1}`);
+        console.log(`[${label}] Success on attempt ${attempt + 1}`);
         return result;
       }
       
-      // Empty response, retry
-      lastError = new Error('Empty response from LLM API');
-      console.warn(`[${providerLabel}] Empty response on attempt ${attempt + 1}, retrying...`);
+      lastError = new Error('Empty response from Claude');
+      console.warn(`[${label}] Empty response on attempt ${attempt + 1}, retrying...`);
       await sleep(Math.pow(2, attempt + 1) * 1000);
       
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[${providerLabel}] Timeout on attempt ${attempt + 1}`);
+        console.error(`[${label}] Timeout on attempt ${attempt + 1}`);
       } else {
-        console.error(`[${providerLabel}] Error on attempt ${attempt + 1}:`, error);
+        console.error(`[${label}] Error on attempt ${attempt + 1}:`, error);
       }
       
-      // Check for retryable errors (rate limits, server errors, overloaded)
       const errorMsg = lastError.message.toLowerCase();
       const isRetryable = errorMsg.includes('429') || 
                           errorMsg.includes('529') ||
@@ -306,29 +672,24 @@ export async function callLLMMax(prompt: string, maxRetries: number = 3, options
                           errorMsg.includes('rate_limit');
       
       if (!isRetryable && attempt === 0) {
-        // Non-retryable error on first attempt — fail fast
         throw lastError;
       }
       
       if (attempt < maxRetries - 1) {
         const backoffMs = Math.pow(2, attempt + 1) * 1000;
-        console.log(`[${providerLabel}] Retrying in ${backoffMs}ms...`);
+        console.log(`[${label}] Retrying in ${backoffMs}ms...`);
         await sleep(backoffMs);
       }
     }
   }
   
-  console.error(`[${providerLabel}] All ${maxRetries} attempts failed. Last error:`, lastError);
+  console.error(`[${label}] All ${maxRetries} attempts failed.`);
   throw lastError || new Error('All retry attempts failed');
 }
 
 /**
  * Get provider info for logging/debugging
  */
-export function getProviderInfo(): { provider: LLMProvider; proModel: string; flashModel: string } {
-  const provider = getActiveProvider();
-  if (provider === 'anthropic') {
-    return { provider, proModel: CLAUDE_MODELS.pro, flashModel: CLAUDE_MODELS.flash };
-  }
-  return { provider, proModel: 'gemini-3-pro-preview', flashModel: 'gemini-3-flash-preview' };
+export function getProviderInfo(): { provider: string; model: string } {
+  return { provider: 'anthropic', model: MODEL_ID };
 }

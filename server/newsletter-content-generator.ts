@@ -1,22 +1,13 @@
 /**
  * Newsletter Content Generator
  * 
- * Uses Gemini 3 AI to generate personalized, engaging newsletter content
+ * Uses Claude Sonnet 4.6 to generate personalized, engaging newsletter content
  * for market intelligence and deal alerts.
- * 
- * GEMINI 3 COMPLIANT:
- * - Model: gemini-3-flash-preview for fast content generation
- * - Uses REST API with fetch() (no deprecated SDK)
- * - Uses native systemInstruction field
- * - Uses thinkingConfig for improved reasoning
- * - API key via ENV.geminiApiKey (centralized)
  */
 
-import { ENV } from './_core/env';
+import { callLLM } from './llm-provider';
 import type { MarketSnapshot } from './newsletter-market-data';
 import type { RentalDeal } from './newsletter-deal-finder';
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 export interface NewsletterContent {
   subject: string;
@@ -36,54 +27,27 @@ interface ContactInfo {
 }
 
 /**
- * Call Gemini 3 API with structured JSON output
+ * Call Claude Sonnet 4.6 with structured JSON output
  */
-async function callGeminiForJson<T>(
+async function callClaudeForJson<T>(
   systemPrompt: string,
   userPrompt: string,
-  temperature: number = 1.0
 ): Promise<T> {
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured');
-  }
-
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature,
-        maxOutputTokens: 2048,
-        thinkingConfig: {
-          thinkingLevel: 'low'
-        }
-      }
-    }),
+  const prompt = `${userPrompt}\n\nRespond with valid JSON only, no markdown fences.`;
+  const text = await callLLM(prompt, {
+    systemPrompt,
+    model: 'flash',
+    thinkingLevel: 'low',
+    maxTokens: 2048,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  // Strip markdown fences if present
+  const cleaned = text.replace(/^```json\n?/i, '').replace(/\n?```$/i, '').trim();
+  if (!cleaned) {
+    throw new Error('Empty response from Claude');
   }
 
-  const data = await response.json();
-  // Filter out thinking parts - only extract text parts
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const text = parts
-    .filter((p: any) => p.text && !p.thought)
-    .map((p: any) => p.text)
-    .join('') || '';
-  if (!text) {
-    throw new Error('Empty response from Gemini');
-  }
-
-  return JSON.parse(text) as T;
+  return JSON.parse(cleaned) as T;
 }
 
 /**
@@ -139,7 +103,7 @@ Output as JSON with these fields:
 }`;
 
   try {
-    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.7);
+    return await callClaudeForJson<NewsletterContent>(systemPrompt, userPrompt);
   } catch (error) {
     console.error('[Newsletter] Error generating weekly content:', error);
 
@@ -224,7 +188,7 @@ Output as JSON:
 }`;
 
   try {
-    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.8);
+    return await callClaudeForJson<NewsletterContent>(systemPrompt, userPrompt);
   } catch (error) {
     console.error('[Newsletter] Error generating deal alert content:', error);
 
@@ -310,7 +274,7 @@ Output as JSON with these fields:
 }`;
 
   try {
-    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.6);
+    return await callClaudeForJson<NewsletterContent>(systemPrompt, userPrompt);
   } catch (error) {
     console.error('[Newsletter] Error generating monthly report content:', error);
 

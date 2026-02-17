@@ -72,18 +72,18 @@ describe('AI advisor reportMode handling', () => {
   });
 });
 
-// ─── Gemini Function Exports Tests ─────────────────────────────────────────────
-describe('gemini.ts exports all reportMode-aware functions', () => {
+// ─── Report Generator Function Exports Tests ─────────────────────────────────────────────
+describe('report-generator.ts exports all reportMode-aware functions', () => {
   it('exports all generate functions', async () => {
-    const gemini = await import('../gemini');
+    const reportGen = await import('../report-generator');
     
-    expect(typeof gemini.generateEnhancedPropertyReport).toBe('function');
-    expect(typeof gemini.generateEnhancedMarketReport).toBe('function');
-    expect(typeof gemini.generateMarketTrendNarrative).toBe('function');
-    expect(typeof gemini.generateComprehensivePropertyAdvice).toBe('function');
-    expect(typeof gemini.generateMaxPropertyAdvice).toBe('function');
-    expect(typeof gemini.generateMaxMarketAdvice).toBe('function');
-    expect(typeof gemini.generateFullReportSummary).toBe('function');
+    expect(typeof reportGen.generateEnhancedPropertyReport).toBe('function');
+    expect(typeof reportGen.generateEnhancedMarketReport).toBe('function');
+    expect(typeof reportGen.generateMarketTrendNarrative).toBe('function');
+    expect(typeof reportGen.generateComprehensivePropertyAdvice).toBe('function');
+    expect(typeof reportGen.generateMaxPropertyAdvice).toBe('function');
+    expect(typeof reportGen.generateMaxMarketAdvice).toBe('function');
+    expect(typeof reportGen.generateFullReportSummary).toBe('function');
   });
 });
 

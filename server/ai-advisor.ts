@@ -1,7 +1,7 @@
 /**
- * AI Investment Advisor with Gemini Function Calling
+ * AI Investment Advisor with Claude Tool Use
  * 
- * This service uses Google's Gemini AI with function calling to dynamically
+ * This service uses Claude Sonnet 4.6 with tool use to dynamically
  * fetch AirDNA data based on user questions.
  */
 
@@ -22,11 +22,19 @@ import { makeRequest, GeocodingResult } from './_core/map';
 import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
 import { SOPReports, generateFullArbitrageAnalysis } from './sop-reports';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
+import { callLLMWithToolLoop, ClaudeTool } from './llm-provider';
 
-// Define the tools/functions that Gemini can call
-const AVAILABLE_TOOLS = {
-  functionDeclarations: [
+// Convert function declarations to Claude tools format
+function convertToClaudeTools(declarations: Array<{ name: string; description: string; parameters: Record<string, unknown> }>): ClaudeTool[] {
+  return declarations.map(d => ({
+    name: d.name,
+    description: d.description,
+    input_schema: d.parameters,
+  }));
+}
+
+// Define the tools/functions that Claude can call
+const FUNCTION_DECLARATIONS = [
     {
       name: "search_market",
       description: "Search for a market by name (city, region, or area) to get its ID and basic info. Use this first to find the market ID before fetching detailed data.",
@@ -827,10 +835,9 @@ const AVAILABLE_TOOLS = {
         required: ["market_name"]
       }
     }
-  ]
-};
+];
 
-// Execute the function calls requested by Gemini
+// Execute the function calls requested by Claude
 async function executeFunctionCall(functionName: string, args: Record<string, unknown>): Promise<unknown> {
   console.log(`[AI Advisor] Executing function: ${functionName}`, args);
   
@@ -2094,20 +2101,11 @@ export async function getAIAdvisorResponse(
 ): Promise<string> {
   console.log(`[AI Advisor] Processing question: ${question} (mode: ${reportMode})`);
   
-  // Build conversation history for context
-  const historyContents = conversationHistory.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.content }]
+  // Build conversation history in Claude format
+  const historyMessages = conversationHistory.map(msg => ({
+    role: msg.role as string,
+    content: msg.content,
   }));
-  
-  // Initial request with the user's question
-  const initialContents = [
-    ...historyContents,
-    {
-      role: 'user',
-      parts: [{ text: question }]
-    }
-  ];
   
   const systemInstruction = reportMode === 'pro' 
     ? `You are David Wei Chen (陈伟), a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, an AI-powered advisory firm managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science, quantitative analytics, and real estate investment — 15 years specializing in the short-term rental economy.
@@ -2532,7 +2530,7 @@ When user provides a property address AND monthly rent for arbitrage analysis:
 3. Seasonality Analysis - peak/slow season patterns
 4. Competitor Analysis - FULL TABLE with Airbnb URLs (show EVERY row)
 5. Amenity Analysis - what top performers have
-6. **Visual Analysis (NEW)** - AI photo analysis of competitor listings using Gemini Vision
+6. **Visual Analysis (NEW)** - AI photo analysis of competitor listings using Claude Vision
 7. **AI-Powered Investment Analysis (NEW)** - includes:
    - Executive Summary synthesized by AI
    - Lease Decision (GO/CAUTION/PASS) with confidence score
@@ -2599,105 +2597,31 @@ After EVERY metric, add "What This Means:" explanation.
 8. Always explain metrics in plain language with "What This Means" sections`;
 
   try {
-    // Make the initial API call with function declarations
-    let response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: initialContents,
-        tools: [AVAILABLE_TOOLS],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          temperature: 1.0,
-          maxOutputTokens: 8192,
-          thinkingConfig: {
-            thinkingLevel: 'high'
-          }
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    let data = await response.json();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let contents: any[] = [...initialContents];
+    // Convert function declarations to Claude tool format
+    const claudeTools = convertToClaudeTools(FUNCTION_DECLARATIONS);
     
-    // Loop to handle multiple function calls
-    let maxIterations = 10; // Prevent infinite loops
-    while (maxIterations > 0) {
-      maxIterations--;
-      
-      const candidate = data.candidates?.[0];
-      if (!candidate) {
-        throw new Error('No response from Gemini');
-      }
-      
-      const content = candidate.content;
-      contents.push(content);
-      
-      // Check if there are function calls to execute
-      const functionCalls = content.parts?.filter((p: { functionCall?: unknown }) => p.functionCall);
-      
-      if (!functionCalls || functionCalls.length === 0) {
-        // No more function calls - extract the text response, filtering out thinking parts
-        const textParts = content.parts?.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought) || [];
-        const responseText = textParts.map((p: { text: string }) => p.text).join('');
-        return responseText || "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
-      }
-      
-      // Execute each function call and collect results
-      const functionResponses = [];
-      for (const fc of functionCalls) {
-        const { name, args } = fc.functionCall;
-        const result = await executeFunctionCall(name, args || {});
-        functionResponses.push({
-          functionResponse: {
-            name,
-            response: result
-          }
-        });
-      }
-      
-      // Add function responses to the conversation
-      // Gemini expects function responses in a specific format
-      contents.push({
-        role: 'user' as const,
-        parts: functionResponses.map(fr => ({
-          functionResponse: fr.functionResponse
-        }))
-      });
-      
-      // Make another API call with the function results
-      response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          tools: [AVAILABLE_TOOLS],
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: 8192,
-            thinkingConfig: {
-              thinkingLevel: 'high'
-            }
-          }
-        })
-      });
+    // Also add enhanced tools from ai-advisor-enhanced.ts
+    const enhancedClaudeTools = convertToClaudeTools(
+      ENHANCED_TOOLS.functionDeclarations || []
+    );
+    const allTools = [...claudeTools, ...enhancedClaudeTools];
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    // Use the multi-turn tool loop — Claude calls tools, we execute, repeat
+    const result = await callLLMWithToolLoop(
+      question,
+      allTools,
+      executeFunctionCall,
+      {
+        systemPrompt: systemInstruction,
+        model: 'pro',
+        thinkingLevel: 'high',
+        maxTokens: 16384,
+        maxIterations: 10,
+        conversationHistory: historyMessages,
       }
+    );
 
-      data = await response.json();
-    }
-    
-    return "I apologize, but I'm having trouble processing your question. Please try a simpler query.";
+    return result;
     
   } catch (error) {
     console.error('[AI Advisor] Error:', error);

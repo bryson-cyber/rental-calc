@@ -1,7 +1,7 @@
 /**
  * Pro Mode Prompt Overrides
  * 
- * When reportMode === 'pro', these overrides are injected into Gemini prompts
+ * When reportMode === 'pro', these overrides are injected into AI prompts
  * to switch from beginner-friendly "guided" language to investor-grade "pro" language.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Enhanced Gemini AI Analyzer - Improved Narrative Quality & Performance
+ * Enhanced Claude AI Analyzer - Improved Narrative Quality & Performance
  * 
  * Key Improvements:
  * 1. Better prompts with market-specific context
@@ -10,9 +10,8 @@
  * 6. Plain-language explanations throughout
  */
 
-import { ENV } from './_core/env';
+import { callLLM } from './llm-provider';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
 
 // ============================================
 // CACHING LAYER
@@ -61,104 +60,15 @@ const marketDataCache = new SimpleCache<any>(10 * 60 * 1000); // 10 minutes
 const narrativeCache = new SimpleCache<any>(24 * 60 * 60 * 1000); // 24 hours - AI analysis is expensive
 
 // ============================================
-// ENHANCED GEMINI CALL WITH RETRY
+// ENHANCED CLAUDE CALL
 // ============================================
 
-interface RetryConfig {
-  maxRetries: number;
-  baseDelayMs: number;
-  maxDelayMs: number;
-}
-
-const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 0, // No retries - fail fast and use fallback
-  baseDelayMs: 1000,
-  maxDelayMs: 5000
-};
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function callGeminiWithRetry(
+async function callClaudeWithRetry(
   prompt: string, 
   maxTokens: number = 4096, 
-  timeoutMs: number = 30000, // 30 second timeout - fail fast
-  retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
 ): Promise<string> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
-    if (attempt > 0) {
-      // Exponential backoff with jitter
-      const delay = Math.min(
-        retryConfig.baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 1000,
-        retryConfig.maxDelayMs
-      );
-      console.log(`[GeminiEnhanced] Retry attempt ${attempt}/${retryConfig.maxRetries} after ${Math.round(delay)}ms delay`);
-      await sleep(delay);
-    }
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You combine Wall Street analytical rigor with Main Street accessibility. Provide detailed, data-driven analysis with specific numbers. Use the "story before the stats" approach — lead with narrative, then data. Write for someone who may be new to STR investing. Never sugarcoat risks but always empower.' }]
-          },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: maxTokens,
-            thinkingConfig: {
-              thinkingLevel: 'high'
-            }
-          }
-        }),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-      // Filter out thinking parts - only extract text parts
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const result = parts
-        .filter((p: any) => p.text && !p.thought)
-        .map((p: any) => p.text)
-        .join('') || '';
-      
-      if (!result) {
-        throw new Error('Empty response from Gemini');
-      }
-      
-      return result;
-    } catch (error: any) {
-      lastError = error;
-      
-      if (error.name === 'AbortError') {
-        console.error(`[GeminiEnhanced] Timeout after ${timeoutMs / 1000}s on attempt ${attempt + 1}`);
-      } else {
-        console.error(`[GeminiEnhanced] Error on attempt ${attempt + 1}:`, error.message);
-      }
-      
-      // Don't retry on certain errors
-      if (error.message?.includes('API key') || error.message?.includes('quota')) {
-        throw error;
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-  
-  throw lastError || new Error('All retry attempts failed');
+  const systemPrompt = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You combine Wall Street analytical rigor with Main Street accessibility. Provide detailed, data-driven analysis with specific numbers. Use the "story before the stats" approach \u2014 lead with narrative, then data. Write for someone who may be new to STR investing. Never sugarcoat risks but always empower.';
+  return callLLM(prompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt });
 }
 
 // ============================================
@@ -413,7 +323,7 @@ async function withGlobalTimeout<T>(
       setTimeout(() => reject(new Error(`Global timeout after ${timeoutMs}ms`)), timeoutMs)
     )
   ]).catch((error) => {
-    console.error('[GeminiEnhanced] Global timeout triggered:', error.message);
+    console.error('[ClaudeAnalyzer] Global timeout triggered:', error.message);
     return fallbackFn();
   });
 }
@@ -425,11 +335,11 @@ export async function generateEnhancedNarrativeReport(
   const cacheKey = `narrative_${input.address}_${input.monthly_rent}_${input.bedrooms}`;
   const cached = narrativeCache.get(cacheKey);
   if (cached) {
-    console.log('[GeminiEnhanced] Returning cached narrative report');
+    console.log('[ClaudeAnalyzer] Returning cached narrative report');
     return cached;
   }
   
-  console.log('[GeminiEnhanced] Generating enhanced narrative report...');
+  console.log('[ClaudeAnalyzer] Generating enhanced narrative report...');
   
   // Calculate market context and ratios early for fallback
   const marketContext = detectMarketContext(
@@ -446,7 +356,7 @@ export async function generateEnhancedNarrativeReport(
     generateEnhancedNarrativeReportInternal(input, cacheKey),
     180000,
     () => {
-      console.log('[GeminiEnhanced] Returning fallback report due to global timeout');
+      console.log('[ClaudeAnalyzer] Returning fallback report due to global timeout');
       return generateFallbackReport(input, marketContext, revenueToRentRatio);
     }
   );
@@ -456,7 +366,7 @@ async function generateEnhancedNarrativeReportInternal(
   input: EnhancedNarrativeReportInput,
   cacheKey: string
 ): Promise<EnhancedNarrativeReport> {
-  console.log('[GeminiEnhanced] Starting internal report generation...');
+  console.log('[ClaudeAnalyzer] Starting internal report generation...');
   
   // Detect market context
   const marketContext = detectMarketContext(
@@ -701,7 +611,7 @@ IMPORTANT:
 - When discussing market size, refer to the ${input.active_listings} direct competitors, not broader regional statistics`;
 
   try {
-    const response = await callGeminiWithRetry(prompt, 8192, 60000);
+    const response = await callClaudeWithRetry(prompt, 8192);
     
     // Parse JSON from response - clean markdown fences if present
     let cleanedResponse = response.trim();
@@ -745,11 +655,11 @@ IMPORTANT:
     // Cache the result
     narrativeCache.set(cacheKey, result);
     
-    console.log('[GeminiEnhanced] Enhanced narrative report generated successfully');
+    console.log('[ClaudeAnalyzer] Enhanced narrative report generated successfully');
     return result;
     
   } catch (error) {
-    console.error('[GeminiEnhanced] Error generating enhanced narrative report:', error);
+    console.error('[ClaudeAnalyzer] Error generating enhanced narrative report:', error);
     
     // Return a comprehensive fallback report
     return generateFallbackReport(input, marketContext, revenueToRentRatio);
@@ -898,7 +808,7 @@ export async function fetchDataInParallel<T extends Record<string, Promise<any>>
   const keys = Object.keys(fetchers) as (keyof T)[];
   const promises = keys.map(key => 
     fetchers[key].catch(err => {
-      console.error(`[GeminiEnhanced] Error fetching ${String(key)}:`, err.message);
+      console.error(`[ClaudeAnalyzer] Error fetching ${String(key)}:`, err.message);
       return null;
     })
   );
@@ -920,7 +830,7 @@ export async function fetchDataInParallel<T extends Record<string, Promise<any>>
 export function clearAllCaches(): void {
   marketDataCache.clear();
   narrativeCache.clear();
-  console.log('[GeminiEnhanced] All caches cleared');
+  console.log('[ClaudeAnalyzer] All caches cleared');
 }
 
 export function getCacheStats(): { marketData: number; narrative: number } {

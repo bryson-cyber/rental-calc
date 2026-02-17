@@ -19,7 +19,7 @@ import {
   type PropertyAdvisorInput,
   type MaxPropertyAdvisorInput,
   type MaxMarketAdvisorInput,
-} from "../gemini";
+} from "../report-generator";
 import { getAIAdvisorResponse, type ChatMessage } from "../ai-advisor";
 import { generateFullArbitrageAnalysis } from "../sop-reports";
 import { getRentSummary } from "../rentometer";
@@ -405,7 +405,7 @@ export const advancedRouter = router({
               historical_trends: analysis.historical_trends,
               // 5-YEAR HISTORICAL SUMMARY
               five_year_summary: analysis.five_year_summary,
-              // GEMINI HISTORICAL ANALYSIS
+              // AI HISTORICAL ANALYSIS
               historical_analysis: analysis.historical_analysis,
               // COMPREHENSIVE NARRATIVE REPORT
               narrative_report: analysis.narrative_report,

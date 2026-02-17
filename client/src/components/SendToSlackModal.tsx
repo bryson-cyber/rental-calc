@@ -6,7 +6,7 @@
  * 
  * Features:
  * - Dynamic channel search across the entire Slack workspace
- * - Auto-generates an AI deal summary via Gemini
+ * - Auto-generates an AI deal summary via Claude
  * - Optional custom message
  * - Posts report link + deal summary + Zillow/Redfin links to the selected channel
  */

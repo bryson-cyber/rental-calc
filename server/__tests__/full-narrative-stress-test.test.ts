@@ -1,7 +1,7 @@
 /**
  * Full Narrative Generation Stress Test
  * Tests the complete AI narrative pipeline with fully mocked external dependencies.
- * All AirDNA, Gemini, scraper, and AI fallback calls are mocked.
+ * All AirDNA, Claude AI, scraper, and AI fallback calls are mocked.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -205,10 +205,10 @@ vi.mock('../airdna', async (importOriginal) => {
 });
 
 // ============================================
-// Mock Gemini Analyzer
+// Mock AI Analyzer
 // ============================================
-vi.mock('../gemini-analyzer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../gemini-analyzer')>();
+vi.mock('../ai-analyzer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ai-analyzer')>();
   return {
     ...actual,
     runFullAIAnalysis: vi.fn().mockResolvedValue({
@@ -233,7 +233,7 @@ vi.mock('../gemini-analyzer', async (importOriginal) => {
     generateWhatThisMeans: vi.fn().mockResolvedValue('This means the property has good potential.'),
     analyzeHistoricalMarketTrends: vi.fn().mockResolvedValue({ trend: 'growing', summary: 'Market has been growing steadily' }),
     generateNarrativeReport: vi.fn().mockResolvedValue({ report: 'Comprehensive analysis report', sections: [] }),
-    callGeminiStructured: vi.fn().mockResolvedValue({}),
+    callLLMStructured: vi.fn().mockResolvedValue({}),
     generateStructuredAnalysis: vi.fn().mockResolvedValue({}),
     fetchAnalysisDataParallel: vi.fn().mockResolvedValue({}),
     explainForBeginners: vi.fn().mockResolvedValue('Simple explanation of the data.'),
@@ -247,10 +247,10 @@ vi.mock('../gemini-analyzer', async (importOriginal) => {
 });
 
 // ============================================
-// Mock Gemini Analyzer Enhanced
+// Mock AI Analyzer Enhanced
 // ============================================
-vi.mock('../gemini-analyzer-enhanced', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../gemini-analyzer-enhanced')>();
+vi.mock('../ai-analyzer-enhanced', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ai-analyzer-enhanced')>();
   return {
     ...actual,
     generateEnhancedNarrativeReport: vi.fn().mockResolvedValue({

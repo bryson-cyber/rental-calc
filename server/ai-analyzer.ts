@@ -1,24 +1,21 @@
 /**
- * Gemini AI Analyzer - Maximized AI Integration for Arbitrage Analysis
+ * Claude AI Analyzer - AI-Powered Arbitrage Analysis
  * 
- * This module transforms Gemini from a "data router" into an "AI analyst"
- * by using its analytical capabilities to synthesize insights, identify
- * patterns, and generate personalized recommendations.
+ * Uses Claude Sonnet 4.6 to synthesize insights, identify patterns,
+ * and generate personalized recommendations for rental arbitrage.
  * 
  * Key Capabilities:
  * - Property insight synthesis (unique insights per property)
  * - Competitor pattern analysis (what makes winners win)
- * - Photo analysis using Gemini Vision (design themes, amenities)
+ * - Photo analysis using Claude Vision (design themes, amenities)
  * - Lease decision generation (GO/CAUTION/PASS with confidence)
  * - Pricing strategy recommendations
  * - Risk and opportunity assessment
  * - Personalized action plans
  */
 
-import { ENV } from './_core/env';
 import { apiCache } from './cache';
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
+import { callLLM, callLLMWithVision } from './llm-provider';
 
 // ============================================
 // GLOBAL HELPER FUNCTIONS
@@ -221,227 +218,59 @@ export interface FullAIAnalysis {
 }
 
 // ============================================
-// CORE GEMINI CALL FUNCTION WITH RETRY LOGIC
+// CORE CLAUDE CALL FUNCTION
 // ============================================
 
-/**
- * Sleep for a given number of milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Call Gemini API with exponential backoff retry logic
- * @param prompt - The prompt to send to Gemini
- * @param maxTokens - Maximum tokens in the response
- * @param timeoutMs - Timeout for each attempt in milliseconds
- * @param maxRetries - Maximum number of retry attempts (default: 3)
- */
-interface CallGeminiOptions {
+interface CallAnalyzerOptions {
   prompt: string;
   systemInstruction?: string;
   maxTokens?: number;
-  timeoutMs?: number;
-  maxRetries?: number;
   responseSchema?: Record<string, unknown>;
 }
 
-async function callGemini(
-  promptOrOptions: string | CallGeminiOptions, 
+/**
+ * Call Claude Sonnet 4.6 for analysis.
+ * Supports both simple string prompts and options objects.
+ */
+async function callAnalyzer(
+  promptOrOptions: string | CallAnalyzerOptions, 
   maxTokens: number = 4096, 
-  timeoutMs: number = 45000,
-  maxRetries: number = 2
 ): Promise<string> {
-  // Support both old signature and new options object
-  const opts: CallGeminiOptions = typeof promptOrOptions === 'string'
-    ? { prompt: promptOrOptions, maxTokens, timeoutMs, maxRetries }
-    : { maxTokens: 4096, timeoutMs: 45000, maxRetries: 2, ...promptOrOptions };
+  const opts: CallAnalyzerOptions = typeof promptOrOptions === 'string'
+    ? { prompt: promptOrOptions, maxTokens }
+    : { maxTokens: 4096, ...promptOrOptions };
   const prompt = opts.prompt;
   maxTokens = opts.maxTokens!;
-  timeoutMs = opts.timeoutMs!;
-  maxRetries = opts.maxRetries!;
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    // Create an AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      if (attempt > 0) {
-        // Exponential backoff: 2^attempt * 1000ms (2s, 4s, 8s, ...)
-        const backoffMs = Math.pow(2, attempt) * 1000;
-        console.log(`[GeminiAnalyzer] Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms backoff`);
-        await sleep(backoffMs);
-      }
-      
-      // Build request body with optional systemInstruction and responseSchema
-      const requestBody: Record<string, unknown> = {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 1.0,
-          maxOutputTokens: maxTokens,
-          thinkingConfig: {
-            thinkingLevel: 'high'
-          },
-          ...(opts.responseSchema ? {
-            responseMimeType: 'application/json',
-            responseSchema: opts.responseSchema
-          } : {})
-        }
-      };
 
-      // Add systemInstruction if provided
-      if (opts.systemInstruction) {
-        requestBody.systemInstruction = {
-          parts: [{ text: opts.systemInstruction }]
-        };
-      }
-
-      const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        // Check if response is HTML (error page) before trying to parse as JSON
-        const contentType = response.headers.get('content-type') || '';
-        let errorMessage = 'Unknown error';
-        
-        if (contentType.includes('text/html')) {
-          const htmlText = await response.text();
-          console.error(`[GeminiAnalyzer] Received HTML error page instead of JSON: ${htmlText.substring(0, 200)}`);
-          errorMessage = `API returned HTML error page (status ${response.status}). This may indicate an invalid API key or service issue.`;
-        } else {
-          try {
-            const error = await response.json();
-            errorMessage = error.error?.message || 'Unknown error';
-          } catch {
-            errorMessage = `HTTP ${response.status} - Could not parse error response`;
-          }
-        }
-        
-        // Check if it's a retryable error (rate limit, server error)
-        if (response.status === 429 || response.status >= 500) {
-          lastError = new Error(`Gemini API error (${response.status}): ${errorMessage}`);
-          console.warn(`[GeminiAnalyzer] Retryable error on attempt ${attempt + 1}: ${errorMessage}`);
-          continue; // Retry
-        }
-        
-        // Non-retryable error, throw immediately
-        throw new Error(`Gemini API error: ${errorMessage}`);
-      }
-
-      // Check content type before parsing
-      const successContentType = response.headers.get('content-type') || '';
-      if (successContentType.includes('text/html')) {
-        const htmlText = await response.text();
-        console.error(`[GeminiAnalyzer] Received HTML instead of JSON: ${htmlText.substring(0, 200)}`);
-        throw new Error('API returned HTML instead of JSON. This may indicate an authentication or service issue.');
-      }
-      
-      const data = await response.json();
-      // Filter out thinking parts - only extract text parts (not thought parts)
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const result = parts
-        .filter((p: any) => p.text && !p.thought)
-        .map((p: any) => p.text)
-        .join('') || '';
-      
-      if (attempt > 0) {
-        console.log(`[GeminiAnalyzer] Success on retry attempt ${attempt + 1}`);
-      }
-      
-      return result;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        lastError = new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
-        console.warn(`[GeminiAnalyzer] Timeout on attempt ${attempt + 1}/${maxRetries}`);
-        continue; // Retry on timeout
-      }
-      
-      // For other errors, check if retryable
-      if (error.message?.includes('ECONNRESET') || 
-          error.message?.includes('ETIMEDOUT') ||
-          error.message?.includes('network')) {
-        lastError = error;
-        console.warn(`[GeminiAnalyzer] Network error on attempt ${attempt + 1}: ${error.message}`);
-        continue; // Retry on network errors
-      }
-      
-      // Non-retryable error
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+  // If responseSchema is provided, ask Claude for JSON
+  if (opts.responseSchema) {
+    const jsonPrompt = opts.systemInstruction
+      ? `${opts.systemInstruction}\n\n${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`
+      : `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`;
+    return callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high' });
   }
-  
-  // All retries exhausted
-  throw lastError || new Error('Gemini API failed after all retry attempts');
+
+  return callLLM(prompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt: opts.systemInstruction });
 }
 
-async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: number = 2048): Promise<string> {
-  // Fetch the image and convert to base64
-  let imageData: string;
-  let mimeType: string;
-  
-  try {
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-    }
-    
-    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-    mimeType = contentType.split(';')[0];
-    
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    imageData = Buffer.from(arrayBuffer).toString('base64');
-  } catch (error) {
-    console.error('[GeminiAnalyzer] Error fetching image:', error);
-    throw new Error(`Could not fetch image from URL: ${imageUrl}`);
-  }
+async function callAnalyzerWithImage(prompt: string, imageUrl: string, maxTokens: number = 2048): Promise<string> {
+  // Fetch image and convert to base64
+  const imageResponse = await fetch(imageUrl);
+  if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+  const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+  const mimeType = contentType.split(';')[0];
+  const arrayBuffer = await imageResponse.arrayBuffer();
+  const imageData = Buffer.from(arrayBuffer).toString('base64');
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You specialize in visual assessment of rental listings. Analyze images objectively, identifying design themes, amenities, and guest appeal factors.' }]
-      },
-      contents: [{
-        role: 'user',
-        parts: [
-          { text: prompt },
-          {
-            inline_data: {
-              mime_type: mimeType,
-              data: imageData
-            }
-          }
-        ]
-      }],
-      generationConfig: {
-        temperature: 1.0,
-        maxOutputTokens: maxTokens,
-        thinkingConfig: {
-          thinkingLevel: 'low'
-        }
-      }
-    })
+  return callLLMWithVision(prompt, [{
+    type: 'image',
+    source: { type: 'base64', media_type: mimeType, data: imageData },
+  }], {
+    maxTokens,
+    model: 'flash',
+    thinkingLevel: 'low',
+    systemPrompt: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You specialize in visual assessment of rental listings. Analyze images objectively, identifying design themes, amenities, and guest appeal factors.',
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Gemini Vision API error: ${error.error?.message || 'Unknown error'}`);
-  }
-
-  const data = await response.json();
-  // Filter out thinking parts
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  return parts.filter((p: any) => p.text && !p.thought).map((p: any) => p.text).join('') || '';
 }
 
 // ============================================
@@ -567,14 +396,14 @@ Generate exactly 5 insights.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Generate unique, data-driven insights specific to each property. Every insight must include specific numbers from the provided data. Use the story-before-the-stats approach. Never give generic advice.',
       responseSchema: insightsSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error synthesizing insights:', error);
+    console.error('[ClaudeAnalyzer] Error synthesizing insights:', error);
     // Return default insights on error
     return [
       {
@@ -684,14 +513,14 @@ CRITICAL: Every pattern MUST include specific numbers. No generic observations.`
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Identify quantified patterns from competitor data. Every pattern must include specific numbers from the data provided. Use analogy over jargon. Never give generic observations.',
       responseSchema: patternsSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error analyzing patterns:', error);
+    console.error('[ClaudeAnalyzer] Error analyzing patterns:', error);
     return [];
   }
 }
@@ -834,14 +663,14 @@ Provide your verdict based on the composite score and data above.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Provide quantified investment verdicts based strictly on the data provided. Every statement must include specific numbers. Use the story-before-the-stats approach. Align your rating with the composite score: 7+ = GO, 4-7 = CAUTION, below 4 = PASS.',
       responseSchema: verdictSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating verdict:', error);
+    console.error('[ClaudeAnalyzer] Error generating verdict:', error);
     // Return default verdict based on numbers
     const medianProfit = profitability.conservative;
     let rating: 'GO' | 'CAUTION' | 'PASS' = 'CAUTION';
@@ -991,14 +820,14 @@ Generate the pricing strategy based on the data above.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are a dynamic pricing expert for Airbnb short-term rentals. Create data-driven pricing strategies based strictly on the market data, competitor analysis, and seasonality patterns provided. All recommendations must be backed by specific numbers.',
       responseSchema: pricingSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating pricing:', error);
+    console.error('[ClaudeAnalyzer] Error generating pricing:', error);
     // Return calculated defaults
     const competitorADRs = competitors.map(c => c.adr).filter(a => a > 0);
     const avgCompetitorADR = competitorADRs.length > 0 
@@ -1047,7 +876,7 @@ Consider:
 Return ONLY the JSON object, no other text.`;
 
   try {
-    console.log(`[GeminiAnalyzer] Analyzing photo via AI: ${listingName}`);
+    console.log(`[ClaudeAnalyzer] Analyzing photo via AI: ${listingName}`);
     const response = await invokeLLM({
       messages: [
         { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.' },
@@ -1064,7 +893,7 @@ Return ONLY the JSON object, no other text.`;
     }
     throw new Error('Could not parse photo analysis JSON');
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error analyzing photo:', error);
+    console.error('[ClaudeAnalyzer] Error analyzing photo:', error);
     return {
       design_theme: "Unable to analyze",
       quality_score: 0,
@@ -1096,7 +925,7 @@ export async function analyzeCompetitorPhotos(
         const analysis = await analyzeListingPhoto(comp.imageUrl, comp.name);
         analyses.push(analysis);
       } catch (error) {
-        console.error(`[GeminiAnalyzer] Error analyzing photo for ${comp.name}:`, error);
+        console.error(`[ClaudeAnalyzer] Error analyzing photo for ${comp.name}:`, error);
       }
     }
   }
@@ -1274,14 +1103,14 @@ INCLUDE 4 RISKS (one from each category) and 3 OPPORTUNITIES with specific dolla
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Assess risks and opportunities using specific numbers from the data provided. Every risk and opportunity must include quantified financial impacts. Never sugarcoat risks but always empower.',
       responseSchema: riskSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error assessing risks:', error);
+    console.error('[ClaudeAnalyzer] Error assessing risks:', error);
     return {
       overall_risk: 'Medium',
       risks: [
@@ -1430,14 +1259,14 @@ Generate the 5-phase roadmap based on the data above.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are an Airbnb launch strategist who creates actionable, phased roadmaps for new short-term rental properties. Each phase must include specific costs, timelines, and measurable outcomes based on the property and market data provided.',
       responseSchema: roadmapSchema
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating action plan:', error);
+    console.error('[ClaudeAnalyzer] Error generating action plan:', error);
     return [
       {
         phase: "Pre-Launch Setup",
@@ -1577,9 +1406,9 @@ End with a confident closing statement aligned with the verdict.
 CRITICAL: Every paragraph MUST include specific numbers from the data above. No vague statements.`;
 
   try {
-    return await callGemini(prompt, 1024);
+    return await callAnalyzer(prompt, 1024);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating executive summary:', error);
+    console.error('[ClaudeAnalyzer] Error generating executive summary:', error);
     return `**Investment Verdict: ${verdict.rating}** (Confidence: ${verdict.confidence}/10)
 
 ${verdict.summary}
@@ -1617,11 +1446,11 @@ export async function runFullAIAnalysis(
   // Check cache first (async for DB fallback)
   const cached = await apiCache.getAsync<FullAIAnalysis>(cacheKey);
   if (cached) {
-    console.log('[GeminiAnalyzer] Returning cached AI analysis for:', property.address);
+    console.log('[ClaudeAnalyzer] Returning cached AI analysis for:', property.address);
     return cached;
   }
   
-  console.log('[GeminiAnalyzer] Starting full AI analysis for:', property.address);
+  console.log('[ClaudeAnalyzer] Starting full AI analysis for:', property.address);
   
   // Run analyses in parallel where possible
   const [insights, patterns, verdict] = await Promise.all([
@@ -1636,7 +1465,7 @@ export async function runFullAIAnalysis(
   const actionPlan = await generateActionPlan(property, verdict, pricingStrategy);
   const executiveSummary = await generateExecutiveSummary(property, insights, verdict, pricingStrategy, riskAssessment);
   
-  console.log('[GeminiAnalyzer] Full AI analysis complete');
+  console.log('[ClaudeAnalyzer] Full AI analysis complete');
   
   const result: FullAIAnalysis = {
     insights,
@@ -1650,19 +1479,19 @@ export async function runFullAIAnalysis(
   
   // Cache the result for 24 hours
   apiCache.set(cacheKey, result, 'ai_analysis');
-  console.log('[GeminiAnalyzer] Cached AI analysis for:', property.address);
+  console.log('[ClaudeAnalyzer] Cached AI analysis for:', property.address);
   
   return result;
 }
 
 
 // ============================================
-// PHASE 3: GEMINI ADVANCED FEATURES
+// PHASE 3: STRUCTURED OUTPUT
 // ============================================
 
 /**
  * Structured JSON Output Schema
- * Forces Gemini to return consistent, typed responses
+ * Forces Claude to return consistent, typed responses
  */
 export interface StructuredAnalysisSchema {
   property_score: number; // 1-100
@@ -1712,135 +1541,27 @@ export interface StructuredAnalysisSchema {
 }
 
 /**
- * Call Gemini with structured JSON output schema and retry logic
- * @param prompt - The prompt to send to Gemini
+ * Call Claude with structured JSON output schema and retry logic
+ * @param prompt - The prompt to send to Claude
  * @param schema - JSON schema for the expected output
  * @param maxTokens - Maximum tokens in the response
  * @param maxRetries - Maximum number of retry attempts (default: 3)
  * @param timeoutMs - Timeout for each attempt in milliseconds (default: 120000)
  */
-export async function callGeminiStructured<T>(
+export async function callLLMStructured<T>(
   prompt: string,
   schema: object,
   maxTokens: number = 4096,
-  maxRetries: number = 2,
-  timeoutMs: number = 45000
 ): Promise<T> {
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
-  }
-
-  // Use native systemInstruction instead of embedding in prompt
   const systemPrompt = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze property data and market metrics to provide quantified, actionable investment analysis. Use the story-before-the-stats approach and analogy over jargon.';
 
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      if (attempt > 0) {
-        // Exponential backoff: 2^attempt * 1000ms (2s, 4s, 8s, ...)
-        const backoffMs = Math.pow(2, attempt) * 1000;
-        console.log(`[GeminiAnalyzer] Structured retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms backoff`);
-        await sleep(backoffMs);
-      }
-      
-      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: maxTokens,
-            responseMimeType: 'application/json',
-            responseSchema: schema,
-            thinkingConfig: {
-              thinkingLevel: 'high'
-            }
-          }
-        }),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        // Check if response is HTML (error page) before trying to parse as JSON
-        const contentType = response.headers.get('content-type') || '';
-        let errorMessage = `HTTP ${response.status}`;
-        
-        if (contentType.includes('text/html')) {
-          const htmlText = await response.text();
-          console.error(`[GeminiAnalyzer] Structured: Received HTML error page: ${htmlText.substring(0, 200)}`);
-          errorMessage = `API returned HTML error page (status ${response.status}). This may indicate an invalid API key or service issue.`;
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          errorMessage = errorData.error?.message || errorMessage;
-        }
-        
-        // Check if it's a retryable error (rate limit, server error)
-        if (response.status === 429 || response.status >= 500) {
-          lastError = new Error(`Gemini API error (${response.status}): ${errorMessage}`);
-          console.warn(`[GeminiAnalyzer] Retryable structured error on attempt ${attempt + 1}: ${errorMessage}`);
-          continue; // Retry
-        }
-        
-        throw new Error(`Gemini API error: ${errorMessage}`);
-      }
-
-      // Check content type before parsing successful response
-      const successContentType = response.headers.get('content-type') || '';
-      if (successContentType.includes('text/html')) {
-        const htmlText = await response.text();
-        console.error(`[GeminiAnalyzer] Structured: Received HTML instead of JSON: ${htmlText.substring(0, 200)}`);
-        throw new Error('API returned HTML instead of JSON. This may indicate an authentication or service issue.');
-      }
-      
-      const data = await response.json();
-      // Filter out thinking parts - only extract text parts
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const text = parts
-        .filter((p: any) => p.text && !p.thought)
-        .map((p: any) => p.text)
-        .join('') || '';
-
-      if (attempt > 0) {
-        console.log(`[GeminiAnalyzer] Structured success on retry attempt ${attempt + 1}`);
-      }
-
-      return JSON.parse(text.trim()) as T;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        lastError = new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
-        console.warn(`[GeminiAnalyzer] Structured timeout on attempt ${attempt + 1}/${maxRetries}`);
-        continue; // Retry on timeout
-      }
-      
-      // For network errors, retry
-      if (error.message?.includes('ECONNRESET') || 
-          error.message?.includes('ETIMEDOUT') ||
-          error.message?.includes('network')) {
-        lastError = error;
-        console.warn(`[GeminiAnalyzer] Structured network error on attempt ${attempt + 1}: ${error.message}`);
-        continue; // Retry on network errors
-      }
-      
-      // Non-retryable error
-      console.error('[GeminiAnalyzer] Structured output error:', error);
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-  
-  // All retries exhausted
-  throw lastError || new Error('Gemini structured API failed after all retry attempts');
+  const jsonPrompt = `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(schema)}`;
+  const result = await callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt });
+  // Extract JSON from response (handle markdown code blocks)
+  const jsonMatch = result.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, result];
+  return JSON.parse((jsonMatch[1] || result).trim()) as T;
 }
+
 
 /**
  * Generate comprehensive structured analysis
@@ -1920,9 +1641,9 @@ Provide scores (1-100), verdict, insights, risks, opportunities, startup costs, 
 Be specific to THIS property and market. Use fifth-grade reading level for explanations.`;
 
   try {
-    return await callGeminiStructured<StructuredAnalysisSchema>(prompt, schema);
+    return await callLLMStructured<StructuredAnalysisSchema>(prompt, schema);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating structured analysis:', error);
+    console.error('[ClaudeAnalyzer] Error generating structured analysis:', error);
     
     // Return calculated fallback
     const annualRent = property.monthly_rent * 12;
@@ -2030,7 +1751,7 @@ export async function fetchAnalysisDataParallel<T extends Record<string, Promise
     if (result.status === 'fulfilled') {
       output[key] = result.value;
     } else {
-      console.error(`[GeminiAnalyzer] Failed to fetch ${String(key)}:`, result.reason);
+      console.error(`[ClaudeAnalyzer] Failed to fetch ${String(key)}:`, result.reason);
       output[key] = null as any;
     }
   });
@@ -2039,8 +1760,8 @@ export async function fetchAnalysisDataParallel<T extends Record<string, Promise
 }
 
 /**
- * Search for local STR regulations using Gemini's knowledge
- * Note: This uses Gemini's training data, not real-time search
+ * Search for local STR regulations using Claude's knowledge
+ * Note: This uses Claude's training data, not real-time search
  */
 export interface RegulationInfo {
   city: string;
@@ -2116,7 +1837,7 @@ Provide the regulation information based on your knowledge.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You have deep knowledge of STR regulations across markets. Provide information about STR regulations based on your knowledge. Always include a disclaimer that information may be outdated and should be verified with local authorities.',
       responseSchema: regulationSchema,
@@ -2124,7 +1845,7 @@ Provide the regulation information based on your knowledge.`;
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error fetching regulations:', error);
+    console.error('[ClaudeAnalyzer] Error fetching regulations:', error);
     return {
       city,
       state,
@@ -2167,13 +1888,13 @@ Requirements:
 - Keep it under 150 words`;
 
   try {
-    return await callGemini({
+    return await callAnalyzer({
       prompt,
       systemInstruction: 'You are a friendly Airbnb investing mentor explaining concepts to a complete beginner. Write at a fifth-grade reading level. Never use jargon or technical terms without immediately explaining them. Use analogies to everyday situations.',
       maxTokens: 512
     });
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error explaining for beginners:', error);
+    console.error('[ClaudeAnalyzer] Error explaining for beginners:', error);
     return `This data shows important information about ${topic}. It helps you understand if this investment makes sense for you.`;
   }
 }
@@ -2199,7 +1920,7 @@ Write 1-2 sentences starting with "This means..." or "This tells you..."
 Be specific about what action they should take.`;
 
   try {
-    return await callGemini({
+    return await callAnalyzer({
       prompt,
       systemInstruction: 'You are a friendly Airbnb investing mentor. Write at a fifth-grade reading level. Be specific and actionable.',
       maxTokens: 256
@@ -2252,7 +1973,7 @@ Explain each data point in 1-2 simple sentences.`;
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are explaining Airbnb investment data to a complete beginner. Write at a fifth-grade reading level. Use simple words. No jargon. Start each explanation with "This means..." or "This tells you..."',
       responseSchema: explanationSchema,
@@ -2260,7 +1981,7 @@ Explain each data point in 1-2 simple sentences.`;
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error batch generating explanations:', error);
+    console.error('[ClaudeAnalyzer] Error batch generating explanations:', error);
     const fallback: Record<string, string> = {};
     dataPoints.forEach(d => {
       fallback[d.name] = `This is an important factor to consider for your investment.`;
@@ -2769,7 +2490,7 @@ Focus on:
   };
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze historical market data to identify trends, assess market health, and provide actionable investment insights. Every finding must reference specific numbers from the data. Use the story-before-the-stats approach.',
       responseSchema: historicalSchema,
@@ -2777,7 +2498,7 @@ Focus on:
     });
     return JSON.parse(response);
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error analyzing historical trends:', error);
+    console.error('[ClaudeAnalyzer] Error analyzing historical trends:', error);
     
     // Return fallback analysis based on raw data
     return {
@@ -3387,7 +3108,7 @@ export interface NarrativeReportInput {
  * The narrative report output structure
  */
 export interface NarrativeReport {
-  // Main narrative sections (Gemini-generated prose)
+  // Main narrative sections (Claude-generated prose)
   executive_summary: string;
   market_overview: string;
   revenue_analysis: string;
@@ -3428,7 +3149,7 @@ export interface NarrativeReport {
 }
 
 /**
- * Generate a comprehensive narrative investment report using Gemini
+ * Generate a comprehensive narrative investment report using Claude
  * This transforms raw data into a professional, readable document
  */
 export async function generateNarrativeReport(
@@ -4129,7 +3850,7 @@ ${topSuperhostsList}`;
   }
 
   // ============================================
-  // PRE-COMPUTED CALCULATIONS FOR GEMINI
+  // PRE-COMPUTED CALCULATIONS FOR AI
   // These reduce cognitive load and ensure consistent analysis
   // ============================================
   
@@ -4377,7 +4098,7 @@ KEY REQUIREMENTS:
     : ' Use the story-before-the-stats approach. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor sharing insights over coffee. Never sugarcoat risks but always empower.';
 
   try {
-    const response = await callGemini({
+    const response = await callAnalyzer({
       prompt,
       systemInstruction: baseSystemInstruction + modeOverride,
       responseSchema: reportSchema,
@@ -4421,7 +4142,7 @@ KEY REQUIREMENTS:
       quick_facts: parsed.quick_facts || []
     };
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error generating narrative report:', error);
+    console.error('[ClaudeAnalyzer] Error generating narrative report:', error);
     
     // Return a basic fallback report
     return {

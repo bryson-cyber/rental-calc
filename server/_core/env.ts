@@ -8,7 +8,6 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   airdnaApiKey: process.env.AIRDNA_API_KEY ?? "",
-  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   coachinayahEmail: process.env.COACHINAYAH_EMAIL ?? "",
   coachinayahPassword: process.env.COACHINAYAH_PASSWORD ?? "",
@@ -17,6 +16,5 @@ export const ENV = {
   simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
   zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
   golpoApiKey: process.env.GOLPO_API_KEY ?? "",
-  llmProvider: (process.env.LLM_PROVIDER || 'gemini') as 'gemini' | 'anthropic',
   devMockApi: process.env.DEV_MOCK_API === "true",
 };

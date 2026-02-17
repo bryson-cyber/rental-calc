@@ -1,5 +1,5 @@
 /**
- * Tests for Gemini Analyzer AI Functions
+ * Tests for AI Analyzer Functions
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock the ENV before importing the module
 vi.mock('../_core/env', () => ({
   ENV: {
-    geminiApiKey: 'test-api-key'
+    anthropicApiKey: 'test-api-key'
   }
 }));
 
@@ -15,7 +15,7 @@ vi.mock('../_core/env', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('Gemini Analyzer', () => {
+describe('AI Analyzer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset module cache to ensure fresh imports
@@ -24,7 +24,7 @@ describe('Gemini Analyzer', () => {
 
   describe('synthesizePropertyInsights', () => {
     it('should generate insights from property and market data', async () => {
-      // Mock successful Gemini response
+      // Mock successful AI response
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
@@ -51,7 +51,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { synthesizePropertyInsights } = await import('../gemini-analyzer');
+      const { synthesizePropertyInsights } = await import('../ai-analyzer');
       
       const result = await synthesizePropertyInsights(
         {
@@ -95,7 +95,7 @@ describe('Gemini Analyzer', () => {
     it('should return fallback insights on API error', async () => {
       mockFetch.mockRejectedValueOnce(new Error('API Error'));
 
-      const { synthesizePropertyInsights } = await import('../gemini-analyzer');
+      const { synthesizePropertyInsights } = await import('../ai-analyzer');
       
       const result = await synthesizePropertyInsights(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
@@ -136,7 +136,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { generateInvestmentVerdict } = await import('../gemini-analyzer');
+      const { generateInvestmentVerdict } = await import('../ai-analyzer');
       
       const result = await generateInvestmentVerdict(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
@@ -183,7 +183,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { generatePricingStrategy } = await import('../gemini-analyzer');
+      const { generatePricingStrategy } = await import('../ai-analyzer');
       
       const result = await generatePricingStrategy(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
@@ -243,7 +243,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { assessRisks } = await import('../gemini-analyzer');
+      const { assessRisks } = await import('../ai-analyzer');
       
       const result = await assessRisks(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
@@ -292,7 +292,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { generateActionPlan } = await import('../gemini-analyzer');
+      const { generateActionPlan } = await import('../ai-analyzer');
       
       const result = await generateActionPlan(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
@@ -342,7 +342,7 @@ describe('Gemini Analyzer', () => {
         })
       });
 
-      const { analyzeHistoricalMarketTrends } = await import('../gemini-analyzer');
+      const { analyzeHistoricalMarketTrends } = await import('../ai-analyzer');
       
       const result = await analyzeHistoricalMarketTrends(
         "Austin, TX",
@@ -410,7 +410,7 @@ describe('Gemini Analyzer', () => {
     it('should return fallback analysis on API error', async () => {
       mockFetch.mockRejectedValueOnce(new Error('API Error'));
 
-      const { analyzeHistoricalMarketTrends } = await import('../gemini-analyzer');
+      const { analyzeHistoricalMarketTrends } = await import('../ai-analyzer');
       
       const result = await analyzeHistoricalMarketTrends(
         "Austin, TX",

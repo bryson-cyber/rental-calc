@@ -1,5 +1,5 @@
 /**
- * Tests for Enhanced Gemini AI Analyzer
+ * Tests for Enhanced AI Analyzer
  * 
  * Tests the improved narrative quality, caching, and performance features
  */
@@ -9,7 +9,7 @@ import {
   generateEnhancedNarrativeReport,
   clearAllCaches,
   type EnhancedNarrativeReport
-} from '../gemini-analyzer-enhanced';
+} from '../ai-analyzer-enhanced';
 
 // Test data representing a typical property analysis
 const testInput = {
@@ -103,7 +103,7 @@ const testInput = {
   }
 };
 
-describe('Enhanced Gemini Analyzer', () => {
+describe('Enhanced AI Analyzer', () => {
   beforeAll(() => {
     clearAllCaches();
   });

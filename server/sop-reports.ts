@@ -88,12 +88,12 @@ import {
   type PhotoAnalysis,
   type RegulationInfo,
   type NarrativeReport
-} from './gemini-analyzer';
+} from './ai-analyzer';
 
 import {
   generateEnhancedNarrativeReport,
   type EnhancedNarrativeReport
-} from './gemini-analyzer-enhanced';
+} from './ai-analyzer-enhanced';
 
 import { generateEnhancedNarrativeWithFallback } from './ai-fallback';
 
@@ -365,7 +365,7 @@ export interface ArbitrageReport {
     market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated';
     insight: string;
   };
-  // GEMINI HISTORICAL ANALYSIS
+  // AI HISTORICAL ANALYSIS
   historical_analysis?: HistoricalMarketAnalysis;
   // COMPREHENSIVE NARRATIVE REPORT
   narrative_report?: NarrativeReport;
@@ -914,7 +914,7 @@ export async function generateFullArbitrageAnalysis(
   };
   // 5-YEAR HISTORICAL SUMMARY
   five_year_summary?: ArbitrageReport['five_year_summary'];
-  // GEMINI HISTORICAL ANALYSIS
+  // AI HISTORICAL ANALYSIS
   historical_analysis?: HistoricalMarketAnalysis;
   // COMPREHENSIVE NARRATIVE REPORT
   narrative_report?: NarrativeReport;
@@ -1839,19 +1839,19 @@ export async function generateFullArbitrageAnalysis(
   if (sessionId) progressTracker.completeStep(sessionId, 'competitors', `Analyzed ${competitors.length} competitors`);
   if (sessionId) progressTracker.startStep(sessionId, 'ai_analysis', 'Running AI analysis...');
   
-  // Step 13: Run FULL AI ANALYSIS using Gemini
+  // Step 13: Run FULL AI ANALYSIS using Claude
   let ai_analysis: FullAIAnalysis | null = null;
   
-  // TEMPORARILY SKIP Gemini AI analysis to fix timeout issues
+  // TEMPORARILY SKIP AI analysis to fix timeout issues
   // The enhanced narrative report provides better AI insights anyway
-  const SKIP_GEMINI_AI_ANALYSIS = true;
+  const SKIP_AI_ANALYSIS = true;
   
-  if (SKIP_GEMINI_AI_ANALYSIS) {
-    console.log('[ArbitrageAnalysis] Skipping Gemini AI analysis (using enhanced narrative instead)');
+  if (SKIP_AI_ANALYSIS) {
+    console.log('[ArbitrageAnalysis] Skipping AI analysis (using enhanced narrative instead)');
     if (sessionId) progressTracker.completeStep(sessionId, 'ai_analysis', 'Using enhanced AI analysis');
   } else {
   try {
-    console.log('[ArbitrageAnalysis] Running full AI analysis with Gemini...');
+    console.log('[ArbitrageAnalysis] Running full AI analysis with Claude...');
     
     // Prepare data for AI analysis
     const propertyData = {
@@ -1915,7 +1915,7 @@ export async function generateFullArbitrageAnalysis(
     console.error('[ArbitrageAnalysis] Error running AI analysis:', error);
     // Continue without AI analysis - the base report is still valuable
   }
-  } // End of else block for SKIP_GEMINI_AI_ANALYSIS
+  } // End of else block for SKIP_AI_ANALYSIS
   
   // Step 15: Fetch additional market intelligence data
   let booking_patterns: BookingPatternsData | undefined;
@@ -3006,7 +3006,7 @@ export async function generateFullArbitrageAnalysis(
     console.error('[ArbitrageAnalysis] Error fetching regulations:', error);
   }
   
-  // Step 16: Analyze competitor photos using Gemini Vision
+  // Step 16: Analyze competitor photos using AI Vision
   let photo_analysis: {
     competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }>;
     design_insights: {
@@ -3023,7 +3023,7 @@ export async function generateFullArbitrageAnalysis(
   
   if (!SKIP_PHOTO_ANALYSIS) {
   try {
-    console.log('[ArbitrageAnalysis] Analyzing competitor photos with Poe Gemini 3 Vision...');
+    console.log('[ArbitrageAnalysis] Analyzing competitor photos with Claude Vision...');
     
     // Get Airbnb URLs from top competitors
     const competitorsWithUrls = competitors
@@ -3171,7 +3171,7 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // Step 19: Generate Gemini historical analysis
+  // Step 19: Generate AI historical analysis
   let historical_analysis: HistoricalMarketAnalysis | undefined;
   
   // TEMPORARILY SKIP historical analysis to fix timeout issue
@@ -3183,13 +3183,13 @@ export async function generateFullArbitrageAnalysis(
         ? (await getMarketDetails(property_estimate.property.market_id))?.name || addressInfo.marketName
         : addressInfo.marketName;
       
-      console.log('[ArbitrageAnalysis] Generating Gemini historical analysis...');
+      console.log('[ArbitrageAnalysis] Generating Claude historical analysis...');
       historical_analysis = await analyzeHistoricalMarketTrends(
         marketName,
         five_year_summary,
         { monthly_rent, bedrooms: actualBedrooms }
       );
-      console.log('[ArbitrageAnalysis] Gemini historical analysis complete');
+      console.log('[ArbitrageAnalysis] Claude historical analysis complete');
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error generating historical analysis:', error);
     }
@@ -3591,9 +3591,9 @@ export async function generateFullArbitrageAnalysis(
   console.log(`[ArbitrageAnalysis] Using market name: ${marketNameForEnhanced}`);
   
   // Use the new multi-provider fallback service
-  // This tries: Poe AI -> Forge API -> Gemini Direct -> Template (guaranteed)
+  // This tries: Poe AI -> Forge API -> Claude -> Template (guaranteed)
   try {
-    console.log('[ArbitrageAnalysis] Starting multi-provider AI generation (Poe -> Forge -> Gemini -> Template)...');
+    console.log('[ArbitrageAnalysis] Starting multi-provider AI generation (Poe -> Forge -> Claude -> Template)...');
     
     enhanced_narrative_report = await generateEnhancedNarrativeWithFallback(
       {
@@ -3654,11 +3654,11 @@ export async function generateFullArbitrageAnalysis(
   // The new multi-provider fallback service handles everything above
   // No need for additional fallback code - ai-fallback.ts guarantees a report
   
-  // LEGACY CODE REMOVED - was: Gemini fallback and template fallback
+  // LEGACY CODE REMOVED - was: AI fallback and template fallback
   // Now handled by generateEnhancedNarrativeWithFallback which tries:
   // 1. Poe AI (Claude Opus) - 45s timeout
-  // 2. Forge API (Gemini Flash) - 30s timeout  
-  // 3. Gemini Direct - 30s timeout
+  // 2. Forge API (Claude) - 30s timeout  
+  // 3. Claude Direct - 30s timeout
   // 4. Template-based (guaranteed)
   
   // The multi-provider fallback guarantees we always have a report
@@ -3695,7 +3695,7 @@ export async function generateFullArbitrageAnalysis(
     future_pricing,
     historical_trends,
     five_year_summary,
-    // GEMINI HISTORICAL ANALYSIS
+    // AI HISTORICAL ANALYSIS
     historical_analysis,
     // COMPREHENSIVE NARRATIVE REPORT
     narrative_report,
@@ -4071,7 +4071,7 @@ export function generateAIAnalysisSection(aiAnalysis: FullAIAnalysis): string {
 
 ## AI-Powered Investment Analysis
 
-*This section was generated by our AI analyst using Gemini, synthesizing all the data above into actionable insights specific to YOUR property.*
+*This section was generated by our AI analyst using Claude, synthesizing all the data above into actionable insights specific to YOUR property.*
 
 ### Executive Summary
 
@@ -4191,7 +4191,7 @@ export function generatePhotoAnalysisSection(photoAnalysis: {
 
 ## Visual Analysis: What Top Performers Look Like
 
-*Our AI analyzed photos from your top competitors using Gemini Vision to identify design patterns that drive bookings.*
+*Our AI analyzed photos from your top competitors using AI Vision to identify design patterns that drive bookings.*
 
 `;
 

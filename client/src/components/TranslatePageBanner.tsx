@@ -3,7 +3,7 @@
  * 
  * A banner that appears at the top of a page/section when a non-English
  * language is selected. Translates all visible text nodes within a
- * container element using the Gemini translation API.
+ * container element using the AI translation API.
  * 
  * This approach works with any component — no need to modify individual
  * components or wrap every string.
@@ -76,7 +76,7 @@ function getTranslatableTextNodes(container: HTMLElement): Text[] {
 
 /**
  * Batch text nodes into groups for efficient translation.
- * Each batch stays under ~3000 chars to fit Gemini's sweet spot.
+ * Each batch stays under ~3000 chars to fit the AI model's context.
  */
 function batchTextNodes(nodes: Text[]): Text[][] {
   const batches: Text[][] = [];

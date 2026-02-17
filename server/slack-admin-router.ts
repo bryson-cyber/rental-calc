@@ -6,7 +6,7 @@
  * Features:
  * - Dynamic channel search across the entire Slack workspace
  * - Fetch existing reports (shared_reports + universal_shareable_reports)
- * - Generate AI deal summary via Gemini as an opportunity pitch
+ * - Generate AI deal summary via Claude as an opportunity pitch
  * - Post report link + AI summary to any channel via Slack MCP
  * - Track all deliveries in slack_report_deliveries table
  * - Batch send to multiple channels at once
@@ -180,7 +180,7 @@ async function postToSlackChannel(channelId: string, message: string): Promise<{
 }
 
 // ============================================
-// HELPER: Generate AI deal summary via Gemini
+// HELPER: Generate AI deal summary via Claude
 // ============================================
 
 async function generateDealSummary(reportData: {

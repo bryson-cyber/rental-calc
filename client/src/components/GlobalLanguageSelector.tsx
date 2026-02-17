@@ -193,7 +193,7 @@ export default function GlobalLanguageSelector() {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/30">
             <p className="text-xs text-slate-400 text-center">
-              Powered by Gemini AI Translation
+              Powered by AI Translation
             </p>
           </div>
         </div>

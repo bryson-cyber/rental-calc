@@ -2,11 +2,11 @@
  * AI Service for Property Analysis
  * 
  * Generates educational, easy-to-understand content for rental property
- * analysis reports using the active LLM provider (Gemini or Claude).
+ * analysis reports using Claude AI.
  * 
  * Provider is controlled by LLM_PROVIDER env var:
- * - "gemini" (default): Google Gemini 3 Pro/Flash
- * - "anthropic": Anthropic Claude Opus 4 / Sonnet 4
+ * - Claude Sonnet 4.6 for all operations
+ * - "anthropic": Anthropic Claude Sonnet 4.6 (primary) / Haiku 4.5 (flash)
  * 
  * PROMPTING BEST PRACTICES APPLIED:
  * - PTCF framework (Persona, Task, Context, Format)
@@ -16,7 +16,7 @@
  */
 
 import { ENV } from './_core/env';
-import { callLLM, callLLMMax, getActiveProvider } from './llm-provider';
+import { callLLM, callLLMMax } from './llm-provider';
 
 /**
  * Post-process AI output to remove prescriptive language
@@ -117,19 +117,19 @@ function stripPrescriptiveLanguage(text: string): string {
   return result.trim();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // LLM PROVIDER CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 //
 // All LLM calls are routed through llm-provider.ts which handles:
-// - Provider selection (Gemini vs Anthropic) based on LLM_PROVIDER env var
+// - All calls route through Claude Sonnet 4.6
 // - Model selection (pro vs flash tier)
 // - Thinking/effort configuration
 // - Retry logic with exponential backoff
 //
-// callLLM()    → standard call (replaces old callGemini)
-// callLLMMax() → extended capacity with retries (replaces old callGeminiMax)
-// ═══════════════════════════════════════════════════════════════════════════════
+// callLLM()    → standard call
+// callLLMMax() → extended capacity with retries
+// 
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -156,7 +156,7 @@ interface InvestmentAdvisorContext {
   }>;
 }
 
-// Old callGemini/callGeminiMax functions removed — now using callLLM/callLLMMax from llm-provider.ts
+// All LLM calls use callLLM/callLLMMax from llm-provider.ts
 
 /**
  * Investment Advisor Chat - Uses Flash model for faster responses
@@ -175,9 +175,9 @@ export async function getInvestmentAdvice(
   // Build context string from market data if available
   let marketContext = '';
   if (context?.markets && context.markets.length > 0) {
-    marketContext = `\n\n<CONTEXT>\nAvailable Market Data:\n${context.markets.map(m => 
+    marketContext = `\n\n<context>\nAvailable Market Data:\n${context.markets.map(m => 
       `- ${m.name}: Score ${m.scores.market_score}/100, Investability ${m.scores.investability}, Demand ${m.scores.rental_demand}, Revenue Growth ${m.scores.revenue_growth}, Seasonality ${m.scores.seasonality}, Regulation ${m.scores.regulation}, Avg Revenue $${m.metrics.revenue.toLocaleString()}, Occupancy ${m.metrics.occupancy}%, ADR $${m.metrics.adr}, ${m.listing_count.toLocaleString()} listings`
-    ).join('\n')}\n</CONTEXT>`;
+    ).join('\n')}\n</context>`;
   }
 
   // Build conversation history
@@ -186,39 +186,30 @@ export async function getInvestmentAdvice(
     : '';
 
   // PTCF-structured prompt
-  const prompt = `<PERSONA>
-You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You combine Wall Street analytical rigor with Main Street accessibility. You ONLY use verified market data provided to you - never external knowledge or assumptions. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon, warm but direct. You never sugarcoat risks but always empower.
-</PERSONA>
+  const prompt = `<persona>
+You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon, warm but direct.
+</persona>
 
-<TASK>
-Answer the user's question about short-term rental markets using ONLY the data provided below. If data is missing, say so clearly.
-</TASK>
+<task>
+Answer the user's question about short-term rental markets. This is a live chat conversation — the user is actively researching markets and needs clear, data-grounded answers to make investment decisions.
+</task>
 ${marketContext}${historyText}
 
-<FORMAT>
-- Keep responses concise (2-4 paragraphs)
-- Use bullet points for market comparisons
-- Cite specific numbers and percentages from the data
-- Explain what each metric means for investors
-- Never provide investment advice beyond what the data shows
-</FORMAT>
+<format>
+Keep responses concise (2-4 paragraphs). Use bullet points for market comparisons. Cite specific numbers and percentages from the provided data. Explain what each metric means for investors. Present data and observations — let the reader draw their own conclusions.
+</format>
 
-<CONSTRAINTS>
-- ONLY reference markets in the dataset provided
-- If a user asks about markets NOT in the data, say "I don't have data on that market yet"
-- Do NOT make up or assume information
-</CONSTRAINTS>
+<grounding_rules>
+Reference only markets present in the dataset above. If a user asks about markets not in the data, say "I don't have data on that market yet." If data is missing for a specific metric, acknowledge the gap.
+</grounding_rules>
 
-User Question: ${question}
-
-Respond based ONLY on the market data above. If the data doesn't cover the question, say so clearly.`;
+User Question: ${question}`;
 
   try {
     // Use Flash model for faster chat responses with medium thinking
     const response = await callLLM(prompt, { 
       model: 'flash',
       thinkingLevel: 'low',
-      temperature: 1.0
     });
     return response.trim();
   } catch (error) {
@@ -226,8 +217,6 @@ Respond based ONLY on the market data above. If the data doesn't cover the quest
     return "I apologize, but I'm having trouble processing your question right now. Please try again in a moment, or feel free to rephrase your question.";
   }
 }
-
-
 export async function generateEnhancedPropertyReport(
   address: string,
   features: Record<string, unknown>,
@@ -239,25 +228,23 @@ export async function generateEnhancedPropertyReport(
   const audience = getAudienceDescription(reportMode);
   
   // PTCF-structured prompt for property reports
-  const prompt = `<PERSONA>
-${reportMode === 'pro' ? 'You are a senior real estate investment analyst who produces institutional-grade Airbnb market assessments.' : 'You are a real estate analyst who explains Airbnb investment opportunities in simple, beginner-friendly language.'}
-</PERSONA>
+  const prompt = `<persona>
+${reportMode === 'pro' ? 'You are a senior real estate investment analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate analyst who explains Airbnb investment opportunities in plain, beginner-friendly language.'}
+</persona>
 ${proOverride}
 
-<TASK>
+<task>
 Generate a brief property analysis summary for the address: ${address}
-</TASK>
+This summary will be the first thing a potential investor reads about this property, so make it clear and compelling.
+</task>
 
-<CONTEXT>
+<context>
 Property Features: ${JSON.stringify(features, null, 2)}
-</CONTEXT>
+</context>
 
-<FORMAT>
-- Write 2-3 paragraphs
-- Use simple language anyone can understand
-- Focus on key metrics and what they mean
-- Avoid jargon without explanation
-</FORMAT>`;
+<format>
+Write 2-3 paragraphs. Use plain language and explain financial terms inline. Focus on key metrics and what they mean for someone evaluating this property as an investment.
+</format>`;
 
   try {
     const response = await callLLM(prompt, { 
@@ -281,25 +268,23 @@ export async function generateEnhancedMarketReport(
   const proOverride = getProModeOverride(reportMode, 'market');
   
   // PTCF-structured prompt for market reports
-  const prompt = `<PERSONA>
-${reportMode === 'pro' ? 'You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate market analyst who explains Airbnb market conditions in simple, beginner-friendly language.'}
-</PERSONA>
+  const prompt = `<persona>
+${reportMode === 'pro' ? 'You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments with precise benchmarks.' : 'You are a real estate market analyst who explains Airbnb market conditions in plain, beginner-friendly language.'}
+</persona>
 ${proOverride}
 
-<TASK>
+<task>
 Generate a brief market analysis summary for: ${marketName}
-</TASK>
+This summary helps investors quickly understand whether this market is worth investigating further.
+</task>
 
-<CONTEXT>
+<context>
 Market Metrics: ${JSON.stringify(metrics, null, 2)}
-</CONTEXT>
+</context>
 
-<FORMAT>
-- Write 2-3 paragraphs
-- Use simple language anyone can understand
-- Focus on key metrics and what they mean for investors
-- Avoid jargon without explanation
-</FORMAT>`;
+<format>
+Write 2-3 paragraphs. Use plain language and explain financial terms inline. Focus on key metrics and what they mean for investors evaluating this market.
+</format>`;
 
   try {
     const response = await callLLM(prompt, { 
@@ -337,15 +322,15 @@ export async function generateMarketTrendNarrative(
   const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore, reportMode = 'guided' } = input;
   
   // PTCF-structured prompt for trend analysis
-  const prompt = `<PERSONA>
-${reportMode === 'pro' ? 'You are a quantitative market analyst who produces concise, benchmark-driven trend assessments for institutional investors.' : 'You are a data analyst who explains market trends in simple, easy-to-understand language.'}
-</PERSONA>
+  const prompt = `<persona>
+${reportMode === 'pro' ? 'You are a quantitative market analyst who produces concise, benchmark-driven trend assessments for institutional investors.' : 'You are a data analyst who explains market trends in plain, easy-to-understand language.'}
+</persona>
 
-<TASK>
-Analyze the market trend data and explain what it means for ${marketName}.
-</TASK>
+<task>
+Analyze the market trend data for ${marketName} and explain what it means for someone considering entering this market.
+</task>
 
-<CONTEXT>
+<context>
 Market: ${marketName}
 Market Grade: ${marketGrade} (Score: ${marketScore}/100)
 Current Year Revenue: $${currentYearRevenue.toLocaleString()}
@@ -356,15 +341,11 @@ Average Daily Rate: $${adr.toFixed(0)}
 
 Monthly Breakdown (most recent first):
 ${monthlyData.slice(0, 6).map(d => `${d.month}: $${d.currentRevenue.toLocaleString()} (${d.yoyChange > 0 ? '+' : ''}${d.yoyChange.toFixed(1)}% YoY)`).join('\n')}
-</CONTEXT>
+</context>
 
-<FORMAT>
-- Write 1-2 paragraphs
-- Identify the trend direction (growing, declining, stable)
-- Explain what this means in practical terms
-- Use simple comparisons (e.g., "up 10% from last year")
-- Mention the market grade and what it indicates
-</FORMAT>`;
+<format>
+Write 1-2 paragraphs. Identify the trend direction (growing, declining, stable). Explain what this means in practical terms using simple comparisons (e.g., "up 10% from last year"). Mention the market grade and what it indicates.
+</format>`;
 
   try {
     const response = await callLLM(prompt, { 
@@ -553,20 +534,20 @@ Revenue-to-Rent Ratio: ${cashFlow ? (cashFlow.monthlyRevenue / cashFlow.monthlyR
 ` : '';
 
   // PTCF-structured comprehensive prompt
-  const prompt = `<PERSONA>
+  const prompt = `<persona>
 ${isPurchaseMode 
-  ? `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You help investors evaluate properties for purchase, specializing in investment metrics like Cap Rate, Cash-on-Cash Return, and DSCR.${reportMode === 'pro' ? ' You speak to the reader as a peer investor with precise financial language.' : ' You use the "story before the stats" approach and analogy over jargon — like talking to a friend who\'s considering buying their first investment property.'} You never sugarcoat risks but always empower.`
-  : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets.${reportMode === 'pro' ? ' You help experienced investors evaluate rental arbitrage opportunities with precise financial metrics and market benchmarks.' : ' You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend who\'s curious about Airbnb investing.'} You never sugarcoat risks but always empower.`}
-</PERSONA>
+  ? `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You evaluate properties for purchase using Cap Rate, Cash-on-Cash Return, and DSCR.${reportMode === 'pro' ? ' You speak to the reader as a peer investor with precise financial language.' : ' You use the "story before the stats" approach and analogy over jargon — like talking to a friend considering their first investment property.'}`
+  : `You are David Wei Chen, a short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets.${reportMode === 'pro' ? ' You evaluate rental arbitrage opportunities with precise financial metrics and market benchmarks.' : ' You help beginners understand if a property is a good rental arbitrage opportunity. You use the "story before the stats" approach and analogy over jargon — like talking to a friend curious about Airbnb investing.'}`}
+</persona>
 ${proOverride}
 
-<TASK>
+<task>
 ${isPurchaseMode
-  ? `Analyze this property as a SHORT-TERM RENTAL INVESTMENT PURCHASE. Focus on investment metrics (Cap Rate, Cash-on-Cash Return, DSCR) and whether the numbers make sense for buying this property.`
-  : `Analyze this property's potential as a rental arbitrage opportunity and write a comprehensive but easy-to-understand report.`}
-</TASK>
+  ? `Analyze this property as a short-term rental investment purchase. The reader is deciding whether to commit $${totalCashNeeded.toLocaleString()} to this deal — focus on investment metrics (Cap Rate, Cash-on-Cash Return, DSCR) and whether the numbers justify the purchase.`
+  : `Analyze this property's potential as a rental arbitrage opportunity. The reader is deciding whether to sign a lease and invest their time and money — write a comprehensive, honest assessment they can use to make that decision.`}
+</task>
 
-<CONTEXT>
+<context>
 PROPERTY DETAILS
 Address: ${property.address}
 Location: ${property.city}, ${property.state} ${property.zipCode}
@@ -616,87 +597,61 @@ Revenue Variance: ${((Math.max(...seasonality.map(s => s.revenue)) - Math.min(..
 
 Monthly Breakdown:
 ${seasonality.map(m => `${m.month}: $${m.revenue.toLocaleString()} | ADR $${m.adr} | ${m.occupancy}% occ`).join('\n')}
-</CONTEXT>
+</context>
 
-<FORMAT>
-${isPurchaseMode ? `Write a comprehensive INVESTMENT analysis with these sections:
+<format>
+${isPurchaseMode ? `Write a comprehensive investment analysis with these sections:
 
 ## Executive Summary
-A 2-3 sentence overview of whether this is a good INVESTMENT to purchase and why, based on the investment metrics.
+A 2-3 sentence overview of whether this is a good investment to purchase and why, based on the investment metrics.
 
 ## Investment Metrics Breakdown
-- What does the ${capRate.toFixed(2)}% Cap Rate tell us? (Industry benchmark: 8-12% is good for STR)
-- What does the ${cashOnCashReturn.toFixed(2)}% Cash-on-Cash Return mean? (Benchmark: 15%+ is excellent)
-- Is the DSCR of ${dscr.toFixed(2)} healthy? (Benchmark: 1.25+ is required by most lenders)
-- At ${breakEvenOccupancy.toFixed(0)}% break-even, how much cushion do you have?
+Evaluate the ${capRate.toFixed(2)}% Cap Rate (benchmark: 8-12% for STR), ${cashOnCashReturn.toFixed(2)}% Cash-on-Cash Return (benchmark: 15%+ is excellent), DSCR of ${dscr.toFixed(2)} (benchmark: 1.25+ required by most lenders), and ${breakEvenOccupancy.toFixed(0)}% break-even occupancy cushion.
 
 ## The Numbers
-- Monthly cash flow of $${monthlyCashFlow.toLocaleString()} - is this sustainable?
-- Total cash needed of $${totalCashNeeded.toLocaleString()} - what's the payback period?
-- How does the revenue compare to competitors?
+Assess the $${monthlyCashFlow.toLocaleString()} monthly cash flow sustainability, $${totalCashNeeded.toLocaleString()} total cash needed and payback period, and revenue vs. competitors.
 
 ## Key Risks & Challenges
-- What could impact your returns?
-- Market saturation concerns?
-- Regulatory or seasonal risks?
+What could impact returns? Market saturation concerns? Regulatory or seasonal risks?
 
 ## Competitive Positioning
-- How does this property stack up against competitors?
-- What would it take to achieve projected occupancy?
+How does this property stack up? What would it take to achieve projected occupancy?
 
 ## Bottom Line Investment Recommendation
-Give a clear BUY, PASS, or CONSIDER recommendation with specific reasoning. Include:
-- Who this investment is best suited for (cash buyer, DSCR investor, house hacker, etc.)
-- Key success factors for achieving projected returns
-- What to watch out for
+Give a clear BUY, PASS, or CONSIDER recommendation with specific reasoning. Include who this investment suits best (cash buyer, DSCR investor, house hacker), key success factors, and what to watch for.
 
-Remember: Focus on the INVESTMENT METRICS and CASH FLOW. This is about whether the numbers make sense for a property PURCHASE.` : `Write a comprehensive analysis with these sections:
+Focus on investment metrics and cash flow — this is a purchase decision.` : `Write a comprehensive analysis with these sections:
 
 ## Executive Summary
 A 2-3 sentence overview of whether this is a good opportunity and why.
 
 ## The Opportunity
-- What makes this property attractive (or not)?
-- How does the revenue compare to competitors?
-- What's the profit potential?
+What makes this property attractive (or not)? How does the revenue compare to competitors? What's the profit potential?
 
 ## Key Risks & Challenges
-- What could go wrong?
-- What competition challenges exist?
-- Are there concerning trends in the data?
+What could go wrong? What competition challenges exist? Any concerning trends?
 
 ## Competitive Positioning
-- How does this property stack up against competitors?
-- What would it take to succeed in this market?
-- Is the market saturated or is there room for new listings?
+How does this property stack up? Is the market saturated or is there room for new listings?
 
 ## Seasonality Strategy
-- When are the best and worst times to earn?
-- How should the owner plan for slow seasons?
-- What pricing strategy does the data suggest?
+When are the best and worst times to earn? How should the operator plan for slow seasons? What pricing strategy does the data suggest?
 
 ## Bottom Line Recommendation
-Give a clear YES, NO, or MAYBE recommendation with specific reasoning based on the data. Include:
-- Who this opportunity is best suited for
-- Key success factors
-- What to watch out for
+Give a clear YES, NO, or MAYBE recommendation with specific reasoning. Include who this opportunity suits best, key success factors, and what to watch for.
 
-Remember: Be specific, cite the actual numbers, and write for someone who is new to short-term rental investing.`}
-</FORMAT>
+Cite the actual numbers and write for someone evaluating their first rental arbitrage deal.`}
+</format>
 
-<CONSTRAINTS>
-- ONLY use the data provided - do not make assumptions
-- Be honest about risks but also highlight genuine opportunities
-- Use simple language - explain jargon when you use it
-${isPurchaseMode ? `- Focus on INVESTMENT METRICS: Cap Rate, Cash-on-Cash Return, DSCR, and monthly cash flow
-- Compare metrics to industry benchmarks
-- This is a PURCHASE decision, not a rental arbitrage decision` : `- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation`}
-</CONSTRAINTS>`;
+<grounding_rules>
+Use only the data provided above. Be honest about risks while highlighting genuine opportunities. Use plain language and explain financial terms inline.
+${isPurchaseMode ? `Focus on Cap Rate, Cash-on-Cash Return, DSCR, and monthly cash flow. Compare metrics to industry benchmarks. This is a purchase decision, not a rental arbitrage decision.` : `Focus on cash flow and profit margin, not property appreciation.`}
+</grounding_rules>`;
 
   try {
     const response = await callLLM(prompt, { 
       maxTokens: 8192, 
-      temperature: 0.7,
+
       thinkingLevel: 'high'
     });
     return response.trim();
@@ -705,17 +660,13 @@ ${isPurchaseMode ? `- Focus on INVESTMENT METRICS: Cap Rate, Cash-on-Cash Return
     return 'Unable to generate property analysis at this time. Please try again.';
   }
 }
-
-
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
  * MAXIMUM CAPACITY AI ADVISORS
- * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * These functions maximize Gemini 3 Pro's full capacity:
- * - Input: Up to 1,048,576 tokens (1 million)
- * - Output: Up to 65,536 tokens (~50,000 words / 50+ pages)
- * - Thinking: High level for comprehensive reasoning
+ * These functions maximize Claude Sonnet 4.6's full capacity:
+ * - Input: Up to 200K tokens
+ * - Output: Up to 64K tokens (~50,000 words / 50+ pages)
+ * - Effort: High for comprehensive reasoning
  * 
  * We send ALL available AirDNA data and request comprehensive analysis.
  */
@@ -1009,79 +960,76 @@ export async function generateMaxPropertyAdvice(
   }
 
   // PTCF-structured maximum capacity prompt - MODE AWARE
-  const personaSection = isPurchaseMode ? `<PERSONA>
+  const personaSection = isPurchaseMode ? `<persona>
 ${reportMode === 'pro' 
-    ? `You are a world-class REAL ESTATE INVESTMENT analyst who produces institutional-grade property purchase assessments. You speak to the reader as a peer investor with precise financial language.
+    ? `You are a world-class real estate investment analyst who produces institutional-grade property purchase assessments. You speak to the reader as a peer investor with precise financial language.
 
 Your communication style:
 ${commStyle}` 
-    : `You are a world-class REAL ESTATE INVESTMENT analyst who helps beginners understand property purchase opportunities. You explain complex investment metrics in simple, friendly language - like talking to a smart friend who's curious about buying rental properties but has never done it before.
+    : `You are a world-class real estate investment analyst who helps beginners understand property purchase opportunities. You explain complex investment metrics in simple, friendly language, like talking to a smart friend who's curious about buying rental properties but has never done it before.
 
 Your communication style:
-- Simple language (if a word is confusing, explain it)
-- Real-life comparisons ("Think of it like..." or "Imagine if...")
-- Friendly and encouraging (like talking to a friend)
-- Always explain the "so what?" - why does this number matter?
+- Use simple language and explain any confusing terms inline
+- Use real-life comparisons ("Think of it like..." or "Imagine if...")
+- Be friendly and encouraging, like talking to a friend
+- Always explain the "so what?" for every number
 - Focus on investment returns: Cap Rate, Cash-on-Cash, DSCR`}
-</PERSONA>
-${proOverride}` : `<PERSONA>
+</persona>
+${proOverride}` : `<persona>
 ${reportMode === 'pro'
-    ? `You are a world-class RENTAL ARBITRAGE analyst who produces institutional-grade opportunity assessments with precise financial metrics and market benchmarks.
+    ? `You are a world-class rental arbitrage analyst who produces institutional-grade opportunity assessments with precise financial metrics and market benchmarks.
 
 Your communication style:
 ${commStyle}`
-    : `You are a world-class RENTAL ARBITRAGE analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language - like talking to a smart friend who's curious about Airbnb investing but has never done it before.
+    : `You are a world-class rental arbitrage analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language, like talking to a smart friend who's curious about Airbnb investing but has never done it before.
 
 Your communication style:
-- Simple language (if a word is confusing, explain it)
-- Real-life comparisons ("Think of it like..." or "Imagine if...")
-- Friendly and encouraging (like talking to a friend)
-- Always explain the "so what?" - why does this number matter?`}
-</PERSONA>
+- Use simple language and explain any confusing terms inline
+- Use real-life comparisons ("Think of it like..." or "Imagine if...")
+- Be friendly and encouraging, like talking to a friend
+- Always explain the "so what?" for every number`}
+</persona>
 ${proOverride}`;
 
-  const taskSection = isPurchaseMode ? `<TASK>
-Analyze this property's potential as a PROPERTY PURCHASE investment and produce a comprehensive investment report.
+  const taskSection = isPurchaseMode ? `<task>
+Analyze this property as a property purchase investment. Produce a comprehensive investment report.
 
-IMPORTANT: This is for PROPERTY PURCHASE - where someone:
-1. BUYS this property (pays purchase price, gets a mortgage)
+This analysis is for a property purchase scenario where the investor:
+1. Buys this property (pays purchase price, gets a mortgage)
 2. Furnishes and lists it on Airbnb/VRBO as a short-term rental
 3. Earns short-term rental income from guests
 4. Keeps the profit (STR income minus mortgage, taxes, and expenses)
 
-This is NOT about rental arbitrage. Focus on:
-- Is this a good investment to BUY?
-- What's the Cap Rate? (NOI / Purchase Price)
-- What's the Cash-on-Cash Return? (Annual Cash Flow / Cash Invested)
-- What's the DSCR? (Does the property income cover the mortgage?)
-- What's the monthly cash flow after mortgage?
-- How does STR income compare to traditional long-term rental?
-</TASK>` : `<TASK>
-Analyze this property's potential as a RENTAL ARBITRAGE opportunity and produce a comprehensive investment report.
+Focus your analysis on:
+- Cap Rate (NOI / Purchase Price)
+- Cash-on-Cash Return (Annual Cash Flow / Cash Invested)
+- DSCR (Does the property income cover the mortgage?)
+- Monthly cash flow after mortgage
+- How STR income compares to traditional long-term rental
+</task>` : `<task>
+Analyze this property as a rental arbitrage opportunity. Produce a comprehensive investment report.
 
-IMPORTANT: This is for RENTAL ARBITRAGE - where someone:
-1. Signs a lease to RENT this property (pays monthly rent to landlord)
+This analysis is for a rental arbitrage scenario where the investor:
+1. Signs a lease to rent this property (pays monthly rent to landlord)
 2. Furnishes and lists it on Airbnb/VRBO
 3. Earns short-term rental income from guests
 4. Keeps the profit (STR income minus rent and expenses)
 
-This is NOT about purchasing property. Focus on:
-- Can the STR revenue cover the monthly rent?
-- What's the monthly cash flow after rent?
-- Is there enough profit margin to be worth the effort?
-- What's the break-even occupancy needed?
-</TASK>`;
+Focus your analysis on:
+- Whether the STR revenue can cover the monthly rent
+- Monthly cash flow after rent
+- Profit margin viability
+- Break-even occupancy needed
+</task>`;
 
   const prompt = `${personaSection}
 
 ${taskSection}
 
-<CONTEXT>
+<context>
 Report Date: ${currentDate}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 1: PROPERTY OVERVIEW
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 PROPERTY DETAILS
 Address: ${property.address}
@@ -1100,9 +1048,7 @@ Total Cash Needed: $${purchaseData.totalCashNeeded.toLocaleString()}
 ` : property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : 'Monthly Rent: Not specified'}
 ${property.latitude && property.longitude ? `Coordinates: ${property.latitude}, ${property.longitude}` : ''}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 2: REVENUE PROJECTIONS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 PROJECTED EARNINGS
 Annual Revenue (Projected): $${revenue.projected.toLocaleString()}
@@ -1117,7 +1063,6 @@ Key Metrics:
 
 ${isPurchaseMode && purchaseMetrics ? `
 INVESTMENT ANALYSIS (PURCHASE MODE)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 KEY INVESTMENT METRICS
 • Cap Rate: ${purchaseMetrics.capRate.toFixed(1)}% ${purchaseMetrics.capRate >= 8 ? '(Excellent - above 8% target)' : purchaseMetrics.capRate >= 6 ? '(Good - meets 6% minimum)' : '(Below typical 6% threshold)'}
@@ -1148,9 +1093,7 @@ Break-Even Occupancy: ${cashFlow.breakEvenOccupancy.toFixed(1)}%
 Safety Cushion: ${(revenue.occupancy - cashFlow.breakEvenOccupancy).toFixed(1)} percentage points above break-even
 ` : ''}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 3: MARKET HEALTH & POSITION
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 MARKET GRADE
 Overall Grade: ${marketGrade.grade} (${marketGrade.score}/100)
@@ -1176,9 +1119,7 @@ ${marketInsights.revenueGrowthScore ? `Revenue Growth Score: ${marketInsights.re
 ${marketInsights.seasonalityScore ? `Seasonality Score: ${marketInsights.seasonalityScore}/100` : ''}
 ${marketInsights.regulationScore ? `Regulation Score: ${marketInsights.regulationScore}/100` : ''}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 4: HISTORICAL TRENDS (24 MONTHS)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 YEAR-OVER-YEAR PERFORMANCE
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
@@ -1190,9 +1131,7 @@ ${historicalData.months.map(m =>
   `${m.date}: Revenue $${m.revenue.toLocaleString()} | Occupancy ${m.occupancy}% | ADR $${m.adr} | RevPAR $${m.revpar}${m.listingCount ? ` | ${m.listingCount} listings` : ''}`
 ).join('\n')}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 5: SEASONALITY ANALYSIS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 12-MONTH REVENUE FORECAST
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
@@ -1208,9 +1147,7 @@ ${seasonality.map(m =>
   `${m.month}: Revenue $${m.revenue.toLocaleString()} | ADR $${m.adr} | Occupancy ${m.occupancy}% | RevPAR $${m.revpar}${m.yoyChange !== undefined ? ` | YoY ${m.yoyChange >= 0 ? '+' : ''}${m.yoyChange.toFixed(1)}%` : ''}`
 ).join('\n')}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 6: SAME-BEDROOM COMPETITOR ANALYSIS (${sameBedroomComps.length} ${property.bedrooms}BR PROPERTIES)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 IMPORTANT: This analysis ONLY compares to other ${property.bedrooms}-bedroom properties for a fair apples-to-apples comparison.
 We found ${sameBedroomComps.length} properties with ${property.bedrooms} bedrooms in this area.
@@ -1255,10 +1192,8 @@ ${sameBedroomComps.map((c, i) =>
 ).join('\n')}
 
 ${rentometerData ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 7: LONG-TERM RENTAL MARKET COMPARISON (Rentometer Data)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 7: LONG-TERM RENTAL MARKET COMPARISON (Rentometer Data)
 TRADITIONAL RENTAL MARKET
 Median Long-Term Rent: $${rentometerData.median.toLocaleString()}/month
 Mean Long-Term Rent: $${rentometerData.mean.toLocaleString()}/month
@@ -1303,9 +1238,9 @@ ${submarkets.map(s => `${s.name}: ${s.listingCount} listings${s.metrics ? ` | Re
 Analyze which neighborhoods are strongest for this property type and why.
 Identify the best-performing submarket and explain what makes it stand out.
 ` : ''}
-</CONTEXT>
+</context>
 
-<FORMAT>
+<format>
 Write a comprehensive rental arbitrage analysis report as a clean narrative document. Use plain text formatting only - NO markdown, NO asterisks, NO bullet points, NO headers with # symbols. Write in flowing paragraphs like a professional consultant's report.
 
 Structure your response as follows:
@@ -1357,21 +1292,11 @@ IMPORTANT FORMATTING RULES:
 - Explain what metrics mean for someone new to investing
 - Be honest about risks but also highlight genuine opportunities
 - This should read like a professional consultant's narrative report
-</FORMAT>
+</format>
 
-<CONSTRAINTS>
-- ONLY use the data provided - do not make assumptions or use external knowledge
-- ONLY compare to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is critical for accurate analysis
-- Do NOT compare to luxury hotel residences, branded properties, or properties with different bedroom counts
-- Be extremely specific with numbers - cite actual figures from the data
-- Write for someone who is new to Airbnb arbitrage - explain what metrics mean
-- Be honest about risks but also highlight genuine opportunities
-- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
-- The user is RESEARCHING this opportunity - they have NOT signed a lease yet
-- DO NOT assume they lack amenities or discourage them
-- Instead, SHOW THEM what top performers have so they know what to aim for
-- Be EDUCATIONAL and ENCOURAGING - "Here's the blueprint for success" not "You can't compete"
-</CONSTRAINTS>`;
+<guidelines>
+Base every claim on the data provided above. Compare exclusively to ${property.bedrooms}BR properties for an apples-to-apples analysis. Cite specific dollar amounts, percentages, and competitor names throughout. Write for someone researching this opportunity who has not yet signed a lease — frame the analysis as educational and empowering. Highlight what top performers do so the reader knows what to aim for. Center the analysis on cash flow and profit margin rather than property appreciation. Present risks honestly alongside genuine opportunities.
+</guidelines>`;
 
   try {
     const response = await callLLMMax(prompt);
@@ -1638,7 +1563,7 @@ export async function generateMaxMarketAdvice(
     : 0;
 
   // PTCF-structured maximum capacity market prompt
-  const prompt = `<PERSONA>
+  const prompt = `<persona>
 ${reportMode === 'pro' 
     ? `You are a senior real estate market analyst who produces institutional-grade Airbnb market assessments. You speak to the reader as a peer investor evaluating market opportunities.
 
@@ -1649,22 +1574,18 @@ ${commStyle}`
 - Use real-life comparisons ("Think of it like..." or "Imagine if...")`}
 - Friendly and encouraging (like talking to a friend over coffee)
 - Always explain the "so what?" - why does this number matter?
-</PERSONA>
+</persona>
 ${proOverride}
 
-<TASK>
+<task>
 ${reportMode === 'pro' ? 'Analyze the market data below and produce an INSTITUTIONAL-GRADE MARKET REPORT with precise benchmarks and financial metrics.' : 'Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT.'} This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand.
-</TASK>
+</task>
 
-<CONTEXT>
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+<context>
+
                                            COMPREHENSIVE MARKET INVESTMENT ANALYSIS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 1: MARKET OVERVIEW
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-
 MARKET DETAILS
 Market Name: ${market.name}
 Location: ${market.city}, ${market.state}, ${market.country}
@@ -1686,11 +1607,7 @@ Average RevPAR: $${metrics.avgRevpar.toLocaleString()}
 Professionally Managed: ${metrics.professionallyManagedPct.toFixed(1)}%
 Superhost Percentage: ${metrics.superhostPct.toFixed(1)}%
 Average Rating: ${metrics.avgRating.toFixed(2)} stars
-
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 2: REVENUE BY PROPERTY SIZE
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-
 REVENUE BY BEDROOM COUNT
 ${revenueByBedroom.map(r => 
   `${r.bedrooms} Bedroom: $${r.avgRevenue.toLocaleString()}/yr avg | ${r.avgOccupancy}% occupancy | $${r.avgAdr} ADR | ${r.listingCount.toLocaleString()} listings`
@@ -1707,11 +1624,7 @@ ${propertyTypes.map(p =>
   `${p.type}: ${p.count.toLocaleString()} listings | $${p.avgRevenue.toLocaleString()}/yr avg | ${p.avgOccupancy}% occupancy`
 ).join('\n')}
 ` : ''}
-
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 3: HISTORICAL TRENDS (5 YEARS / 60 MONTHS)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-
 YEAR-OVER-YEAR PERFORMANCE
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
@@ -1721,11 +1634,7 @@ MONTHLY HISTORICAL DATA:
 ${historicalData.months.map(m => 
   `${m.date}: Revenue $${m.revenue.toLocaleString()} | Occupancy ${m.occupancy}% | ADR $${m.adr} | ${m.listingCount.toLocaleString()} listings`
 ).join('\n')}
-
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 4: SEASONALITY ANALYSIS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-
 SEASONAL PATTERNS
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
 
@@ -1739,11 +1648,7 @@ FULL MONTHLY BREAKDOWN:
 ${seasonality.map(m => 
   `${m.month}: Revenue $${m.revenue.toLocaleString()} | Occupancy ${m.occupancy}% | ADR $${m.adr}${m.yoyChange !== undefined ? ` | YoY ${m.yoyChange >= 0 ? '+' : ''}${m.yoyChange.toFixed(1)}%` : ''}`
 ).join('\n')}
-
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 5: TOP PERFORMERS IN THIS MARKET
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-
 TOP EARNING PROPERTIES
 ${topPerformers.map((p, i) => 
   `${i+1}. "${p.title.substring(0, 50)}${p.title.length > 50 ? '...' : ''}"
@@ -1753,10 +1658,8 @@ ${topPerformers.map((p, i) =>
 ).join('\n\n')}
 
 ${bookingPatterns ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 6: BOOKING PATTERNS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 6: BOOKING PATTERNS
 GUEST BOOKING BEHAVIOR
 Average Booking Lead Time: ${bookingPatterns.avgLeadTimeDays} days in advance
 Last-Minute Bookings (0-7 days): ${bookingPatterns.lastMinutePercent}%
@@ -1770,10 +1673,8 @@ ${bookingPatterns.insights.map(i => `• ${i}`).join('\n')}
 ` : ''}
 
 ${supplyTrend ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 7: SUPPLY TREND (MARKET SATURATION)
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 7: SUPPLY TREND (MARKET SATURATION)
 MARKET SUPPLY ANALYSIS
 Current Active Listings: ${supplyTrend.currentListings.toLocaleString()}
 Listings 12 Months Ago: ${supplyTrend.listings12MonthsAgo.toLocaleString()}
@@ -1790,10 +1691,8 @@ ${supplyTrend.monthlyData.slice(0, 12).map(m =>
 ` : ''}
 
 ${submarkets && submarkets.length > 0 ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 8: SUBMARKETS / NEIGHBORHOODS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 8: SUBMARKETS / NEIGHBORHOODS
 NEIGHBORHOOD BREAKDOWN
 ${submarkets.slice(0, 15).map((s, i) => 
   `${i+1}. ${s.name}\n   Listings: ${s.listingCount.toLocaleString()}${s.metrics ? ` | Revenue: $${s.metrics.revenue.toLocaleString()}/yr | ADR: $${s.metrics.adr} | Occupancy: ${s.metrics.occupancy}%${s.metrics.marketScore ? ` | Score: ${s.metrics.marketScore}` : ''}` : ''}`
@@ -1801,10 +1700,8 @@ ${submarkets.slice(0, 15).map((s, i) =>
 ` : ''}
 
 ${cancellationPolicies ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 9: CANCELLATION POLICY ANALYSIS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 9: CANCELLATION POLICY ANALYSIS
 POLICY DISTRIBUTION & PERFORMANCE
 Total Listings Analyzed: ${cancellationPolicies.totalListings.toLocaleString()}
 
@@ -1816,10 +1713,8 @@ RECOMMENDATION: ${cancellationPolicies.recommendation}
 ` : ''}
 
 ${professionalStats ? `
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 10: PROFESSIONAL VS INDIVIDUAL HOST ANALYSIS
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+SECTION 10: PROFESSIONAL VS INDIVIDUAL HOST ANALYSIS
 HOST TYPE BREAKDOWN
 Total Listings: ${professionalStats.totalListings.toLocaleString()}
 Professionally Managed: ${professionalStats.professionalCount.toLocaleString()} (${professionalStats.professionalPercentage}%)
@@ -1831,9 +1726,9 @@ Avg Revenue (Professional): $${professionalStats.avgRevenueProfessional.toLocale
 Avg Revenue (Individual): $${professionalStats.avgRevenueIndividual.toLocaleString()}/yr
 Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '+' : ''}${professionalStats.revenuePremiumPercent}%
 ` : ''}
-</CONTEXT>
+</context>
 
-<FORMAT>
+<format>
 Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
 
 Write like you're explaining to a friend who's curious about Airbnb investing but has never done it before. Use simple words, real examples, and always explain WHY each number matters.
@@ -1908,21 +1803,11 @@ End with a simple summary:
 - "The market is [growing/stable/shrinking] based on the last 12 months of data."
 
 IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (C, D, or F), that does NOT mean there are no good opportunities there. Market averages include many hosts who are doing a poor job - bad photos, wrong pricing, poor guest communication, etc. A skilled operator who does things right can often significantly outperform the market average. The top performers in ANY market prove this - look at how much more they earn than the average. So a "C grade" market might still be great for someone who's willing to put in the work to stand out from the crowd.
-</FORMAT>
+</format>
 
-<CONSTRAINTS>
-- Use simple words a third grader would understand
-- Always explain what numbers MEAN, not just what they ARE
-- Use comparisons like "That's like..." or "Think of it as..."
-- Be honest but friendly - don't scare people, but don't sugarcoat problems
-- DO NOT use jargon like "RevPAR", "ADR", "YoY" without explaining them
-- DO NOT use emojis
-- DO NOT give specific advice like "you should buy here" - just explain the data
-- ONLY use the data provided - do not make assumptions or use external knowledge
-- When displaying scores, always round to whole numbers (e.g., 73 not 73.567)
-- Maximum 2,500 words total
-- DO NOT include any placeholder text like "[Your Name]", dates, or "Market Analyst" headers - start directly with the analysis content
-</CONSTRAINTS>`;
+<guidelines>
+Use simple, conversational language and explain what every number means in practical terms. Use comparisons ("That's like...") to make data tangible. When using terms like RevPAR, ADR, or YoY, define them inline on first use. Present data honestly — acknowledge challenges while highlighting genuine opportunities. Round scores to whole numbers. Base every claim on the data provided above. Keep the total under 2,500 words. Start directly with the analysis content.
+</guidelines>`;
 
   try {
     const response = await callLLMMax(prompt);
@@ -1933,11 +1818,9 @@ IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (
     return 'Unable to generate comprehensive market analysis at this time. Please try again.';
   }
 }
-
-
 /**
  * Generate a comprehensive AI executive summary for the Full Property Report
- * Uses Gemini 3 Pro with maximum output tokens for thorough analysis
+ * Uses Claude Sonnet 4.6 with maximum output tokens for thorough analysis
  * 
  * This is specifically for the shared Full Property Report — it should be
  * a polished, professional summary that synthesizes ALL data points into
@@ -2166,20 +2049,20 @@ HISTORICAL TRENDS:
 - Market Trend: ${trend}`;
   }
 
-  const prompt = `<PERSONA>
+  const prompt = `<persona>
 ${reportMode === 'pro' 
     ? `You are David Wei Chen, a senior real estate investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You write institutional-grade executive summaries with precise financial metrics, benchmarks, and quantitative analysis. Your communication style: data-first with exact figures, industry-standard terminology (Cap Rate, DSCR, RevPAR, NOI), and benchmark comparisons. Your tone is authoritative and direct — like a managing director presenting to an investment committee. You never give prescriptive investment advice but present data with analytical rigor.`
     : `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your communication style: data-first (every claim references specific numbers), "story before the stats" (lead with narrative, then data), analogy over jargon. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do. You never sugarcoat risks but always empower.`}
-</PERSONA>
+</persona>
 ${proOverride}
 
-<TASK>
+<task>
 Write a comprehensive Executive Summary for a Full Property Investment Analysis Report.${preparedFor ? ` This report is prepared for ${preparedFor}.` : ''}
 
 The summary must synthesize ALL of the following data into a cohesive, professional narrative. Cover every section that has data available. Do NOT skip any section.
-</TASK>
+</task>
 
-<CONTEXT>
+<context>
 SUBJECT PROPERTY:
 - Address: ${property.address}
 - City: ${property.city || 'Unknown'}, ${property.state || ''}
@@ -2248,9 +2131,9 @@ COMPARABLE SALES:
 - ${comparableSales.length} recently sold properties analyzed
 - Price Range: $${Math.min(...comparableSales.map(s => s.price)).toLocaleString()} – $${Math.max(...comparableSales.map(s => s.price)).toLocaleString()}
 - Average Sale Price: $${Math.round(comparableSales.reduce((s, c) => s + c.price, 0) / comparableSales.length).toLocaleString()}` : ''}
-</CONTEXT>
+</context>
 
-<FORMAT>
+<format>
 Write the summary in Markdown format with the following structure:
 
 ## Executive Summary
@@ -2288,15 +2171,8 @@ Discuss the comparable sales data — how the asking/purchase price compares to 
 ### Key Takeaways
 End with 3-4 bullet points summarizing the most important findings. These should be factual observations, NOT recommendations.
 
-CRITICAL RULES:
-- Do NOT give investment advice or tell the reader what to do
-- Do NOT use phrases like "I recommend", "you should", "this is a good/bad investment"
-- Present data and observations only — let the reader draw their own conclusions
-- Use simple, beginner-friendly language — explain any financial terms
-- Be specific with numbers — always cite the actual data
-- Write in a warm, professional tone
-- Use bold for key numbers and metrics
-</FORMAT>`;
+Present data and observations only — let the reader draw their own conclusions. Use simple, beginner-friendly language and explain financial terms inline. Cite specific numbers from the data throughout. Write in a warm, professional tone and use **bold** for key metrics. The reader is evaluating this opportunity independently; empower them with clear analysis rather than prescriptive advice.
+</format>`;
 
   try {
     const response = await callLLMMax(prompt);

@@ -450,11 +450,11 @@ async function startServer() {
     });
     
     try {
-      const { streamGeminiChat } = await import('../gemini-streaming');
+      const { streamClaudeChat } = await import('../ai-streaming');
       
       let fullResponse = '';
       
-      await streamGeminiChat({
+      await streamClaudeChat({
         messages: messages.map((m: any) => ({
           role: m.role as 'user' | 'assistant' | 'system',
           content: m.content,

@@ -2214,7 +2214,7 @@ function MarketInsights({
 
 /**
  * AI Property Advisor - Comprehensive AI-powered analysis
- * Uses Gemini to synthesize all data into actionable insights
+ * Uses Claude AI to synthesize all data into actionable insights
  */
 function AIPropertyAdvisor({
   address,
@@ -2344,7 +2344,7 @@ function AIPropertyAdvisor({
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               AI Property Advisor
               <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium">
-                Powered by Gemini
+                Powered by Claude AI
               </span>
             </h3>
             <p className="text-sm text-slate-500">
@@ -2374,7 +2374,7 @@ function AIPropertyAdvisor({
               <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
               <p className="text-slate-600 font-medium">Analyzing property data...</p>
               <p className="text-sm text-slate-500 mt-1">
-                Gemini is reviewing {result.comparables.length} competitors, {result.forecast.length} months of seasonality data, and market insights
+                Claude AI is reviewing {result.comparables.length} competitors, {result.forecast.length} months of seasonality data, and market insights
               </p>
             </div>
           ) : advice ? (

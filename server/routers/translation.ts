@@ -1,7 +1,7 @@
 /**
  * Translation Router
  * 
- * Provides tRPC endpoints for translating text content using Gemini API.
+ * Provides tRPC endpoints for translating text content using Claude AI.
  * Supports single text, batch, report translation, and server-side cache.
  */
 

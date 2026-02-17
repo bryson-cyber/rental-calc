@@ -4,7 +4,7 @@
  * Coordinates the entire newsletter automation flow:
  * 1. Fetches contacts from HubSpot grouped by city
  * 2. Gets market data from AirDNA
- * 3. Generates personalized content with Gemini
+ * 3. Generates personalized content with Claude AI
  * 4. Sends emails via HubSpot Single Send API
  * 
  * This is the main entry point for scheduled newsletter jobs.
