@@ -1,17 +1,22 @@
 /**
- * Gemini AI Service for Property Analysis
+ * AI Service for Property Analysis
  * 
- * This service uses Google's Gemini 3 AI to generate educational,
- * easy-to-understand content for rental property analysis reports.
+ * Generates educational, easy-to-understand content for rental property
+ * analysis reports using the active LLM provider (Gemini or Claude).
  * 
- * GEMINI 3 BEST PRACTICES APPLIED:
- * - Model: gemini-3-pro-preview for complex reasoning tasks
- * - Thinking: thinkingLevel 'high' for property/market analysis, 'low' for simple tasks
- * - Temperature: 1.0 (recommended by Gemini 3 for optimal reasoning)
- * - Prompts: PTCF framework (Persona, Task, Context, Format)
+ * Provider is controlled by LLM_PROVIDER env var:
+ * - "gemini" (default): Google Gemini 3 Pro/Flash
+ * - "anthropic": Anthropic Claude Opus 4 / Sonnet 4
+ * 
+ * PROMPTING BEST PRACTICES APPLIED:
+ * - PTCF framework (Persona, Task, Context, Format)
+ * - Provider-appropriate thinking/effort settings
+ * - Explicit instructions (per Claude best practices)
+ * - XML tags for structure
  */
 
 import { ENV } from './_core/env';
+import { callLLM, callLLMMax, getActiveProvider } from './llm-provider';
 
 /**
  * Post-process AI output to remove prescriptive language
@@ -113,34 +118,18 @@ function stripPrescriptiveLanguage(text: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GEMINI 3 API CONFIGURATION
+// LLM PROVIDER CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
-// 
-// Model Selection (per Gemini 3 API skill):
-// - gemini-3-pro-preview: Complex reasoning, multi-step analysis, comprehensive reports
-// - gemini-3-flash-preview: Fast responses, chat, simple summarization
 //
-// Thinking Levels:
-// - 'high': Maximum reasoning depth (default for Pro, recommended for analysis)
-// - 'low': Minimizes latency and cost (for simpler tasks)
-// - 'minimal': Lowest latency (Flash only)
+// All LLM calls are routed through llm-provider.ts which handles:
+// - Provider selection (Gemini vs Anthropic) based on LLM_PROVIDER env var
+// - Model selection (pro vs flash tier)
+// - Thinking/effort configuration
+// - Retry logic with exponential backoff
 //
-// Temperature:
-// - 1.0: Recommended by Gemini 3 for optimal reasoning
-// - Lower values (0.1-0.3): For deterministic, consistent outputs
-
-const GEMINI_3_PRO_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
-const GEMINI_3_FLASH_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
-
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string }>;
-      role: string;
-    };
-    finishReason: string;
-  }>;
-}
+// callLLM()    → standard call (replaces old callGemini)
+// callLLMMax() → extended capacity with retries (replaces old callGeminiMax)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -167,182 +156,10 @@ interface InvestmentAdvisorContext {
   }>;
 }
 
-interface GeminiCallOptions {
-  maxTokens?: number;
-  temperature?: number;
-  thinkingLevel?: 'low' | 'high';
-  model?: 'pro' | 'flash';
-}
+// Old callGemini/callGeminiMax functions removed — now using callLLM/callLLMMax from llm-provider.ts
 
 /**
- * Core Gemini 3 API call function with best practices
- * 
- * @param prompt - The prompt to send to Gemini
- * @param options - Configuration options
- * @returns The generated text response
- */
-async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<string> {
-  const controller = new AbortController();
-  // Gemini 3 with thinking enabled can take longer - 3 minute timeout
-  const timeoutId = setTimeout(() => controller.abort(), 180000);
-  
-  const model = options?.model ?? 'pro';
-  const apiUrl = model === 'flash' ? GEMINI_3_FLASH_URL : GEMINI_3_PRO_URL;
-  
-  // Gemini 3 best practices:
-  // - Temperature 1.0 for optimal reasoning (per Gemini 3 docs)
-  // - thinkingLevel 'high' for complex analysis (default for Pro)
-  const temperature = options?.temperature ?? 1.0;
-  // Gemini 3 Pro only supports 'low' and 'high' (not 'medium' or 'minimal')
-  // Flash supports all levels but we keep it simple
-  const thinkingLevel = options?.thinkingLevel ?? 'high';
-  
-  try {
-    const response = await fetch(`${apiUrl}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: options?.maxTokens ?? 8192,
-          // Gemini 3 thinking configuration for advanced reasoning
-          thinkingConfig: {
-            thinkingLevel
-          }
-        }
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data: GeminiResponse = await response.json();
-    // Filter out thinking parts - only extract text parts
-    const parts = data.candidates[0]?.content?.parts || [];
-    return parts
-      .filter((p: any) => p.text && !p.thought)
-      .map((p: any) => p.text)
-      .join('') || '';
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-/**
- * Utility function to sleep for a given number of milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Extended capacity Gemini 3 call for comprehensive analysis
- * Uses maximum output tokens (65K) for detailed reports
- * Includes retry logic with exponential backoff for resilience
- */
-async function callGeminiMax(prompt: string, maxRetries: number = 3): Promise<string> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
-    
-    try {
-      console.log(`[Gemini Max] Attempt ${attempt + 1}/${maxRetries}...`);
-      
-      const response = await fetch(`${GEMINI_3_PRO_URL}?key=${ENV.geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: 16384,
-            thinkingConfig: {
-              thinkingLevel: 'low'
-            }
-          }
-        }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const error = await response.json();
-        const errorMessage = error.error?.message || 'Unknown error';
-        console.error(`[Gemini Max] API error on attempt ${attempt + 1}: ${errorMessage}`);
-        
-        // Check if it's a rate limit error (429) or server error (5xx)
-        if (response.status === 429 || response.status >= 500) {
-          lastError = new Error(`Gemini API error: ${errorMessage}`);
-          // Exponential backoff: 2s, 4s, 8s
-          const backoffMs = Math.pow(2, attempt + 1) * 1000;
-          console.log(`[Gemini Max] Retrying in ${backoffMs}ms...`);
-          await sleep(backoffMs);
-          continue;
-        }
-        
-        throw new Error(`Gemini API error: ${errorMessage}`);
-      }
-
-      const data: GeminiResponse = await response.json();
-      // Filter out thinking parts - only extract text parts
-      const resultParts = data.candidates[0]?.content?.parts || [];
-      const result = resultParts
-        .filter((p: any) => p.text && !p.thought)
-        .map((p: any) => p.text)
-        .join('') || '';
-      
-      if (result) {
-        console.log(`[Gemini Max] Success on attempt ${attempt + 1}`);
-        return result;
-      }
-      
-      // Empty response, retry
-      lastError = new Error('Empty response from Gemini API');
-      console.warn(`[Gemini Max] Empty response on attempt ${attempt + 1}, retrying...`);
-      await sleep(Math.pow(2, attempt + 1) * 1000);
-      
-    } catch (error) {
-      clearTimeout(timeoutId);
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // Check if it's an abort error (timeout)
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[Gemini Max] Timeout on attempt ${attempt + 1}`);
-      } else {
-        console.error(`[Gemini Max] Error on attempt ${attempt + 1}:`, error);
-      }
-      
-      // Don't retry on the last attempt
-      if (attempt < maxRetries - 1) {
-        const backoffMs = Math.pow(2, attempt + 1) * 1000;
-        console.log(`[Gemini Max] Retrying in ${backoffMs}ms...`);
-        await sleep(backoffMs);
-      }
-    }
-  }
-  
-  // All retries exhausted
-  console.error(`[Gemini Max] All ${maxRetries} attempts failed. Last error:`, lastError);
-  throw lastError || new Error('All retry attempts failed');
-}
-
-/**
- * Investment Advisor Chat - Uses Gemini 3 Flash for faster responses
+ * Investment Advisor Chat - Uses Flash model for faster responses
  * 
  * PTCF Framework Applied:
  * - Persona: Short-term rental investment advisor
@@ -398,7 +215,7 @@ Respond based ONLY on the market data above. If the data doesn't cover the quest
 
   try {
     // Use Flash model for faster chat responses with medium thinking
-    const response = await callGemini(prompt, { 
+    const response = await callLLM(prompt, { 
       model: 'flash',
       thinkingLevel: 'low',
       temperature: 1.0
@@ -443,9 +260,9 @@ Property Features: ${JSON.stringify(features, null, 2)}
 </FORMAT>`;
 
   try {
-    const response = await callGemini(prompt, { 
+    const response = await callLLM(prompt, { 
       maxTokens: 2048,
-      thinkingLevel: 'low' // Simple task, lower thinking
+      thinkingLevel: 'low'
     });
     return response.trim();
   } catch (error) {
@@ -485,7 +302,7 @@ Market Metrics: ${JSON.stringify(metrics, null, 2)}
 </FORMAT>`;
 
   try {
-    const response = await callGemini(prompt, { 
+    const response = await callLLM(prompt, { 
       maxTokens: 2048,
       thinkingLevel: 'low'
     });
@@ -550,7 +367,7 @@ ${monthlyData.slice(0, 6).map(d => `${d.month}: $${d.currentRevenue.toLocaleStri
 </FORMAT>`;
 
   try {
-    const response = await callGemini(prompt, { 
+    const response = await callLLM(prompt, { 
       maxTokens: 1024,
       thinkingLevel: 'low'
     });
@@ -877,10 +694,10 @@ ${isPurchaseMode ? `- Focus on INVESTMENT METRICS: Cap Rate, Cash-on-Cash Return
 </CONSTRAINTS>`;
 
   try {
-    const response = await callGemini(prompt, { 
+    const response = await callLLM(prompt, { 
       maxTokens: 8192, 
       temperature: 0.7,
-      thinkingLevel: 'high' // Complex analysis needs high thinking
+      thinkingLevel: 'high'
     });
     return response.trim();
   } catch (error) {
@@ -1557,7 +1374,7 @@ IMPORTANT FORMATTING RULES:
 </CONSTRAINTS>`;
 
   try {
-    const response = await callGeminiMax(prompt);
+    const response = await callLLMMax(prompt);
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -2108,7 +1925,7 @@ IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (
 </CONSTRAINTS>`;
 
   try {
-    const response = await callGeminiMax(prompt);
+    const response = await callLLMMax(prompt);
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -2482,13 +2299,13 @@ CRITICAL RULES:
 </FORMAT>`;
 
   try {
-    const response = await callGeminiMax(prompt);
+    const response = await callLLMMax(prompt);
     return response.trim();
   } catch (error) {
     console.error('Error generating full report summary:', error);
     // Fallback to the simpler function
     try {
-      const fallbackResponse = await callGemini(prompt, { maxTokens: 4096, thinkingLevel: 'low' });
+      const fallbackResponse = await callLLM(prompt, { maxTokens: 4096, thinkingLevel: 'low' });
       return fallbackResponse.trim();
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError);

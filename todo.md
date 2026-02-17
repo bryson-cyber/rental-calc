@@ -11850,3 +11850,26 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Zero extra API calls — all data already fetched
 - [x] All 1,503 tests passing
 - [ ] Test with live shared report (pending API rate limit reset)
+
+## Dual-Provider LLM System: Gemini + Claude Opus 4.6 (February 17, 2026)
+- [x] Audit all Gemini call sites in gemini.ts (callGemini, callGeminiMax, 7 exported generate functions)
+- [x] Map token usage per function to ensure Claude context window handles it
+- [x] Add ANTHROPIC_API_KEY secret (validated with live API call)
+- [x] Add LLM_PROVIDER env var (defaults to 'gemini', toggle to 'anthropic')
+- [x] Create centralized LLM abstraction layer (server/llm-provider.ts)
+- [x] callLLM() — drop-in replacement for callGemini(), routes to active provider
+- [x] callLLMMax() — drop-in replacement for callGeminiMax(), with retry logic
+- [x] Claude 4.6 API: adaptive thinking + effort parameter (not deprecated budget_tokens)
+- [x] Model mapping: pro → claude-opus-4-6, flash → claude-sonnet-4-6
+- [x] Effort mapping: thinkingLevel high → effort high, low → effort medium
+- [x] Update gemini.ts to use callLLM/callLLMMax instead of direct Gemini API calls
+- [x] Remove old callGemini/callGeminiMax/sleep functions from gemini.ts
+- [x] TypeScript clean — zero errors
+- [x] 9 vitest tests for LLM provider layer (all passing)
+- [x] Live tests: Claude Opus 4.6, Claude Sonnet 4.6, Gemini Flash all responding
+- [x] Provider override: per-call provider selection works
+- [x] Save checkpoint
+- [ ] Migrate remaining 12 files (gemini-analyzer.ts, gemini-streaming.ts, ai-advisor.ts, etc.) to use callLLM
+- [ ] Apply Claude-specific prompt optimizations (remove anti-laziness, add XML structure)
+- [ ] Clear cached reports so new Claude narratives generate fresh
+- [ ] Test full report generation end-to-end with Claude provider
