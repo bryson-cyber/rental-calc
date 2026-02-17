@@ -11991,3 +11991,55 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] All 1,495 tests passing across 104 files
 - [x] Zero Gemini references remaining in codebase
 - [x] Zero TypeScript errors
+
+## CC-Test: Comprehensive QA (Feb 17, 2026)
+### Happy Path Testing
+- [ ] Homepage loads with mode selection (Pro/Guided)
+- [ ] Mode selection works and persists
+- [ ] Property analysis flow (Step 3 - One Home) works end-to-end
+- [ ] Market advisor flow works end-to-end
+- [ ] AI Advisor generates analysis successfully (Claude API)
+- [ ] Compare Many tab works
+- [ ] Explore Area tab works
+### Edge Cases & Error Handling
+- [ ] Empty address submission handled gracefully
+- [ ] Invalid zip code handled gracefully
+- [ ] Loading states show during API calls
+- [ ] Error messages are clear and user-friendly
+### Mobile & Responsive
+- [ ] Mobile viewport renders correctly
+- [ ] Touch targets are adequate size
+- [ ] No horizontal scroll on mobile
+### Console & Forms
+- [ ] No console errors on page load
+- [ ] No console errors during main flows
+- [ ] Form validation works correctly
+### Post-Migration Verification
+- [ ] No "Gemini" text visible anywhere in UI
+- [ ] Claude AI responses work correctly
+
+## Prompt Optimization (cc-prompt + Claude Best Practices)
+- [ ] Audit Market Advisor MAX prompt for bloat and redundancy
+- [ ] Optimize Market Advisor prompt — reduce token count while maintaining output quality
+- [ ] Audit Property Advisor MAX prompt for bloat
+- [ ] Optimize Property Advisor prompt — reduce token count
+- [ ] Audit Full Report Summary MAX prompt for bloat
+- [ ] Optimize Full Report Summary prompt — reduce token count
+- [ ] Test optimized prompts in browser (Market Advisor, AI Advisor)
+- [ ] Run vitest suite and save checkpoint
+
+## Fix: SocketError — reduce max_tokens only (no prompt content changes)
+- [ ] Revert Market Advisor prompt to original wording, keep only maxTokens: 16000
+- [ ] Apply maxTokens: 16000 to Property Advisor callLLMMax
+- [ ] Apply maxTokens: 16000 to Full Report Summary callLLMMax
+- [ ] Test in browser
+- [ ] Run vitest and save checkpoint
+
+## 100% Claude — Remove All Manus Forge/invokeLLM Proxy Usage
+- [x] Audit all Manus Forge/invokeLLM references in codebase
+- [x] Replace all invokeLLM calls with direct Claude API calls (ai-analyzer.ts, behavior-engine.ts, deal-alert-agent.ts, deep-analysis.ts, slack-admin-router.ts)
+- [x] Remove all Forge proxy imports and dependencies (ai-fallback.ts Forge provider removed)
+- [x] Ensure 100% of LLM calls go directly to Anthropic API
+- [x] Update tests to reflect Forge removal (deep-analysis.test.ts updated)
+- [x] Verify no BUILT_IN_FORGE references remain in LLM paths (only non-LLM platform services remain)
+- [x] Run vitest and save checkpoint (104 files, 1495 tests passed)

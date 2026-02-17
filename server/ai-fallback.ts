@@ -1,30 +1,23 @@
 /**
- * Multi-Provider AI Fallback Service
+ * AI Fallback Service — Claude Direct Only
  * 
- * Provides robust AI narrative generation with automatic fallback between providers:
- * 1. Forge API (Claude Sonnet) - Primary, fast and reliable
- * 2. Claude Direct (Sonnet) - Secondary fallback
- * 3. Template-based - Guaranteed fallback (no AI)
- * 
- * Each provider has a short timeout to fail fast and try the next one.
+ * Provides robust AI narrative generation with automatic fallback:
+ * 1. Claude Direct (Sonnet 4.6) - Primary, direct Anthropic API
+ * 2. Template-based - Guaranteed fallback (no AI)
  */
 
 import { callLLM } from './llm-provider';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './ai-analyzer-enhanced';
 
-// Timeout for each provider - strict 15s each for fast fallback
-const FORGE_TIMEOUT_MS = 15000;  // 15 seconds - primary provider
-const CLAUDE_TIMEOUT_MS = 15000; // 15 seconds - backup
+// Timeout for Claude provider
+const CLAUDE_TIMEOUT_MS = 60000; // 60 seconds — Claude direct with streaming is reliable
 
-// Maximum total time for all AI attempts before falling back to template
-const MAX_TOTAL_AI_TIME_MS = 40000; // 40 seconds total max
+// Maximum total time for AI attempt before falling back to template
+const MAX_TOTAL_AI_TIME_MS = 90000; // 90 seconds total max
 
 /**
- * Generate enhanced narrative report with multi-provider fallback
- * Tries AI providers in sequence with strict timeouts:
- * 1. Forge API (15s) - Built-in, most reliable
- * 2. Claude Direct (15s) - Fast backup
- * 3. Template - Guaranteed fallback
+ * Generate enhanced narrative report with Claude Direct + template fallback
+ * Claude Direct is the only AI provider — no Forge proxy.
  */
 export async function generateEnhancedNarrativeWithFallback(
   input: EnhancedNarrativeReportInput,
@@ -36,30 +29,11 @@ export async function generateEnhancedNarrativeWithFallback(
   const metrics = calculateMetrics(input);
   const prompt = buildPrompt(input, metrics);
   
-  console.log('[AIFallback] Starting multi-provider AI generation...');
+  console.log('[AIFallback] Starting Claude Direct AI generation...');
   
   const totalStart = Date.now();
   
-  // Provider 1: Forge API
-  try {
-    if (Date.now() - totalStart < MAX_TOTAL_AI_TIME_MS) {
-      notify('forge', 'trying');
-      console.log('[AIFallback] Trying Forge API...');
-      const report = await withTimeout(
-        generateWithForge(prompt, input, metrics),
-        FORGE_TIMEOUT_MS,
-        'Forge API timeout'
-      );
-      notify('forge', 'success');
-      console.log('[AIFallback] Forge API succeeded');
-      return report;
-    }
-  } catch (err: any) {
-    console.log(`[AIFallback] Forge API failed: ${err.message}`);
-    notify('forge', 'failed');
-  }
-  
-  // Provider 2: Claude Direct
+  // Provider 1: Claude Direct (only AI provider)
   try {
     if (Date.now() - totalStart < MAX_TOTAL_AI_TIME_MS) {
       notify('claude', 'trying');
@@ -78,8 +52,8 @@ export async function generateEnhancedNarrativeWithFallback(
     notify('claude', 'failed');
   }
   
-  // Provider 3: Template (guaranteed)
-  console.log('[AIFallback] All AI providers failed, using template');
+  // Provider 2: Template (guaranteed fallback)
+  console.log('[AIFallback] Claude Direct failed, using template');
   notify('template', 'trying');
   const report = generateTemplateReport(input, metrics);
   notify('template', 'success');
@@ -195,59 +169,7 @@ SEASONALITY: ${metrics.seasonalSwingPct}% swing between peak and off-peak
 Write a professional summary covering: revenue potential, profit projections, market comparison, and cash flow timing. Use **bold** for key terms. DO NOT give investment advice or recommendations like "GO" or "sign the lease". Just summarize the data objectively.`;
 }
 
-// Provider 1: Forge API (Claude Sonnet) - with proper timeout
-async function generateWithForge(
-  prompt: string, 
-  input: EnhancedNarrativeReportInput, 
-  metrics: Metrics
-): Promise<EnhancedNarrativeReport> {
-  const { ENV } = await import('./_core/env');
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FORGE_TIMEOUT_MS - 2000);
-  
-  try {
-    const apiUrl = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-      ? `${ENV.forgeApiUrl.replace(/\/$/, '')}/v1/chat/completions`
-      : 'https://forge.manus.im/v1/chat/completions';
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ENV.forgeApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        messages: [
-          { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. Provide objective, data-driven market analysis. Every claim must reference specific numbers. Use the "story before the stats" approach. Be warm but direct — like a trusted advisor over coffee.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 1024,
-      }),
-      signal: controller.signal,
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Forge API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    const text = typeof content === 'string' ? content : 
-      Array.isArray(content) ? content.map((c: any) => 'text' in c ? c.text : '').join('') : '';
-    
-    if (!text) {
-      throw new Error('Empty response from Forge API');
-    }
-    
-    return buildReport(text.trim(), input, metrics);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Provider 2: Claude Direct
+// Claude Direct — only AI provider
 async function generateWithClaudeDirect(
   prompt: string, 
   input: EnhancedNarrativeReportInput, 

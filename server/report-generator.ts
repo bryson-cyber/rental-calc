@@ -1305,7 +1305,7 @@ Base every claim on the data provided above. Compare exclusively to ${property.b
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: personaSection });
+    const response = await callLLMMax(prompt, 3, { systemPrompt: personaSection, maxTokens: 16000 });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -1735,7 +1735,49 @@ Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '
 </context>
 
 <format>
-Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
+${reportMode === 'pro' 
+    ? `Write a PROFESSIONAL MARKET ASSESSMENT with institutional-grade analysis.
+
+Use precise financial language with specific data points and industry benchmarks.
+
+# THE QUICK ANSWER
+${filterContextParts.length > 0 ? `Start with: "This analysis focuses on ${filterContextParts.join(' ')} in this market..."` : ''}
+Grade the market (A-F) with a concise investment thesis. Reference key scores and metrics.
+
+# HOW MUCH MONEY CAN YOU MAKE HERE?
+
+## Revenue Analysis
+Break down revenue by property size, compare ADR and occupancy to market benchmarks.
+
+## Which Property Sizes Make the Most?
+Rank bedroom counts by revenue potential with specific figures.
+
+# WHEN'S THE BEST TIME TO HAVE GUESTS?
+
+## Seasonal Revenue Patterns
+Quantify peak vs off-season variance. Identify optimal pricing windows.
+
+# HOW CROWDED IS THIS MARKET?
+
+## Competitive Landscape
+Analyze professional vs individual host performance. Identify competitive advantages of top earners.
+
+# IS THIS MARKET GETTING BETTER OR WORSE?
+
+## Market Trajectory
+YoY trends, supply dynamics, and forward-looking indicators.
+
+# THINGS TO THINK ABOUT
+
+## Strengths
+2-3 data-backed market advantages.
+
+## Risk Factors
+2-3 quantified concerns.
+
+# THE BOTTOM LINE
+Synthesis with key metrics. No prescriptive advice.`
+    : `Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
 
 Write like you're explaining to a friend who's curious about Airbnb investing but has never done it before. Use simple words, real examples, and always explain WHY each number matters.
 
@@ -1808,7 +1850,7 @@ End with a simple summary:
 - "The average property makes $X/year, which is [above/below/about average] for markets like this."
 - "The market is [growing/stable/shrinking] based on the last 12 months of data."
 
-IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (C, D, or F), that does NOT mean there are no good opportunities there. Market averages include many hosts who are doing a poor job - bad photos, wrong pricing, poor guest communication, etc. A skilled operator who does things right can often significantly outperform the market average. The top performers in ANY market prove this - look at how much more they earn than the average. So a "C grade" market might still be great for someone who's willing to put in the work to stand out from the crowd.
+IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (C, D, or F), that does NOT mean there are no good opportunities there. Market averages include many hosts who are doing a poor job - bad photos, wrong pricing, poor guest communication, etc. A skilled operator who does things right can often significantly outperform the market average. The top performers in ANY market prove this - look at how much more they earn than the average. So a "C grade" market might still be great for someone who's willing to put in the work to stand out from the crowd.`}
 </format>
 
 <guidelines>
@@ -1816,7 +1858,7 @@ Use simple, conversational language and explain what every number means in pract
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: marketSystemPrompt });
+    const response = await callLLMMax(prompt, 3, { systemPrompt: marketSystemPrompt, maxTokens: 16000 });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -2181,7 +2223,7 @@ Present data and observations only — let the reader draw their own conclusions
 </format>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: summarySystemPrompt });
+    const response = await callLLMMax(prompt, 3, { systemPrompt: summarySystemPrompt, maxTokens: 16000 });
     return response.trim();
   } catch (error) {
     console.error('Error generating full report summary:', error);

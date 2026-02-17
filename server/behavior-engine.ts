@@ -11,7 +11,7 @@
 import { eq, and, desc, gte, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { toolUsageEvents } from "../drizzle/schema";
-import { invokeLLM } from "./_core/llm";
+import { callLLM } from './llm-provider';
 
 // ============================================================
 // Types
@@ -298,30 +298,7 @@ export async function generateAdaptiveEmail(
   const prompt = strategyPrompts[selectedStrategy];
   
   try {
-    const response = await invokeLLM({
-      messages: [
-        {
-          role: 'system',
-          content: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing emails on behalf of Coach Inayah's team for short-term rental investors.
-
-Your communication style:
-- Data-first: every claim references specific numbers
-- "Story before the stats": lead with a plain-language narrative, then bring in data
-- Use analogy over jargon: make complex concepts accessible
-- Warm but direct — like a trusted advisor sharing insights over coffee
-- Honest about risks — never sugarcoat, but always empower
-          
-Rules:
-- Keep emails under 200 words
-- Write at a 5th grade reading level — simple words, short sentences
-- Include one clear CTA with a link placeholder [CTA_LINK]
-- Never use the word "AirDNA" — say "powered by Coach Inayah market data" if referencing data source
-- Sign off as "Coach Inayah"
-- Format as JSON with fields: subject, previewText, htmlBody (simple HTML with inline styles)`
-        },
-        {
-          role: 'user',
-          content: `${prompt}
+    const fullPrompt = `${prompt}
 
 User profile:
 - Engagement: ${profile.engagementLevel}
@@ -329,32 +306,41 @@ User profile:
 - Tools used: ${profile.uniqueTools.join(', ') || 'none yet'}
 - Markets researched: ${profile.uniqueMarkets.map(m => `${m.city}, ${m.state} (${m.count}x)`).join('; ') || 'none yet'}
 - Days since last active: ${profile.daysSinceLastActive}
-- Journey stage: ${profile.journeyStage}`
-        }
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'adaptive_email',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              subject: { type: 'string', description: 'Email subject line' },
-              previewText: { type: 'string', description: 'Email preview text (shown in inbox)' },
-              htmlBody: { type: 'string', description: 'Email HTML body with inline styles' },
-            },
-            required: ['subject', 'previewText', 'htmlBody'],
-            additionalProperties: false,
-          },
-        },
-      },
+- Journey stage: ${profile.journeyStage}
+
+Respond with ONLY a JSON object with these exact fields:
+{"subject": "...", "previewText": "...", "htmlBody": "..."}`;
+
+    const response = await callLLM(fullPrompt, {
+      model: 'flash',
+      thinkingLevel: 'low',
+      maxTokens: 1024,
+      systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing emails on behalf of Coach Inayah's team for short-term rental investors.
+
+Your communication style:
+- Data-first: every claim references specific numbers
+- "Story before the stats": lead with a plain-language narrative, then bring in data
+- Use analogy over jargon: make complex concepts accessible
+- Warm but direct — like a trusted advisor sharing insights over coffee
+- Honest about risks — never sugarcoat, but always empower
+
+Rules:
+- Keep emails under 200 words
+- Write at a 5th grade reading level — simple words, short sentences
+- Include one clear CTA with a link placeholder [CTA_LINK]
+- Never use the word "AirDNA" — say "powered by Coach Inayah market data" if referencing data source
+- Sign off as "Coach Inayah"
+- Respond with ONLY a JSON object with fields: subject, previewText, htmlBody (simple HTML with inline styles). No markdown code blocks.`,
     });
     
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) throw new Error('No LLM response');
+    if (!response) throw new Error('No LLM response');
     
-    const parsed = JSON.parse(content as string);
+    // Parse JSON from response (handle potential markdown code blocks)
+    let jsonStr = response.trim();
+    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+    else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+    const parsed = JSON.parse(jsonStr.trim());
     
     return {
       subject: parsed.subject,

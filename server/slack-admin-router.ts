@@ -17,7 +17,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
-import { invokeLLM } from "./_core/llm";
+import { callLLM } from './llm-provider';
 import { getDb } from "./db";
 import { sharedReports, universalShareableReports, slackReportDeliveries } from "../drizzle/schema";
 import { desc, eq, like, and, sql } from "drizzle-orm";
@@ -201,11 +201,23 @@ async function generateDealSummary(reportData: {
     const occPct = occRate && occRate <= 1 ? Math.round(occRate * 100) : occRate ? Math.round(occRate) : null;
     const monthlyRev = reportData.annualRevenue ? Math.round(reportData.annualRevenue / 12) : null;
     
-    const response = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing on behalf of Coach Inayah's team. Write a short, compelling Slack message (3-5 sentences max) presenting a property as an investment opportunity to a client.
+    const prompt = `Write a deal summary for this property:
+
+Address: ${reportData.address}
+${reportData.bedrooms ? `Bedrooms: ${reportData.bedrooms}` : ''}
+${reportData.bathrooms ? `Bathrooms: ${reportData.bathrooms}` : ''}
+${reportData.annualRevenue ? `Annual Revenue Estimate: $${reportData.annualRevenue.toLocaleString()}` : ''}
+${monthlyRev ? `Monthly Revenue: $${monthlyRev.toLocaleString()}` : ''}
+${occPct ? `Occupancy Rate: ${occPct}%` : ''}
+${reportData.averageDailyRate ? `Average Daily Rate: $${reportData.averageDailyRate}` : ''}
+${reportData.verdict ? `Analysis Verdict: ${reportData.verdict}` : ''}
+Report Type: ${reportData.reportType}`;
+
+    const content = await callLLM(prompt, {
+      model: 'flash',
+      thinkingLevel: 'low',
+      maxTokens: 512,
+      systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing on behalf of Coach Inayah's team. Write a short, compelling Slack message (3-5 sentences max) presenting a property as an investment opportunity to a client.
 
 Rules:
 - Use the "story before the stats" approach — lead with a compelling narrative hook, then back it with specific numbers
@@ -216,33 +228,10 @@ Rules:
 - Do NOT use emojis
 - Do NOT use bullet points — write in flowing sentences
 - Do NOT give investment advice or say "you should buy this"
-- Present the data as an opportunity worth looking at, not a recommendation`
-        },
-        {
-          role: "user",
-          content: `Write a deal summary for this property:
-
-Address: ${reportData.address}
-${reportData.bedrooms ? `Bedrooms: ${reportData.bedrooms}` : ''}
-${reportData.bathrooms ? `Bathrooms: ${reportData.bathrooms}` : ''}
-${reportData.annualRevenue ? `Annual Revenue Estimate: $${reportData.annualRevenue.toLocaleString()}` : ''}
-${monthlyRev ? `Monthly Revenue: $${monthlyRev.toLocaleString()}` : ''}
-${occPct ? `Occupancy Rate: ${occPct}%` : ''}
-${reportData.averageDailyRate ? `Average Daily Rate: $${reportData.averageDailyRate}` : ''}
-${reportData.verdict ? `Analysis Verdict: ${reportData.verdict}` : ''}
-Report Type: ${reportData.reportType}`
-        }
-      ],
+- Present the data as an opportunity worth looking at, not a recommendation`,
     });
-
-    const rawContent = response.choices?.[0]?.message?.content;
-    if (!rawContent) return "";
     
-    const content = typeof rawContent === 'string' 
-      ? rawContent 
-      : rawContent.map(part => 'text' in part ? part.text : '').join('');
-    
-    return content.trim();
+    return (content || '').trim();
   } catch (error) {
     console.error("[SlackAdmin] Error generating deal summary:", error);
     return "";

@@ -17,7 +17,7 @@ import { eq, and, desc, sql, isNull, gt, lt, or } from 'drizzle-orm';
 import { analyzePropertyForArbitrage, type RentalDeal } from './newsletter-deal-finder';
 import { sendDealAlertEmail } from './newsletter-email-sender';
 import { getRentalizerEstimate, searchMarketsAPI, getMarketDetails, getMarketHistoricalData, getMarketSeasonality, getTopPerformers, getMarketListings, calculateMarketInsights } from './airdna';
-import { invokeLLM } from './_core/llm';
+import { callLLM } from './llm-provider';
 import { searchZillowRentals, type ZillowListing } from './hasdata-zillow';
 
 // ============================================================
@@ -661,15 +661,14 @@ Total Matches Found: ${matches.length}
 
 Write in a warm, conversational tone. Mention the key numbers. Keep it under 60 words.`;
 
-    const response = await invokeLLM({
-      messages: [
-        { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties. Write brief, warm email content on behalf of Coach Inayah. Use the "story before the stats" approach. Be warm but direct.' },
-        { role: 'user', content: prompt }
-      ],
+    const response = await callLLM(prompt, {
+      model: 'flash',
+      thinkingLevel: 'low',
+      maxTokens: 512,
+      systemPrompt: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties. Write brief, warm email content on behalf of Coach Inayah. Use the "story before the stats" approach. Be warm but direct.',
     });
     
-    const content = response.choices?.[0]?.message?.content;
-    return typeof content === 'string' ? content : '';
+    return response || '';
   } catch (err) {
     console.error('[DealAlertAgent] Error generating narrative:', err);
     return '';
@@ -1000,24 +999,7 @@ export async function runMarketEvaluation(params: {
         if (marketInsights.averageRating) dataContext.push(`- Average rating: ${marketInsights.averageRating.toFixed(1)} stars`);
       }
       
-      const memoResponse = await invokeLLM({
-        messages: [
-          {
-            role: 'system',
-            content: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science, quantitative analytics, and real estate investment. You operate on the "Generate, Interrogate, Certify" model. Your tone is warm but direct — like a trusted advisor giving real talk over coffee. You never sugarcoat, but you always empower. Use the "story before the stats" approach: lead with a plain-language narrative, then bring in specific numbers.
-
-Rules:
-- Use specific dollar amounts and percentages from the data provided — never make up numbers
-- Frame everything as "here's what this means for YOUR bottom line"
-- When data shows a strong market, be enthusiastic but grounded
-- When data shows a weak market, be honest and redirect to better options
-- Use markdown formatting with bold for key numbers
-- Reference the actual data points (revenue, occupancy, ADR) to support every claim
-- Write for someone evaluating their FIRST short-term rental market — no jargon without explanation`
-          },
-          {
-            role: 'user',
-            content: `Write a market evaluation memo for ${params.city}, ${params.state} based on this data:
+      const memoPrompt = `Write a market evaluation memo for ${params.city}, ${params.state} based on this data:
 
 ${dataContext.join('\n')}
 
@@ -1054,13 +1036,25 @@ Structure the memo EXACTLY as follows:
 ### Your Next 3 Steps
 (Exactly 3 numbered, specific action items. Not vague like "do more research" — specific like "Search for 2BR properties under $X/month rent in [specific area] and run the numbers through the calculator.")
 
-Keep it under 900 words. Every claim must reference actual data. Write like you're talking to a friend who's about to invest their savings.`
-          }
-        ],
+Keep it under 900 words. Every claim must reference actual data. Write like you're talking to a friend who's about to invest their savings.`;
+
+      aiMemo = await callLLM(memoPrompt, {
+        model: 'pro',
+        thinkingLevel: 'high',
+        maxTokens: 4096,
+        systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science, quantitative analytics, and real estate investment. You operate on the "Generate, Interrogate, Certify" model. Your tone is warm but direct — like a trusted advisor giving real talk over coffee. You never sugarcoat, but you always empower. Use the "story before the stats" approach: lead with a plain-language narrative, then bring in specific numbers.
+
+Rules:
+- Use specific dollar amounts and percentages from the data provided — never make up numbers
+- Frame everything as "here's what this means for YOUR bottom line"
+- When data shows a strong market, be enthusiastic but grounded
+- When data shows a weak market, be honest and redirect to better options
+- Use markdown formatting with bold for key numbers
+- Reference the actual data points (revenue, occupancy, ADR) to support every claim
+- Write for someone evaluating their FIRST short-term rental market — no jargon without explanation`,
       });
       
-      const memoContent = memoResponse.choices?.[0]?.message?.content;
-      aiMemo = typeof memoContent === 'string' ? memoContent : 'Unable to generate memo.';
+      if (!aiMemo) aiMemo = 'Unable to generate memo.';
     } catch (err) {
       console.error('[MarketEval] AI memo generation failed:', err);
       aiMemo = `# Market Evaluation: ${params.city}, ${params.state}\n\n## Market Score: ${marketScore}/100\n\n### Revenue Summary\n${revenueData.map((r: any) => `- **${r.bedrooms}BR**: $${r.annualRevenue.toLocaleString()}/year, ADR: $${r.adr}, Occupancy: ${Math.round(r.occupancy * 100)}%`).join('\n')}\n\n*AI memo generation encountered an error. The data above is from Coach Inayah market analysis.*`;

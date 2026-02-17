@@ -26,8 +26,7 @@ vi.mock('../db', () => ({
 // Mock the ENV
 vi.mock('../_core/env', () => ({
   ENV: {
-    forgeApiKey: 'test-key',
-    forgeApiUrl: 'https://test.api.com',
+    anthropicApiKey: 'test-anthropic-key',
   },
 }));
 

@@ -848,7 +848,7 @@ Generate the pricing strategy based on the data above.`;
  * Analyze listing photos using AI Vision
  */
 export async function analyzeListingPhoto(imageUrl: string, listingName: string): Promise<PhotoAnalysis> {
-  const { invokeLLM } = await import('./_core/llm');
+  const { callLLM } = await import('./llm-provider');
   
   const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze this listing photo and provide insights.
 
@@ -875,16 +875,22 @@ Return ONLY the JSON object, no other text.`;
 
   try {
     console.log(`[ClaudeAnalyzer] Analyzing photo via AI: ${listingName}`);
-    const response = await invokeLLM({
-      messages: [
-        { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.' },
-        { role: 'user', content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: imageUrl } }
-        ] }
-      ],
+    // Use callLLMWithVision for image analysis — direct Claude API
+    const { callLLMWithVision } = await import('./llm-provider');
+    const text = await callLLMWithVision(prompt, [
+      {
+        type: 'image',
+        source: {
+          type: 'url',
+          url: imageUrl,
+        },
+      },
+    ], {
+      model: 'flash',
+      thinkingLevel: 'low',
+      maxTokens: 1024,
+      systemPrompt: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.',
     });
-    const text = String(response.choices?.[0]?.message?.content || '');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);

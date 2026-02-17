@@ -18,7 +18,7 @@ import { getDb } from './db';
 import { deepAnalysis, analysisReports } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { ENV } from './_core/env';
-import { invokeLLM } from './_core/llm';
+import { callLLM } from './llm-provider';
 
 // AI provider timeout - reduced for faster failure
 const AI_TIMEOUT_MS = 45000; // 45 seconds per call (reduced from 120s)
@@ -358,7 +358,7 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
         marketNarrative,
         actionPlan,
         processingTimeMs,
-        aiProvider: 'forge',
+        aiProvider: 'claude',
         completedAt: new Date(),
         completedSteps: JSON.stringify(['executiveSummary', 'marketScenarios', 'historicalContext', 'riskAssessment', 'pricingData', 'marketDeepDive']),
       })
@@ -383,20 +383,19 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
 }
 
 /**
- * Call AI using Forge/LLM API for high-quality narratives
+ * Call AI using Claude direct API for high-quality narratives
  */
 async function callAI(prompt: string, systemPrompt: string = ''): Promise<string> {
-  console.log('[DeepAnalysis] Calling AI via Forge...');
+  console.log('[DeepAnalysis] Calling AI via Claude direct...');
   
   try {
-    const response = await invokeLLM({
-      messages: [
-        { role: 'system', content: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.' },
-        { role: 'user', content: prompt }
-      ],
+    const text = await callLLM(prompt, {
+      model: 'pro',
+      thinkingLevel: 'high',
+      maxTokens: 4096,
+      systemPrompt: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.',
     });
     
-    const text = String(response.choices?.[0]?.message?.content || '');
     console.log(`[DeepAnalysis] AI response received: ${text.length} chars`);
     return text;
   } catch (error: any) {

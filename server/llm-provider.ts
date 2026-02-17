@@ -110,6 +110,7 @@ async function callClaude(prompt: string, options?: LLMCallOptions): Promise<str
       thinking: { type: 'adaptive' },
       output_config: { effort: effectiveEffort },
       messages,
+      stream: true, // Streaming prevents SocketErrors on long-running requests
     };
 
     // Add system prompt if provided
@@ -130,27 +131,77 @@ async function callClaude(prompt: string, options?: LLMCallOptions): Promise<str
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
-      const errorMessage = (errorData as any)?.error?.message || `HTTP ${response.status}`;
+      const errorData = await response.text().catch(() => `HTTP ${response.status}`);
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const parsed = JSON.parse(errorData);
+        errorMessage = parsed?.error?.message || errorMessage;
+      } catch { /* use default */ }
       throw new Error(`Claude API error (${response.status}): ${errorMessage}`);
     }
 
-    const data = await response.json() as {
-      content: Array<{ type: string; text?: string }>;
-      usage: { input_tokens: number; output_tokens: number };
-      stop_reason: string;
-    };
+    // Parse SSE stream and accumulate text blocks
+    const body = response.body;
+    if (!body) {
+      throw new Error('No response body from Claude API');
+    }
 
-    // Extract text blocks (skip thinking blocks)
-    const textBlocks = data.content.filter(
-      (block) => block.type === 'text' && block.text
-    );
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let resultText = '';
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let stopReason = '';
 
-    const result = textBlocks.map((block) => block.text).join('');
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE lines
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+
+          // Accumulate text deltas (skip thinking deltas)
+          if (event.type === 'content_block_delta') {
+            if (event.delta?.type === 'text_delta' && event.delta?.text) {
+              resultText += event.delta.text;
+            }
+          }
+
+          // Capture usage from message_delta (final event)
+          if (event.type === 'message_delta') {
+            if (event.usage) {
+              outputTokens = event.usage.output_tokens || outputTokens;
+            }
+            if (event.delta?.stop_reason) {
+              stopReason = event.delta.stop_reason;
+            }
+          }
+
+          // Capture input tokens from message_start
+          if (event.type === 'message_start' && event.message?.usage) {
+            inputTokens = event.message.usage.input_tokens || 0;
+          }
+        } catch {
+          // Skip malformed JSON lines
+        }
+      }
+    }
+
+    console.log(`[${label}] ${inputTokens} in, ${outputTokens} out (stop: ${stopReason})`);
     
-    console.log(`[${label}] ${data.usage.input_tokens} in, ${data.usage.output_tokens} out (stop: ${data.stop_reason})`);
-    
-    return result;
+    return resultText;
   } finally {
     clearTimeout(timeoutId);
   }
