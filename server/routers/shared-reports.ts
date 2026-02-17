@@ -121,7 +121,10 @@ export const sharedReportsRouter = router({
                 rating: c.rating ?? undefined,
                 reviews: c.reviews || 0,
                 bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
               })),
+              revenueSource: reportData._revenue_source || undefined,
+              exactMatchCompCount: reportData._exact_match_comp_count || undefined,
               revenuePercentiles: reportData.revenue_percentiles,
               historicalData: reportData.historical_data,
               rentalArbitrage: reportData.rental_arbitrage,
@@ -655,6 +658,9 @@ export const sharedReportsRouter = router({
             purchase: existingData.purchase,
             rental_arbitrage: existingData.rental_arbitrage,
             prepared_for: existingData.prepared_for,
+            // Revenue source metadata for Gemini narrative framing
+            _revenue_source: (prop as any)?._revenue_source || 'rentalizer',
+            _exact_match_comp_count: (prop as any)?._exact_match_comp_count || 0,
             // Supply trend and submarket data
             supply_trend: (rawHistorical?.active_listings || []).map((d: any) => ({ date: d.date, value: d.value })),
             submarkets: ((freshReport.submarkets || []) as any[]).map((s: any) => ({
@@ -798,7 +804,10 @@ export const sharedReportsRouter = router({
                 rating: c.rating,
                 reviews: c.reviews,
                 bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
               })),
+              revenueSource: newReportData._revenue_source || undefined,
+              exactMatchCompCount: newReportData._exact_match_comp_count || undefined,
               revenuePercentiles: newReportData.revenue_percentiles,
               historicalData: newReportData.historical_data,
               rentalArbitrage: newReportData.rental_arbitrage,
@@ -1050,6 +1059,9 @@ export const sharedReportsRouter = router({
               longitude: c.longitude || null,
             })),
             prepared_for: preparedFor || ctx.user?.name || undefined,
+            // Revenue source metadata for Gemini narrative framing
+            _revenue_source: (prop as any)?._revenue_source || 'rentalizer',
+            _exact_match_comp_count: (prop as any)?._exact_match_comp_count || 0,
             // Supply trend and submarket data
             supply_trend: (rawHistorical?.active_listings || []).map((d: any) => ({ date: d.date, value: d.value })),
             submarkets: ((freshReport.submarkets || []) as any[]).map((s: any) => ({
@@ -1276,7 +1288,10 @@ export const sharedReportsRouter = router({
                 rating: c.rating,
                 reviews: c.reviews,
                 bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
               })),
+              revenueSource: reportData._revenue_source || undefined,
+              exactMatchCompCount: reportData._exact_match_comp_count || undefined,
               revenuePercentiles: reportData.revenue_percentiles,
               historicalData: reportData.historical_data,
               rentalArbitrage: reportData.rental_arbitrage,

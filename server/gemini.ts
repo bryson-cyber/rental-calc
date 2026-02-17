@@ -2167,7 +2167,10 @@ export interface FullReportSummaryInput {
     rating?: number;
     reviews?: number;
     bedrooms?: number;
+    bathrooms?: number;
   }>;
+  revenueSource?: 'comp_median' | 'p75_fallback' | 'rentalizer';
+  exactMatchCompCount?: number;
   revenuePercentiles?: {
     p10: number; p25: number; p50: number; p75: number; p90: number;
   };
@@ -2230,7 +2233,7 @@ export interface FullReportSummaryInput {
 }
 
 export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
-  const { reportMode = 'guided', property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales } = input;
+  const { reportMode = 'guided', property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales, revenueSource, exactMatchCompCount } = input;
   
   // Import pro mode overrides
   const { getProModeOverride } = await import('./pro-mode-prompts');
@@ -2365,11 +2368,14 @@ SUBJECT PROPERTY:
 - City: ${property.city || 'Unknown'}, ${property.state || ''}
 - Configuration: ${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, sleeps ${property.accommodates}
 
-REVENUE PROJECTIONS:
-- Projected Annual Revenue: $${revenue.annual.toLocaleString()}
+REVENUE DATA:
+${revenueSource === 'comp_median' ? `- Revenue Basis: COMPARABLE PROPERTY MEDIAN — This figure represents what ${exactMatchCompCount || 'similar'} properties with the same bedroom/bathroom count are CURRENTLY earning. This is real operator data, not a prediction.
+- Annual Revenue (Comp Median): $${revenue.annual.toLocaleString()}` : revenueSource === 'p75_fallback' ? `- Revenue Basis: 75TH PERCENTILE of comparable properties (fewer than 3 exact-match comps available)
+- Annual Revenue (P75 Estimate): $${revenue.annual.toLocaleString()}` : `- Revenue Basis: Market algorithm estimate (insufficient comparable properties)
+- Projected Annual Revenue: $${revenue.annual.toLocaleString()}`}
 ${revenue.range ? `- Revenue Range: $${revenue.range.low.toLocaleString()} – $${revenue.range.high.toLocaleString()}` : ''}
 - Average Nightly Rate (ADR): $${revenue.nightly.toLocaleString()}
-- Projected Occupancy Rate: ${(occRate * 100).toFixed(0)}%
+- Occupancy Rate: ${(occRate * 100).toFixed(0)}%
 - Revenue Per Available Night (RevPAR): $${revpar.toFixed(0)}
 - Monthly Average: $${revenue.monthly.toLocaleString()}
 ${forecastSection}
@@ -2386,10 +2392,14 @@ ${bedroomSection}
 ${percentilesSection}
 
 COMPETITION:
-- ${compCount} comparable properties analyzed
+- ${compCount} comparable properties analyzed${exactMatchCompCount !== undefined ? ` (${exactMatchCompCount} exact bedroom/bathroom match)` : ''}
 ${compCount > 0 ? `- Top Performer Revenue: $${topCompRevenue.toLocaleString()}
 - Average Comp Revenue: $${Math.round(avgCompRevenue).toLocaleString()}
+- Median Comp Revenue: $${competitors && competitors.length > 0 ? Math.round(competitors.map(c => c.revenue).sort((a, b) => a - b)[Math.floor(competitors.length / 2)]).toLocaleString() : 'N/A'}
 - Average Comp Rating: ${avgCompRating.toFixed(1)} stars` : ''}
+${competitors && competitors.length > 0 ? `
+INDIVIDUAL COMPARABLE PROPERTIES (top 10 by revenue):
+${competitors.slice(0, 10).sort((a, b) => b.revenue - a.revenue).map((c, i) => `  ${i + 1}. ${c.name} — ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA — $${c.revenue.toLocaleString()}/yr — $${c.adr}/night — ${(c.occupancy > 1 ? c.occupancy : c.occupancy * 100).toFixed(0)}% occ — ${c.rating ? c.rating.toFixed(1) + '★' : 'No rating'} (${c.reviews || 0} reviews)`).join('\n')}` : ''}
 ${rentalSection}
 ${purchaseSection}
 ${itemizedExpenses ? `
@@ -2431,13 +2441,14 @@ Write the summary in Markdown format with the following structure:
 Start with a brief overview paragraph that introduces the property and the key finding.
 
 ### Revenue Outlook
-Discuss the revenue projections, how they compare to the market, where the property falls in the revenue distribution, and the seasonality pattern.
+${revenueSource === 'comp_median' ? `IMPORTANT: The revenue figure is based on the MEDIAN of ${exactMatchCompCount || 'comparable'} properties with the same bedroom/bathroom count that are CURRENTLY operating. Frame this as fact, not prediction. Use language like "Properties like this one are currently earning..." or "The median of ${exactMatchCompCount || 'comparable'} same-configuration properties shows annual revenue of...". Do NOT say "projected" or "estimated" — this is what real operators are actually earning right now.` : revenueSource === 'p75_fallback' ? `The revenue figure is based on the 75th percentile of comparable properties (fewer than 3 exact bedroom/bathroom matches were available). Frame this as a strong-performer benchmark.` : `The revenue figure is an algorithm-based estimate. Use standard projection language.`}
+Discuss how the revenue compares to the market, where the property falls in the revenue distribution, and the seasonality pattern.
 
 ### Market Position
 Analyze the market context — how healthy is the market, how does this property compare to the market averages, and what the bedroom performance data shows about demand for this property type.
 
 ### Competitive Landscape
-Summarize the competition — how many comps were analyzed, how this property compares to the top performers and the average, and what the ratings tell us.
+Summarize the competition — how many comps were analyzed, how this property compares to the top performers and the average, and what the ratings tell us. IMPORTANT: Reference specific comparable properties by name and their revenue figures from the INDIVIDUAL COMPARABLE PROPERTIES list. This makes the analysis concrete and verifiable. For example: "The top-performing comp, [Name], earns $X/year with a Y★ rating and Z reviews."
 
 ${itemizedExpenses ? `### Expense Analysis
 Discuss the itemized expense breakdown — how the effective expense rate compares to the industry standard 35%, which categories are the largest cost drivers, and what this means for net income projections.` : ''}

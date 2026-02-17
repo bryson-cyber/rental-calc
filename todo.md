@@ -11837,3 +11837,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update cache re-application logic for P75 fallback
 - [x] Added 8 new P75 fallback tests (cap enforcement, edge cases, scaling, normalization)
 - [x] All 1,503 tests passing
+
+## Surface Comp Cards & Gemini Narrative Upgrade (February 16, 2026)
+- [x] Audit what comp data is already in the comprehensive report result (same_bedroom_comps with photos, Airbnb links, revenue, ADR, occupancy, ratings, reviews)
+- [x] Audit what comp data is stored in the shared report DB record (all fields preserved)
+- [x] Audit what data Gemini currently receives (was: only aggregate stats; now: individual comp details)
+- [x] Comp cards already exist in FullPropertyReport.tsx Competition Analysis section
+- [x] Pass individual comp details (name, revenue, ADR, occupancy, rating, reviews, BR/BA) to Gemini
+- [x] Add revenueSource and exactMatchCompCount to Gemini prompt
+- [x] Reframe Gemini language: comp_median = fact-based ("properties like this are earning"), rentalizer = prediction ("projected")
+- [x] Wire _revenue_source and _exact_match_comp_count through all 3 shared report flows (create, regenerate, generateFromAddress)
+- [x] Zero extra API calls — all data already fetched
+- [x] All 1,503 tests passing
+- [ ] Test with live shared report (pending API rate limit reset)

@@ -3790,6 +3790,8 @@ export async function getComprehensivePropertyReport(
         average_daily_rate: propertyEstimate.estimates.average_daily_rate,
         occupancy_rate: propertyEstimate.estimates.occupancy_rate,
       };
+      (propertyEstimate as any)._revenue_source = 'comp_median';
+      (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
       
       // Update headline estimates with comp median values
       propertyEstimate.estimates.annual_revenue = targetRevenue;
@@ -3808,8 +3810,13 @@ export async function getComprehensivePropertyReport(
           // Keep occupancy unchanged — it's a percentage reflecting seasonal demand patterns
         }));
       }
+      (propertyEstimate as any)._revenue_source = 'comp_median';
+      (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
     } else {
       console.log(`[Comp-Median Adjustment] No adjustment needed — Rentalizer ($${rentalizerRevenue.toLocaleString()}) equals comp median ($${targetRevenue.toLocaleString()})`);
+      // Even when no adjustment needed, still mark the source as comp_median since we have enough comps
+      (propertyEstimate as any)._revenue_source = 'comp_median';
+      (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
     }
   } else {
     // FALLBACK: <3 exact-match comps — use P75 adjustment with 1.5x cap
@@ -3853,6 +3860,8 @@ export async function getComprehensivePropertyReport(
           occupancy_rate: propertyEstimate.estimates.occupancy_rate,
         };
         (propertyEstimate as any)._adjustment_method = 'p75_fallback';
+        (propertyEstimate as any)._revenue_source = 'p75_fallback';
+        (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
         
         // Update headline estimates
         propertyEstimate.estimates.annual_revenue = targetRevenue;
@@ -3874,9 +3883,13 @@ export async function getComprehensivePropertyReport(
         }
       } else {
         console.log(`[P75 Fallback] No adjustment — Rentalizer ($${rentalizerRevenue.toLocaleString()}) already >= target ($${targetRevenue.toLocaleString()})`);
+        (propertyEstimate as any)._revenue_source = 'p75_fallback';
+        (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
       }
     } else {
       console.log(`[Comp-Median Adjustment] Skipped — only ${exactMatchComps.length} exact-match comps and ${p75Comps.length} same-bedroom comps (need >= 3 for either method), using Rentalizer as-is`);
+      (propertyEstimate as any)._revenue_source = 'rentalizer';
+      (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
     }
   }
   
