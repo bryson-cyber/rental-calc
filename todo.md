@@ -12078,3 +12078,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: added full state name → abbreviation conversion ("Missouri" → "MO") in disambiguateLocation
 - [x] Fix: added "City, FullStateName, USA" pattern handling for Google Places
 - [x] All 1495 tests pass
+
+## BUG: Zip code search not working in Step 2 (Opportunity Finder) — FIXED
+- [x] Check server logs for zip code search attempts
+- [x] Trace zip code flow through disambiguateLocation
+- [x] Fix: added handling for "63108, USA" and "63108, City, ST, USA" formats from Google Places
+- [x] disambiguateLocation now extracts bare zip code from all Google Places formats
+- [x] All 1495 tests pass

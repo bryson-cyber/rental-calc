@@ -135,10 +135,24 @@ async function disambiguateLocation(location: string): Promise<string> {
     return location;
   }
   
-  // If it's a zip code, use as-is
-  if (/^\d{5}$/.test(location.trim())) {
-    console.log(`[OpportunityFinder] Location is a zip code: ${location}`);
-    return location;
+  // If it's a zip code (bare or with country suffix), use as-is
+  // Handles: "63108", "63108, USA", "63108, United States"
+  const zipOnlyPattern = /^(\d{5})(?:\s*,\s*(?:USA|United States))?$/i;
+  const zipOnlyMatch = location.trim().match(zipOnlyPattern);
+  if (zipOnlyMatch) {
+    const zipCode = zipOnlyMatch[1];
+    console.log(`[OpportunityFinder] Location is a zip code: ${location} -> ${zipCode}`);
+    return zipCode;
+  }
+  
+  // Also extract zip code from Google Places format like "63108, Saint Louis, MO, USA"
+  // or "Saint Louis, MO 63108, USA" — keep the full location but ensure zip is preserved
+  const embeddedZipPattern = /^(\d{5}),\s*.+/;
+  const embeddedZipMatch = location.trim().match(embeddedZipPattern);
+  if (embeddedZipMatch) {
+    const zipCode = embeddedZipMatch[1];
+    console.log(`[OpportunityFinder] Location starts with zip code: ${location} -> using ${zipCode}`);
+    return zipCode;
   }
   
   try {
