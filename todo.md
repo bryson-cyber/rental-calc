@@ -12104,3 +12104,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Wire admin-tracking router into main router
 - [x] Write 27 vitest tests for activity tracking (all pass)
 - [x] All 1522 tests pass, 0 TypeScript errors
+
+## BUG FIX: Opportunity Finder and Market Research not enforcing usage limits — COMPLETE
+- [x] Add canPerformAnalysis check to opportunity-finder.ts searchZillowRentals
+- [x] Add canPerformAnalysis check to opportunity-finder.ts searchZillowForSale
+- [x] Add canPerformAnalysis check to opportunity-finder.ts validateProperty
+- [x] Add canPerformAnalysis check to opportunity-finder.ts batchValidateProperties
+- [x] Add canPerformMarketResearch check to market-research-simple.ts getMarketReport
+- [x] Add canPerformMarketResearch check to market-research-simple.ts getMarketReportByLocation
+- [x] Add canPerformMarketResearch check to market-research-simple.ts getSubmarketReport
+- [x] Add canPerformAnalysis + recordAnalysisUsage to deep-analysis.ts start
+- [x] Write 28 structural tests to verify limit enforcement across all files
+- [x] All tests pass (28/28), 0 TypeScript errors

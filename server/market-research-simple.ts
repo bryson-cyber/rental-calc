@@ -10,7 +10,8 @@
  */
 
 import { router, publicProcedure } from './_core/trpc';
-import { recordMarketResearchUsage, recordApiCallsUsage } from './usage-limits';
+import { canPerformMarketResearch, recordMarketResearchUsage, recordApiCallsUsage } from './usage-limits';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 import {
@@ -202,6 +203,15 @@ export const marketResearchSimpleRouter = router({
       const { marketId, marketName } = input;
       const userId = ctx.user?.id;
       const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+
+      // Enforce daily usage limits (admins bypass)
+      const limitCheck = await canPerformMarketResearch(userId, undefined, ipAddress);
+      if (!limitCheck.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: limitCheck.reason || 'Daily market research limit reached. Please try again tomorrow.',
+        });
+      }
 
       console.log(`[getMarketReport] Starting for marketId: ${marketId}, marketName: ${marketName}`);
       
@@ -435,6 +445,15 @@ export const marketResearchSimpleRouter = router({
       const { location } = input;
       const userId = ctx.user?.id;
       const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+
+      // Enforce daily usage limits (admins bypass)
+      const limitCheck = await canPerformMarketResearch(userId, undefined, ipAddress);
+      if (!limitCheck.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: limitCheck.reason || 'Daily market research limit reached. Please try again tomorrow.',
+        });
+      }
       
       console.log(`[getMarketReportByLocation] Getting market data for: ${location}`);
       
@@ -699,6 +718,15 @@ export const marketResearchSimpleRouter = router({
       const { submarketId, submarketName } = input;
       const userId = ctx.user?.id;
       const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+
+      // Enforce daily usage limits (admins bypass)
+      const limitCheck = await canPerformMarketResearch(userId, undefined, ipAddress);
+      if (!limitCheck.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: limitCheck.reason || 'Daily market research limit reached. Please try again tomorrow.',
+        });
+      }
       
       console.log(`[getSubmarketReport] Fetching report for submarket: ${submarketId} (${submarketName}`);
       

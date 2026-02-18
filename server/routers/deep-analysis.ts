@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDeepAnalysis, startDeepAnalysis } from "../deep-analysis";
 import { logActivity, ActionCategory } from "../activity";
+import { canPerformAnalysis, recordAnalysisUsage } from "../usage-limits";
 
 export const deepAnalysisRouter = router({
     // Start deep analysis for a report
@@ -11,8 +12,26 @@ export const deepAnalysisRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         try {
+          // Enforce daily usage limits (admins bypass)
+          const userId = ctx.user?.id;
+          const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+          const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+          if (!limitCheck.allowed) {
+            return {
+              success: false,
+              error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+              data: null,
+              limitReached: true,
+            };
+          }
+
           console.log(`[DeepAnalysis] Starting for report ${input.reportId}`);
           const result = await startDeepAnalysis(input.reportId);
+
+          // Record usage after successful deep analysis start
+          await recordAnalysisUsage(userId, undefined, ipAddress, 5).catch(err =>
+            console.error('[DeepAnalysis] Error recording usage:', err)
+          );
           
           // Track activity for admin visibility
           logActivity({

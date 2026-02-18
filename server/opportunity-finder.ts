@@ -22,7 +22,7 @@ const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps
 const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
-import { recordAnalysisUsage } from './usage-limits';
+import { canPerformAnalysis, recordAnalysisUsage } from './usage-limits';
 import { getRentalizerComps } from './airdna';
 import { logActivity, ActionCategory, ActionType } from './activity';
 
@@ -651,6 +651,17 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Enforce daily usage limits (admins bypass)
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+        if (!limitCheck.allowed) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+          });
+        }
+
         // DO NOT normalize city names for HasData/Zillow search.
         // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
         // "Saint Louis" to "Saint Petersburg" instead. Zillow handles "St. Louis" correctly.
@@ -840,6 +851,17 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Enforce daily usage limits (admins bypass)
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+        if (!limitCheck.allowed) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+          });
+        }
+
         // DO NOT normalize city names for HasData/Zillow search.
         // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
         // "Saint Louis" to "Saint Petersburg" instead. Zillow handles "St. Louis" correctly.
@@ -1073,6 +1095,19 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Enforce daily usage limits (admins bypass)
+        const userId = ctx.user?.id;
+        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+        if (!limitCheck.allowed) {
+          return {
+            success: false,
+            error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+            property: input,
+            limitReached: true,
+          };
+        }
+
         console.log(`[Opportunity Finder] Validating property: ${input.address}`);
         
         // Get AirDNA estimate
@@ -1113,9 +1148,7 @@ export const opportunityFinderRouter = router({
                         monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :
                         'Not Recommended';
         
-        // Record AirDNA usage
-        const userId = ctx.user?.id;
-        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+        // Record AirDNA usage (userId/ipAddress already declared above for limit check)
         await recordAnalysisUsage(userId, undefined, ipAddress, 1).catch(err =>
           console.error('[OpportunityFinder] Error recording usage:', err)
         );
@@ -1195,6 +1228,17 @@ export const opportunityFinderRouter = router({
       minProfitThreshold: z.number().min(0).default(500),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Enforce daily usage limits (admins bypass)
+      const userId = ctx.user?.id;
+      const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
+      const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+      if (!limitCheck.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
+        });
+      }
+
       const { properties, minProfitThreshold } = input;
       console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties`);
       const startTime = Date.now();
@@ -1323,10 +1367,8 @@ export const opportunityFinderRouter = router({
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`[Batch Analyze] Complete: ${successful.length} succeeded, ${failed.length} failed in ${elapsed}s`);
 
-      // Record AirDNA usage for all successful analyses
+      // Record AirDNA usage for all successful analyses (userId/ipAddress already declared above for limit check)
       if (successful.length > 0) {
-        const userId = ctx.user?.id;
-        const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
         await recordAnalysisUsage(userId, undefined, ipAddress, successful.length).catch(err =>
           console.error('[BatchAnalyze] Error recording usage:', err)
         );
