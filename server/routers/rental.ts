@@ -119,14 +119,15 @@ export const rentalRouter = router({
     // Search for markets (for autocomplete)
     searchMarkets: publicProcedure
       .input(marketSearchInputSchema)
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           // Log activity
-          await logActivity({
+          logActivity({
+            userId: ctx.user?.id ?? null,
             action: ActionType.MARKET_SEARCH,
             actionCategory: ActionCategory.SEARCH,
             details: { searchTerm: input.searchTerm },
-          });
+          }).catch(() => {});
           
           // Use searchMarketsAPI which supports zip codes, cities, and submarkets
           const results = await searchMarketsAPI(input.searchTerm, input.limit);
@@ -969,14 +970,15 @@ export const rentalRouter = router({
     // Geocode a zip code to find the corresponding market and submarket
     geocodeZipCode: publicProcedure
       .input(z.object({ zipcode: z.string().length(5) }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
           console.log(`[geocodeZipCode] Looking up zip code: ${input.zipcode}`);
           
           const result = await geocodeZipCodeToMarket(input.zipcode);
           
           // Log activity
-          await logActivity({
+          logActivity({
+            userId: ctx.user?.id ?? null,
             action: ActionType.MARKET_SEARCH,
             actionCategory: ActionCategory.SEARCH,
             details: { 
@@ -988,7 +990,7 @@ export const rentalRouter = router({
               marketName: result.market?.name,
               success: result.success
             },
-          });
+          }).catch(() => {});
           
           return result;
         } catch (error) {
@@ -1100,6 +1102,25 @@ export const rentalRouter = router({
           await recordAnalysisUsage(userId, undefined, ipAddress, 15).catch(err => 
             console.error('[Rental] Error recording usage:', err)
           );
+
+          // Track activity for admin visibility
+          const property = report.property as any;
+          logActivity({
+            userId: ctx.user?.id ?? null,
+            action: ActionType.REPORT_GENERATED,
+            actionCategory: ActionCategory.ANALYSIS,
+            details: {
+              address: input.address,
+              bedrooms: input.bedrooms,
+              bathrooms: input.bathrooms,
+              city: property?.location?.city,
+              state: property?.location?.state,
+              marketName: property?.location?.market_name,
+              annualRevenue: property?.estimates?.annual_revenue,
+              occupancyRate: property?.estimates?.occupancy_rate,
+              adr: property?.estimates?.average_daily_rate,
+            },
+          }).catch(() => {});
 
           return {
             success: true,
@@ -1785,17 +1806,18 @@ export const rentalRouter = router({
     // Submit lead and store in database
     submitLead: publicProcedure
       .input(leadInputSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           // Log activity
-          await logActivity({
+          logActivity({
+            userId: ctx.user?.id ?? null,
             action: ActionType.LEAD_SUBMITTED,
             actionCategory: ActionCategory.LEAD,
             details: {
               email: input.email,
               address: input.address,
             },
-          });
+          }).catch(() => {});
           
           const db = await getDb();
           

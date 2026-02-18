@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDeepAnalysis, startDeepAnalysis } from "../deep-analysis";
+import { logActivity, ActionCategory } from "../activity";
 
 export const deepAnalysisRouter = router({
     // Start deep analysis for a report
@@ -8,10 +9,21 @@ export const deepAnalysisRouter = router({
       .input(z.object({
         reportId: z.number().int().positive(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           console.log(`[DeepAnalysis] Starting for report ${input.reportId}`);
           const result = await startDeepAnalysis(input.reportId);
+          
+          // Track activity for admin visibility
+          logActivity({
+            userId: ctx.user?.id ?? null,
+            action: 'deep_analysis_started',
+            actionCategory: ActionCategory.ANALYSIS,
+            details: {
+              reportId: input.reportId,
+            },
+          }).catch(() => {});
+          
           return {
             success: true,
             data: result,

@@ -24,6 +24,7 @@ import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowProp
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 import { recordAnalysisUsage } from './usage-limits';
 import { getRentalizerComps } from './airdna';
+import { logActivity, ActionCategory, ActionType } from './activity';
 
 // ============================================
 // CITY NAME NORMALIZATION
@@ -648,7 +649,7 @@ export const opportunityFinderRouter = router({
       page: z.number().optional().default(1),
       loadMore: z.boolean().optional().default(false), // If true, fetch only the specified page
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         // DO NOT normalize city names for HasData/Zillow search.
         // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
@@ -782,6 +783,25 @@ export const opportunityFinderRouter = router({
         
         console.log(`[Opportunity Finder] Fetched ${allProperties.length} total rental properties, hasMore: ${hasMore}`);
         
+        // Track activity for admin visibility
+        logActivity({
+          userId: ctx.user?.id ?? null,
+          action: ActionType.PROPERTY_SEARCH,
+          actionCategory: ActionCategory.SEARCH,
+          details: {
+            searchType: 'zillow_rentals',
+            location: input.location,
+            disambiguated: disambiguatedLocation,
+            filterZipCode,
+            resultsCount: allProperties.length,
+            totalResults,
+            priceMin: input.priceMin,
+            priceMax: input.priceMax,
+            bedsMin: input.bedsMin,
+            bedsMax: input.bedsMax,
+          },
+        }).catch(() => {});
+        
         return {
           success: true,
           totalResults: totalResults,
@@ -818,7 +838,7 @@ export const opportunityFinderRouter = router({
       page: z.number().optional().default(1),
       loadMore: z.boolean().optional().default(false), // If true, fetch only the specified page
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         // DO NOT normalize city names for HasData/Zillow search.
         // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
@@ -947,6 +967,25 @@ export const opportunityFinderRouter = router({
         const hasMore = initialPagesToFetch < estimatedTotalPages;
         
         console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties for sale, hasMore: ${hasMore}`);
+        
+        // Track activity for admin visibility
+        logActivity({
+          userId: ctx.user?.id ?? null,
+          action: ActionType.PROPERTY_SEARCH,
+          actionCategory: ActionCategory.SEARCH,
+          details: {
+            searchType: 'zillow_for_sale',
+            location: input.location,
+            disambiguated: disambiguatedLocation,
+            filterZipCode,
+            resultsCount: allProperties.length,
+            totalResults,
+            priceMin: input.priceMin,
+            priceMax: input.priceMax,
+            bedsMin: input.bedsMin,
+            bedsMax: input.bedsMax,
+          },
+        }).catch(() => {});
         
         return {
           success: true,
@@ -1080,6 +1119,26 @@ export const opportunityFinderRouter = router({
         await recordAnalysisUsage(userId, undefined, ipAddress, 1).catch(err =>
           console.error('[OpportunityFinder] Error recording usage:', err)
         );
+
+        // Track activity for admin visibility
+        logActivity({
+          userId: ctx.user?.id ?? null,
+          action: ActionType.PROPERTY_ANALYSIS,
+          actionCategory: ActionCategory.ANALYSIS,
+          details: {
+            searchType: 'opportunity_validate',
+            address: input.address,
+            bedrooms: input.bedrooms,
+            bathrooms: input.bathrooms,
+            rent: input.rent,
+            annualRevenue: Math.round(headlineRevenue),
+            monthlyProfit: Math.round(monthlyProfit),
+            verdict,
+            isGoodDeal,
+            revenueSource: compMedian.source,
+            compCount: compMedian.compCount,
+          },
+        }).catch(() => {});
 
         return {
           success: true,
@@ -1272,6 +1331,24 @@ export const opportunityFinderRouter = router({
           console.error('[BatchAnalyze] Error recording usage:', err)
         );
       }
+
+      // Track activity for admin visibility
+      const topDeal = successful[0];
+      logActivity({
+        userId: ctx.user?.id ?? null,
+        action: 'batch_property_analysis',
+        actionCategory: ActionCategory.ANALYSIS,
+        details: {
+          searchType: 'opportunity_batch_validate',
+          totalProperties: properties.length,
+          successCount: successful.length,
+          failedCount: failed.length,
+          goodDeals: successful.filter(r => r.isGoodDeal).length,
+          topDealAddress: topDeal?.property?.address,
+          topDealProfit: topDeal?.projection?.monthlyProfit,
+          elapsedSeconds: parseFloat(elapsed),
+        },
+      }).catch(() => {});
 
       return {
         success: true,

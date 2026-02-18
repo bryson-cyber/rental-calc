@@ -12,8 +12,8 @@ import { z } from "zod";
  * 2. universal_shareable_reports - Reports shared via UniversalShareButton (/share/:shareCode)
  * 3. analysis_reports - All analysis runs (revenue calculations)
  * 
- * For admin users: shows ALL reports across the system
- * For regular users: shows reports they created (by userId or email)
+ * Always shows reports created by the current logged-in user
+ * Admin has a separate "All Reports" view in the admin dashboard
  */
 export const myReportsRouter = router({
   /**
@@ -34,7 +34,7 @@ export const myReportsRouter = router({
       const offset = input?.offset ?? 0;
       const typeFilter = input?.type ?? 'all';
       const userId = ctx.user.id;
-      const isAdmin = ctx.user.role === 'admin';
+      // Always filter by current user - admin sees all reports in admin dashboard instead
 
       // Build unified report list from all sources
       const reports: Array<{
@@ -60,9 +60,7 @@ export const myReportsRouter = router({
       // 1. Query shared_reports (property, market, full types)
       try {
         const sharedConditions = [];
-        if (!isAdmin) {
-          sharedConditions.push(eq(sharedReports.createdByUserId, userId));
-        }
+        sharedConditions.push(eq(sharedReports.createdByUserId, userId));
         if (typeFilter !== 'all' && ['property', 'market', 'full'].includes(typeFilter)) {
           sharedConditions.push(eq(sharedReports.reportType, typeFilter as any));
         }
@@ -119,9 +117,7 @@ export const myReportsRouter = router({
       // 2. Query universal_shareable_reports (revenue, validator, ai_advisor, market, regulation)
       try {
         const universalConditions = [];
-        if (!isAdmin) {
-          universalConditions.push(eq(universalShareableReports.creatorUserId, userId));
-        }
+        universalConditions.push(eq(universalShareableReports.creatorUserId, userId));
         if (typeFilter !== 'all' && ['revenue', 'validator', 'ai_advisor', 'market', 'regulation'].includes(typeFilter)) {
           universalConditions.push(eq(universalShareableReports.reportType, typeFilter as any));
         }
@@ -175,10 +171,10 @@ export const myReportsRouter = router({
         console.error('[MyReports] Error querying universal_shareable_reports:', e);
       }
 
-      // 3. Query analysis_reports (all analysis runs - only for admin since these don't have userId)
-      if (isAdmin && (typeFilter === 'all' || typeFilter === 'revenue')) {
+      // 3. Query analysis_reports - skip for My Reports since these don't have userId association
+      if (false && (typeFilter === 'all' || typeFilter === 'revenue')) {
         try {
-          const analysisRows = await db
+          const analysisRows = await db!
             .select({
               id: analysisReports.id,
               address: analysisReports.address,
@@ -251,7 +247,7 @@ export const myReportsRouter = router({
     if (!db) throw new Error('Database not available');
 
     const userId = ctx.user.id;
-    const isAdmin = ctx.user.role === 'admin';
+    // Always filter by current user
 
     const counts: Record<string, number> = {
       all: 0,
@@ -265,8 +261,8 @@ export const myReportsRouter = router({
     };
 
     try {
-      // Count shared_reports
-      const sharedCondition = isAdmin ? undefined : eq(sharedReports.createdByUserId, userId);
+      // Count shared_reports (always filtered to current user)
+      const sharedCondition = eq(sharedReports.createdByUserId, userId);
       const [sharedCounts] = await db
         .select({
           reportType: sharedReports.reportType,
@@ -290,8 +286,8 @@ export const myReportsRouter = router({
         counts[row.reportType] = (counts[row.reportType] || 0) + Number(row.count);
       }
 
-      // Count universal_shareable_reports
-      const universalCondition = isAdmin ? undefined : eq(universalShareableReports.creatorUserId, userId);
+      // Count universal_shareable_reports (always filtered to current user)
+      const universalCondition = eq(universalShareableReports.creatorUserId, userId);
       const universalCountRows = await db
         .select({
           reportType: universalShareableReports.reportType,
@@ -305,9 +301,9 @@ export const myReportsRouter = router({
         counts[row.reportType] = (counts[row.reportType] || 0) + Number(row.count);
       }
 
-      // Count analysis_reports (admin only)
-      if (isAdmin) {
-        const [analysisCount] = await db
+      // Count analysis_reports - skip for My Reports since these don't have userId
+      if (false) {
+        const [analysisCount] = await db!
           .select({ count: sql<number>`COUNT(*)` })
           .from(analysisReports)
           .where(isNotNull(analysisReports.annualRevenueRealistic));

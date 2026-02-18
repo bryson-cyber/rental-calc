@@ -12085,3 +12085,22 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: added handling for "63108, USA" and "63108, City, ST, USA" formats from Google Places
 - [x] disambiguateLocation now extracts bare zip code from all Google Places formats
 - [x] All 1495 tests pass
+
+## BUG: My Reports showing all users' reports instead of current user only — FIXED
+- [x] Find the My Reports query — was showing all reports for admin users
+- [x] Fix: always filter by current user's userId regardless of admin role
+- [x] Admin can still see all reports via the admin dashboard
+
+## Feature: Admin User Activity Tracking — COMPLETE
+- [x] Design user activity events schema (property views, reports generated, tools used)
+- [x] Create activity_logs table in database with userId, sessionId, action, actionCategory, details JSON
+- [x] Create tool_usage_events table for frontend-tracked events with userId support
+- [x] Add server-side activity tracking to key user actions:
+  - [x] rental.ts: searchMarkets, geocodeZipcode, getPropertyReport, submitLead (already had userId)
+  - [x] opportunity-finder.ts: searchZillowRentals, searchZillowForSale, validateProperty, batchValidateProperties
+  - [x] deep-analysis.ts: start
+  - [x] advanced.ts: analyzeProperty (added userId), propertyAdvisorMax, marketAdvisorMax
+- [x] Build admin-tracking router with getUserActivityFeed, getUserActivitySummary, trackToolUsage
+- [x] Wire admin-tracking router into main router
+- [x] Write 27 vitest tests for activity tracking (all pass)
+- [x] All 1522 tests pass, 0 TypeScript errors

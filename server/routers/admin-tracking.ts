@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { emailOptins, personalizedLinks, linkClicks, promotions, toolUsageEvents } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { emailOptins, personalizedLinks, linkClicks, promotions, toolUsageEvents, users } from "../../drizzle/schema";
+import { eq, desc, sql, and, gte, isNotNull } from "drizzle-orm";
 
 export const adminTrackingRouter = router({
     // Create a personalized link
@@ -223,13 +223,19 @@ export const adminTrackingRouter = router({
         utmCampaign: z.string().optional(),
         personalizedLinkId: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const db = await getDb();
           if (!db) throw new Error('Database not available');
+          
+          // Capture userId from session when available
+          const userId = ctx.user?.id || undefined;
+          const email = input.email || ctx.user?.email || undefined;
+          
           const result = await db.insert(toolUsageEvents).values({
-            email: input.email,
+            email,
             sessionId: input.sessionId,
+            userId,
             eventType: input.eventType,
             toolName: input.toolName,
             city: input.city,
@@ -244,7 +250,7 @@ export const adminTrackingRouter = router({
             personalizedLinkId: input.personalizedLinkId,
           });
           
-          console.log('[ToolUsage] Event tracked:', input.eventType, input.toolName, input.city);
+          console.log('[ToolUsage] Event tracked:', input.eventType, input.toolName, input.city, userId ? `user:${userId}` : 'anonymous');
           
           return {
             success: true,
@@ -289,6 +295,211 @@ export const adminTrackingRouter = router({
           byCity,
           byEvent,
           recentEvents: results.slice(0, 20),
+        };
+      }),
+    
+    // Get per-user activity feed (admin) — shows what each user is doing
+    getUserActivityFeed: protectedProcedure
+      .input(z.object({
+        limit: z.number().default(100),
+        userId: z.number().optional(), // Filter to specific user
+        days: z.number().default(30),
+      }))
+      .query(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new Error('Admin access required');
+        }
+        
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - input.days);
+        
+        const conditions = [
+          gte(toolUsageEvents.createdAt, cutoffDate),
+        ];
+        
+        if (input.userId) {
+          conditions.push(eq(toolUsageEvents.userId, input.userId));
+        }
+        
+        const events = await db
+          .select({
+            id: toolUsageEvents.id,
+            userId: toolUsageEvents.userId,
+            email: toolUsageEvents.email,
+            sessionId: toolUsageEvents.sessionId,
+            eventType: toolUsageEvents.eventType,
+            toolName: toolUsageEvents.toolName,
+            city: toolUsageEvents.city,
+            state: toolUsageEvents.state,
+            zipCode: toolUsageEvents.zipCode,
+            address: toolUsageEvents.address,
+            revenueEstimate: toolUsageEvents.revenueEstimate,
+            regulationStatus: toolUsageEvents.regulationStatus,
+            utmSource: toolUsageEvents.utmSource,
+            utmMedium: toolUsageEvents.utmMedium,
+            utmCampaign: toolUsageEvents.utmCampaign,
+            createdAt: toolUsageEvents.createdAt,
+          })
+          .from(toolUsageEvents)
+          .where(and(...conditions))
+          .orderBy(desc(toolUsageEvents.createdAt))
+          .limit(input.limit);
+        
+        return events;
+      }),
+    
+    // Get user activity summary — grouped by user with their key actions (admin)
+    getUserActivitySummary: protectedProcedure
+      .input(z.object({
+        days: z.number().default(30),
+        limit: z.number().default(50),
+      }))
+      .query(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new Error('Admin access required');
+        }
+        
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - input.days);
+        
+        // Get all events in the time range that have a userId or email
+        const events = await db
+          .select()
+          .from(toolUsageEvents)
+          .where(and(
+            gte(toolUsageEvents.createdAt, cutoffDate),
+          ))
+          .orderBy(desc(toolUsageEvents.createdAt))
+          .limit(2000);
+        
+        // Group by user (userId or email or sessionId)
+        const userMap = new Map<string, {
+          userId: number | null;
+          email: string | null;
+          sessionId: string | null;
+          userName: string | null;
+          totalEvents: number;
+          lastActive: Date;
+          firstSeen: Date;
+          toolsUsed: Set<string>;
+          citiesSearched: Set<string>;
+          propertiesViewed: string[];
+          reportsGenerated: number;
+          revenueEstimates: number[];
+          utmSource: string | null;
+          utmCampaign: string | null;
+          events: typeof events;
+        }>();
+        
+        for (const event of events) {
+          // Use userId > email > sessionId as the grouping key
+          const key = event.userId ? `user:${event.userId}` : event.email ? `email:${event.email}` : `session:${event.sessionId}`;
+          
+          if (!userMap.has(key)) {
+            userMap.set(key, {
+              userId: event.userId,
+              email: event.email,
+              sessionId: event.sessionId,
+              userName: null,
+              totalEvents: 0,
+              lastActive: event.createdAt,
+              firstSeen: event.createdAt,
+              toolsUsed: new Set(),
+              citiesSearched: new Set(),
+              propertiesViewed: [],
+              reportsGenerated: 0,
+              revenueEstimates: [],
+              utmSource: event.utmSource,
+              utmCampaign: event.utmCampaign,
+              events: [],
+            });
+          }
+          
+          const user = userMap.get(key)!;
+          user.totalEvents++;
+          user.toolsUsed.add(event.toolName);
+          if (event.city && event.state) {
+            user.citiesSearched.add(`${event.city}, ${event.state}`);
+          }
+          if (event.address) {
+            user.propertiesViewed.push(event.address);
+          }
+          if (event.eventType === 'report_generated') {
+            user.reportsGenerated++;
+          }
+          if (event.revenueEstimate) {
+            user.revenueEstimates.push(event.revenueEstimate);
+          }
+          if (event.createdAt < user.firstSeen) {
+            user.firstSeen = event.createdAt;
+          }
+          // Update email/userId if we have better info
+          if (event.userId && !user.userId) user.userId = event.userId;
+          if (event.email && !user.email) user.email = event.email;
+          if (!user.utmSource && event.utmSource) user.utmSource = event.utmSource;
+          if (!user.utmCampaign && event.utmCampaign) user.utmCampaign = event.utmCampaign;
+          user.events.push(event);
+        }
+        
+        // Resolve user names from the users table
+        const userIds = Array.from(userMap.values()).filter(u => u.userId).map(u => u.userId!);
+        if (userIds.length > 0) {
+          try {
+            const userRows = await db.select({ id: users.id, name: users.name, email: users.email }).from(users);
+            const nameMap = new Map(userRows.map(u => [u.id, { name: u.name, email: u.email }]));
+            for (const user of Array.from(userMap.values())) {
+              if (user.userId && nameMap.has(user.userId)) {
+                const info = nameMap.get(user.userId)!;
+                user.userName = info.name;
+                if (!user.email) user.email = info.email;
+              }
+            }
+          } catch (e) {
+            // Non-critical — continue without names
+          }
+        }
+        
+        // Convert to array and sort by last active
+        const summaries = Array.from(userMap.values())
+          .sort((a, b) => b.lastActive.getTime() - a.lastActive.getTime())
+          .slice(0, input.limit)
+          .map(u => ({
+            userId: u.userId,
+            email: u.email,
+            sessionId: u.sessionId,
+            userName: u.userName,
+            totalEvents: u.totalEvents,
+            lastActive: u.lastActive,
+            firstSeen: u.firstSeen,
+            toolsUsed: Array.from(u.toolsUsed),
+            citiesSearched: Array.from(u.citiesSearched),
+            propertiesViewed: Array.from(new Set(u.propertiesViewed)).slice(0, 10), // Dedupe, limit to 10
+            reportsGenerated: u.reportsGenerated,
+            avgRevenueEstimate: u.revenueEstimates.length > 0 
+              ? Math.round(u.revenueEstimates.reduce((a: number, b: number) => a + b, 0) / u.revenueEstimates.length)
+              : null,
+            utmSource: u.utmSource,
+            utmCampaign: u.utmCampaign,
+            recentEvents: u.events.slice(0, 5).map((e: any) => ({
+              eventType: e.eventType,
+              toolName: e.toolName,
+              city: e.city,
+              state: e.state,
+              address: e.address,
+              revenueEstimate: e.revenueEstimate,
+              createdAt: e.createdAt,
+            })),
+          }));
+        
+        return {
+          totalUsers: userMap.size,
+          users: summaries,
         };
       }),
     

@@ -253,6 +253,7 @@ export const advancedRouter = router({
           
           // Log activity
           await logActivity({
+            userId: ctx.user?.id ?? null,
             sessionId: input.sessionId,
             action: ActionType.PROPERTY_ANALYSIS,
             actionCategory: ActionCategory.ANALYSIS,
@@ -753,7 +754,7 @@ export const advancedRouter = router({
         })).optional(),
         reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const db = await getDb();
           
@@ -886,6 +887,22 @@ export const advancedRouter = router({
             occupancyRate: input.revenue.occupancy / 100, // Convert to decimal
           }).catch(err => console.error('[Notification] Failed to notify owner:', err));
           
+          // Track activity for admin visibility
+          logActivity({
+            userId: ctx.user?.id ?? null,
+            action: 'property_advisor_max',
+            actionCategory: ActionCategory.ANALYSIS,
+            details: {
+              address: input.property.address,
+              city: input.property.city,
+              state: input.property.state,
+              bedrooms: input.property.bedrooms,
+              bathrooms: input.property.bathrooms,
+              projectedRevenue: input.revenue.projected,
+              reportMode: input.reportMode,
+            },
+          }).catch(() => {});
+          
           return {
             success: true,
             data: { advice, cached: false },
@@ -972,7 +989,7 @@ export const advancedRouter = router({
         })).optional(),
         reportMode: z.enum(['pro', 'guided']).default('guided'),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const db = await getDb();
           
@@ -1044,6 +1061,19 @@ export const advancedRouter = router({
             averageOccupancy: input.metrics?.avgOccupancy ? input.metrics.avgOccupancy / 100 : undefined,
             listingCount: input.metrics?.totalListings,
           }).catch(err => console.error('[Notification] Failed to notify owner:', err));
+          
+          // Track activity for admin visibility
+          logActivity({
+            userId: ctx.user?.id ?? null,
+            action: 'market_advisor_max',
+            actionCategory: ActionCategory.ANALYSIS,
+            details: {
+              marketName: input.market.name,
+              city: input.market.city,
+              state: input.market.state,
+              reportMode: input.reportMode,
+            },
+          }).catch(() => {});
           
           return {
             success: true,
