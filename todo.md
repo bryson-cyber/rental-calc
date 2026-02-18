@@ -12069,3 +12069,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verified getPropertyReport() already had comp-median adjustment
 - [x] Comp-median logic: 3+ exact-match comps → median revenue; 3+ same-BR comps → P75 capped at 1.5x; else Rentalizer
 - [x] Run tests and verify (104 files, 1495 tests passed)
+
+## CRITICAL BUG: St. Louis, Missouri returns St. Petersburg, Florida (Step 2) — FIXED
+- [x] Reproduce bug: search "St. Louis, Missouri" in Step 2 (Find Your Market)
+- [x] Gather diagnostic info from server logs — found usersSearchTerm was "saint" (Zillow resolved to St. Petersburg)
+- [x] Root cause: normalizeCityName expanded "St." to "Saint", Zillow then matched "Saint Petersburg" over "Saint Louis"
+- [x] Fix: removed normalizeCityName from HasData/Zillow search paths (keep original abbreviations)
+- [x] Fix: added full state name → abbreviation conversion ("Missouri" → "MO") in disambiguateLocation
+- [x] Fix: added "City, FullStateName, USA" pattern handling for Google Places
+- [x] All 1495 tests pass

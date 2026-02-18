@@ -80,12 +80,58 @@ async function disambiguateLocation(location: string): Promise<string> {
     console.log(`[OpportunityFinder] Removed country suffix: "${location}" -> "${cleaned}"`);
     location = cleaned;
   }
-
-  // If location already contains a state abbreviation or full state name, use as-is
-  const statePattern = /,\s*([A-Z]{2}|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s*$/i;
   
-  if (statePattern.test(location)) {
-    console.log(`[OpportunityFinder] Location already has state: ${location}`);
+  // Handle: "City, FullStateName, USA" or "City, FullStateName, United States" -> "City, FullStateName"
+  // Google Places sometimes sends full state names with country suffix
+  const fullStateCountryPattern = /^(.+?,\s*(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)),\s*(?:USA|United States)$/i;
+  const fullStateCountryMatch = location.match(fullStateCountryPattern);
+  if (fullStateCountryMatch) {
+    const cleaned = fullStateCountryMatch[1];
+    console.log(`[OpportunityFinder] Removed country suffix (full state): "${location}" -> "${cleaned}"`);
+    location = cleaned;
+  }
+
+  // State name to abbreviation mapping for Zillow/HasData compatibility
+  // Zillow works better with "St. Louis, MO" than "St. Louis, Missouri"
+  const stateNameToAbbr: Record<string, string> = {
+    'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+    'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+    'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+    'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+    'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+    'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+    'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+    'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+    'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+    'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+    'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+    'wisconsin': 'WI', 'wyoming': 'WY'
+  };
+
+  // If location already contains a state abbreviation or full state name
+  const stateAbbrPattern = /,\s*([A-Z]{2})\s*$/;
+  const stateNamePattern = /,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s*$/i;
+  
+  // Check for state abbreviation first (already good format)
+  if (stateAbbrPattern.test(location)) {
+    console.log(`[OpportunityFinder] Location already has state abbreviation: ${location}`);
+    return location;
+  }
+  
+  // Check for full state name and convert to abbreviation
+  const fullStateMatch = location.match(stateNamePattern);
+  if (fullStateMatch) {
+    const stateName = fullStateMatch[1].toLowerCase();
+    const abbr = stateNameToAbbr[stateName];
+    if (abbr) {
+      const cityPart = location.replace(stateNamePattern, '');
+      const converted = `${cityPart}, ${abbr}`;
+      console.log(`[OpportunityFinder] Converted full state name: "${location}" -> "${converted}"`);
+      return converted;
+    }
+    // If somehow not in our map, return as-is
+    console.log(`[OpportunityFinder] Location has state name but no abbreviation found: ${location}`);
     return location;
   }
   
@@ -590,8 +636,10 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
-        const normalizedLocation = normalizeCityName(input.location);
+        // DO NOT normalize city names for HasData/Zillow search.
+        // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
+        // "Saint Louis" to "Saint Petersburg" instead. Zillow handles "St. Louis" correctly.
+        // normalizeCityName is only useful for AirDNA's local market database search.
         
         // Extract zip code from original input BEFORE disambiguation
         // Google Places may send "63108, Saint Louis, MO, USA" which gets disambiguated to "Saint Louis, MO"
@@ -599,10 +647,10 @@ export const opportunityFinderRouter = router({
         const zipCodeMatch = input.location.match(/\b(\d{5})\b/);
         const filterZipCode = zipCodeMatch ? zipCodeMatch[1] : undefined;
         
-        // Then disambiguate location by geocoding to get correct city + state
-        // This fixes issues where "Saint Louis" could match Florida instead of Missouri
-        const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
+        // Disambiguate location by geocoding to get correct city + state
+        // Pass the ORIGINAL location (not normalized) to preserve abbreviations like "St."
+        const disambiguatedLocation = await disambiguateLocation(input.location.trim());
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
         // If loadMore is true, just fetch the specific page
         if (input.loadMore && input.page > 1) {
@@ -758,17 +806,18 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
-        const normalizedLocation = normalizeCityName(input.location);
+        // DO NOT normalize city names for HasData/Zillow search.
+        // normalizeCityName expands "St." to "Saint" which causes Zillow to resolve
+        // "Saint Louis" to "Saint Petersburg" instead. Zillow handles "St. Louis" correctly.
         
         // Extract zip code from original input BEFORE disambiguation
         const zipCodeMatch = input.location.match(/\b(\d{5})\b/);
         const filterZipCode = zipCodeMatch ? zipCodeMatch[1] : undefined;
         
-        // Then disambiguate location by geocoding to get correct city + state
-        // This fixes issues where "Saint Louis" could match Florida instead of Missouri
-        const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
+        // Disambiguate location by geocoding to get correct city + state
+        // Pass the ORIGINAL location (not normalized) to preserve abbreviations like "St."
+        const disambiguatedLocation = await disambiguateLocation(input.location.trim());
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
         // If loadMore is true, just fetch the specific page
         if (input.loadMore && input.page > 1) {
