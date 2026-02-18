@@ -33,6 +33,7 @@ import { trpc } from '@/lib/trpc';
 import { Link } from 'wouter';
 import ChapterMarketReport from '@/components/ChapterMarketReport';
 import { useReportMode } from '@/contexts/ReportModeContext';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 // Types
 interface MarketSearchResult {
@@ -403,6 +404,9 @@ export default function MarketReport() {
               </p>
             </motion.div>
             
+            {/* Upgrade Banner */}
+            <UpgradeBanner type="market" className="mb-6" dismissible />
+
             {/* Search Card */}
             <motion.div 
               className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 md:p-10"

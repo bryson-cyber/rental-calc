@@ -24,6 +24,7 @@ import {
   BarChart3,
   Lightbulb
 } from 'lucide-react';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 interface DeepAnalysisData {
   historicalContext: {
@@ -215,6 +216,9 @@ export default function DeepAnalysis() {
       </header>
 
       <main className="container py-8">
+        {/* Upgrade Banner - shows when daily limit is reached */}
+        <UpgradeBanner type="property" className="mb-6" dismissible />
+
         {/* Loading State */}
         {(status === 'pending' || status === 'processing' || isLoading) && (
           <Card className="max-w-2xl mx-auto">

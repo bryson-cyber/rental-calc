@@ -126,6 +126,7 @@ import { LoginGate } from '@/components/LoginGate';
 const BuildFullReportButton = lazy(() => import('@/components/BuildFullReportButton').then(m => ({ default: m.BuildFullReportButton })));
 import StepErrorBoundary from '@/components/StepErrorBoundary';
 import { useReportMode } from '@/contexts/ReportModeContext';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -2567,6 +2568,9 @@ export default function LeadMagnet() {
             className="apple-card p-4 sm:p-6 md:p-8 lg:p-12"
           >
             
+            {/* Upgrade Banner - shows when daily limit is reached */}
+            <UpgradeBanner className="mb-6" dismissible />
+
             {/* Current Job Header */}
             <div className="mb-6 sm:mb-8 md:mb-10 pb-6 sm:pb-8 md:pb-10 border-b border-[oklch(0.92_0_0)]">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">

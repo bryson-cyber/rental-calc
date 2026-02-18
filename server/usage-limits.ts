@@ -7,7 +7,7 @@
  * Default limits:
  * - Property analyses: 5/day
  * - Market researches: 3/day
- * - API calls: 100/day (hard cap)
+ * - API calls: 50/day (hard cap)
  */
 
 import { getDb } from './db';
@@ -18,7 +18,7 @@ import { eq, and, sql } from 'drizzle-orm';
 const DEFAULT_LIMITS = {
   propertyAnalyses: 5,
   marketResearches: 3,
-  apiCalls: 100,
+  apiCalls: 50,
 };
 
 interface UsageStatus {
@@ -178,7 +178,7 @@ export async function canPerformAnalysis(
   if (status.apiCalls.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: 'Daily API limit reached. Please try again tomorrow.',
+      reason: 'Daily API limit reached. Upgrade to the Turnkey Program for unlimited access.',
       remaining: 0
     };
   }
@@ -186,7 +186,7 @@ export async function canPerformAnalysis(
   if (status.propertyAnalyses.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: `Daily analysis limit reached (${DEFAULT_LIMITS.propertyAnalyses}/day). Please try again tomorrow.`,
+      reason: `Daily analysis limit reached (${DEFAULT_LIMITS.propertyAnalyses}/day). Upgrade to the Turnkey Program for unlimited access.`,
       remaining: 0
     };
   }
@@ -214,7 +214,7 @@ export async function canPerformMarketResearch(
   if (status.apiCalls.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: 'Daily API limit reached. Please try again tomorrow.',
+      reason: 'Daily API limit reached. Upgrade to the Turnkey Program for unlimited access.',
       remaining: 0
     };
   }
@@ -222,7 +222,7 @@ export async function canPerformMarketResearch(
   if (status.marketResearches.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: `Daily market research limit reached (${DEFAULT_LIMITS.marketResearches}/day). Please try again tomorrow.`,
+      reason: `Daily market research limit reached (${DEFAULT_LIMITS.marketResearches}/day). Upgrade to the Turnkey Program for unlimited access.`,
       remaining: 0
     };
   }

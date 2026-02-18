@@ -220,11 +220,11 @@ describe('Usage Limit Enforcement', () => {
     });
 
     it('should have correct default limits', async () => {
-      // The default limits are 5 analyses/day, 3 market researches/day, 100 API calls/day
+      // The default limits are 5 analyses/day, 3 market researches/day, 50 API calls/day
       const src = readFile(path.join(SERVER_DIR, 'usage-limits.ts'));
       expect(src).toContain('propertyAnalyses: 5');
       expect(src).toContain('marketResearches: 3');
-      expect(src).toContain('apiCalls: 100');
+      expect(src).toContain('apiCalls: 50');
     });
 
     it('should bypass limits for admin users', async () => {

@@ -12,6 +12,7 @@ import { Link, useSearch } from 'wouter';
 import { ArrowLeft, Search, Home, Sparkles } from 'lucide-react';
 import OpportunityFinderStep from '@/components/OpportunityFinderStep';
 import { SharePageButton } from '@/components/SharePageButton';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 export default function OpportunityFinder() {
   const [currentLocation, setCurrentLocation] = useState<{ city?: string; state?: string } | null>(null);
@@ -92,6 +93,7 @@ export default function OpportunityFinder() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
+          <UpgradeBanner type="property" className="mb-6" dismissible />
           <OpportunityFinderStep
             onSelectProperty={(property) => {
               // Navigate to analyze the selected property

@@ -120,12 +120,12 @@ describe('usage-limits', () => {
     });
 
     it('blocks analysis when daily limit reached', async () => {
-      // Return a usage record that's at the limit
+      // Return a usage record that's at the property analysis limit
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 5,
         marketResearches: 0,
-        apiCallsCount: 50,
+        apiCallsCount: 10,
       }];
       const result = await canPerformAnalysis(undefined, undefined, '192.168.1.1');
       expect(result.allowed).toBe(false);
@@ -138,7 +138,7 @@ describe('usage-limits', () => {
         id: 1,
         propertyAnalyses: 1,
         marketResearches: 0,
-        apiCallsCount: 100,
+        apiCallsCount: 50,
       }];
       const result = await canPerformAnalysis(undefined, undefined, '192.168.1.1');
       expect(result.allowed).toBe(false);
@@ -214,7 +214,7 @@ describe('usage-limits', () => {
         id: 1,
         propertyAnalyses: 5,
         marketResearches: 0,
-        apiCallsCount: 50,
+        apiCallsCount: 10,
       }];
       const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
       expect(status.canAnalyze).toBe(false);

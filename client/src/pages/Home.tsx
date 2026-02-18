@@ -47,6 +47,7 @@ import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/Enh
 import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
 import { SEOHead, calculatorSchema, organizationSchema } from '@/components/SEOHead';
 import { UsageLimitBadge } from '@/components/UsageLimitBadge';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { useReportMode } from '@/contexts/ReportModeContext';
 
 // Type definitions based on API response
@@ -613,17 +614,18 @@ export default function RentalEstimator() {
               </div>
 
               {/* Error Message */}
-              {error && (
-                <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${error.includes('limit reached') ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
-                  <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${error.includes('limit reached') ? 'text-amber-500' : 'text-red-500'}`} />
-                  <div>
-                    <p className={`text-sm font-sans ${error.includes('limit reached') ? 'text-amber-700' : 'text-red-700'}`}>{error}</p>
-                    {error.includes('limit reached') && (
-                      <p className="text-xs text-amber-600 mt-1 font-sans">Usage limits reset daily. Contact Coach Inayah for unlimited access.</p>
-                    )}
-                  </div>
+              {error && !error.toLowerCase().includes('limit reached') && (
+                <div className="mb-6 p-4 rounded-xl flex items-start gap-3 bg-red-50 border border-red-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" />
+                  <p className="text-sm font-sans text-red-700">{error}</p>
                 </div>
               )}
+
+              {/* Upgrade Banner - shows when daily limit is reached */}
+              {error && error.toLowerCase().includes('limit reached') && (
+                <UpgradeBanner forceShow={true} className="mb-6" />
+              )}
+              <UpgradeBanner className="mb-6" />
 
               {/* Zillow URL Input */}
               {inputType === 'zillow' && (
@@ -919,11 +921,15 @@ export default function RentalEstimator() {
               className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8"
               variants={itemVariants}
             >
-              {error && (
+              {error && !error.toLowerCase().includes('limit reached') && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-red-700 text-sm font-sans">{error}</p>
                 </div>
+              )}
+
+              {error && error.toLowerCase().includes('limit reached') && (
+                <UpgradeBanner forceShow={true} className="mb-6" />
               )}
 
               <div className="space-y-5">

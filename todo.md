@@ -12116,3 +12116,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add canPerformAnalysis + recordAnalysisUsage to deep-analysis.ts start
 - [x] Write 28 structural tests to verify limit enforcement across all files
 - [x] All tests pass (28/28), 0 TypeScript errors
+
+## Feature: Reduce daily API limit to 50 and add upgrade banner — COMPLETE
+- [x] Change DEFAULT_LIMITS.apiCalls from 100 to 50 in server/usage-limits.ts
+- [x] Create UpgradeBanner component with Turnkey Program link
+- [x] Create UpgradeBannerInline compact variant
+- [x] Banner links to https://masterclass.coachinayah.com/the-turnkey-program
+- [x] Integrate banner into Home, OpportunityFinder, PropertyAnalyzer, DeepAnalysis, MarketReport, MarketAdvisor, LeadMagnet
+- [x] Update UsageLimitBadge tooltip to show Turnkey link when limit reached
+- [x] Update all backend error messages to mention Turnkey Program upgrade
+- [x] Update tests for new limit value (50 API calls/day)
+- [x] All 1550 tests pass, 0 TypeScript errors

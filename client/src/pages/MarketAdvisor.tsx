@@ -28,6 +28,7 @@ import { MarketComparison, ComparisonBar, type MarketComparisonData } from '@/co
 import { SharePageButton } from '@/components/SharePageButton';
 import { AnimatePresence } from 'framer-motion';
 import { useReportMode } from '@/contexts/ReportModeContext';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 export default function MarketAdvisor() {
   const [comparisonMarkets, setComparisonMarkets] = useState<MarketComparisonData[]>([]);
@@ -178,6 +179,8 @@ export default function MarketAdvisor() {
       <main className="py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-8">
+            {/* Upgrade Banner - shows when daily limit is reached */}
+            <UpgradeBanner type="market" dismissible />
             {/* Market Comparison Section */}
             <AnimatePresence>
               {showComparison && comparisonMarkets.length > 0 && (

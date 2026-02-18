@@ -2,6 +2,17 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
+// Mock usage limits to bypass DB checks
+vi.mock('./usage-limits', () => ({
+  canPerformAnalysis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10 }),
+  canPerformMarketResearch: vi.fn().mockResolvedValue({ allowed: true, remaining: 10 }),
+  recordAnalysisUsage: vi.fn().mockResolvedValue(undefined),
+  recordMarketResearchUsage: vi.fn().mockResolvedValue(undefined),
+  recordApiCallsUsage: vi.fn().mockResolvedValue(undefined),
+  getUsageStatus: vi.fn().mockResolvedValue({ propertyAnalyses: { used: 0, limit: 5, remaining: 5 }, marketResearches: { used: 0, limit: 3, remaining: 3 }, apiCalls: { used: 0, limit: 50, remaining: 50 }, isAdmin: false, canAnalyze: true, canResearchMarket: true }),
+  isUserAdmin: vi.fn().mockResolvedValue(false),
+}));
+
 // Mock the rate limiter to bypass DB checks and use our mock fetch directly
 vi.mock('./airdna-rate-limiter', async (importOriginal) => {
   return {

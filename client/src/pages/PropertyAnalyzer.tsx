@@ -54,6 +54,7 @@ import { toast } from 'sonner';
 import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
 import NarrativeSkeleton, { InlineNarrativeSkeleton } from '@/components/NarrativeSkeleton';
 import { useReportMode } from '@/contexts/ReportModeContext';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 // Export PDF Button Component with Progress Indicator
 function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms, analysisData }: {
@@ -1062,6 +1063,9 @@ export default function PropertyAnalyzer() {
       
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Upgrade Banner - shows when daily limit is reached */}
+        <UpgradeBanner type="property" className="mb-6" dismissible />
+
         {/* Hero Section */}
         {!result && !isAnalyzing && (
           <div className="text-center mb-12">
