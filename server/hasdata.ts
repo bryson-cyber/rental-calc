@@ -20,6 +20,7 @@ export interface ZillowListingParams {
   bathsMax?: number;
   homeTypes?: string[]; // SINGLE_FAMILY, CONDO, TOWNHOUSE, APARTMENT, etc.
   page?: number;
+  filterZipCode?: string; // Optional: filter results to only this zip code (used when user searches by zip but keyword gets disambiguated to city)
 }
 
 export interface ZillowProperty {
@@ -157,15 +158,17 @@ export async function searchZillowListings(
     // Filter out properties without price - they're not useful for analysis
     const propertiesWithPrice = properties.filter(p => p.price > 0);
     
-    // If the search keyword looks like a zip code, filter to only show properties in that zip code
-    // This ensures strict zip code matching when users search by zip code
+    // Filter by zip code if:
+    // 1. The search keyword IS a zip code (direct zip search), OR
+    // 2. A filterZipCode was explicitly provided (zip was extracted from user input before disambiguation)
     const isZipCodeSearch = /^\d{5}$/.test(params.keyword.trim());
-    const filteredProperties = isZipCodeSearch 
-      ? propertiesWithPrice.filter(p => p.zipCode === params.keyword.trim())
+    const targetZipCode = params.filterZipCode || (isZipCodeSearch ? params.keyword.trim() : null);
+    const filteredProperties = targetZipCode
+      ? propertiesWithPrice.filter(p => p.zipCode === targetZipCode)
       : propertiesWithPrice;
     
-    if (isZipCodeSearch && filteredProperties.length < propertiesWithPrice.length) {
-      console.log(`[HasData] Filtered ${propertiesWithPrice.length - filteredProperties.length} properties that didn't match zip code ${params.keyword}`);
+    if (targetZipCode && filteredProperties.length < propertiesWithPrice.length) {
+      console.log(`[HasData] Filtered ${propertiesWithPrice.length - filteredProperties.length} properties that didn't match zip code ${targetZipCode}`);
     }
     
     // Extract pagination info from the correct API response structure
@@ -209,7 +212,7 @@ export async function searchZillowListings(
     console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data, ${filteredProperties.length} after zip filter. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}, hasNextPage: ${!!data.pagination?.nextPage}`);
 
     // For zip code searches, adjust totalResults to reflect filtered count
-    const adjustedTotalResults = isZipCodeSearch ? filteredProperties.length : totalResults;
+    const adjustedTotalResults = targetZipCode ? filteredProperties.length : totalResults;
     
     return {
       success: true,

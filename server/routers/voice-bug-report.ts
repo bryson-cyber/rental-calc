@@ -13,7 +13,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { transcribeAudio } from "../_core/voiceTranscription";
-import { callLLM } from "../llm-provider";
+import { invokeLLM } from "../_core/llm";
 import { storagePut } from "../storage";
 import { getDb } from "../db";
 import { bugReports } from "../../drizzle/schema";
@@ -108,33 +108,11 @@ async function triageBug(parsed: {
   manusPrompt: string;
 }> {
   try {
-    const prompt = `Triage this bug:
-
-**Title:** ${parsed.title}
-**Description:** ${parsed.description}
-**Steps to Reproduce:** ${parsed.stepsToReproduce}
-**Expected:** ${parsed.expectedBehavior}
-**Actual:** ${parsed.actualBehavior}
-**Severity:** ${parsed.severity}
-**Feature:** ${parsed.affectedFeature}
-**Page:** ${context.pagePath || 'unknown'}
-**Tool/Tab:** ${context.toolName || 'unknown'}
-${context.navTrail ? `**Navigation Trail:**\n${context.navTrail}` : ''}
-${context.transcript ? `**Voice Transcript:** "${context.transcript}"` : ''}
-
-Respond with ONLY a JSON object with these exact fields:
-{
-  "likelyFiles": ["file1.ts", "file2.tsx"],
-  "diagnosis": "Brief technical diagnosis...",
-  "suggestedApproach": "Suggested fix approach...",
-  "manusPrompt": "Copy-paste-ready prompt for Manus..."
-}`;
-
-    const response = await callLLM(prompt, {
-      model: 'flash',
-      thinkingLevel: 'low',
-      maxTokens: 1024,
-      systemPrompt: `You are a senior developer triaging bugs for the Coach Inayah Turnkey Tool — a rental property analysis web app built with React + tRPC + Express + Drizzle ORM.
+    const result = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You are a senior developer triaging bugs for the Coach Inayah Turnkey Tool — a rental property analysis web app built with React + tRPC + Express + Drizzle ORM.
 
 ${CODEBASE_MAP}
 
@@ -146,16 +124,60 @@ Given a bug report, you must:
 
 The Manus prompt should be specific, actionable, and include the bug details + affected files + what needs to change. Write it as if you're instructing an AI coding assistant.
 
-Respond with ONLY a JSON object. No markdown code blocks.`,
+Return JSON.`,
+        },
+        {
+          role: 'user',
+          content: `Triage this bug:
+
+**Title:** ${parsed.title}
+**Description:** ${parsed.description}
+**Steps to Reproduce:** ${parsed.stepsToReproduce}
+**Expected:** ${parsed.expectedBehavior}
+**Actual:** ${parsed.actualBehavior}
+**Severity:** ${parsed.severity}
+**Feature:** ${parsed.affectedFeature}
+**Page:** ${context.pagePath || 'unknown'}
+**Tool/Tab:** ${context.toolName || 'unknown'}
+${context.navTrail ? `**Navigation Trail:**\n${context.navTrail}` : ''}
+${context.transcript ? `**Voice Transcript:** "${context.transcript}"` : ''}`,
+        },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'bug_triage',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              likelyFiles: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'List of likely affected file paths (2-5 files)',
+              },
+              diagnosis: {
+                type: 'string',
+                description: 'Brief technical diagnosis of what is probably wrong (2-3 sentences)',
+              },
+              suggestedApproach: {
+                type: 'string',
+                description: 'Suggested fix approach (1-3 sentences)',
+              },
+              manusPrompt: {
+                type: 'string',
+                description: 'A complete, copy-paste-ready prompt for Manus chat to fix this bug. Should be specific and actionable, referencing exact files and what needs to change.',
+              },
+            },
+            required: ['likelyFiles', 'diagnosis', 'suggestedApproach', 'manusPrompt'],
+            additionalProperties: false,
+          },
+        },
+      },
     });
 
-    // Parse JSON from response
-    let jsonStr = response.trim();
-    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-    else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-    
-    const triage = JSON.parse(jsonStr.trim());
+    const content = result.choices[0]?.message?.content;
+    const triage = typeof content === 'string' ? JSON.parse(content) : null;
 
     if (!triage) {
       return {
@@ -338,41 +360,46 @@ export const voiceBugReportRouter = router({
           input.city && input.state ? `Location: ${input.city}, ${input.state}` : null,
         ].filter(Boolean).join('\n');
         
-        const parsePrompt = `Parse this voice bug report into structured fields:
-
-"${transcript}"
-
-${contextInfo ? `Current context:\n${contextInfo}` : ''}
-
-Respond with ONLY a JSON object with these exact fields:
-{
-  "title": "A concise bug title (max 80 chars)",
-  "description": "Detailed description of the bug",
-  "stepsToReproduce": "Steps to reproduce the bug, numbered list",
-  "expectedBehavior": "What should happen",
-  "actualBehavior": "What actually happens",
-  "severity": "low, medium, high, or critical",
-  "affectedFeature": "Which feature/tool is affected"
-}`;
-
-        const parseResponse = await callLLM(parsePrompt, {
-          model: 'flash',
-          thinkingLevel: 'low',
-          maxTokens: 512,
-          systemPrompt: `You are a bug report parser. Given a voice transcript describing a software bug, extract structured information into a JSON format. Be concise but accurate. If the speaker doesn't mention something, leave it empty.
+        const parseResult = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: `You are a bug report parser. Given a voice transcript describing a software bug, extract structured information into a JSON format. Be concise but accurate. If the speaker doesn't mention something, leave it empty.
 
 The application is a rental property analysis tool called "Coach Inayah Turnkey Tool" that helps users analyze short-term rental markets and properties.
 
-Respond with ONLY a JSON object. No markdown code blocks.`,
+${contextInfo ? `Current context:\n${contextInfo}` : ''}`,
+            },
+            {
+              role: 'user',
+              content: `Parse this voice bug report into structured fields:\n\n"${transcript}"`,
+            },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'bug_report',
+              strict: true,
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', description: 'A concise bug title (max 80 chars)' },
+                  description: { type: 'string', description: 'Detailed description of the bug' },
+                  stepsToReproduce: { type: 'string', description: 'Steps to reproduce the bug, numbered list' },
+                  expectedBehavior: { type: 'string', description: 'What should happen' },
+                  actualBehavior: { type: 'string', description: 'What actually happens' },
+                  severity: { type: 'string', description: 'Bug severity: low, medium, high, or critical' },
+                  affectedFeature: { type: 'string', description: 'Which feature/tool is affected' },
+                },
+                required: ['title', 'description', 'stepsToReproduce', 'expectedBehavior', 'actualBehavior', 'severity', 'affectedFeature'],
+                additionalProperties: false,
+              },
+            },
+          },
         });
         
-        // Parse JSON from response
-        let jsonStr = parseResponse.trim();
-        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-        else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-        if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-        
-        const parsed = JSON.parse(jsonStr.trim());
+        const parsedContent = parseResult.choices[0]?.message?.content;
+        const parsed = typeof parsedContent === 'string' ? JSON.parse(parsedContent) : null;
         
         if (!parsed) {
           return { success: true, transcript, parsed: null, error: 'Could not parse transcript' };

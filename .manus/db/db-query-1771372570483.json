@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, shareCode, title, description, status, priority, toolName, pagePath, errorMessage, createdAt FROM bug_reports ORDER BY createdAt DESC LIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, title, description, status, priority, toolName, pagePath, errorMessage, createdAt FROM bug_reports ORDER BY createdAt DESC LIMIT 50;",
+  "rows": [],
+  "messages": [
+    "30002\tBUG-MLR97CWE-VCTN\tMonthly profit estimates appear low\tThe monthly profit estimates displayed on the page seem unusually low. The user suspects that the 'revenue lift' sorting of data might not be correctly applied or reflected on this page, leading to inaccurate profit calculations.",
+    "---",
+    "**Voice Transcript:**",
+    "I don't know if our revenue lift when it comes to how we're sorting the data transpired to this page. The monthly profit estimates are seeming really low.",
+    "**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771372079984-bva6p6.webm\tnew\tmedium\tMain App\t/\tNULL\t2026-02-17 23:48:05",
+    "30001\tBUG-MLR94LGB-IZVY\tIncorrect properties displayed for entered zip code\tWhen entering a specific zip code, the application displays properties from a different zip code.",
+    "---",
+    "**Voice Transcript:**",
+    "So I put in 63108 as my zip code, and I'm getting properties in the different zip codes. I see 63110, so something's not right there.",
+    "**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771371950036-r07xey.webm\tnew\thigh\tMain App\t/\tNULL\t2026-02-17 23:45:56",
+    "2\tBUG-MLLP7KR8-51YH\tHome button not working\tThe home button on the application is not functional.",
+    "---",
+    "**Voice Transcript:**",
+    "Okay, I'm just testing out this tool. Let's say I'm on the home page and the home button isn't working. What would be, what would the output be?",
+    "**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771036167269-tkgdxw.webm\tnew\tmedium\tMain App\t/?from_webdev=1\tNULL\t2026-02-14 02:29:32",
+    "1\tBUG-MLLOR880-WFQ6\tNo bug reported\tThe user stated they are just testing the feature and did not encounter any bugs at the moment.",
+    "---",
+    "**Voice Transcript:**",
+    "Okay, so I am just testing this feature out. I don't really have any bugs right now at the very moment, but I am, yeah, just testing it.",
+    "**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771035405294-qlbepf.webm\tnew\tlow\tMain App\t/?from_webdev=1\tNULL\t2026-02-14 02:16:50"
+  ],
+  "stdout": "id\tshareCode\ttitle\tdescription\tstatus\tpriority\ttoolName\tpagePath\terrorMessage\tcreatedAt\n30002\tBUG-MLR97CWE-VCTN\tMonthly profit estimates appear low\tThe monthly profit estimates displayed on the page seem unusually low. The user suspects that the 'revenue lift' sorting of data might not be correctly applied or reflected on this page, leading to inaccurate profit calculations.\n\n---\n**Voice Transcript:**\nI don't know if our revenue lift when it comes to how we're sorting the data transpired to this page. The monthly profit estimates are seeming really low.\n\n**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771372079984-bva6p6.webm\tnew\tmedium\tMain App\t/\tNULL\t2026-02-17 23:48:05\n30001\tBUG-MLR94LGB-IZVY\tIncorrect properties displayed for entered zip code\tWhen entering a specific zip code, the application displays properties from a different zip code.\n\n---\n**Voice Transcript:**\nSo I put in 63108 as my zip code, and I'm getting properties in the different zip codes. I see 63110, so something's not right there.\n\n**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771371950036-r07xey.webm\tnew\thigh\tMain App\t/\tNULL\t2026-02-17 23:45:56\n2\tBUG-MLLP7KR8-51YH\tHome button not working\tThe home button on the application is not functional.\n\n---\n**Voice Transcript:**\nOkay, I'm just testing out this tool. Let's say I'm on the home page and the home button isn't working. What would be, what would the output be?\n\n**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771036167269-tkgdxw.webm\tnew\tmedium\tMain App\t/?from_webdev=1\tNULL\t2026-02-14 02:29:32\n1\tBUG-MLLOR880-WFQ6\tNo bug reported\tThe user stated they are just testing the feature and did not encounter any bugs at the moment.\n\n---\n**Voice Transcript:**\nOkay, so I am just testing this feature out. I don't really have any bugs right now at the very moment, but I am, yeah, just testing it.\n\n**Audio Recording:** https://d2xsxph8kpxj0f.cloudfront.net/310519663085050152/DGUybt3jtP54yda4M9Ci8Y/voice-bug-reports/1771035405294-qlbepf.webm\tnew\tlow\tMain App\t/?from_webdev=1\tNULL\t2026-02-14 02:16:50\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

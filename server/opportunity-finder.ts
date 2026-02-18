@@ -23,6 +23,7 @@ const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 import { recordAnalysisUsage } from './usage-limits';
+import { getRentalizerComps } from './airdna';
 
 // ============================================
 // CITY NAME NORMALIZATION
@@ -293,6 +294,74 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
 }
 
 // ============================================
+// COMP-MEDIAN REVENUE ADJUSTMENT
+// Uses median revenue from same bed/bath comps as the headline number
+// This shows what real operators with the same property type are actually earning
+// ============================================
+
+async function getCompMedianRevenue(
+  address: string,
+  bedrooms: number,
+  bathrooms: number,
+  rentalizerRevenue: number
+): Promise<{ adjustedRevenue: number; adjustedAdr: number; adjustedOccupancy: number; source: string; compCount: number }> {
+  try {
+    const compsData = await getRentalizerComps(address, bedrooms, bathrooms, 25);
+    if (!compsData || !compsData.comps || compsData.comps.length === 0) {
+      console.log(`[Comp-Median] No comps found for ${address}, using Rentalizer as-is`);
+      return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0 };
+    }
+
+    // Match same bed/bath (within 0.5 for bathrooms)
+    const matchesBathrooms = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
+    const exactMatchComps = compsData.comps.filter(
+      c => c.bedrooms === bedrooms && matchesBathrooms(c.bathrooms, bathrooms) && c.annual_revenue > 0
+    );
+
+    if (exactMatchComps.length >= 3) {
+      // Use median of exact-match comps
+      const sortedRevs = exactMatchComps.map(c => c.annual_revenue).sort((a, b) => a - b);
+      const sortedAdrs = exactMatchComps.map(c => c.adr).sort((a, b) => a - b);
+      const sortedOccs = exactMatchComps.map(c => c.occupancy).sort((a, b) => a - b);
+      const midIdx = Math.floor(sortedRevs.length / 2);
+      const medianRevenue = sortedRevs.length % 2 === 0
+        ? Math.round((sortedRevs[midIdx - 1] + sortedRevs[midIdx]) / 2)
+        : sortedRevs[midIdx];
+      const medianAdr = sortedAdrs.length % 2 === 0
+        ? Math.round((sortedAdrs[midIdx - 1] + sortedAdrs[midIdx]) / 2)
+        : sortedAdrs[midIdx];
+      const medianOcc = sortedOccs.length % 2 === 0
+        ? (sortedOccs[midIdx - 1] + sortedOccs[midIdx]) / 2
+        : sortedOccs[midIdx];
+
+      console.log(`[Comp-Median] ${exactMatchComps.length} exact-match comps for ${bedrooms}BR/${bathrooms}BA: median=$${medianRevenue.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
+      return { adjustedRevenue: medianRevenue, adjustedAdr: medianAdr, adjustedOccupancy: medianOcc, source: 'comp_median', compCount: exactMatchComps.length };
+    }
+
+    // Fallback: P75 of same-bedroom comps (capped at 1.5x Rentalizer)
+    const sameBrComps = compsData.comps.filter(c => c.bedrooms === bedrooms && c.annual_revenue > 0);
+    if (sameBrComps.length >= 3) {
+      const sortedRevs = sameBrComps.map(c => c.annual_revenue).sort((a, b) => a - b);
+      const p75Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
+      const p75Revenue = sortedRevs[p75Idx];
+      const cap = Math.floor(rentalizerRevenue * 1.5);
+      const targetRevenue = Math.min(p75Revenue, cap);
+
+      if (targetRevenue > rentalizerRevenue) {
+        console.log(`[Comp-Median] P75 fallback: ${sameBrComps.length} same-BR comps, P75=$${p75Revenue.toLocaleString()}, target=$${targetRevenue.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
+        return { adjustedRevenue: targetRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'p75_fallback', compCount: sameBrComps.length };
+      }
+    }
+
+    console.log(`[Comp-Median] Not enough comps (${exactMatchComps.length} exact, ${sameBrComps.length} same-BR), using Rentalizer`);
+    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: exactMatchComps.length };
+  } catch (error) {
+    console.error(`[Comp-Median] Error fetching comps for ${address}:`, error);
+    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0 };
+  }
+}
+
+// ============================================
 // ROUTER
 // ============================================
 
@@ -439,15 +508,21 @@ export const opportunityFinderRouter = router({
           );
           
           if (estimate && estimate.revenue > 0) {
-            const monthlyRevenue = estimate.revenue / 12;
+            // Apply comp-median adjustment
+            const compMedian = await getCompMedianRevenue(rental.address, rental.bedrooms ?? 2, rental.bathrooms ?? 1, estimate.revenue);
+            const headlineRevenue = compMedian.adjustedRevenue;
+            const headlineAdr = compMedian.adjustedAdr > 0 ? compMedian.adjustedAdr : estimate.adr;
+            const headlineOccupancy = compMedian.adjustedOccupancy > 0 ? compMedian.adjustedOccupancy : estimate.occupancy;
+            
+            const monthlyRevenue = headlineRevenue / 12;
             const estimatedExpenses = monthlyRevenue * 0.20; // 20% of revenue for operating costs
             const profit = monthlyRevenue - rental.rent - estimatedExpenses;
             
             opportunities.push({
               rental,
               projectedRevenue: Math.round(monthlyRevenue),
-              occupancy: estimate.occupancy,
-              adr: estimate.adr,
+              occupancy: headlineOccupancy,
+              adr: headlineAdr,
               profit: Math.round(profit),
             });
           }
@@ -518,10 +593,16 @@ export const opportunityFinderRouter = router({
         // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
         const normalizedLocation = normalizeCityName(input.location);
         
+        // Extract zip code from original input BEFORE disambiguation
+        // Google Places may send "63108, Saint Louis, MO, USA" which gets disambiguated to "Saint Louis, MO"
+        // We need to preserve the zip code for filtering
+        const zipCodeMatch = input.location.match(/\b(\d{5})\b/);
+        const filterZipCode = zipCodeMatch ? zipCodeMatch[1] : undefined;
+        
         // Then disambiguate location by geocoding to get correct city + state
         // This fixes issues where "Saint Louis" could match Florida instead of Missouri
         const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}, loadMore: ${input.loadMore}`);
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
         // If loadMore is true, just fetch the specific page
         if (input.loadMore && input.page > 1) {
@@ -537,6 +618,7 @@ export const opportunityFinderRouter = router({
               bathsMax: input.bathsMax,
               homeTypes: input.homeTypes,
               page: input.page,
+              filterZipCode,
             },
             { maxEnrichments: 10 }
           );
@@ -578,6 +660,7 @@ export const opportunityFinderRouter = router({
             bathsMax: input.bathsMax,
             homeTypes: input.homeTypes,
             page: 1,
+            filterZipCode,
           },
           { maxEnrichments: 15 }
         );
@@ -615,6 +698,7 @@ export const opportunityFinderRouter = router({
                 bathsMax: input.bathsMax,
                 homeTypes: input.homeTypes,
                 page,
+                filterZipCode,
               })
             );
           }
@@ -677,10 +761,14 @@ export const opportunityFinderRouter = router({
         // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
         const normalizedLocation = normalizeCityName(input.location);
         
+        // Extract zip code from original input BEFORE disambiguation
+        const zipCodeMatch = input.location.match(/\b(\d{5})\b/);
+        const filterZipCode = zipCodeMatch ? zipCodeMatch[1] : undefined;
+        
         // Then disambiguate location by geocoding to get correct city + state
         // This fixes issues where "Saint Louis" could match Florida instead of Missouri
         const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}, loadMore: ${input.loadMore}`);
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, filterZipCode: ${filterZipCode || 'none'}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
         // If loadMore is true, just fetch the specific page
         if (input.loadMore && input.page > 1) {
@@ -696,6 +784,7 @@ export const opportunityFinderRouter = router({
               bathsMax: input.bathsMax,
               homeTypes: input.homeTypes,
               page: input.page,
+              filterZipCode,
             },
             { maxEnrichments: 10 }
           );
@@ -736,6 +825,7 @@ export const opportunityFinderRouter = router({
             bathsMax: input.bathsMax,
             homeTypes: input.homeTypes,
             page: 1,
+            filterZipCode,
           },
           { maxEnrichments: 15 }
         );
@@ -773,6 +863,7 @@ export const opportunityFinderRouter = router({
                 bathsMax: input.bathsMax,
                 homeTypes: input.homeTypes,
                 page,
+                filterZipCode,
               })
             );
           }
@@ -897,15 +988,24 @@ export const opportunityFinderRouter = router({
           };
         }
         
-        // Calculate profitability
-        const monthlyRevenue = estimate.revenue / 12;
+        // Apply comp-median adjustment: use median of same bed/bath comps as headline revenue
+        // This shows what real operators are actually earning, not AirDNA's conservative new-listing prediction
+        const compMedian = await getCompMedianRevenue(input.address, input.bedrooms, input.bathrooms, estimate.revenue);
+        const headlineRevenue = compMedian.adjustedRevenue;
+        const headlineAdr = compMedian.adjustedAdr > 0 ? compMedian.adjustedAdr : estimate.adr;
+        const headlineOccupancy = compMedian.adjustedOccupancy > 0 ? compMedian.adjustedOccupancy : estimate.occupancy;
+        
+        console.log(`[Opportunity Finder] Revenue: Rentalizer=$${estimate.revenue.toLocaleString()} → Headline=$${headlineRevenue.toLocaleString()} (source: ${compMedian.source}, ${compMedian.compCount} comps)`);
+        
+        // Calculate profitability using comp-median revenue
+        const monthlyRevenue = headlineRevenue / 12;
         const operatingCosts = monthlyRevenue * 0.20; // 20% for utilities, supplies, cleaning, etc.
         const monthlyProfit = monthlyRevenue - input.rent - operatingCosts;
         const annualProfit = monthlyProfit * 12;
         const roi = (annualProfit / (input.rent * 12)) * 100;
         
         // Determine if it's a good deal
-        const isGoodDeal = monthlyProfit > 500 && estimate.occupancy > 50;
+        const isGoodDeal = monthlyProfit > 500 && headlineOccupancy > 50;
         const verdict = monthlyProfit > 1000 ? 'Excellent Opportunity' :
                         monthlyProfit > 500 ? 'Good Opportunity' :
                         monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :
@@ -929,10 +1029,10 @@ export const opportunityFinderRouter = router({
             image: input.image,
           },
           projection: {
-            annualRevenue: Math.round(estimate.revenue),
+            annualRevenue: Math.round(headlineRevenue),
             monthlyRevenue: Math.round(monthlyRevenue),
-            occupancy: estimate.occupancy,
-            adr: estimate.adr,
+            occupancy: headlineOccupancy,
+            adr: headlineAdr,
             operatingCosts: Math.round(operatingCosts),
             monthlyProfit: Math.round(monthlyProfit),
             annualProfit: Math.round(annualProfit),
@@ -1029,7 +1129,16 @@ export const opportunityFinderRouter = router({
                 };
               }
 
-              const monthlyRevenue = estimate.revenue / 12;
+              // Apply comp-median adjustment: use median of same bed/bath comps as headline
+              const fullAddress = `${prop.address}, ${prop.city || ''}, ${prop.state || ''} ${prop.zipCode || ''}`.trim();
+              const compMedian = await getCompMedianRevenue(fullAddress, prop.bedrooms, prop.bathrooms, estimate.revenue);
+              const headlineRevenue = compMedian.adjustedRevenue;
+              const headlineAdr = compMedian.adjustedAdr > 0 ? compMedian.adjustedAdr : estimate.adr;
+              const headlineOccupancy = compMedian.adjustedOccupancy > 0 ? compMedian.adjustedOccupancy : estimate.occupancy;
+              
+              console.log(`[Batch Analyze] ${prop.address}: Rentalizer=$${estimate.revenue.toLocaleString()} → Headline=$${headlineRevenue.toLocaleString()} (${compMedian.source}, ${compMedian.compCount} comps)`);
+
+              const monthlyRevenue = headlineRevenue / 12;
               const operatingCosts = monthlyRevenue * 0.20;
               const monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
               const annualProfit = monthlyProfit * 12;
@@ -1045,10 +1154,10 @@ export const opportunityFinderRouter = router({
                 success: true as const,
                 property: prop,
                 projection: {
-                  annualRevenue: Math.round(estimate.revenue),
+                  annualRevenue: Math.round(headlineRevenue),
                   monthlyRevenue: Math.round(monthlyRevenue),
-                  occupancy: estimate.occupancy,
-                  adr: estimate.adr,
+                  occupancy: headlineOccupancy,
+                  adr: headlineAdr,
                   operatingCosts: Math.round(operatingCosts),
                   monthlyProfit: Math.round(monthlyProfit),
                   annualProfit: Math.round(annualProfit),

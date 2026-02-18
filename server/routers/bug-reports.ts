@@ -3,7 +3,7 @@ import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { bugReports } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
-import { callLLM } from "../llm-provider";
+import { invokeLLM } from "../_core/llm";
 import { notifyOwner } from "../_core/notification";
 
 // #bug-triage channel ID
@@ -83,30 +83,11 @@ async function triageBugReport(input: {
   severity: string;
 }> {
   try {
-    const prompt = `Triage this bug:
-
-**Title:** ${input.title}
-**Description:** ${input.description || 'Not provided'}
-**Steps to Reproduce:** ${input.stepsToReproduce || 'Not provided'}
-**Expected:** ${input.expectedBehavior || 'Not provided'}
-**Actual:** ${input.actualBehavior || 'Not provided'}
-**Page/Tool:** ${input.toolName || input.pagePath || 'unknown'}
-**Error Message:** ${input.errorMessage || 'None'}
-
-Respond with ONLY a JSON object with these exact fields:
-{
-  "likelyFiles": ["file1.ts", "file2.tsx"],
-  "diagnosis": "Brief technical diagnosis...",
-  "suggestedApproach": "Suggested fix approach...",
-  "manusPrompt": "Copy-paste-ready prompt for Manus...",
-  "severity": "low|medium|high|critical"
-}`;
-
-    const response = await callLLM(prompt, {
-      model: 'flash',
-      thinkingLevel: 'low',
-      maxTokens: 1024,
-      systemPrompt: `You are a senior developer triaging bugs for the Coach Inayah Turnkey Tool — a rental property analysis web app built with React + tRPC + Express + Drizzle ORM.
+    const result = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You are a senior developer triaging bugs for the Coach Inayah Turnkey Tool — a rental property analysis web app built with React + tRPC + Express + Drizzle ORM.
 
 ${CODEBASE_MAP}
 
@@ -117,15 +98,56 @@ Given a bug report, you must:
 4. Generate a copy-paste-ready Manus prompt
 5. Assess severity (low/medium/high/critical)
 
-Respond with ONLY a JSON object. No markdown code blocks.`,
+Return JSON.`,
+        },
+        {
+          role: 'user',
+          content: `Triage this bug:
+
+**Title:** ${input.title}
+**Description:** ${input.description || 'Not provided'}
+**Steps to Reproduce:** ${input.stepsToReproduce || 'Not provided'}
+**Expected:** ${input.expectedBehavior || 'Not provided'}
+**Actual:** ${input.actualBehavior || 'Not provided'}
+**Page/Tool:** ${input.toolName || input.pagePath || 'unknown'}
+**Error Message:** ${input.errorMessage || 'None'}`,
+        },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'bug_triage',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              likelyFiles: { type: 'array', items: { type: 'string' }, description: 'Likely affected file paths (2-5 files)' },
+              diagnosis: { type: 'string', description: 'Brief technical diagnosis' },
+              suggestedApproach: { type: 'string', description: 'Suggested fix approach' },
+              manusPrompt: { type: 'string', description: 'Copy-paste-ready Manus prompt' },
+              severity: { type: 'string', description: 'Bug severity: low, medium, high, or critical' },
+            },
+            required: ['likelyFiles', 'diagnosis', 'suggestedApproach', 'manusPrompt', 'severity'],
+            additionalProperties: false,
+          },
+        },
+      },
     });
 
-    let jsonStr = response.trim();
-    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-    else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-    
-    return JSON.parse(jsonStr.trim());
+    const content = result.choices[0]?.message?.content;
+    const triage = typeof content === 'string' ? JSON.parse(content) : null;
+
+    if (!triage) {
+      return {
+        likelyFiles: [],
+        diagnosis: 'Could not auto-diagnose.',
+        suggestedApproach: 'Manual investigation needed.',
+        manusPrompt: `Fix this bug in the rental-calculator project: ${input.title}. ${input.description || ''}`,
+        severity: 'medium',
+      };
+    }
+
+    return triage;
   } catch (error) {
     console.error('[BugReport] AI triage error:', error);
     return {

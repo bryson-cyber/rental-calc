@@ -12051,3 +12051,21 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added full Slack pipeline to bug-reports.ts (AI triage + post to #bug-triage)
 - [x] Converted voice-bug-report.ts invokeLLM calls to callLLM (direct Claude)
 - [ ] Test and verify bug reports reach Slack (user to test live)
+
+## Revert bug report triage to Forge LLM (OK for non-core analysis)
+- [x] Revert bug-reports.ts triage to use invokeLLM
+- [x] Revert voice-bug-report.ts triage/parse to use invokeLLM
+
+## Fix reported bugs
+- [x] Pull all reported bugs from database (4 reports, 2 real bugs)
+- [x] Bug #30001 (HIGH): Incorrect properties displayed for entered zip code — FIXED: added filterZipCode param to preserve zip from Google Places input through disambiguation
+- [x] Bug #30002 (MEDIUM): Monthly profit estimates appear low — FIXED: switched to comp median revenue (Option B)
+
+## Switch headline profit to median comp revenue (Option B)
+- [x] Audit how comp data (same bed/bath median revenue) flows through the system
+- [x] Update Opportunity Finder single validate to use comp median as headline revenue
+- [x] Update Opportunity Finder batch validate to use comp median as headline revenue
+- [x] Update processResults (legacy Browser Use path) to use comp median
+- [x] Verified getPropertyReport() already had comp-median adjustment
+- [x] Comp-median logic: 3+ exact-match comps → median revenue; 3+ same-BR comps → P75 capped at 1.5x; else Rentalizer
+- [x] Run tests and verify (104 files, 1495 tests passed)

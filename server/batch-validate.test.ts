@@ -198,8 +198,8 @@ describe("opportunityFinder.batchValidateProperties", () => {
     expect(result.successCount + result.failedCount).toBe(5);
     // All should succeed with our mock
     expect(result.successCount).toBe(5);
-    // fetch should have been called 5 times (once per property)
-    expect(mockFetch).toHaveBeenCalledTimes(5);
+    // fetch should have been called at least 5 times (rentalizer estimate per property + possible comp-median calls)
+    expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(5);
   });
 
   it("returns results sorted by monthly profit descending", async () => {
