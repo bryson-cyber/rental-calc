@@ -415,7 +415,7 @@ function ThreeTierProjections({
     {
       key: 'conservative',
       label: 'Conservative',
-      sublabel: 'Median performer (P50)',
+      sublabel: 'Average host',
       description: 'What the typical operator earns',
       annualRevenue: scenarios.conservative,
       color: 'amber' as const,
@@ -427,7 +427,7 @@ function ThreeTierProjections({
     {
       key: 'target',
       label: 'Target',
-      sublabel: 'Top quarter (P75)',
+      sublabel: 'Good host',
       description: 'What good operators earn',
       annualRevenue: scenarios.target,
       color: 'blue' as const,
@@ -439,7 +439,7 @@ function ThreeTierProjections({
     {
       key: 'optimistic',
       label: 'Optimistic',
-      sublabel: 'Top 10% (P90)',
+      sublabel: 'Top 10%',
       description: 'What top operators earn',
       annualRevenue: scenarios.optimistic,
       color: 'emerald' as const,
@@ -496,7 +496,7 @@ function ThreeTierProjections({
                   {tier.label}
                 </span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tier.badgeClass} font-medium`}>
-                  {tier.sublabel.split('(')[1]?.replace(')', '') || tier.sublabel}
+                  {tier.sublabel}
                 </span>
               </div>
               

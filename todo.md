@@ -12183,3 +12183,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Migrate Batch 5 (Opus): Deal Verdict, AI Advisor Tool Loop, Deal Alert AI Memo
 - [x] Write vitest tests for model router (21 tests passing)
 - [x] All 1,580 tests passing, TypeScript clean
+
+### Label Simplification (Feb 19, 2026)
+- [x] Remove P50/P75/P90 jargon from ThreeTierProjections sublabels
+- [x] Remove P50/P75/P90 jargon from FullPropertyReport scenario section

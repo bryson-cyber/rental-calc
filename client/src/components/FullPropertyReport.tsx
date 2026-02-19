@@ -1843,11 +1843,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <p className="text-sm text-[oklch(0.45_0.01_265)] mb-4">Where your property's projected revenue falls among all listings in this market:</p>
               <div className="grid grid-cols-5 gap-2">
                 {[
-                  { label: 'Bottom 10%', value: revenue_percentiles.p10 },
-                  { label: '25th Pctl', value: revenue_percentiles.p25 },
-                  { label: 'Median', value: revenue_percentiles.p50 },
-                  { label: '75th Pctl', value: revenue_percentiles.p75 },
-                  { label: 'Top 10%', value: revenue_percentiles.p90 },
+{ label: 'Bottom 10%', value: revenue_percentiles.p10 },
+                   { label: 'Below Avg', value: revenue_percentiles.p25 },
+                   { label: 'Average', value: revenue_percentiles.p50 },
+                   { label: 'Above Avg', value: revenue_percentiles.p75 },
+                   { label: 'Top 10%', value: revenue_percentiles.p90 },
                 ].map((p, i) => (
                   <div key={i} className={`text-center p-3 rounded-xl ${
                     revenue_estimate.annual >= p.value ? 'bg-[oklch(0.55_0.14_75)]/10 border border-[oklch(0.55_0.14_75)]/30' : 'bg-[oklch(0.97_0_0)] border border-[oklch(0.90_0_0)]'
@@ -2686,7 +2686,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Scenario Analysis — uses real comp percentile data when available */}
             <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
-              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Profit Projections <InfoTip text={revenue_scenarios ? `Three profit scenarios based on real revenue data from ${revenue_scenarios.compCount} comparable properties. Conservative = median performer (P50). Target = top-quarter performer (P75). Optimistic = top 10% performer (P90).` : "Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher."} /></h3>
+              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Profit Projections <InfoTip text={revenue_scenarios ? `Three profit scenarios based on real revenue data from ${revenue_scenarios.compCount} comparable properties. Conservative = what the average host earns. Target = what a good host earns. Optimistic = what the top 10% of hosts earn.` : "Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher."} /></h3>
               {revenue_scenarios && (
                 <p className="text-xs text-[oklch(0.55_0_0)] mb-4">Based on {revenue_scenarios.compCount} comparable {revenue_scenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}</p>
               )}
@@ -2694,21 +2694,21 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 {(revenue_scenarios ? [
                   {
                     label: 'Conservative',
-                    sublabel: 'Median performer (P50)',
+                    sublabel: 'Average host',
                     revenue: revenue_scenarios.conservative,
                     colorClass: 'border-amber-200 bg-amber-50',
                     labelColor: 'text-amber-600',
                   },
                   {
                     label: 'Target',
-                    sublabel: 'Top quarter (P75)',
+                    sublabel: 'Good host',
                     revenue: revenue_scenarios.target,
                     colorClass: 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5',
                     labelColor: 'text-[oklch(0.45_0.14_75)]',
                   },
                   {
                     label: 'Optimistic',
-                    sublabel: 'Top 10% (P90)',
+                    sublabel: 'Top 10%',
                     revenue: revenue_scenarios.optimistic,
                     colorClass: 'border-emerald-200 bg-emerald-50',
                     labelColor: 'text-emerald-600',
