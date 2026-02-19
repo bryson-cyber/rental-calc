@@ -477,7 +477,7 @@ function ThreeTierProjections({
         </Tooltip>
       </div>
       
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {tiers.map((tier) => {
           const monthlyRevenue = tier.annualRevenue / 12;
           const monthlyExpenses = monthlyRevenue * (expensePercent / 100);

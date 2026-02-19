@@ -12164,3 +12164,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Hide old RevenuePercentileProjections when three-tier data is available
 - [x] Write vitest tests for three-tier calculation logic (9 tests passing)
 - [x] TypeScript compilation clean (0 errors)
+
+### Bug Fixes & QA (Feb 19, 2026)
+- [x] Fix revenue_scenarios not flowing through validateProperty endpoint (opportunity-finder.ts)
+- [x] Add revenue_scenarios cache backfill for stale cached results (airdna.ts)
+- [x] Fix mobile responsiveness: three-tier grid now stacks on small screens (grid-cols-1 sm:grid-cols-3)
+- [x] All 1559 vitest tests passing

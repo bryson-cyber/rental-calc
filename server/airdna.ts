@@ -2820,6 +2820,49 @@ export async function getComprehensivePropertyReport(
     } else {
       console.log(`[Property Report] CACHE HIT for ${address} — comp-median already applied or no comps`);
     }
+    
+    // Backfill revenue_scenarios for cached results that don't have it yet
+    if (!(cachedReport as any).revenue_scenarios && cachedReport.same_bedroom_comps?.length > 0) {
+      const propBr = bedrooms || (cachedReport.property as any)?.property?.bedrooms;
+      const propBa = bathrooms || (cachedReport.property as any)?.property?.bathrooms;
+      const matchBa = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
+      
+      const exactComps = propBr && propBa
+        ? cachedReport.same_bedroom_comps.filter((c: any) => c.bedrooms === propBr && matchBa(c.bathrooms, propBa) && c.annual_revenue > 0)
+        : [];
+      const scenarioComps = exactComps.length >= 3
+        ? exactComps
+        : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
+      
+      if (scenarioComps.length >= 3) {
+        const scenarioRevenues = scenarioComps.map((c: any) => c.annual_revenue).sort((a: number, b: number) => a - b);
+        const pctl = (arr: number[], p: number) => {
+          const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+          return arr[idx];
+        };
+        const mid = Math.floor(scenarioRevenues.length / 2);
+        const p50 = scenarioRevenues.length % 2 === 0
+          ? Math.round((scenarioRevenues[mid - 1] + scenarioRevenues[mid]) / 2)
+          : scenarioRevenues[mid];
+        const p75 = pctl(scenarioRevenues, 75);
+        const p90 = pctl(scenarioRevenues, 90);
+        
+        (cachedReport as any).revenue_scenarios = {
+          conservative: p50,
+          target: p75,
+          optimistic: p90,
+          source: exactComps.length >= 3 ? 'exact_match' : 'same_bedroom',
+          compCount: scenarioComps.length,
+        };
+        
+        console.log(`[Revenue Scenarios] CACHE BACKFILL: P50=$${p50.toLocaleString()}, P75=$${p75.toLocaleString()}, P90=$${p90.toLocaleString()} (${scenarioComps.length} comps)`);
+        // Update cache with revenue_scenarios
+        apiCache.set(reportCacheKey, cachedReport, 'property_details');
+      } else {
+        console.log(`[Revenue Scenarios] CACHE BACKFILL: Not enough comps (${scenarioComps.length}) for three-tier projections`);
+      }
+    }
+    
     return cachedReport;
   }
   console.log(`[Property Report] CACHE MISS for ${address} — fetching fresh data`);

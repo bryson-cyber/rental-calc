@@ -365,12 +365,12 @@ async function getCompMedianRevenue(
   bedrooms: number,
   bathrooms: number,
   rentalizerRevenue: number
-): Promise<{ adjustedRevenue: number; adjustedAdr: number; adjustedOccupancy: number; source: string; compCount: number }> {
+): Promise<{ adjustedRevenue: number; adjustedAdr: number; adjustedOccupancy: number; source: string; compCount: number; revenueScenarios?: { conservative: number; target: number; optimistic: number; source: string; compCount: number } }> {
   try {
     const compsData = await getRentalizerComps(address, bedrooms, bathrooms, 25);
     if (!compsData || !compsData.comps || compsData.comps.length === 0) {
       console.log(`[Comp-Median] No comps found for ${address}, using Rentalizer as-is`);
-      return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0 };
+      return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0, revenueScenarios: undefined };
     }
 
     // Match same bed/bath (within 0.5 for bathrooms)
@@ -395,8 +395,17 @@ async function getCompMedianRevenue(
         ? (sortedOccs[midIdx - 1] + sortedOccs[midIdx]) / 2
         : sortedOccs[midIdx];
 
-      console.log(`[Comp-Median] ${exactMatchComps.length} exact-match comps for ${bedrooms}BR/${bathrooms}BA: median=$${medianRevenue.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
-      return { adjustedRevenue: medianRevenue, adjustedAdr: medianAdr, adjustedOccupancy: medianOcc, source: 'comp_median', compCount: exactMatchComps.length };
+      // Compute P50/P75/P90 for three-tier projections
+      const pctl = (arr: number[], p: number) => {
+        const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+        return arr[idx];
+      };
+      const p50 = medianRevenue;
+      const p75 = pctl(sortedRevs, 75);
+      const p90 = pctl(sortedRevs, 90);
+      const scenarios = { conservative: p50, target: p75, optimistic: p90, source: 'exact_match', compCount: exactMatchComps.length };
+      console.log(`[Comp-Median] ${exactMatchComps.length} exact-match comps for ${bedrooms}BR/${bathrooms}BA: median=$${medianRevenue.toLocaleString()}, P75=$${p75.toLocaleString()}, P90=$${p90.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
+      return { adjustedRevenue: medianRevenue, adjustedAdr: medianAdr, adjustedOccupancy: medianOcc, source: 'comp_median', compCount: exactMatchComps.length, revenueScenarios: scenarios };
     }
 
     // Fallback: P75 of same-bedroom comps (capped at 1.5x Rentalizer)
@@ -409,16 +418,29 @@ async function getCompMedianRevenue(
       const targetRevenue = Math.min(p75Revenue, cap);
 
       if (targetRevenue > rentalizerRevenue) {
-        console.log(`[Comp-Median] P75 fallback: ${sameBrComps.length} same-BR comps, P75=$${p75Revenue.toLocaleString()}, target=$${targetRevenue.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
-        return { adjustedRevenue: targetRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'p75_fallback', compCount: sameBrComps.length };
+        // Compute P50/P75/P90 for three-tier projections from same-BR comps
+        const pctl2 = (arr: number[], p: number) => {
+          const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+          return arr[idx];
+        };
+        const median2 = (arr: number[]) => {
+          const mid = Math.floor(arr.length / 2);
+          return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
+        };
+        const p50fb = median2(sortedRevs);
+        const p75fb = pctl2(sortedRevs, 75);
+        const p90fb = pctl2(sortedRevs, 90);
+        const scenariosFb = { conservative: p50fb, target: p75fb, optimistic: p90fb, source: 'same_bedroom', compCount: sameBrComps.length };
+        console.log(`[Comp-Median] P75 fallback: ${sameBrComps.length} same-BR comps, P50=$${p50fb.toLocaleString()}, P75=$${p75Revenue.toLocaleString()}, P90=$${p90fb.toLocaleString()}, target=$${targetRevenue.toLocaleString()}, Rentalizer=$${rentalizerRevenue.toLocaleString()}`);
+        return { adjustedRevenue: targetRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'p75_fallback', compCount: sameBrComps.length, revenueScenarios: scenariosFb };
       }
     }
 
     console.log(`[Comp-Median] Not enough comps (${exactMatchComps.length} exact, ${sameBrComps.length} same-BR), using Rentalizer`);
-    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: exactMatchComps.length };
+    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: exactMatchComps.length, revenueScenarios: undefined };
   } catch (error) {
     console.error(`[Comp-Median] Error fetching comps for ${address}:`, error);
-    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0 };
+    return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0, revenueScenarios: undefined };
   }
 }
 
@@ -1195,6 +1217,7 @@ export const opportunityFinderRouter = router({
           },
           verdict,
           isGoodDeal,
+          revenue_scenarios: compMedian.revenueScenarios,
         };
         
       } catch (error) {
