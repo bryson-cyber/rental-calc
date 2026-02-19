@@ -1520,7 +1520,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm sm:text-base font-semibold text-[oklch(0.15_0_0)]">Net Profit</p>
-                        <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">What you keep after all costs</p>
+                        <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">What you keep after all monthly costs</p>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">

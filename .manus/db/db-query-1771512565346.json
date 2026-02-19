@@ -1,0 +1,9 @@
+{
+  "query": "SELECT id, shareId, reportType, address, bedrooms, bathrooms, createdAt, \n  JSON_EXTRACT(reportData, '$.revenue_estimate.annual') as stored_annual_revenue,\n  JSON_EXTRACT(reportData, '$.revenue_estimate.range.low') as stored_low,\n  JSON_EXTRACT(reportData, '$.revenue_estimate.range.high') as stored_high,\n  JSON_EXTRACT(reportData, '$.property._revenue_source') as revenue_source,\n  JSON_EXTRACT(reportData, '$.property._original_rentalizer.annual_revenue') as original_rentalizer,\n  JSON_EXTRACT(reportData, '$.property._exact_match_comp_count') as exact_match_comp_count\nFROM shared_reports \nWHERE shareId LIKE '%dzd2wg%' OR shareId LIKE '%dzd2wgdDnJ%'\nLIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareId, reportType, address, bedrooms, bathrooms, createdAt, \n  JSON_EXTRACT(reportData, '$.revenue_estimate.annual') as stored_annual_revenue,\n  JSON_EXTRACT(reportData, '$.revenue_estimate.range.low') as stored_low,\n  JSON_EXTRACT(reportData, '$.revenue_estimate.range.high') as stored_high,\n  JSON_EXTRACT(reportData, '$.property._revenue_source') as revenue_source,\n  JSON_EXTRACT(reportData, '$.property._original_rentalizer.annual_revenue') as original_rentalizer,\n  JSON_EXTRACT(reportData, '$.property._exact_match_comp_count') as exact_match_comp_count\nFROM shared_reports \nWHERE shareId LIKE '%dzd2wg%' OR shareId LIKE '%dzd2wgdDnJ%'\nLIMIT 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 124
+}

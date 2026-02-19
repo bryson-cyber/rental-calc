@@ -224,7 +224,7 @@ function HeroRevenueCard({
       <div className="relative">
         {/* Section Headline - Why this matters */}
         <p className="text-sm text-slate-600 mb-3 font-medium">
-          The bottom line — will this property make money after all costs?
+          The bottom line — will this property make money after all monthly costs?
         </p>
         
         {/* Verdict Badge */}
@@ -353,9 +353,9 @@ function HeroRevenueCard({
         {fixedCost > 0 && (
           <p className="text-[oklch(0.50_0_0)] text-sm mt-4">
             {isProfitable ? (
-              <>After {mode === 'purchase' ? 'mortgage' : 'rent'} + {expensePercent}% expenses, you keep <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit)}/month</span> — that's <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit * 12)}/year</span> profit</>
+              <>After all monthly costs, you keep <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit)}/month</span> — that's <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit * 12)}/year</span> profit</>
             ) : (
-              <>After {mode === 'purchase' ? 'mortgage' : 'rent'} + {expensePercent}% expenses, you'd lose <span className="text-red-600 font-medium">{formatCurrency(Math.abs(trueMonthlyProfit))}/month</span> — {mode === 'purchase' ? 'consider a lower offer price or different loan terms' : 'consider negotiating rent or increasing rates'}</>
+              <>After all monthly costs, you'd lose <span className="text-red-600 font-medium">{formatCurrency(Math.abs(trueMonthlyProfit))}/month</span> — {mode === 'purchase' ? 'consider a lower offer price or different loan terms' : 'consider negotiating rent or increasing rates'}</>
             )}
           </p>
         )}

@@ -1,0 +1,31 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%share%' OR TABLE_NAME LIKE '%universal%' OR TABLE_NAME LIKE '%report%');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%share%' OR TABLE_NAME LIKE '%universal%' OR TABLE_NAME LIKE '%report%');",
+  "rows": [
+    {
+      "TABLE_NAME": "analysis_reports"
+    },
+    {
+      "TABLE_NAME": "market_research_reports"
+    },
+    {
+      "TABLE_NAME": "shared_reports"
+    },
+    {
+      "TABLE_NAME": "bug_reports"
+    },
+    {
+      "TABLE_NAME": "shareable_regulation_reports"
+    },
+    {
+      "TABLE_NAME": "universal_shareable_reports"
+    },
+    {
+      "TABLE_NAME": "slack_report_deliveries"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nanalysis_reports\nmarket_research_reports\nshared_reports\nbug_reports\nshareable_regulation_reports\nuniversal_shareable_reports\nslack_report_deliveries\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

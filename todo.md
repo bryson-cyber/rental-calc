@@ -12127,3 +12127,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update all backend error messages to mention Turnkey Program upgrade
 - [x] Update tests for new limit value (50 API calls/day)
 - [x] All 1550 tests pass, 0 TypeScript errors
+
+## RESOLVED: Option B comp-based headline IS working correctly
+- [x] Investigated the data flow from server to frontend to shareable report
+- [x] Found comp-median logic in airdna.ts getComprehensivePropertyReport (line 3797)
+- [x] Verified cached data for 1337 S Vandeventer Ave: _revenue_source = 'comp_median'
+- [x] Original Rentalizer: $21,035 → Comp-median (30 exact 1BR/1BA comps): $30,247 (44% uplift)
+- [x] The $30,247 headline IS the comp median, not the Rentalizer estimate
+
+## UI Text Fix: Bottom line section — COMPLETE
+- [x] Change "will this property make money after all costs?" to "after all monthly costs" in TeslaDashboard
+- [x] Change "After rent + 20% expenses" to "After all monthly costs" in profit insight text
+- [x] Change "after all costs" to "after all monthly costs" in FullPropertyReport
+- [x] Verified comp-median IS working — $30,247 is the comp median (original Rentalizer was $21,035, 44% uplift)
