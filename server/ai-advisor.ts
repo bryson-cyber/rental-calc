@@ -22,10 +22,10 @@ import { makeRequest, GeocodingResult } from './_core/map';
 import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
 import { SOPReports, generateFullArbitrageAnalysis } from './sop-reports';
 
-import { callLLMWithToolLoop, ClaudeTool } from './llm-provider';
+import { callOpusWithToolLoop, type OpusToolDefinition } from './opus-provider';
 
 // Convert function declarations to Claude tools format
-function convertToClaudeTools(declarations: Array<{ name: string; description: string; parameters: Record<string, unknown> }>): ClaudeTool[] {
+function convertToClaudeTools(declarations: Array<{ name: string; description: string; parameters: Record<string, unknown> }>): OpusToolDefinition[] {
   return declarations.map(d => ({
     name: d.name,
     description: d.description,
@@ -2607,13 +2607,12 @@ After EVERY metric, add "What This Means:" explanation.
     const allTools = [...claudeTools, ...enhancedClaudeTools];
 
     // Use the multi-turn tool loop — Claude calls tools, we execute, repeat
-    const result = await callLLMWithToolLoop(
+    const result = await callOpusWithToolLoop(
       question,
       allTools,
       executeFunctionCall,
       {
         systemPrompt: systemInstruction,
-        model: 'pro',
         thinkingLevel: 'high',
         maxTokens: 16384,
         maxIterations: 10,

@@ -18,7 +18,7 @@ import { getDb } from './db';
 import { deepAnalysis, analysisReports } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { ENV } from './_core/env';
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 
 // AI provider timeout - reduced for faster failure
 const AI_TIMEOUT_MS = 45000; // 45 seconds per call (reduced from 120s)
@@ -389,9 +389,7 @@ async function callAI(prompt: string, systemPrompt: string = ''): Promise<string
   console.log('[DeepAnalysis] Calling AI via Claude direct...');
   
   try {
-    const text = await callLLM(prompt, {
-      model: 'pro',
-      thinkingLevel: 'high',
+    const text = await routedLLMCall(FEATURES.DEEP_ANALYSIS, prompt, {
       maxTokens: 4096,
       systemPrompt: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.',
     });

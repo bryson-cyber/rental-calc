@@ -5,7 +5,7 @@
  * for market intelligence and deal alerts.
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import type { MarketSnapshot } from './newsletter-market-data';
 import type { RentalDeal } from './newsletter-deal-finder';
 
@@ -34,10 +34,8 @@ async function callClaudeForJson<T>(
   userPrompt: string,
 ): Promise<T> {
   const prompt = `${userPrompt}\n\nRespond with valid JSON only, no markdown fences.`;
-  const text = await callLLM(prompt, {
+  const text = await routedLLMCall(FEATURES.NEWSLETTER_CONTENT, prompt, {
     systemPrompt,
-    model: 'flash',
-    thinkingLevel: 'low',
     maxTokens: 2048,
   });
 

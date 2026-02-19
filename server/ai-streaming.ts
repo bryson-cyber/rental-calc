@@ -9,7 +9,7 @@
  * - Uses callLLM, callLLMStreaming from llm-provider.ts
  * - Uses native systemPrompt field
  */
-import { callLLM, callLLMStreaming } from './llm-provider';
+import { routedLLMCall, routedLLMCallStreaming, FEATURES } from './model-router';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -60,7 +60,7 @@ export async function streamClaudeChat(options: StreamingChatOptions): Promise<v
     }
 
     const prompt = buildPrompt(messages);
-    const stream = callLLMStreaming(prompt, { systemPrompt, model: 'flash', thinkingLevel: 'low' });
+    const stream = routedLLMCallStreaming(FEATURES.CHAT_STREAMING, prompt, { systemPrompt });
 
     let fullResponse = '';
     for await (const chunk of stream) {
@@ -87,7 +87,7 @@ export async function claudeChat(messages: ChatMessage[], systemPrompt?: string)
     }
 
     const prompt = buildPrompt(messages);
-    const response = await callLLM(prompt, { systemPrompt, model: 'flash', thinkingLevel: 'low' });
+    const response = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, prompt, { systemPrompt });
     return response;
 
   } catch (error) {
@@ -111,7 +111,7 @@ export async function claudeChat(messages: ChatMessage[], systemPrompt?: string)
  */
 export async function checkClaudeHealth(): Promise<boolean> {
   try {
-    const response = await callLLM('Say "OK" if you can hear me.', { maxTokens: 10, model: 'flash', thinkingLevel: 'low' });
+    const response = await routedLLMCall(FEATURES.HEALTH_CHECK, 'Say "OK" if you can hear me.', { maxTokens: 10 });
     return response.toLowerCase().includes('ok');
   } catch {
     return false;

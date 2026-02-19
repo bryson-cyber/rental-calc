@@ -9,7 +9,7 @@
  * - PTCF-optimized prompts for professional, clear output
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import { getDb } from "./db";
 import { regulationCache } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
@@ -566,10 +566,8 @@ async function callClaudeWithSearch(prompt: string, systemPrompt?: string): Prom
   // We ask Claude to include source URLs in its response and parse them out.
   const enhancedPrompt = prompt + `\n\nInclude specific source URLs for any regulations you reference. Format each source on its own line as: [SOURCE: title | url | official/news/third_party]`;
 
-  const text = await callLLM(enhancedPrompt, {
+  const text = await routedLLMCall(FEATURES.REGULATION_TRACKER, enhancedPrompt, {
     systemPrompt,
-    model: 'pro',
-    thinkingLevel: 'low',
     maxTokens: 8192,
   });
 

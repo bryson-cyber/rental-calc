@@ -13,7 +13,7 @@
  * Zero user effort required — just press "Generate."
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import {
   gatherContentData,
   formatDataForPrompt,
@@ -317,12 +317,11 @@ export async function generateAutonomousScript(
 
   // 3. Call Claude
   console.log('[Content Studio] Calling Claude API...');
-  const rawText = await callLLM(
+  const rawText = await routedLLMCall(
+    FEATURES.CONTENT_STUDIO,
     userPrompt + '\n\nRespond with valid JSON only, no markdown fences.',
     {
       systemPrompt,
-      model: 'pro',
-      thinkingLevel: 'low',
       maxTokens: 16384,
     },
   );
@@ -406,12 +405,11 @@ Return a JSON object with these fields:
 
 Return ONLY valid JSON. No markdown code fences. No extra text.`;
 
-  const rawText = await callLLM(
+  const rawText = await routedLLMCall(
+    FEATURES.CONTENT_STUDIO,
     userPrompt,
     {
       systemPrompt,
-      model: 'pro',
-      thinkingLevel: 'low',
       maxTokens: 4096,
     },
   );

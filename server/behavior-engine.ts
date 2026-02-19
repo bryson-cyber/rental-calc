@@ -11,7 +11,7 @@
 import { eq, and, desc, gte, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { toolUsageEvents } from "../drizzle/schema";
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 
 // ============================================================
 // Types
@@ -311,9 +311,7 @@ User profile:
 Respond with ONLY a JSON object with these exact fields:
 {"subject": "...", "previewText": "...", "htmlBody": "..."}`;
 
-    const response = await callLLM(fullPrompt, {
-      model: 'flash',
-      thinkingLevel: 'low',
+    const response = await routedLLMCall(FEATURES.BEHAVIOR_ENGINE_EMAIL, fullPrompt, {
       maxTokens: 1024,
       systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing emails on behalf of Coach Inayah's team for short-term rental investors.
 

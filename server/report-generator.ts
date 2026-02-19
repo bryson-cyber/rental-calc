@@ -16,7 +16,7 @@
  */
 
 import { ENV } from './_core/env';
-import { callLLM, callLLMMax } from './llm-provider';
+import { routedLLMCall, routedLLMCallMax, FEATURES } from './model-router';
 
 /**
  * Post-process AI output to remove prescriptive language
@@ -121,14 +121,13 @@ function stripPrescriptiveLanguage(text: string): string {
 // LLM PROVIDER CONFIGURATION
 // 
 //
-// All LLM calls are routed through llm-provider.ts which handles:
-// - All calls route through Claude Sonnet 4.6
-// - Model selection (pro vs flash tier)
-// - Thinking/effort configuration
-// - Retry logic with exponential backoff
+// All LLM calls are routed through model-router.ts which handles:
+// - Gemini 3.1 Pro for full reports and narratives
+// - Opus 4.6 for precision judgment tasks
+// - Sonnet 4.6 for chat, summaries, and quick tasks
 //
-// callLLM()    → standard call
-// callLLMMax() → extended capacity with retries
+// routedLLMCall()    → standard call routed to optimal model
+// routedLLMCallMax() → extended capacity with retries
 // 
 
 export interface ChatMessage {
@@ -206,9 +205,7 @@ User Question: ${question}`;
 
   try {
     // Use Flash model for faster chat responses with medium thinking
-    const response = await callLLM(prompt, { 
-      model: 'flash',
-      thinkingLevel: 'low',
+    const response = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, prompt, { 
       systemPrompt,
     });
     return response.trim();
@@ -249,9 +246,8 @@ Write 2-3 paragraphs. Use plain language and explain financial terms inline. Foc
 </format>`;
 
   try {
-    const response = await callLLM(prompt, { 
+    const response = await routedLLMCall(FEATURES.PROPERTY_QUICK_SUMMARY, prompt, { 
       maxTokens: 2048,
-      thinkingLevel: 'low',
       systemPrompt,
     });
     return response.trim();
@@ -292,9 +288,8 @@ Write 2-3 paragraphs. Use plain language and explain financial terms inline. Foc
 </format>`;
 
   try {
-    const response = await callLLM(prompt, { 
+    const response = await routedLLMCall(FEATURES.MARKET_QUICK_SUMMARY, prompt, { 
       maxTokens: 2048,
-      thinkingLevel: 'low',
       systemPrompt,
     });
     return response.trim();
@@ -355,9 +350,8 @@ Write 1-2 paragraphs. Identify the trend direction (growing, declining, stable).
 </format>`;
 
   try {
-    const response = await callLLM(prompt, { 
+    const response = await routedLLMCall(FEATURES.TREND_ANALYSIS, prompt, { 
       maxTokens: 1024,
-      thinkingLevel: 'low',
       systemPrompt: trendSystemPrompt,
     });
     return response.trim();
@@ -657,9 +651,8 @@ ${isPurchaseMode ? `Focus on Cap Rate, Cash-on-Cash Return, DSCR, and monthly ca
 </grounding_rules>`;
 
   try {
-    const response = await callLLM(prompt, { 
+    const response = await routedLLMCall(FEATURES.ENHANCED_NARRATIVE, prompt, { 
       maxTokens: 8192, 
-      thinkingLevel: 'high',
       systemPrompt,
     });
     return response.trim();
@@ -1305,7 +1298,7 @@ Base every claim on the data provided above. Compare exclusively to ${property.b
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: personaSection, maxTokens: 16000 });
+    const response = await routedLLMCallMax(FEATURES.FULL_PROPERTY_REPORT, prompt, 3, { systemPrompt: personaSection, maxTokens: 16000 });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -1858,7 +1851,7 @@ Use simple, conversational language and explain what every number means in pract
 </guidelines>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: marketSystemPrompt, maxTokens: 16000 });
+    const response = await routedLLMCallMax(FEATURES.FULL_MARKET_REPORT, prompt, 3, { systemPrompt: marketSystemPrompt, maxTokens: 16000 });
     // Post-process to remove any prescriptive language that slipped through
     return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
@@ -2223,17 +2216,10 @@ Present data and observations only — let the reader draw their own conclusions
 </format>`;
 
   try {
-    const response = await callLLMMax(prompt, 3, { systemPrompt: summarySystemPrompt, maxTokens: 16000 });
+    const response = await routedLLMCallMax(FEATURES.FULL_REPORT_SUMMARY, prompt, 3, { systemPrompt: summarySystemPrompt, maxTokens: 16000 });
     return response.trim();
   } catch (error) {
     console.error('Error generating full report summary:', error);
-    // Fallback to the simpler function
-    try {
-      const fallbackResponse = await callLLM(prompt, { maxTokens: 4096, thinkingLevel: 'low', systemPrompt: summarySystemPrompt });
-      return fallbackResponse.trim();
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      return '';
-    }
+    throw error;
   }
 }

@@ -15,7 +15,8 @@
  */
 
 import { apiCache } from './cache';
-import { callLLM, callLLMWithVision } from './llm-provider';
+import { callLLMWithVision } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 
 // ============================================
 // GLOBAL HELPER FUNCTIONS
@@ -245,10 +246,10 @@ async function callAnalyzer(
   // If responseSchema is provided, ask Claude for JSON
   if (opts.responseSchema) {
     const jsonPrompt = `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(opts.responseSchema)}`;
-    return callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt: opts.systemInstruction });
+    return routedLLMCall(FEATURES.PROPERTY_ANALYSIS_STRUCTURED, jsonPrompt, { maxTokens, systemPrompt: opts.systemInstruction });
   }
 
-  return callLLM(prompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt: opts.systemInstruction });
+  return routedLLMCall(FEATURES.PROPERTY_ANALYSIS_GENERAL, prompt, { maxTokens, systemPrompt: opts.systemInstruction });
 }
 
 async function callAnalyzerWithImage(prompt: string, imageUrl: string, maxTokens: number = 2048): Promise<string> {
@@ -1560,7 +1561,7 @@ export async function callLLMStructured<T>(
   const systemPrompt = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze property data and market metrics to provide quantified, actionable investment analysis. Use the story-before-the-stats approach and analogy over jargon.';
 
   const jsonPrompt = `${prompt}\n\nRespond with valid JSON only, matching this schema: ${JSON.stringify(schema)}`;
-  const result = await callLLM(jsonPrompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt });
+  const result = await routedLLMCall(FEATURES.PROPERTY_ANALYSIS_STRUCTURED, jsonPrompt, { maxTokens, systemPrompt });
   // Extract JSON from response (handle markdown code blocks)
   const jsonMatch = result.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, result];
   return JSON.parse((jsonMatch[1] || result).trim()) as T;

@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@golpoai/sdk": "^0.1.9",
+    "@google/genai": "^1.42.0",
     "@googlemaps/markerclusterer": "^2.6.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.10",

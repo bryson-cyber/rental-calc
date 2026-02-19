@@ -12170,3 +12170,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add revenue_scenarios cache backfill for stale cached results (airdna.ts)
 - [x] Fix mobile responsiveness: three-tier grid now stacks on small screens (grid-cols-1 sm:grid-cols-3)
 - [x] All 1559 vitest tests passing
+
+## Multi-Model Routing System (Feb 19, 2026)
+- [x] Install @google/genai SDK for Gemini 3.1 Pro
+- [x] Create gemini-provider.ts with callGemini, callGeminiMax, callGeminiStreaming
+- [x] Create opus-provider.ts for Claude Opus 4.6 with adaptive thinking
+- [x] Create model-router.ts routing layer with feature-to-model mapping (no fallback — errors surface immediately)
+- [x] Migrate Batch 1: Newsletter, Behavior Engine, Slack, Deal Alert Snippet, Health Check
+- [x] Migrate Batch 2: Chat Streaming, Chat Non-Streaming, Quick Summaries, Trend Analysis
+- [x] Migrate Batch 3: Content Studio, Photo Analysis, Deep Analysis, Regulation Tracker, Structured JSON
+- [x] Migrate Batch 4 (Gemini): Full Property Report, Full Market Report, Full Report Summary, Enhanced Narrative
+- [x] Migrate Batch 5 (Opus): Deal Verdict, AI Advisor Tool Loop, Deal Alert AI Memo
+- [x] Write vitest tests for model router (21 tests passing)
+- [x] All 1,580 tests passing, TypeScript clean

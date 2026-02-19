@@ -6,7 +6,7 @@
  * 2. Template-based - Guaranteed fallback (no AI)
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './ai-analyzer-enhanced';
 
 // Timeout for Claude provider
@@ -176,9 +176,7 @@ async function generateWithClaudeDirect(
   metrics: Metrics
 ): Promise<EnhancedNarrativeReport> {
   console.log('[ClaudeFallback] Generating narrative with Claude Sonnet...');
-  const text = await callLLM(prompt, {
-    model: 'pro', // 'pro' for Sonnet
-    thinkingLevel: 'high',
+  const text = await routedLLMCall(FEATURES.AI_FALLBACK, prompt, {
     maxTokens: 1024,
     systemPrompt: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. Provide objective, data-driven market analysis. Every claim must reference specific numbers. Use the "story before the stats" approach. Be warm but direct — like a trusted advisor over coffee.'
   });

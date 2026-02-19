@@ -17,7 +17,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import { getDb } from "./db";
 import { sharedReports, universalShareableReports, slackReportDeliveries } from "../drizzle/schema";
 import { desc, eq, like, and, sql } from "drizzle-orm";
@@ -213,9 +213,7 @@ ${reportData.averageDailyRate ? `Average Daily Rate: $${reportData.averageDailyR
 ${reportData.verdict ? `Analysis Verdict: ${reportData.verdict}` : ''}
 Report Type: ${reportData.reportType}`;
 
-    const content = await callLLM(prompt, {
-      model: 'flash',
-      thinkingLevel: 'low',
+    const content = await routedLLMCall(FEATURES.SLACK_REPORT, prompt, {
       maxTokens: 512,
       systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You are writing on behalf of Coach Inayah's team. Write a short, compelling Slack message (3-5 sentences max) presenting a property as an investment opportunity to a client.
 

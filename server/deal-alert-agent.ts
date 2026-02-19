@@ -17,7 +17,7 @@ import { eq, and, desc, sql, isNull, gt, lt, or } from 'drizzle-orm';
 import { analyzePropertyForArbitrage, type RentalDeal } from './newsletter-deal-finder';
 import { sendDealAlertEmail } from './newsletter-email-sender';
 import { getRentalizerEstimate, searchMarketsAPI, getMarketDetails, getMarketHistoricalData, getMarketSeasonality, getTopPerformers, getMarketListings, calculateMarketInsights } from './airdna';
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 import { searchZillowRentals, type ZillowListing } from './hasdata-zillow';
 
 // ============================================================
@@ -661,9 +661,7 @@ Total Matches Found: ${matches.length}
 
 Write in a warm, conversational tone. Mention the key numbers. Keep it under 60 words.`;
 
-    const response = await callLLM(prompt, {
-      model: 'flash',
-      thinkingLevel: 'low',
+    const response = await routedLLMCall(FEATURES.DEAL_ALERT_SNIPPET, prompt, {
       maxTokens: 512,
       systemPrompt: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties. Write brief, warm email content on behalf of Coach Inayah. Use the "story before the stats" approach. Be warm but direct.',
     });
@@ -1038,9 +1036,7 @@ Structure the memo EXACTLY as follows:
 
 Keep it under 900 words. Every claim must reference actual data. Write like you're talking to a friend who's about to invest their savings.`;
 
-      aiMemo = await callLLM(memoPrompt, {
-        model: 'pro',
-        thinkingLevel: 'high',
+      aiMemo = await routedLLMCall(FEATURES.DEAL_ALERT_MEMO, memoPrompt, {
         maxTokens: 4096,
         systemPrompt: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science, quantitative analytics, and real estate investment. You operate on the "Generate, Interrogate, Certify" model. Your tone is warm but direct — like a trusted advisor giving real talk over coffee. You never sugarcoat, but you always empower. Use the "story before the stats" approach: lead with a plain-language narrative, then bring in specific numbers.
 

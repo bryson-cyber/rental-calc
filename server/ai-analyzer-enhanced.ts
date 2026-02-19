@@ -10,7 +10,7 @@
  * 6. Plain-language explanations throughout
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 
 
 // ============================================
@@ -68,7 +68,7 @@ async function callClaudeWithRetry(
   maxTokens: number = 4096, 
 ): Promise<string> {
   const systemPrompt = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You combine Wall Street analytical rigor with Main Street accessibility. Provide detailed, data-driven analysis with specific numbers. Use the "story before the stats" approach \u2014 lead with narrative, then data. Write for someone who may be new to STR investing. Never sugarcoat risks but always empower.';
-  return callLLM(prompt, { maxTokens, model: 'pro', thinkingLevel: 'high', systemPrompt });
+  return routedLLMCall(FEATURES.DEEP_ANALYSIS, prompt, { maxTokens, systemPrompt });
 }
 
 // ============================================

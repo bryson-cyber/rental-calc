@@ -11,7 +11,7 @@
  * - Structured JSON output for reliable parsing
  */
 
-import { callLLM } from './llm-provider';
+import { routedLLMCall, FEATURES } from './model-router';
 
 // Supported languages with their display names
 export const SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -114,11 +114,9 @@ export async function translateText(
   const systemPrompt = `You are a professional translator. Translate the given text to ${languageName}.\n\nRules:\n- Preserve all formatting (markdown, HTML tags, line breaks)\n- Preserve all numbers, currency symbols, and units exactly as-is\n- Preserve all proper nouns (company names, brand names, place names) unless they have well-known translations\n- Preserve all URLs, email addresses, and code snippets exactly as-is\n- Do NOT add any explanations or notes — return ONLY the translated text\n- Maintain the same tone and register as the original\n- For real estate and financial terminology, use the standard terms in the target language\n${context ? `\nContext: This text is from ${context}` : ''}`;
 
   try {
-    const translatedText = await callLLM(text, {
+    const translatedText = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, text, {
       systemPrompt,
-      model: 'flash', // Use faster model for quick translations
       maxTokens: 8192,
-      thinkingLevel: 'low',
     });
     
     if (!translatedText) {
@@ -170,11 +168,9 @@ export async function translateBatch(
   const systemPrompt = `You are a professional translator. Translate all values in the given JSON object to ${languageName}.\n\nRules:\n- Return a valid JSON object with the same keys but translated values. The response MUST be ONLY the JSON object, with no surrounding text or markdown code blocks.\n- Preserve all formatting (markdown, HTML tags, line breaks) within values\n- Preserve all numbers, currency symbols, and units exactly as-is\n- Preserve all proper nouns unless they have well-known translations\n- Preserve all URLs, email addresses, and code snippets exactly as-is\n- Do NOT translate the JSON keys — only translate the values\n- Maintain the same tone and register as the original\n- For real estate and financial terminology, use standard terms in the target language\n${context ? `\nContext: This text is from ${context}` : ''}`;
 
   try {
-    const responseText = await callLLM(JSON.stringify(uncachedTexts), {
+    const responseText = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, JSON.stringify(uncachedTexts), {
       systemPrompt,
-      model: 'flash',
       maxTokens: 16384,
-      thinkingLevel: 'low',
     });
 
     if (!responseText) {
