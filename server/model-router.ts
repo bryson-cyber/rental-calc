@@ -10,13 +10,15 @@
  * If a provider fails, the error surfaces immediately so it can be fixed properly.
  * 
  * USAGE:
- *   import { routedLLMCall, routedLLMCallMax, FEATURES } from './model-router';
+ *   import { routedLLMCall, routedLLMCallMax, routedLLMCallStreaming, FEATURES } from './model-router';
  *   const result = await routedLLMCall(FEATURES.DEAL_VERDICT, prompt, { systemPrompt });
+ *   // Streaming:
+ *   for await (const chunk of routedLLMCallStreaming(FEATURES.FULL_PROPERTY_REPORT, prompt)) { ... }
  */
 
 import { callLLM, callLLMMax, callLLMStreaming, type LLMCallOptions } from './llm-provider';
-import { callGemini, callGeminiMax, type GeminiCallOptions } from './gemini-provider';
-import { callOpus, callOpusMax, type OpusCallOptions } from './opus-provider';
+import { callGemini, callGeminiMax, callGeminiStreaming, type GeminiCallOptions } from './gemini-provider';
+import { callOpus, callOpusMax, callOpusStreaming, type OpusCallOptions } from './opus-provider';
 
 // ---------------------------------------------------------------------------
 // FEATURE CONSTANTS
@@ -224,8 +226,14 @@ export async function routedLLMCallMax(
 // ---------------------------------------------------------------------------
 
 /**
- * Route a streaming LLM call. Currently only Sonnet supports streaming.
- * Used for the chat interface where chunks are sent to the client in real-time.
+ * Route a streaming LLM call to the optimal provider based on the feature name.
+ * All three providers support streaming:
+ * - Gemini: generateContentStream via @google/genai SDK
+ * - Opus: SSE streaming via Anthropic Messages API
+ * - Sonnet: SSE streaming via Anthropic Messages API
+ * 
+ * Returns an async generator that yields text chunks.
+ * No fallback — errors surface immediately.
  */
 export function routedLLMCallStreaming(
   feature: FeatureName,
@@ -240,8 +248,102 @@ export function routedLLMCallStreaming(
   const { provider, effort, label } = route;
   console.log(`[ModelRouter] ${label} (Streaming) → ${provider} (effort: ${effort})`);
 
-  // Streaming is currently Sonnet-only
-  return callLLMStreaming(prompt, toSonnetOptions(effort, options));
+  switch (provider) {
+    case 'gemini':
+      return callGeminiStreaming(prompt, toGeminiOptions(effort, options));
+    case 'opus':
+      return callOpusStreaming(prompt, toOpusOptions(effort, options));
+    case 'sonnet':
+      return callLLMStreaming(prompt, toSonnetOptions(effort, options));
+  }
+}
+
+/**
+ * Route a streaming LLM call with retry logic.
+ * On transient errors, retries the full stream from the beginning.
+ * Returns an async generator that yields text chunks.
+ * 
+ * Use this for long report generation where you want both streaming AND resilience.
+ */
+export async function* routedLLMCallStreamingMax(
+  feature: FeatureName,
+  prompt: string,
+  maxRetries: number = 3,
+  options?: RoutedCallOptions
+): AsyncGenerator<string, void, unknown> {
+  const route = ROUTING_TABLE[feature];
+  if (!route) {
+    throw new Error(`[ModelRouter] Unknown feature "${feature}". Add it to FEATURES and ROUTING_TABLE.`);
+  }
+
+  const { provider, effort, label } = route;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`[ModelRouter] ${label} (StreamMax) → ${provider} (effort: ${effort}) attempt ${attempt + 1}/${maxRetries}`);
+
+      let stream: AsyncGenerator<string, void, unknown>;
+      switch (provider) {
+        case 'gemini':
+          stream = callGeminiStreaming(prompt, toGeminiOptions(effort, options));
+          break;
+        case 'opus':
+          stream = callOpusStreaming(prompt, toOpusOptions(effort, options));
+          break;
+        case 'sonnet':
+          stream = callLLMStreaming(prompt, toSonnetOptions(effort, options));
+          break;
+      }
+
+      let hasYielded = false;
+      for await (const chunk of stream) {
+        hasYielded = true;
+        yield chunk;
+      }
+
+      if (hasYielded) {
+        console.log(`[ModelRouter] ${label} (StreamMax) completed on attempt ${attempt + 1}`);
+        return; // Success — exit the generator
+      }
+
+      // Empty stream — retry
+      lastError = new Error('Empty streaming response');
+      console.warn(`[ModelRouter] ${label} (StreamMax) empty response on attempt ${attempt + 1}`);
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`[ModelRouter] ${label} (StreamMax) error on attempt ${attempt + 1}:`, lastError.message);
+
+      const errorMsg = lastError.message.toLowerCase();
+      const isRetryable =
+        errorMsg.includes('429') ||
+        errorMsg.includes('500') ||
+        errorMsg.includes('503') ||
+        errorMsg.includes('529') ||
+        errorMsg.includes('overloaded') ||
+        errorMsg.includes('rate') ||
+        errorMsg.includes('quota') ||
+        errorMsg.includes('fetch failed') ||
+        errorMsg.includes('socket') ||
+        errorMsg.includes('econnreset') ||
+        errorMsg.includes('econnrefused') ||
+        errorMsg.includes('etimedout') ||
+        errorMsg.includes('network');
+
+      if (!isRetryable && attempt === 0) {
+        throw lastError;
+      }
+
+      if (attempt < maxRetries - 1) {
+        const backoffMs = Math.pow(2, attempt + 1) * 1000;
+        console.log(`[ModelRouter] ${label} (StreamMax) retrying in ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError || new Error(`[ModelRouter] ${label} (StreamMax) all ${maxRetries} attempts failed`);
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +364,14 @@ export function getFeaturesByProvider(provider: ModelProvider): string[] {
   return Object.entries(ROUTING_TABLE)
     .filter(([, config]) => config.provider === provider)
     .map(([feature]) => feature);
+}
+
+/**
+ * Check if a feature supports streaming.
+ * All features support streaming since all three providers have streaming implementations.
+ */
+export function supportsStreaming(feature: FeatureName): boolean {
+  return feature in ROUTING_TABLE;
 }
 
 /**

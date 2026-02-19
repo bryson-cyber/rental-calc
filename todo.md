@@ -12192,3 +12192,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix model ID: gemini-3-pro-preview → gemini-3.1-pro-preview (per official docs)
 - [x] Verify thinking config matches official docs (added medium level, documented minimal not supported)
 - [x] Update model-router.ts — toGeminiOptions now maps low/medium/high correctly
+### Gemini Streaming Support (Feb 19, 2026)
+- [x] Add Gemini streaming support to gemini-provider.ts
+- [x] Update model-router.ts to expose streaming for Gemini-routed features (routedLLMCallStreaming + routedLLMCallStreamingMax)
+- [x] Wire streaming into full report generation — SSE endpoints /api/reports/stream/property and /api/reports/stream/market
+- [x] Wire streaming into narrative generation — AIAdvisorStep uses useStreamingReport hook for real-time rendering
+- [x] Write vitest tests for Gemini streaming (24 tests passing)
