@@ -80,6 +80,15 @@ interface BuildFullReportButtonProps {
   // Revenue percentiles
   revenuePercentiles?: any;
   
+  // Three-tier revenue scenarios from comp data
+  revenueScenarios?: {
+    conservative: number;
+    target: number;
+    optimistic: number;
+    source: string;
+    compCount: number;
+  };
+  
   // Historical data
   historicalData?: any;
   
@@ -124,6 +133,7 @@ export function BuildFullReportButton({
   marketData,
   bedroomPerformance,
   revenuePercentiles,
+  revenueScenarios,
   historicalData,
   monthlyRent,
   purchasePrice,
@@ -268,6 +278,7 @@ export function BuildFullReportButton({
         },
         bedroom_performance: bedroomPerformance || [],
         revenue_percentiles: revenuePercentiles,
+        revenue_scenarios: revenueScenarios,
         historical_data: historicalData,
         generated_at: new Date().toISOString(),
         prepared_for: clientName || undefined,

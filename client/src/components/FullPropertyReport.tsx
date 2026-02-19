@@ -237,6 +237,14 @@ export interface FullReportData {
   // Supply trend and submarket data
   supply_trend?: Array<{ date: string; value: number }>;
   submarkets?: SubmarketInfo[];
+  // Three-tier revenue scenarios from real comp data
+  revenue_scenarios?: {
+    conservative: number;
+    target: number;
+    optimistic: number;
+    source: string;
+    compCount: number;
+  };
 }
 
 interface StressTestScenario {
@@ -658,6 +666,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     supply_trend,
     submarkets,
     comp_selection,
+    revenue_scenarios,
   } = data as any;
 
   // Normalize purchase data: handle both snake_case (legacy) and camelCase (new) keys
@@ -2675,41 +2684,76 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
             </div>
 
-            {/* Scenario Analysis */}
+            {/* Scenario Analysis — uses real comp percentile data when available */}
             <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
-              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Scenario Analysis <InfoTip text="Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher. This helps you plan for best and worst cases." /></h3>
+              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Profit Projections <InfoTip text={revenue_scenarios ? `Three profit scenarios based on real revenue data from ${revenue_scenarios.compCount} comparable properties. Conservative = median performer (P50). Target = top-quarter performer (P75). Optimistic = top 10% performer (P90).` : "Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher."} /></h3>
+              {revenue_scenarios && (
+                <p className="text-xs text-[oklch(0.55_0_0)] mb-4">Based on {revenue_scenarios.compCount} comparable {revenue_scenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}</p>
+              )}
               <div className="grid grid-cols-3 gap-4">
-                {[
+                {(revenue_scenarios ? [
+                  {
+                    label: 'Conservative',
+                    sublabel: 'Median performer (P50)',
+                    revenue: revenue_scenarios.conservative,
+                    colorClass: 'border-amber-200 bg-amber-50',
+                    labelColor: 'text-amber-600',
+                  },
+                  {
+                    label: 'Target',
+                    sublabel: 'Top quarter (P75)',
+                    revenue: revenue_scenarios.target,
+                    colorClass: 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5',
+                    labelColor: 'text-[oklch(0.45_0.14_75)]',
+                  },
+                  {
+                    label: 'Optimistic',
+                    sublabel: 'Top 10% (P90)',
+                    revenue: revenue_scenarios.optimistic,
+                    colorClass: 'border-emerald-200 bg-emerald-50',
+                    labelColor: 'text-emerald-600',
+                  },
+                ] : [
                   {
                     label: 'Conservative',
                     sublabel: '30% lower occupancy',
-                    occupancy: (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 0.7,
                     revenue: revenue_estimate.nightly * ((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 0.7) * 365,
+                    colorClass: 'border-[oklch(0.90_0_0)]',
+                    labelColor: 'text-amber-600',
                   },
                   {
                     label: 'Projected',
                     sublabel: 'Based on market data',
-                    occupancy: revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy,
                     revenue: revenue_estimate.annual,
+                    colorClass: 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5',
+                    labelColor: 'text-[oklch(0.45_0.14_75)]',
                   },
                   {
                     label: 'Optimistic',
                     sublabel: '20% higher occupancy',
-                    occupancy: Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95),
                     revenue: revenue_estimate.nightly * Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95) * 365,
+                    colorClass: 'border-emerald-200 bg-emerald-50',
+                    labelColor: 'text-emerald-600',
                   },
-                ].map((scenario, i) => {
+                ]).map((scenario, i) => {
                   const annualOperatingCosts = scenario.revenue * 0.20;
                   const annualProfit = scenario.revenue - rentalCalcs.rent * 12 - annualOperatingCosts;
+                  const monthlyProfit = annualProfit / 12;
                   return (
-                    <div key={i} className={`rounded-xl p-4 border ${i === 1 ? 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5' : 'border-[oklch(0.90_0_0)]'}`}>
-                      <p className="font-semibold text-[oklch(0.15_0_0)] text-sm">{scenario.label}</p>
-                      <p className="text-xs text-[oklch(0.55_0_0)] mb-3">{scenario.sublabel}</p>
+                    <div key={i} className={`rounded-xl p-4 border ${scenario.colorClass}`}>
+                      <p className={`font-bold text-xs uppercase tracking-wider mb-0.5 ${scenario.labelColor}`}>{scenario.label}</p>
+                      <p className="text-[10px] text-[oklch(0.55_0_0)] mb-3">{scenario.sublabel}</p>
                       <p className="text-lg font-bold text-[oklch(0.15_0_0)]">{formatCurrency(scenario.revenue)}/yr</p>
-                      <p className="text-xs text-[oklch(0.55_0_0)]">at {formatPercent(scenario.occupancy)} occupancy</p>
-                      <p className={`text-sm font-bold mt-2 ${annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(annualProfit)} profit
-                      </p>
+                      <p className="text-xs text-[oklch(0.55_0_0)] mb-2">{formatCurrency(scenario.revenue / 12)}/mo revenue</p>
+                      <div className="pt-2 border-t border-dashed border-[oklch(0.85_0_0)]">
+                        <p className="text-[10px] text-[oklch(0.55_0_0)] uppercase tracking-wide">Monthly Profit</p>
+                        <p className={`text-base font-bold ${monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {monthlyProfit >= 0 ? '+' : ''}{formatCurrency(monthlyProfit)}/mo
+                        </p>
+                        <p className={`text-xs font-semibold ${annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {annualProfit >= 0 ? '+' : ''}{formatCurrency(annualProfit)}/yr
+                        </p>
+                      </div>
                     </div>
                   );
                 })}

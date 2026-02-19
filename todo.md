@@ -12140,3 +12140,27 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Change "After rent + 20% expenses" to "After all monthly costs" in profit insight text
 - [x] Change "after all costs" to "after all monthly costs" in FullPropertyReport
 - [x] Verified comp-median IS working — $30,247 is the comp median (original Rentalizer was $21,035, 44% uplift)
+
+## Feature: Three-tier net profit projections (Conservative / Target / Optimistic)
+- [ ] Add P50, P75, P90 percentile calculations from real comp data on server
+- [ ] Return revenueScenarios { conservative, target, optimistic } in API response
+- [ ] Redesign TeslaDashboard bottom-line section with three clean projection columns
+- [ ] Each tier shows: monthly revenue, monthly profit, annual profit
+- [ ] Keep it clean and not jumbled — clear visual hierarchy
+- [ ] Update shared report data to include the three tiers
+- [ ] Update FullPropertyReport to also show three tiers
+- [ ] Test with real property data
+- [ ] All tests pass
+
+## Three-Tier Revenue Projections (Feb 19, 2026)
+
+### Implementation
+- [x] Add P50/P75/P90 percentile calculation to server (airdna.ts) using real comp data
+- [x] Add revenue_scenarios field to API response (conservative/target/optimistic)
+- [x] Pass revenueScenarios through LeadMagnet → TeslaDashboard
+- [x] Add ThreeTierProjections component to HeroRevenueCard (amber/blue/emerald columns)
+- [x] Update FullPropertyReport scenario section to use real percentile data
+- [x] Pass revenueScenarios through BuildFullReportButton to full report
+- [x] Hide old RevenuePercentileProjections when three-tier data is available
+- [x] Write vitest tests for three-tier calculation logic (9 tests passing)
+- [x] TypeScript compilation clean (0 errors)

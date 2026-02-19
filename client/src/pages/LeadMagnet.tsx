@@ -230,6 +230,13 @@ interface AnalysisResult {
   revenuePercentiles?: {
     p10: number; p25: number; p50: number; p75: number; p90: number;
   };
+  revenueScenarios?: {
+    conservative: number;  // P50 - Median performer
+    target: number;        // P75 - Top quarter performer
+    optimistic: number;    // P90 - Top 10% performer
+    source: string;
+    compCount: number;
+  };
 }
 
 interface BulkPropertyInput {
@@ -1515,6 +1522,14 @@ export default function LeadMagnet() {
             p90: percentile(revenues, 90),
           };
         })(),
+        // Three-tier revenue scenarios from real comp data (P50/P75/P90)
+        revenueScenarios: (data as any).revenue_scenarios ? {
+          conservative: (data as any).revenue_scenarios.conservative,
+          target: (data as any).revenue_scenarios.target,
+          optimistic: (data as any).revenue_scenarios.optimistic,
+          source: (data as any).revenue_scenarios.source,
+          compCount: (data as any).revenue_scenarios.compCount,
+        } : undefined,
       });
       
       toast.success('Property validated! See your results below.');
@@ -5801,6 +5816,7 @@ export default function LeadMagnet() {
                 loanType={myProperty?.loanType as 'conventional' | 'dscr' | 'fha' | 'cash' | undefined}
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
+                revenueScenarios={result.revenueScenarios}
               />
               </Suspense>
             </StepErrorBoundary>
@@ -5859,6 +5875,7 @@ export default function LeadMagnet() {
                   } : undefined)}
                   bedroomPerformance={result.bedroomPerformance}
                   revenuePercentiles={result.revenuePercentiles}
+                  revenueScenarios={result.revenueScenarios}
                   historicalData={result.historicalData}
                   monthlyRent={globalMode === 'rent' ? (parseFloat(monthlyRent) || undefined) : undefined}
                   purchasePrice={globalMode === 'purchase' ? myProperty?.purchasePrice : undefined}

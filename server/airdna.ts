@@ -3893,6 +3893,41 @@ export async function getComprehensivePropertyReport(
     }
   }
   
+  // ============================================
+  // THREE-TIER REVENUE SCENARIOS (P50 / P75 / P90)
+  // Based on real comp data percentiles
+  // ============================================
+  const scenarioComps = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
+  let revenueScenarios: { conservative: number; target: number; optimistic: number; source: string; compCount: number } | undefined;
+  
+  if (scenarioComps.length >= 3) {
+    const scenarioRevenues = scenarioComps.map(c => c.annual_revenue).sort((a, b) => a - b);
+    const pctl = (arr: number[], p: number) => {
+      const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+      return arr[idx];
+    };
+    const median = (arr: number[]) => {
+      const mid = Math.floor(arr.length / 2);
+      return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
+    };
+    
+    const p50 = median(scenarioRevenues);
+    const p75 = pctl(scenarioRevenues, 75);
+    const p90 = pctl(scenarioRevenues, 90);
+    
+    revenueScenarios = {
+      conservative: p50,  // Median performer (P50)
+      target: p75,        // Top quarter performer (P75)
+      optimistic: p90,    // Top 10% performer (P90)
+      source: exactMatchComps.length >= 3 ? 'exact_match' : 'same_bedroom',
+      compCount: scenarioComps.length,
+    };
+    
+    console.log(`[Revenue Scenarios] P50=$${p50.toLocaleString()}, P75=$${p75.toLocaleString()}, P90=$${p90.toLocaleString()} (${scenarioComps.length} comps, source: ${revenueScenarios.source})`);
+  } else {
+    console.log(`[Revenue Scenarios] Not enough comps (${scenarioComps.length}) for three-tier projections`);
+  }
+  
   const result = {
     property: propertyEstimate,
     market: marketData,
@@ -3906,6 +3941,8 @@ export async function getComprehensivePropertyReport(
       mom_perc_chg: 0, // Not calculated
       yoy_perc_chg: yoyPercentChange,
     } : undefined,
+    // Three-tier revenue projections from real comp data
+    revenue_scenarios: revenueScenarios,
   };
 
   // Cache the full report for instant repeat lookups (7 days)
