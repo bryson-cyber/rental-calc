@@ -12187,3 +12187,8 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Label Simplification (Feb 19, 2026)
 - [x] Remove P50/P75/P90 jargon from ThreeTierProjections sublabels
 - [x] Remove P50/P75/P90 jargon from FullPropertyReport scenario section
+
+### Gemini Provider Fix (Feb 19, 2026)
+- [x] Fix model ID: gemini-3-pro-preview → gemini-3.1-pro-preview (per official docs)
+- [x] Verify thinking config matches official docs (added medium level, documented minimal not supported)
+- [x] Update model-router.ts — toGeminiOptions now maps low/medium/high correctly

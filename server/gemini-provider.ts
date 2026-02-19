@@ -4,13 +4,16 @@
  * Handles heavy synthesis tasks: full reports, market narratives, enhanced narratives.
  * Uses @google/genai SDK with thinking configuration.
  * 
- * MODEL: gemini-3-pro-preview
- * - thinkingLevel: 'high' → deep reasoning for comprehensive reports
+ * MODEL: gemini-3.1-pro-preview
+ * - thinkingLevel: 'high' → deep reasoning for comprehensive reports (default)
+ * - thinkingLevel: 'medium' → balanced thinking for most tasks
  * - thinkingLevel: 'low'  → lighter reasoning for summaries
  * 
- * GEMINI 3.1 PRO CONFIGURATION (per gemini-api-dev skill):
- * - thinkingConfig: { thinkingLevel: "high" | "low" }
- * - Max 1M token context window
+ * GEMINI 3.1 PRO CONFIGURATION (per official docs):
+ * - thinkingConfig: { thinkingLevel: "high" | "medium" | "low" }
+ * - 'minimal' is NOT supported for 3.1 Pro
+ * - Cannot disable thinking for 3.1 Pro
+ * - Max 1M input tokens, 65,536 output tokens
  * - systemInstruction for system prompts
  */
 
@@ -26,10 +29,12 @@ export interface GeminiCallOptions {
   maxTokens?: number;
   /**
    * Reasoning intensity.
-   * 'high' → deep reasoning for comprehensive reports
-   * 'low'  → lighter reasoning for summaries
+   * 'high'   → maximizes reasoning depth (default, dynamic)
+   * 'medium' → balanced thinking for most tasks
+   * 'low'    → minimizes latency and cost
+   * Note: 'minimal' is NOT supported for Gemini 3.1 Pro
    */
-  thinkingLevel?: 'low' | 'high';
+  thinkingLevel?: 'low' | 'medium' | 'high';
   /** System prompt / instruction. */
   systemPrompt?: string;
 }
@@ -38,7 +43,7 @@ export interface GeminiCallOptions {
 // CONFIGURATION
 // ---------------------------------------------------------------------------
 
-const MODEL_ID = 'gemini-3-pro-preview';
+const MODEL_ID = 'gemini-3.1-pro-preview';
 const MAX_OUTPUT_TOKENS = 65536; // Gemini 3 Pro max
 
 // ---------------------------------------------------------------------------

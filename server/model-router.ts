@@ -131,10 +131,15 @@ function toSonnetOptions(effort: EffortLevel, options?: { maxTokens?: number; sy
 }
 
 function toGeminiOptions(effort: EffortLevel, options?: { maxTokens?: number; systemPrompt?: string }): GeminiCallOptions {
+  const thinkingMap: Record<EffortLevel, 'low' | 'medium' | 'high'> = {
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+  };
   return {
     maxTokens: options?.maxTokens,
     systemPrompt: options?.systemPrompt,
-    thinkingLevel: effort === 'low' ? 'low' : 'high',
+    thinkingLevel: thinkingMap[effort],
   };
 }
 
