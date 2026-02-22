@@ -12386,3 +12386,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add week-to-week re-engagement logic: skip past_attendees, re-invite past_noshows
 - [x] Auto-tag attendees as 'past_attendee' and no-shows as 'past_noshow' after each webinar
 - [x] Build admin UI: upload CSV, view suppression list with counts, manual add/remove
+
+## Fix: Attendee CTA Message Too Long (Feb 22, 2026)
+- [x] Shorten Attendee CTA from 186+ chars to under 160 chars for single SMS delivery

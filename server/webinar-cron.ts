@@ -101,8 +101,8 @@ const FIFTEEN_MIN_MESSAGE = `Get your water, energy drink, paper and pen ready! 
 /** Live now (4 PM PST) */
 const LIVE_NOW_MESSAGE = `we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}`;
 
-/** Post-webinar CTA (5 PM PST) — attendees only */
-const ATTENDEE_CTA_MESSAGE = `Hey {{firstName}} it's Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: ${TURNKEY_CTA_URL}`;
+/** Post-webinar CTA (5 PM PST) — attendees only (must stay under 160 chars after {{firstName}} substitution) */
+const ATTENDEE_CTA_MESSAGE = `Hey {{firstName}} its Inayah! Ready to start your Airbnb? I opened a few Turnkey spots. Book a free call: masterclass.coachinayah.com/the-turnkey-program`;
 
 /**
  * Strip emoji characters from a string.
