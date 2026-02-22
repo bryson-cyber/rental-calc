@@ -715,6 +715,103 @@ export const webinarRouter = router({
       return sendBlast(input.scheduleId, input.message, 'manual', 'custom blast');
     }),
 
+  /** Get editable message templates for a schedule */
+  getMessageTemplates: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const [schedule] = await db.select().from(webinarSchedules).where(eq(webinarSchedules.id, input.scheduleId)).limit(1);
+      if (!schedule) throw new TRPCError({ code: 'NOT_FOUND', message: 'Schedule not found' });
+
+      // Default templates
+      const defaults: Record<string, string> = {
+        noonEngagement: 'Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?',
+        twoHourReminder: 'We are 2 HOURS AWAY! Are you ready? Save your link: {{liveRoomUrl}}',
+        oneHourReminder: '1 hour warning!!! I am so excited to see you! {{liveRoomUrl}}',
+        fifteenMinReminder: 'Get your water, energy drink, paper and pen ready! We have 15 minutes until we are LIVE!\n{{liveRoomUrl}}',
+        liveNow: 'we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}',
+        noShowBlast: 'You\'re missing out! Coach Inayah is LIVE right now. Jump in: {{liveRoomUrl}}',
+      };
+
+      // Merge saved overrides with defaults
+      let saved: Record<string, string> = {};
+      try {
+        if (schedule.messageTemplates) {
+          saved = JSON.parse(schedule.messageTemplates);
+        }
+      } catch { /* ignore parse errors */ }
+
+      return Object.entries(defaults).map(([key, defaultMsg]) => ({
+        key,
+        message: saved[key] ?? defaultMsg,
+        isCustom: !!saved[key],
+      }));
+    }),
+
+  /** Update a single message template for a schedule */
+  updateMessageTemplate: ownerProcedure
+    .input(z.object({
+      scheduleId: z.number(),
+      key: z.string(),
+      message: z.string().min(1).max(500),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const [schedule] = await db.select().from(webinarSchedules).where(eq(webinarSchedules.id, input.scheduleId)).limit(1);
+      if (!schedule) throw new TRPCError({ code: 'NOT_FOUND', message: 'Schedule not found' });
+
+      let saved: Record<string, string> = {};
+      try {
+        if (schedule.messageTemplates) {
+          saved = JSON.parse(schedule.messageTemplates);
+        }
+      } catch { /* ignore */ }
+
+      saved[input.key] = input.message;
+
+      await db.update(webinarSchedules)
+        .set({ messageTemplates: JSON.stringify(saved) })
+        .where(eq(webinarSchedules.id, input.scheduleId));
+
+      return { success: true, key: input.key };
+    }),
+
+  /** Get delivery stats per blast type for today */
+  getBlastTypeStats: ownerProcedure
+    .input(z.object({ scheduleId: z.number().optional() }))
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return {};
+
+      // Get today's start in UTC
+      const now = new Date();
+      const pstOffset = -8 * 60; // PST = UTC-8
+      const pstNow = new Date(now.getTime() + pstOffset * 60000);
+      const todayStart = new Date(pstNow.getFullYear(), pstNow.getMonth(), pstNow.getDate());
+      const todayStartUtc = new Date(todayStart.getTime() - pstOffset * 60000);
+
+      const rows = await db.select({
+        messageType: smsConversations.messageType,
+        count: sql<number>`COUNT(*)`,
+      })
+        .from(smsConversations)
+        .where(and(
+          eq(smsConversations.direction, 'outbound'),
+          sql`${smsConversations.createdAt} >= ${todayStartUtc}`,
+        ))
+        .groupBy(smsConversations.messageType);
+
+      const stats: Record<string, number> = {};
+      for (const row of rows) {
+        stats[row.messageType] = Number(row.count);
+      }
+      return stats;
+    }),
+
   /** Create a schedule from just a WebinarJam Webinar ID — auto-pulls everything */
   createFromWebinarJam: ownerProcedure
     .input(z.object({ webinarId: z.string().min(1) }))

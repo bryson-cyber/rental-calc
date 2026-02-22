@@ -372,7 +372,7 @@ function OverviewPanel({
       {/* SECTION 3: AUTOMATED SCHEDULE + CONTROLS                      */}
       {/* ============================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CronStatusCard />
+        <CronStatusCard scheduleId={activeSchedule?.id} />
         <AiToggleCard />
       </div>
 
@@ -1608,19 +1608,44 @@ function AiToggleCard() {
   );
 }
 
-function CronStatusCard() {
+function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
   const { data: cronStatus, isLoading } = trpc.webinar.getCronStatus.useQuery();
+  const { data: templates, refetch: refetchTemplates } = trpc.webinar.getMessageTemplates.useQuery(
+    { scheduleId: scheduleId! },
+    { enabled: !!scheduleId }
+  );
+  const { data: blastStats } = trpc.webinar.getBlastTypeStats.useQuery(
+    { scheduleId },
+    { refetchInterval: 15000 }
+  );
+  const updateTemplate = trpc.webinar.updateMessageTemplate.useMutation({
+    onSuccess: () => {
+      toast.success('Message template updated');
+      setEditingKey(null);
+      refetchTemplates();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
 
   if (isLoading) return null;
 
   const blasts = [
-    { label: 'Noon Engagement', key: 'noonEngagement' as const, desc: '"What are you excited about?"' },
-    { label: '2-Hour Reminder', key: 'twoHourReminder' as const, desc: '"We are 2 HOURS AWAY!" + link' },
-    { label: '1-Hour Reminder', key: 'oneHourReminder' as const, desc: '"1 hour warning!!!" + link' },
-    { label: '15-Min Reminder', key: 'fifteenMinReminder' as const, desc: '"Get your water..." + link' },
-    { label: 'LIVE NOW', key: 'liveNow' as const, desc: '"we are live !!! LETSGOOOOO!" + link' },
-    { label: 'No-Show Blast', key: 'noShowBlast' as const, desc: 'FOMO teaser to no-shows only' },
+    { label: 'Noon Engagement', key: 'noonEngagement', time: '12:00 PM', dbType: 'engagement' },
+    { label: '2-Hour Reminder', key: 'twoHourReminder', time: '2:00 PM', dbType: 'reminder' },
+    { label: '1-Hour Reminder', key: 'oneHourReminder', time: '3:00 PM', dbType: 'reminder' },
+    { label: '15-Min Reminder', key: 'fifteenMinReminder', time: '3:45 PM', dbType: 'reminder' },
+    { label: 'LIVE NOW', key: 'liveNow', time: '4:00 PM', dbType: 'reminder' },
+    { label: 'No-Show Blast', key: 'noShowBlast', time: '4:10 PM', dbType: 'no_show_blast' },
   ];
+
+  // Map blast keys to messageType counts
+  const getDeliveryCount = (dbType: string): number => {
+    if (!blastStats) return 0;
+    return (blastStats as Record<string, number>)[dbType] ?? 0;
+  };
 
   return (
     <Card>
@@ -1629,29 +1654,103 @@ function CronStatusCard() {
           <Clock className="w-5 h-5 text-primary" />
           Automated Schedule
         </CardTitle>
-        <CardDescription>6 automated SMS blasts fire on webinar day (all times Pacific)</CardDescription>
+        <CardDescription>Click any message to edit it. Changes take effect on the next blast.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="space-y-3">
           {blasts.map((blast) => {
-            const status = cronStatus?.[blast.key];
+            const status = cronStatus?.[blast.key as keyof typeof cronStatus] as { time: string; firedToday: boolean } | undefined;
+            const template = templates?.find(t => t.key === blast.key);
+            const deliveryCount = getDeliveryCount(blast.dbType);
+            const isEditing = editingKey === blast.key;
+
             return (
-              <div key={blast.key} className="flex items-start gap-3 p-3 rounded-lg border">
-                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${status?.firedToday ? 'bg-green-500' : cronStatus?.active ? 'bg-amber-400' : 'bg-red-500'}`} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{blast.label}</p>
-                    {status?.firedToday && <span className="text-xs text-green-600 font-medium">Sent</span>}
+              <div key={blast.key} className="rounded-lg border overflow-hidden">
+                {/* Header row */}
+                <div className="flex items-center justify-between p-3 bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${status?.firedToday ? 'bg-green-500' : cronStatus?.active ? 'bg-amber-400' : 'bg-red-500'}`} />
+                    <div>
+                      <p className="text-sm font-medium">{blast.label}</p>
+                      <p className="text-xs text-muted-foreground">{blast.time} Pacific</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{status?.time}</p>
-                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{blast.desc}</p>
+                  <div className="flex items-center gap-2">
+                    {deliveryCount > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {deliveryCount} sent
+                      </Badge>
+                    )}
+                    {status?.firedToday && (
+                      <Badge variant="default" className="text-xs bg-green-600">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Delivered
+                      </Badge>
+                    )}
+                    {!status?.firedToday && cronStatus?.active && (
+                      <Badge variant="outline" className="text-xs">
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
+                {/* Message body — clickable to edit */}
+                {isEditing ? (
+                  <div className="p-3 space-y-2 bg-muted/10">
+                    <Textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      rows={3}
+                      className="text-sm"
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs ${editDraft.length > 160 ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                        {editDraft.length}/160 characters
+                      </span>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setEditingKey(null)}>Cancel</Button>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (scheduleId) {
+                              updateTemplate.mutate({ scheduleId, key: blast.key, message: editDraft });
+                            }
+                          }}
+                          disabled={updateTemplate.isPending || !editDraft.trim()}
+                        >
+                          {updateTemplate.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="p-3 cursor-pointer hover:bg-muted/20 transition-colors group"
+                    onClick={() => {
+                      if (scheduleId) {
+                        setEditDraft(template?.message || '');
+                        setEditingKey(blast.key);
+                      }
+                    }}
+                  >
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {template?.message || '(default message)'}
+                    </p>
+                    <p className="text-xs text-muted-foreground/50 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Edit className="w-3 h-3 inline mr-1" />
+                      Click to edit
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Reminder blasts include each registrant's personal WebinarJam link. No-show blast only targets people not in the room.
+          Placeholders: {'{{firstName}}'}, {'{{liveRoomUrl}}'}, {'{{webinarName}}'}, {'{{startTime}}'}. No-show blast only targets people not in the room.
         </p>
       </CardContent>
     </Card>

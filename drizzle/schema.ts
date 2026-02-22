@@ -2314,6 +2314,9 @@ export const webinarSchedules = mysqlTable("webinar_schedules", {
   /** AI-generated teasers cache (JSON array of teaser strings) */
   generatedTeasers: text("generatedTeasers"),
 
+  /** Editable message templates for automated blasts (JSON object keyed by blast type) */
+  messageTemplates: text("messageTemplates"),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [

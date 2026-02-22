@@ -184,10 +184,14 @@ describe('Webinar Cron Module', () => {
             where: vi.fn().mockImplementation(() => {
               selectCallCount++;
               if (selectCallCount === 1) {
-                // First call: get schedule
+                // First call: getTemplate reads messageTemplates from schedule
+                return { limit: vi.fn().mockResolvedValue([{ messageTemplates: null }]) };
+              }
+              if (selectCallCount === 2) {
+                // Second call: sendBlast gets full schedule
                 return { limit: vi.fn().mockResolvedValue([mockSchedule]) };
               }
-              // Second call: get registrants
+              // Third call: get registrants
               return Promise.resolve(mockRegistrants);
             }),
           }),

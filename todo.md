@@ -12365,3 +12365,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Reorder overview: Live Room URL > Quick Actions > Blast Tracker > Schedule + Controls > Integrations
 - [x] Add "Send Custom Blast" button with message composer and confirmation
 - [x] Add sent/pending status indicators to the Automated Schedule card on overview
+
+## Editable Automated Messages + Delivery Status (Feb 22, 2026)
+- [x] Make each automated scheduled message clickable and editable inline
+- [x] Show delivery status per blast (sent count, delivered badge, pending badge)
+- [x] Store custom message overrides in the database (messageTemplates JSON on webinarSchedules)
+- [x] Cron reads from DB templates first, falls back to hardcoded defaults

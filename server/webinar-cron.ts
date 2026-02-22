@@ -203,27 +203,72 @@ export async function sendBlast(
 }
 
 // ---------------------------------------------------------------------------
+// DB-AWARE MESSAGE TEMPLATES
+// ---------------------------------------------------------------------------
+
+/** Default templates keyed by blast type */
+const DEFAULT_TEMPLATES: Record<string, string> = {
+  noonEngagement: NOON_ENGAGEMENT_MESSAGE,
+  twoHourReminder: TWO_HOUR_MESSAGE,
+  oneHourReminder: ONE_HOUR_MESSAGE,
+  fifteenMinReminder: FIFTEEN_MIN_MESSAGE,
+  liveNow: LIVE_NOW_MESSAGE,
+  noShowBlast: `You're missing out! Coach Inayah is LIVE right now. Jump in: {{liveRoomUrl}}`,
+};
+
+/**
+ * Get the message template for a blast type.
+ * Reads from the schedule's messageTemplates JSON column first,
+ * falls back to the hardcoded default.
+ */
+async function getTemplate(scheduleId: number, key: string): Promise<string> {
+  try {
+    const db = await getDb();
+    if (db) {
+      const [schedule] = await db
+        .select({ messageTemplates: webinarSchedules.messageTemplates })
+        .from(webinarSchedules)
+        .where(eq(webinarSchedules.id, scheduleId))
+        .limit(1);
+
+      if (schedule?.messageTemplates) {
+        const saved = JSON.parse(schedule.messageTemplates) as Record<string, string>;
+        if (saved[key]) return saved[key];
+      }
+    }
+  } catch {
+    // Fall through to default
+  }
+  return DEFAULT_TEMPLATES[key] || '';
+}
+
+// ---------------------------------------------------------------------------
 // INDIVIDUAL BLAST FUNCTIONS (for manual triggers)
 // ---------------------------------------------------------------------------
 
 export async function executeNoonEngagement(scheduleId: number) {
-  return sendBlast(scheduleId, NOON_ENGAGEMENT_MESSAGE, 'engagement', 'noon engagement');
+  const template = await getTemplate(scheduleId, 'noonEngagement');
+  return sendBlast(scheduleId, template, 'engagement', 'noon engagement');
 }
 
 export async function executeTwoHourReminder(scheduleId: number) {
-  return sendBlast(scheduleId, TWO_HOUR_MESSAGE, 'reminder', '2-hour reminder');
+  const template = await getTemplate(scheduleId, 'twoHourReminder');
+  return sendBlast(scheduleId, template, 'reminder', '2-hour reminder');
 }
 
 export async function executeOneHourReminder(scheduleId: number) {
-  return sendBlast(scheduleId, ONE_HOUR_MESSAGE, 'reminder', '1-hour reminder');
+  const template = await getTemplate(scheduleId, 'oneHourReminder');
+  return sendBlast(scheduleId, template, 'reminder', '1-hour reminder');
 }
 
 export async function executeFifteenMinReminder(scheduleId: number) {
-  return sendBlast(scheduleId, FIFTEEN_MIN_MESSAGE, 'reminder', '15-min reminder');
+  const template = await getTemplate(scheduleId, 'fifteenMinReminder');
+  return sendBlast(scheduleId, template, 'reminder', '15-min reminder');
 }
 
 export async function executeLiveNowBlast(scheduleId: number) {
-  return sendBlast(scheduleId, LIVE_NOW_MESSAGE, 'reminder', 'live now');
+  const template = await getTemplate(scheduleId, 'liveNow');
+  return sendBlast(scheduleId, template, 'reminder', 'live now');
 }
 
 // ---------------------------------------------------------------------------
