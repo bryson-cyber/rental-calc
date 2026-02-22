@@ -1393,6 +1393,15 @@ function CronStatusCard() {
 
   if (isLoading) return null;
 
+  const blasts = [
+    { label: 'Noon Engagement', key: 'noonEngagement' as const, desc: '"What are you excited about?"' },
+    { label: '2-Hour Reminder', key: 'twoHourReminder' as const, desc: '"We are 2 HOURS AWAY!" + link' },
+    { label: '1-Hour Reminder', key: 'oneHourReminder' as const, desc: '"1 hour warning!!!" + link' },
+    { label: '15-Min Reminder', key: 'fifteenMinReminder' as const, desc: '"Get your water..." + link' },
+    { label: 'LIVE NOW', key: 'liveNow' as const, desc: '"we are live !!! LETSGOOOOO!" + link' },
+    { label: 'No-Show Blast', key: 'noShowBlast' as const, desc: 'FOMO teaser to no-shows only' },
+  ];
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -1400,43 +1409,29 @@ function CronStatusCard() {
           <Clock className="w-5 h-5 text-primary" />
           Automated Schedule
         </CardTitle>
-        <CardDescription>Two automated SMS actions fire on webinar day</CardDescription>
+        <CardDescription>6 automated SMS blasts fire on webinar day (all times Pacific)</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-3 rounded-lg border">
-            <div className="flex items-center gap-3">
-              <div className={`w-2.5 h-2.5 rounded-full ${cronStatus?.active ? 'bg-green-500' : 'bg-red-500'}`} />
-              <div>
-                <p className="text-sm font-medium">Noon Engagement</p>
-                <p className="text-xs text-muted-foreground">
-                  {cronStatus?.noonEngagement.time}
-                  {cronStatus?.noonEngagement.firedToday && ' \u2014 Fired today \u2705'}
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {blasts.map((blast) => {
+            const status = cronStatus?.[blast.key];
+            return (
+              <div key={blast.key} className="flex items-start gap-3 p-3 rounded-lg border">
+                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${status?.firedToday ? 'bg-green-500' : cronStatus?.active ? 'bg-amber-400' : 'bg-red-500'}`} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{blast.label}</p>
+                    {status?.firedToday && <span className="text-xs text-green-600 font-medium">Sent</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{status?.time}</p>
+                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{blast.desc}</p>
+                </div>
               </div>
-            </div>
-            <Badge variant={cronStatus?.active ? 'default' : 'secondary'} className="text-xs">
-              {cronStatus?.active ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg border">
-            <div className="flex items-center gap-3">
-              <div className={`w-2.5 h-2.5 rounded-full ${cronStatus?.active ? 'bg-green-500' : 'bg-red-500'}`} />
-              <div>
-                <p className="text-sm font-medium">No-Show Blast</p>
-                <p className="text-xs text-muted-foreground">
-                  {cronStatus?.noShowBlast.time}
-                  {cronStatus?.noShowBlast.firedToday && ' \u2014 Fired today \u2705'}
-                </p>
-              </div>
-            </div>
-            <Badge variant={cronStatus?.active ? 'default' : 'secondary'} className="text-xs">
-              {cronStatus?.active ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
+            );
+          })}
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          The AI reads the webinar transcript and generates all messages. Replies are handled by the AI conversation engine.
+          Reminder blasts include each registrant's personal WebinarJam link. No-show blast only targets people not in the room.
         </p>
       </CardContent>
     </Card>

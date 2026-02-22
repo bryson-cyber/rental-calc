@@ -12345,3 +12345,10 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## SMS Blast Delivery Tracker (Feb 22, 2026)
 - [x] Add live SMS blast delivery tracker card to Webinar Dashboard (shows sent/total, message preview, timestamps)
+
+## Timed Reminder Blasts (Feb 22, 2026)
+- [x] Add 2-hour reminder (2 PM PST): "We are 2 HOURS AWAY! Are you ready? Save your link: {webinarjam_link}"
+- [x] Add 1-hour reminder (3 PM PST): "1 hour warning!!! I am so excited to see you! {webinarjam_link}"
+- [x] Add 15-min reminder (3:45 PM PST): "Get your water, energy drink, paper and pen ready! We have 15 minutes until we are LIVE! {webinarjam_link}"
+- [x] Add live-now blast (4 PM PST): "we are live !!! LETSGOOOOO! {webinarjam_link}"
+- [x] Dynamically pull the WebinarJam link from the active schedule each week (not hardcoded)
