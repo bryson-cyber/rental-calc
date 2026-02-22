@@ -68,7 +68,26 @@ export const webinarRouter = router({
 
   /** List all webinar schedules */
   listSchedules: ownerProcedure.query(async () => {
-    return getAllSchedules();
+    const db = await getDb();
+    if (!db) return [];
+
+    const schedules = await getAllSchedules();
+
+    // Add registrant count to each schedule
+    const withCounts = await Promise.all(
+      schedules.map(async (schedule) => {
+        const [countResult] = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(webinarRegistrants)
+          .where(eq(webinarRegistrants.scheduleId, schedule.id));
+        return {
+          ...schedule,
+          registrantCount: countResult?.count ?? 0,
+        };
+      })
+    );
+
+    return withCounts;
   }),
 
   /** Get a single schedule with registrant stats */
@@ -577,6 +596,117 @@ export const webinarRouter = router({
     .input(z.object({ scheduleId: z.number() }))
     .mutation(async ({ input }) => {
       return executeNoShowBlast(input.scheduleId, 'manual');
+    }),
+
+  /** Create a schedule from just a WebinarJam Webinar ID — auto-pulls everything */
+  createFromWebinarJam: ownerProcedure
+    .input(z.object({ webinarId: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // 1. Fetch webinar details from WebinarJam
+      let webinar;
+      try {
+        webinar = await getWebinar(input.webinarId);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Could not find webinar with ID ${input.webinarId}. Check the ID and try again.`,
+        });
+      }
+
+      if (!webinar.schedules || webinar.schedules.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This webinar has no schedules in WebinarJam.',
+        });
+      }
+
+      // Use the first (or most recent) schedule
+      const wjSchedule = webinar.schedules[webinar.schedules.length - 1];
+
+      // Parse the date to determine day of week
+      let dayOfWeek = 0; // default Sunday
+      let startTime = '16:00'; // default 4 PM
+      try {
+        if (wjSchedule.date) {
+          const dateObj = new Date(wjSchedule.date);
+          if (!isNaN(dateObj.getTime())) {
+            dayOfWeek = dateObj.getDay();
+          }
+        }
+        if (wjSchedule.time) {
+          // WebinarJam time format varies: "4:00 PM", "16:00", etc.
+          const timeStr = wjSchedule.time.trim();
+          const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+          const match12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+          if (match24) {
+            startTime = `${match24[1].padStart(2, '0')}:${match24[2]}`;
+          } else if (match12) {
+            let hour = parseInt(match12[1]);
+            const isPM = match12[3].toUpperCase() === 'PM';
+            if (isPM && hour !== 12) hour += 12;
+            if (!isPM && hour === 12) hour = 0;
+            startTime = `${String(hour).padStart(2, '0')}:${match12[2]}`;
+          }
+        }
+      } catch {
+        // Use defaults if parsing fails
+      }
+
+      // Auto-inject the permanent transcript
+      let transcript: string | null = null;
+      try {
+        transcript = await getTranscript();
+      } catch {
+        console.warn('[WebinarRouter] Could not load permanent transcript for auto-create');
+      }
+
+      // 2. Create the schedule in our database
+      const [result] = await db.insert(webinarSchedules).values({
+        name: webinar.name || `Webinar ${input.webinarId}`,
+        dayOfWeek,
+        startTime,
+        timezone: wjSchedule.timezone || 'America/New_York',
+        liveRoomUrl: null,
+        noShowTeaser: null,
+        webinarTranscript: transcript,
+        webinarjamWebinarId: String(input.webinarId),
+        webinarjamScheduleId: String(wjSchedule.schedule),
+        isActive: 1,
+      }).$returningId();
+
+      const scheduleId = result.id;
+
+      // 3. Auto-generate teasers
+      if (transcript) {
+        try {
+          await generateAndCacheTeasers(scheduleId);
+        } catch (error) {
+          console.error(`[WebinarRouter] Failed to auto-generate teasers:`, error);
+        }
+      }
+
+      // 4. Auto-sync registrants
+      let syncResult = null;
+      try {
+        syncResult = await syncRegistrants(scheduleId);
+        console.log(`[WebinarRouter] Auto-synced ${syncResult.synced} registrants for schedule ${scheduleId}`);
+      } catch (error) {
+        console.error(`[WebinarRouter] Failed to auto-sync registrants:`, error);
+      }
+
+      return {
+        id: scheduleId,
+        success: true,
+        webinarName: webinar.name,
+        scheduleDate: wjSchedule.date,
+        scheduleTime: wjSchedule.time,
+        wjScheduleId: String(wjSchedule.schedule),
+        registrantsSynced: syncResult?.synced ?? 0,
+        totalSchedulesInWJ: webinar.schedules.length,
+      };
     }),
 
   /** Check if current user is the owner (used by frontend to show/hide webinar nav) */

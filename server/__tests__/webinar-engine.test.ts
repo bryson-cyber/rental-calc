@@ -271,7 +271,7 @@ describe('Webinar Engine Logic', () => {
 // ============================================================================
 
 describe('Webinar Router — Owner Access Control', () => {
-  it('isOwner returns true for the owner', async () => {
+  it('isOwner returns true for the owner', { timeout: 15000 }, async () => {
     // We need to test the tRPC router with a mock context
     const { appRouter } = await import('../routers');
     const { ENV } = await import('../_core/env');

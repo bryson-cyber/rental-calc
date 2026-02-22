@@ -12262,3 +12262,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update admin UI: CronStatusCard, automated actions panel with Test Now buttons, removed old reminder stage selector
 - [x] Cleaned up unused imports (CheckCircle, XCircle), removed Welcome column from registrants table
 - [x] Write tests for webinar-cron module (114 test files, 1692 tests all passing)
+
+### Admin UX & Test SMS (Feb 22, 2026)
+- [x] Send test engagement SMS to 702-521-8792 (Message ID: 699a7f30aa75b30d0d775587)
+- [x] Simplify "New Schedule" creation: just enter WebinarJam Webinar ID, auto-pulls name/schedule/date/time/registrants from API
+- [x] Make registrants list prominent: added registrant count to schedule list cards, updated Engaged column
+- [x] Added createFromWebinarJam tRPC procedure for one-field schedule creation
+- [x] All 114 test files, 1692 tests passing

@@ -229,10 +229,13 @@ function OverviewPanel({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {schedule.webinarjamWebinarId && (
-                      <Badge variant="outline" className="text-xs">WebinarJam</Badge>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{(schedule as any).registrantCount ?? '—'} registrants</p>
+                      {schedule.webinarjamWebinarId && (
+                        <p className="text-xs text-muted-foreground">WebinarJam synced</p>
+                      )}
+                    </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
@@ -553,7 +556,7 @@ function ScheduleDetailPanel({
                     <TableHead>Phone</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Reminders</TableHead>
+                      <TableHead>Engaged</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -566,17 +569,18 @@ function ScheduleDetailPanel({
                         {formatPhone(reg.phone)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {reg.email || '—'}
+                        {reg.email || '\u2014'}
                       </TableCell>
                       <TableCell>
                         <AttendanceBadge status={reg.attendanceStatus} optedOut={reg.optedOut === 1} />
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          Stage {reg.lastReminderStage}/4
-                        </Badge>
+                        {reg.lastReminderStage > 0 ? (
+                          <Badge variant="default" className="text-xs bg-green-600">Texted</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Pending</Badge>
+                        )}
                       </TableCell>
-
                     </TableRow>
                   ))}
                 </TableBody>
@@ -903,118 +907,57 @@ function CreateScheduleDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState('0');
-  const [startTime, setStartTime] = useState('18:00');
-  const [liveRoomUrl, setLiveRoomUrl] = useState('');
-  // Transcript is permanently pre-loaded — no need for manual input
-  const [wjWebinarId, setWjWebinarId] = useState('');
-  const [wjScheduleId, setWjScheduleId] = useState('');
+  const [webinarId, setWebinarId] = useState('');
 
-  const createMut = trpc.webinar.createSchedule.useMutation({
+  const createFromWJ = trpc.webinar.createFromWebinarJam.useMutation({
     onSuccess: (result) => {
-      const syncMsg = result.syncResult
-        ? ` | ${result.syncResult.synced} registrants synced from WebinarJam`
-        : '';
-      toast.success(`Schedule created${syncMsg}`);
+      toast.success(
+        `"${result.webinarName}" created \u2014 ${result.registrantsSynced} registrants synced!`
+      );
       onOpenChange(false);
       onCreated();
-      // Reset form
-      setName('');
-      setDayOfWeek('0');
-      setStartTime('18:00');
-      setLiveRoomUrl('');
-
-      setWjWebinarId('');
-      setWjScheduleId('');
+      setWebinarId('');
     },
     onError: (err) => toast.error(err.message),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Webinar Schedule</DialogTitle>
+          <DialogTitle>Add Webinar</DialogTitle>
           <DialogDescription>
-            Set up a recurring webinar schedule. AI content is auto-generated from the permanent webinar transcript.
+            Enter your WebinarJam Webinar ID. Everything else is pulled automatically \u2014 name, schedule, date/time, and all registrants.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Name *</label>
+            <label className="text-sm font-medium">WebinarJam Webinar ID *</label>
             <Input
-              placeholder="e.g., Sunday Masterclass"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., 370"
+              value={webinarId}
+              onChange={(e) => setWebinarId(e.target.value)}
+              className="text-lg font-mono"
+              autoFocus
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Day of Week *</label>
-              <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS_OF_WEEK.map((day, i) => (
-                    <SelectItem key={i} value={String(i)}>{day}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Start Time (PST) *</label>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Live Room URL</label>
-            <Input
-              placeholder="https://webinarjam.com/live/..."
-              value={liveRoomUrl}
-              onChange={(e) => setLiveRoomUrl(e.target.value)}
-            />
-          </div>
-
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <div className="flex items-center gap-2 mb-1">
-              <Bot className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">AI-Powered Content</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              The webinar transcript is permanently loaded. AI will auto-generate no-show teasers, reminder content, and power the conversation engine for this schedule.
+            <p className="text-xs text-muted-foreground mt-1">
+              Find this in your WebinarJam dashboard under the webinar settings.
             </p>
           </div>
 
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-2">WebinarJam Integration (Optional)</p>
-            <p className="text-xs text-muted-foreground mb-3">Connect to auto-sync registrants when the schedule is created.</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground">Webinar ID</label>
-                <Input
-                  placeholder="WJ Webinar ID"
-                  value={wjWebinarId}
-                  onChange={(e) => setWjWebinarId(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Schedule ID</label>
-                <Input
-                  placeholder="WJ Schedule ID"
-                  value={wjScheduleId}
-                  onChange={(e) => setWjScheduleId(e.target.value)}
-                />
-              </div>
+          <div className="bg-muted/50 rounded-lg p-3 border">
+            <div className="flex items-center gap-2 mb-2">
+              <Bot className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">What happens automatically:</span>
             </div>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>\u2022 Webinar name, date, and time pulled from WebinarJam</li>
+              <li>\u2022 All existing registrants synced with phone numbers</li>
+              <li>\u2022 AI generates no-show teasers from the webinar transcript</li>
+              <li>\u2022 Noon engagement + 4:10 PM no-show blast auto-scheduled</li>
+              <li>\u2022 New registrants auto-synced every 5 minutes</li>
+            </ul>
           </div>
         </div>
 
@@ -1022,24 +965,19 @@ function CreateScheduleDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
             onClick={() => {
-              if (!name.trim() || !startTime) {
-                toast.error('Name and start time are required');
+              if (!webinarId.trim()) {
+                toast.error('Webinar ID is required');
                 return;
               }
-              createMut.mutate({
-                name: name.trim(),
-                dayOfWeek: parseInt(dayOfWeek),
-                startTime,
-                liveRoomUrl: liveRoomUrl || undefined,
-                // Transcript is auto-injected on the server side
-                webinarjamWebinarId: wjWebinarId || undefined,
-                webinarjamScheduleId: wjScheduleId || undefined,
-              });
+              createFromWJ.mutate({ webinarId: webinarId.trim() });
             }}
-            disabled={createMut.isPending || !name.trim()}
+            disabled={createFromWJ.isPending || !webinarId.trim()}
           >
-            {createMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-            {createMut.isPending ? 'Creating...' : 'Create Schedule'}
+            {createFromWJ.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Pulling from WebinarJam...</>
+            ) : (
+              <><Plus className="w-4 h-4 mr-1" /> Add Webinar</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
