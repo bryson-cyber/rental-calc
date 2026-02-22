@@ -190,6 +190,9 @@ function OverviewPanel({
         </Button>
       </div>
 
+      {/* Webhook & Polling Status */}
+      <WebhookStatusCard />
+
       {/* Schedules List */}
       <Card>
         <CardHeader>
@@ -1136,6 +1139,90 @@ function AddRegistrantDialog({
 // ---------------------------------------------------------------------------
 // UTILITY COMPONENTS
 // ---------------------------------------------------------------------------
+
+function WebhookStatusCard() {
+  const { data: status, isLoading, refetch } = trpc.webinar.getWebhookStatus.useQuery();
+  const configureWebhooks = trpc.webinar.configureWebhooks.useMutation({
+    onSuccess: () => {
+      toast.success('Webhooks configured successfully');
+      refetch();
+    },
+    onError: (err) => toast.error(`Configuration failed: ${err.message}`),
+  });
+  const pollRegistrants = trpc.webinar.pollRegistrants.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Polled ${data.schedulesPolled} schedules, found ${data.newRegistrants} new registrants`);
+    },
+    onError: (err) => toast.error(`Poll failed: ${err.message}`),
+  });
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Zap className="w-5 h-5 text-amber-600" />
+          Integrations
+        </CardTitle>
+        <CardDescription>SimpleTexting webhook and WebinarJam registrant sync</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* SimpleTexting */}
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${status?.simpleTexting.configured ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="text-sm font-medium">SimpleTexting Webhook</p>
+                <p className="text-xs text-muted-foreground">
+                  {status?.simpleTexting.configured
+                    ? 'Receiving incoming SMS'
+                    : 'Not configured — incoming SMS won\'t be received'}
+                </p>
+              </div>
+            </div>
+            {!status?.simpleTexting.configured && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => configureWebhooks.mutate()}
+                disabled={configureWebhooks.isPending}
+              >
+                {configureWebhooks.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Configure'}
+              </Button>
+            )}
+          </div>
+
+          {/* WebinarJam */}
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${status?.webinarJam.pollingActive ? 'bg-green-500' : status?.webinarJam.apiKeySet ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="text-sm font-medium">WebinarJam Sync</p>
+                <p className="text-xs text-muted-foreground">
+                  {status?.webinarJam.pollingActive
+                    ? 'Polling every 5 min for new registrants'
+                    : status?.webinarJam.apiKeySet
+                    ? 'API key set but polling inactive'
+                    : 'API key not configured'}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => pollRegistrants.mutate()}
+              disabled={pollRegistrants.isPending}
+            >
+              {pollRegistrants.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Sync Now'}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function StatCard({
   icon,

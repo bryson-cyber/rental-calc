@@ -1193,6 +1193,16 @@ async function startServer() {
         );
       }, 5000);
     }).catch(() => { /* transcript seeder not critical */ });
+
+    // Auto-configure webhooks and start WebinarJam polling
+    import('../webhook-auto-config').then(({ runWebhookAutoConfig }) => {
+      // Delay to let DB and transcript seeder settle first
+      setTimeout(() => {
+        runWebhookAutoConfig().catch((err) =>
+          console.error('[WebhookConfig] Auto-config failed:', err),
+        );
+      }, 10000);
+    }).catch(() => { /* webhook auto-config not critical */ });
   });
 }
 

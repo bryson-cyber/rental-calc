@@ -506,6 +506,51 @@ export const webinarRouter = router({
       return { success: true, teasers: result.teasers, primaryTeaser: result.primaryTeaser };
     }),
 
+  // =========================================================================
+  // WEBHOOK AUTO-CONFIGURATION
+  // =========================================================================
+
+  /** Get webhook configuration status */
+  getWebhookStatus: ownerProcedure.query(async () => {
+    const { isPollingActive } = await import('../webhook-auto-config');
+    let simpleTextingWebhooks: Array<{ id: string; url: string; triggers: string[] }> = [];
+    try {
+      simpleTextingWebhooks = await listWebhooks();
+    } catch {
+      // API key might not be set
+    }
+
+    const ourWebhook = simpleTextingWebhooks.find(wh =>
+      wh.url.includes('coachinayahturnkeytool.com') &&
+      wh.triggers.includes('INCOMING_MESSAGE')
+    );
+
+    return {
+      simpleTexting: {
+        configured: !!ourWebhook,
+        webhookId: ourWebhook?.id ?? null,
+        webhookUrl: ourWebhook?.url ?? null,
+        totalWebhooks: simpleTextingWebhooks.length,
+      },
+      webinarJam: {
+        pollingActive: isPollingActive(),
+        apiKeySet: !!ENV.webinarjamApiKey,
+      },
+    };
+  }),
+
+  /** Manually trigger webhook auto-configuration */
+  configureWebhooks: ownerProcedure.mutation(async () => {
+    const { runWebhookAutoConfig } = await import('../webhook-auto-config');
+    return runWebhookAutoConfig();
+  }),
+
+  /** Manually trigger a WebinarJam registrant poll */
+  pollRegistrants: ownerProcedure.mutation(async () => {
+    const { pollWebinarJamRegistrants } = await import('../webhook-auto-config');
+    return pollWebinarJamRegistrants();
+  }),
+
   /** Check if current user is the owner (used by frontend to show/hide webinar nav) */
   isOwner: protectedProcedure.query(({ ctx }) => {
     const ownerOpenId = ENV.ownerOpenId;

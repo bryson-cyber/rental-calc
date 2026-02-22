@@ -12243,3 +12243,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Remove CreateScheduleDialog transcript textarea — auto-injected server-side
 - [x] Update admin UI descriptions to reflect permanent transcript
 - [x] Write tests for webinar-transcript-seeder module (112 test files, 1670 tests all passing)
+
+### Auto-Configure Webhooks (Feb 21, 2026)
+- [x] Research WebinarJam API — no webhook API, pull-only → built polling instead
+- [x] Research SimpleTexting API — full webhook CRUD available
+- [x] Build SimpleTexting webhook auto-config on server startup (creates INCOMING_MESSAGE + UNSUBSCRIBE_REPORT webhook)
+- [x] Build WebinarJam registrant polling (every 5 min, syncs new registrants + sends welcome SMS)
+- [x] Add Integrations status card to admin dashboard (green/red dots, Configure/Sync Now buttons)
+- [x] Add owner-only tRPC procedures: getWebhookStatus, configureWebhooks, pollRegistrants
+- [x] Write vitest tests for webhook-auto-config (113 test files, 1681 tests all passing)
