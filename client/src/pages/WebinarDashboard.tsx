@@ -5,11 +5,12 @@
  * and AI conversation engine. Embedded as a tab in the Unified Admin.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,6 +53,9 @@ import {
   UserPlus,
   Eye,
   Edit,
+  Power,
+  ShieldCheck,
+  Download,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -188,6 +192,9 @@ function OverviewPanel({
           Refresh
         </Button>
       </div>
+
+      {/* AI Toggle & Sync Attendance */}
+      <AiToggleCard />
 
       {/* Cron Scheduler Status */}
       <CronStatusCard />
@@ -451,7 +458,7 @@ function ScheduleDetailPanel({
 
           {/* Manual Actions */}
           <div className="flex flex-wrap gap-3">
-            {/* Sync from WebinarJam */}
+            {/* Sync Attendance from WebinarJam */}
             {schedule.webinarjamWebinarId && (
               <Button
                 size="sm"
@@ -459,8 +466,8 @@ function ScheduleDetailPanel({
                 onClick={() => syncMut.mutate({ scheduleId })}
                 disabled={syncMut.isPending}
               >
-                {syncMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-                Sync WebinarJam
+                {syncMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Download className="w-4 h-4 mr-1" />}
+                Sync Attendance
               </Button>
             )}
 
@@ -1082,6 +1089,121 @@ function AddRegistrantDialog({
 // ---------------------------------------------------------------------------
 // UTILITY COMPONENTS
 // ---------------------------------------------------------------------------
+
+function AiToggleCard() {
+  const { data: aiStatus, isLoading } = trpc.webinar.getAiStatus.useQuery();
+  const utils = trpc.useUtils();
+  const toggleMut = trpc.webinar.setAiEnabled.useMutation({
+    onSuccess: (result) => {
+      utils.webinar.getAiStatus.invalidate();
+      toast.success(result.enabled ? 'AI auto-replies ENABLED' : 'AI auto-replies DISABLED');
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Sync attendance across all schedules
+  const { data: schedules } = trpc.webinar.listSchedules.useQuery();
+  const syncMut = trpc.webinar.syncRegistrants.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Synced ${result.synced} registrants (${result.newRegistrants} new, ${result.updated} updated)`);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  const handleSyncAll = useCallback(async () => {
+    if (!schedules?.length) {
+      toast.error('No schedules to sync');
+      return;
+    }
+    const wjSchedules = schedules.filter(s => (s as any).webinarjamWebinarId);
+    if (!wjSchedules.length) {
+      toast.error('No schedules with WebinarJam connected');
+      return;
+    }
+    setSyncingAll(true);
+    let totalSynced = 0;
+    let totalUpdated = 0;
+    try {
+      for (const schedule of wjSchedules) {
+        try {
+          const result = await syncMut.mutateAsync({ scheduleId: schedule.id });
+          totalSynced += result.synced;
+          totalUpdated += result.updated;
+        } catch (err) {
+          console.error(`Failed to sync schedule ${schedule.id}:`, err);
+        }
+      }
+      toast.success(`Attendance sync complete: ${totalSynced} registrants checked, ${totalUpdated} updated`);
+    } finally {
+      setSyncingAll(false);
+    }
+  }, [schedules, syncMut]);
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Bot className="w-5 h-5 text-primary" />
+          AI & Attendance Controls
+        </CardTitle>
+        <CardDescription>Manage AI auto-replies and sync attendance data from WebinarJam</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* AI Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${aiStatus?.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+              <div>
+                <p className="text-sm font-medium">AI Auto-Replies</p>
+                <p className="text-xs text-muted-foreground">
+                  {aiStatus?.enabled
+                    ? 'AI is responding to incoming SMS'
+                    : 'AI is OFF \u2014 incoming SMS are logged but not replied to'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={aiStatus?.enabled ?? false}
+              onCheckedChange={(checked) => toggleMut.mutate({ enabled: checked })}
+              disabled={toggleMut.isPending}
+            />
+          </div>
+
+          {/* Sync Attendance */}
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+              <div>
+                <p className="text-sm font-medium">Sync Attendance</p>
+                <p className="text-xs text-muted-foreground">
+                  Pull fresh attendance data from WebinarJam for all schedules
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSyncAll}
+              disabled={syncingAll}
+            >
+              {syncingAll ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Download className="w-3 h-3 mr-1" />}
+              {syncingAll ? 'Syncing...' : 'Sync Now'}
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground mt-3">
+          <ShieldCheck className="w-3 h-3 inline mr-1" />
+          No-show blasts always verify attendance with WebinarJam before sending. If the API is unreachable, the blast is aborted to protect attendees.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function CronStatusCard() {
   const { data: cronStatus, isLoading } = trpc.webinar.getCronStatus.useQuery();

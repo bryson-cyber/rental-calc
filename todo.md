@@ -12332,3 +12332,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix critical bug: no-show blast now ABORTS if WebinarJam API fails (was falling back to ALL registrants)
 - [x] Add pre-blast sync: fresh attendance data pulled from WebinarJam right before no-show blast fires
 - [x] 14 new tests for AI toggle and no-show safety (118 files, 1760 tests passing)
+
+## Admin Dashboard Enhancements (Feb 22, 2026)
+- [x] Add AI toggle button to admin dashboard (on/off switch for AI auto-replies)
+- [x] Add manual "Sync Attendance" button to admin dashboard (pulls fresh data from WebinarJam)
