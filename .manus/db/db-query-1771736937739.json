@@ -1,0 +1,170 @@
+{
+  "query": "SELECT id, name, role, openId, email, createdAt FROM users ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, role, openId, email, createdAt FROM users ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "14370602",
+      "name": "andersonkeana2017",
+      "role": "user",
+      "openId": "fjMFy7Yk7qUvKZUrbJP576",
+      "email": "andersonkeana2017@gmail.com",
+      "createdAt": "2026-02-22 04:34:24"
+    },
+    {
+      "id": "14370009",
+      "name": "Aminul Nuhash",
+      "role": "user",
+      "openId": "j9hP8LWoaZdd5cK5YXktLU",
+      "email": "aminul.philly@gmail.com",
+      "createdAt": "2026-02-21 23:40:11"
+    },
+    {
+      "id": "14342703",
+      "name": "Misbah Ellahi",
+      "role": "user",
+      "openId": "i2cKP9rt7ZQLSBxt8PDH8D",
+      "email": "misbahe20@gmail.com",
+      "createdAt": "2026-02-21 20:30:22"
+    },
+    {
+      "id": "14341579",
+      "name": "Sheila Lascano",
+      "role": "user",
+      "openId": "VovAm6onJYRPZkspmSaqbY",
+      "email": "vn8hzrnfrm@privaterelay.appleid.com",
+      "createdAt": "2026-02-21 06:45:22"
+    },
+    {
+      "id": "14341574",
+      "name": "Afrah Akbar",
+      "role": "user",
+      "openId": "mYYw65anFNguB3FUfzvjof",
+      "email": "afrah-akbar@hotmail.com",
+      "createdAt": "2026-02-21 06:43:55"
+    },
+    {
+      "id": "14341278",
+      "name": "Rachel",
+      "role": "user",
+      "openId": "kWaphDeMMecz79GnszzEjt",
+      "email": "primepropertypads@gmail.com",
+      "createdAt": "2026-02-21 03:37:25"
+    },
+    {
+      "id": "14340607",
+      "name": "Tiana Martel",
+      "role": "user",
+      "openId": "SinQtRkSEKXoFp9gxbp27d",
+      "email": "marteltiana@gmail.com",
+      "createdAt": "2026-02-21 01:26:31"
+    },
+    {
+      "id": "14340591",
+      "name": "s h",
+      "role": "user",
+      "openId": "kG7mjMk5Qr55umjE78WB9B",
+      "email": "gabrielahuaman55@gmail.com",
+      "createdAt": "2026-02-21 01:24:56"
+    },
+    {
+      "id": "14340565",
+      "name": "Luis Garcia",
+      "role": "user",
+      "openId": "AxnChqrnmpMUhqYGDukjB3",
+      "email": "lg003899@gmail.com",
+      "createdAt": "2026-02-21 01:22:00"
+    },
+    {
+      "id": "14340374",
+      "name": "Essalmi Ayoub",
+      "role": "user",
+      "openId": "iycLtWWzVFxevMUD9b7S4A",
+      "email": "yassine33live@gmail.com",
+      "createdAt": "2026-02-20 22:47:18"
+    },
+    {
+      "id": "14340241",
+      "name": "lisa benito",
+      "role": "user",
+      "openId": "F3DqZn6Xa5MBFjFiDMPhr8",
+      "email": "elizabenito@gmail.com",
+      "createdAt": "2026-02-20 22:15:11"
+    },
+    {
+      "id": "14340201",
+      "name": "Nasriinnur21",
+      "role": "user",
+      "openId": "L3w8Fbaiw78oACLKwWHGhd",
+      "email": "Nasriinnur21@gmail.com",
+      "createdAt": "2026-02-20 19:49:08"
+    },
+    {
+      "id": "14340090",
+      "name": "Emelda Yufanyi",
+      "role": "user",
+      "openId": "2ZEqjjTJLJMTEz6DMN7t6k",
+      "email": "emelda27@gmail.com",
+      "createdAt": "2026-02-20 18:39:35"
+    },
+    {
+      "id": "14310001",
+      "name": "Aaliyah Galindo",
+      "role": "admin",
+      "openId": "grqDhWQ9gyvbiUs8qycPH6",
+      "email": "aaliyah@coachinayah.com",
+      "createdAt": "2026-02-20 14:49:16"
+    },
+    {
+      "id": "14251567",
+      "name": "Ruth De-Teku",
+      "role": "user",
+      "openId": "PDu99KdZ6TbcUfLNkQdhEm",
+      "email": "ruthlessbaby11@gmail.com",
+      "createdAt": "2026-02-19 21:53:35"
+    },
+    {
+      "id": "14251049",
+      "name": "Zaria Quick",
+      "role": "user",
+      "openId": "kFnJLnwWfYkPpLHpcmJSfQ",
+      "email": "zariaquicc@gmail.com",
+      "createdAt": "2026-02-19 19:20:21"
+    },
+    {
+      "id": "14250245",
+      "name": "inquiries",
+      "role": "user",
+      "openId": "fook67LTyeeNupErn3Vfqg",
+      "email": "inquiries@hopperhomesllc.com",
+      "createdAt": "2026-02-19 15:35:27"
+    },
+    {
+      "id": "14250056",
+      "name": "Angel Dietrich",
+      "role": "user",
+      "openId": "aBEfPzZXNp3eMcoA5QJH3w",
+      "email": "angelrealcapital@gmail.com",
+      "createdAt": "2026-02-19 14:24:27"
+    },
+    {
+      "id": "14130021",
+      "name": "Ridwan Abdsalam",
+      "role": "user",
+      "openId": "TiyNwPeoexmFnxmJq3tJJB",
+      "email": "ridwanabdsalam@gmail.com",
+      "createdAt": "2026-02-19 01:22:03"
+    },
+    {
+      "id": "13830305",
+      "name": "ibrahimafrican22",
+      "role": "user",
+      "openId": "VABwPUgoHjtPrpSxARVszn",
+      "email": "ibrahimafrican22@gmail.com",
+      "createdAt": "2026-02-17 20:04:16"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\topenId\temail\tcreatedAt\n14370602\tandersonkeana2017\tuser\tfjMFy7Yk7qUvKZUrbJP576\tandersonkeana2017@gmail.com\t2026-02-22 04:34:24\n14370009\tAminul Nuhash\tuser\tj9hP8LWoaZdd5cK5YXktLU\taminul.philly@gmail.com\t2026-02-21 23:40:11\n14342703\tMisbah Ellahi\tuser\ti2cKP9rt7ZQLSBxt8PDH8D\tmisbahe20@gmail.com\t2026-02-21 20:30:22\n14341579\tSheila Lascano\tuser\tVovAm6onJYRPZkspmSaqbY\tvn8hzrnfrm@privaterelay.appleid.com\t2026-02-21 06:45:22\n14341574\tAfrah Akbar\tuser\tmYYw65anFNguB3FUfzvjof\tafrah-akbar@hotmail.com\t2026-02-21 06:43:55\n14341278\tRachel\tuser\tkWaphDeMMecz79GnszzEjt\tprimepropertypads@gmail.com\t2026-02-21 03:37:25\n14340607\tTiana Martel\tuser\tSinQtRkSEKXoFp9gxbp27d\tmarteltiana@gmail.com\t2026-02-21 01:26:31\n14340591\ts h\tuser\tkG7mjMk5Qr55umjE78WB9B\tgabrielahuaman55@gmail.com\t2026-02-21 01:24:56\n14340565\tLuis Garcia\tuser\tAxnChqrnmpMUhqYGDukjB3\tlg003899@gmail.com\t2026-02-21 01:22:00\n14340374\tEssalmi Ayoub\tuser\tiycLtWWzVFxevMUD9b7S4A\tyassine33live@gmail.com\t2026-02-20 22:47:18\n14340241\tlisa benito\tuser\tF3DqZn6Xa5MBFjFiDMPhr8\telizabenito@gmail.com\t2026-02-20 22:15:11\n14340201\tNasriinnur21\tuser\tL3w8Fbaiw78oACLKwWHGhd\tNasriinnur21@gmail.com\t2026-02-20 19:49:08\n14340090\tEmelda Yufanyi\tuser\t2ZEqjjTJLJMTEz6DMN7t6k\temelda27@gmail.com\t2026-02-20 18:39:35\n14310001\tAaliyah Galindo\tadmin\tgrqDhWQ9gyvbiUs8qycPH6\taaliyah@coachinayah.com\t2026-02-20 14:49:16\n14251567\tRuth De-Teku\tuser\tPDu99KdZ6TbcUfLNkQdhEm\truthlessbaby11@gmail.com\t2026-02-19 21:53:35\n14251049\tZaria Quick\tuser\tkFnJLnwWfYkPpLHpcmJSfQ\tzariaquicc@gmail.com\t2026-02-19 19:20:21\n14250245\tinquiries\tuser\tfook67LTyeeNupErn3Vfqg\tinquiries@hopperhomesllc.com\t2026-02-19 15:35:27\n14250056\tAngel Dietrich\tuser\taBEfPzZXNp3eMcoA5QJH3w\tangelrealcapital@gmail.com\t2026-02-19 14:24:27\n14130021\tRidwan Abdsalam\tuser\tTiyNwPeoexmFnxmJq3tJJB\tridwanabdsalam@gmail.com\t2026-02-19 01:22:03\n13830305\tibrahimafrican22\tuser\tVABwPUgoHjtPrpSxARVszn\tibrahimafrican22@gmail.com\t2026-02-17 20:04:16\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

@@ -12289,3 +12289,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update all system prompts to reference 155-char limit
 - [x] Update tests for 155-char limit and SINGLE_SMS_STRICTLY enforcement
 - [x] All 115 test files, 1716 tests passing
+
+## Owner-Only Report Generation (Feb 22, 2026)
+
+- [x] Hide "Generate a full report" CTA card from non-owner users (LeadMagnet.tsx line 2328)
+- [x] Hide "Build Full Report" button in Step 5 from non-owner users (LeadMagnet.tsx line 5828)
+- [x] Protect /full-report route — redirects non-owner users to home (FullReportGenerator.tsx)
+- [x] Add backend gate on generateFromAddress procedure (shared-reports.ts) — returns FORBIDDEN for non-owner
+- [x] Only show report generation to Bryson Blocker (user ID 1 / owner account)
+- [x] Added OWNER_USER_ID constant to shared/const.ts
+- [x] Write tests to verify owner-only visibility (owner-only-report.test.ts — 5 tests)
+- [x] All 116 test files, 1721 tests passing
