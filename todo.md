@@ -12336,3 +12336,6 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Admin Dashboard Enhancements (Feb 22, 2026)
 - [x] Add AI toggle button to admin dashboard (on/off switch for AI auto-replies)
 - [x] Add manual "Sync Attendance" button to admin dashboard (pulls fresh data from WebinarJam)
+
+## Noon Engagement Message Fix (Feb 22, 2026)
+- [x] Replace AI-generated noon engagement with fixed message: "Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?"

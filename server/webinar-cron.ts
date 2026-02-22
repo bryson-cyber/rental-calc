@@ -26,8 +26,6 @@ import {
 } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 import { sendSms } from './simpletexting-client';
-import { getRandomTeaser, generateTeasersFromTranscript, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
-import { routedLLMCall, FEATURES } from './model-router';
 import { getLocalWebinarTime } from './area-code-timezone';
 import { executeNoShowBlast, syncRegistrants } from './webinar-engine';
 
@@ -67,59 +65,11 @@ function stripEmoji(text: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * System prompt for generating the noon engagement message.
- * The AI reads the transcript and writes a casual, exciting question
- * that gets registrants thinking about the webinar.
+ * Fixed noon engagement message.
+ * No AI generation — sends this exact message every time.
+ * The {{firstName}} placeholder is replaced per-registrant.
  */
-const NOON_ENGAGEMENT_SYSTEM_PROMPT = `You are Coach Inayah's SMS assistant. You're texting someone who signed up for today's live webinar about starting a profitable Airbnb business.
-
-Your job: Write a SHORT, warm, conversational text asking what they're most excited to learn about today. 
-
-Rules:
-- MUST be under 160 characters total (this is a single SMS, not email)
-- Use their first name with {{firstName}}
-- Reference 1-2 SPECIFIC topics from the webinar transcript so they know what's coming
-- Make it feel like a personal text, not a marketing blast
-- DO NOT use any emoji whatsoever — keep it clean text only
-- End with an open question that invites a reply
-- Casual, warm tone — like a friend checking in before an event
-- Mention the webinar is at 4 PM Pacific / 7 PM Eastern
-
-Example: "Hey {{firstName}}! Going live at 4 PM PT today covering how to get funded with zero out of pocket. What part are you most excited about?"`;
-
-/**
- * Generate a noon engagement message using the transcript.
- * Each registrant gets a slightly personalized version.
- */
-async function generateNoonEngagementMessage(transcript: string | null): Promise<string> {
-  if (!transcript || transcript.length < 100) {
-    return `Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?`;
-  }
-
-  // Use a relevant excerpt
-  const excerpt = transcript.length > 3000
-    ? transcript.substring(0, 3000)
-    : transcript;
-
-  const prompt = `Here's what the webinar covers:\n\n---\n${excerpt}\n---\n\nWrite a noon engagement text for today's webinar. MUST be under 160 characters. NO emoji. Use {{firstName}} as the name placeholder:`;
-
-  try {
-    const response = await routedLLMCall(FEATURES.WEBINAR_SMS_CONTENT, prompt, {
-      systemPrompt: NOON_ENGAGEMENT_SYSTEM_PROMPT,
-      maxTokens: 200,
-    });
-
-    let msg = response.trim().replace(/^["']|["']$/g, '');
-    
-    // Strip any emoji that slipped through
-    msg = stripEmoji(msg);
-    
-    return msg;
-  } catch (error) {
-    console.error('[WebinarCron] Failed to generate noon engagement message:', error);
-    return `Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?`;
-  }
-}
+const NOON_ENGAGEMENT_MESSAGE = `Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?`;
 
 /**
  * Execute the noon engagement blast.
@@ -160,8 +110,8 @@ export async function executeNoonEngagement(scheduleId: number): Promise<{
     return { sent: 0, failed: 0, skipped: 0 };
   }
 
-  // Generate the engagement message template from transcript
-  const messageTemplate = await generateNoonEngagementMessage(schedule.webinarTranscript);
+  // Use the fixed engagement message (no AI generation)
+  const messageTemplate = NOON_ENGAGEMENT_MESSAGE;
 
   console.log(`[WebinarCron] Sending noon engagement to ${registrants.length} registrants for "${schedule.name}"`);
 
