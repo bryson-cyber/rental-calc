@@ -194,10 +194,21 @@ describe('webinar-ai-content', () => {
       const result = buildTranscriptAwareSystemPrompt(null);
 
       expect(result).toContain('SMS');
-      expect(result).toContain('2-4 sentences');
+      expect(result).toContain('under 155 characters');
       expect(result).toContain('unsubscribe');
       expect(result).toContain('LIVE WEBINAR');
       expect(result).toContain('short-term rentals');
+    });
+
+    it('instructs AI to not use emoji', () => {
+      const result = buildTranscriptAwareSystemPrompt(null);
+      expect(result).toContain('DO NOT use any emoji');
+    });
+
+    it('mentions correct webinar time (4 PM Pacific / 7 PM Eastern)', () => {
+      const result = buildTranscriptAwareSystemPrompt(null);
+      expect(result).toContain('4 PM Pacific');
+      expect(result).toContain('7 PM Eastern');
     });
 
     it('instructs AI to reference specific transcript content', () => {

@@ -8,12 +8,17 @@
  * Runs on server startup and can be triggered from the admin dashboard.
  */
 
-import { listWebhooks, createWebhook, deleteWebhook } from './simpletexting-client';
+import { listWebhooks, createWebhook, deleteWebhook, type WebhookResponse } from './simpletexting-client';
 import { getDb } from './db';
 import { webinarSchedules, webinarRegistrants } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 import { syncRegistrants } from './webinar-engine';
 import { ENV } from './_core/env';
+
+/** Helper to get webhook ID regardless of field name */
+function getWebhookId(wh: WebhookResponse): string {
+  return wh.webhookId || wh.id || '';
+}
 
 // ---------------------------------------------------------------------------
 // CONSTANTS
@@ -64,16 +69,18 @@ export async function ensureSimpleTextingWebhook(): Promise<{
     );
 
     if (ourWebhook) {
-      console.log(`[WebhookConfig] SimpleTexting webhook already configured (ID: ${ourWebhook.id})`);
-      return { status: 'already_configured', webhookId: ourWebhook.id };
+      const whId = getWebhookId(ourWebhook);
+      console.log(`[WebhookConfig] SimpleTexting webhook already configured (ID: ${whId})`);
+      return { status: 'already_configured', webhookId: whId };
     }
 
     // Remove any stale webhooks pointing to our domain but with wrong URL
     for (const wh of existing) {
       if (wh.url.includes('coachinayahturnkeytool.com') && wh.url !== SIMPLETEXTING_WEBHOOK_URL) {
-        console.log(`[WebhookConfig] Removing stale webhook: ${wh.url} (ID: ${wh.id})`);
+        const staleId = getWebhookId(wh);
+        console.log(`[WebhookConfig] Removing stale webhook: ${wh.url} (ID: ${staleId})`);
         try {
-          await deleteWebhook(wh.id);
+          await deleteWebhook(staleId);
         } catch (err) {
           console.warn(`[WebhookConfig] Failed to delete stale webhook ${wh.id}:`, err);
         }
@@ -87,8 +94,9 @@ export async function ensureSimpleTextingWebhook(): Promise<{
       requestPerSecLimit: 15,
     });
 
-    console.log(`[WebhookConfig] SimpleTexting webhook created successfully (ID: ${result.id})`);
-    return { status: 'created', webhookId: result.id };
+    const newId = getWebhookId(result) || result.id;
+    console.log(`[WebhookConfig] SimpleTexting webhook created successfully (ID: ${newId})`);
+    return { status: 'created', webhookId: newId };
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

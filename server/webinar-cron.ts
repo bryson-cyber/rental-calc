@@ -3,17 +3,18 @@
  * 
  * Two automated SMS actions on webinar day (Sunday):
  * 
- * 1. NOON ENGAGEMENT (12:00 PM EST)
+ * 1. NOON ENGAGEMENT (12:00 PM Pacific / 3:00 PM Eastern)
  *    - Texts all registrants asking what they're most excited to learn
  *    - AI-generated from the webinar transcript
  *    - Kicks off a conversation thread — AI handles all replies
  * 
- * 2. NO-SHOW BLAST (4:10 PM EST)
- *    - Checks who hasn't shown up 10 minutes after webinar starts (4 PM EST)
+ * 2. NO-SHOW BLAST (4:10 PM Pacific / 7:10 PM Eastern)
+ *    - Checks who hasn't shown up 10 minutes after webinar starts (4 PM Pacific)
  *    - Sends AI-generated teaser from transcript to create FOMO
  *    - AI handles replies from no-shows too
  * 
- * All times are in America/New_York (EST/EDT).
+ * All times are in America/Los_Angeles (Pacific).
+ * Webinar starts at 4 PM Pacific / 7 PM Eastern.
  */
 
 import { getDb } from './db';
@@ -33,19 +34,32 @@ import { executeNoShowBlast } from './webinar-engine';
 // CONSTANTS
 // ---------------------------------------------------------------------------
 
-/** Timezone for all webinar scheduling */
-const WEBINAR_TZ = 'America/New_York';
+/** Timezone for all webinar scheduling — Pacific Time */
+const WEBINAR_TZ = 'America/Los_Angeles';
 
-/** Noon engagement text goes out at 12:00 PM EST */
+/** Noon engagement text goes out at 12:00 PM Pacific */
 const NOON_HOUR = 12;
 const NOON_MINUTE = 0;
 
-/** No-show blast goes out at 4:10 PM EST (10 min after 4 PM start) */
+/** No-show blast goes out at 4:10 PM Pacific (10 min after 4 PM start) */
 const NOSHOW_HOUR = 16;
 const NOSHOW_MINUTE = 10;
 
 /** Check interval: every 60 seconds */
 const CHECK_INTERVAL_MS = 60 * 1000;
+
+/**
+ * Strip emoji characters from a string.
+ * Uses a simple approach that catches common emoji ranges.
+ */
+function stripEmoji(text: string): string {
+  // Remove surrogate pairs (most emoji) and common symbol ranges
+  return text
+    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+    .replace(/[\u2600-\u27BF\u2B50\u2B55\u231A-\u23F3\u23F8-\u23FA\u25AA-\u25FE\u2934-\u2935\u2190-\u21FF\u200D\uFE0F\u20E3]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
 // ---------------------------------------------------------------------------
 // NOON ENGAGEMENT BLAST
@@ -61,15 +75,16 @@ const NOON_ENGAGEMENT_SYSTEM_PROMPT = `You are Coach Inayah's SMS assistant. You
 Your job: Write a SHORT, warm, conversational text asking what they're most excited to learn about today. 
 
 Rules:
-- 2-3 sentences MAX (this is SMS, not email)
+- MUST be under 160 characters total (this is a single SMS, not email)
 - Use their first name with {{firstName}}
-- Reference 2-3 SPECIFIC topics from the webinar transcript so they know what's coming
+- Reference 1-2 SPECIFIC topics from the webinar transcript so they know what's coming
 - Make it feel like a personal text, not a marketing blast
-- Use 1-2 emojis max
+- DO NOT use any emoji whatsoever — keep it clean text only
 - End with an open question that invites a reply
 - Casual, warm tone — like a friend checking in before an event
+- Mention the webinar is at 4 PM Pacific / 7 PM Eastern
 
-Example tone: "Hey {{firstName}}! Today's the day 🔥 We're covering everything from finding your first deal to getting funded with zero out of pocket. What part are you most excited about?"`;
+Example: "Hey {{firstName}}! Going live at 4 PM PT today covering how to get funded with zero out of pocket. What part are you most excited about?"`;
 
 /**
  * Generate a noon engagement message using the transcript.
@@ -77,7 +92,7 @@ Example tone: "Hey {{firstName}}! Today's the day 🔥 We're covering everything
  */
 async function generateNoonEngagementMessage(transcript: string | null): Promise<string> {
   if (!transcript || transcript.length < 100) {
-    return `Hey {{firstName}}! 🔥 Today's the day — Coach Inayah goes LIVE at 4 PM EST. What are you most excited to learn about?`;
+    return `Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?`;
   }
 
   // Use a relevant excerpt
@@ -85,7 +100,7 @@ async function generateNoonEngagementMessage(transcript: string | null): Promise
     ? transcript.substring(0, 3000)
     : transcript;
 
-  const prompt = `Here's what the webinar covers:\n\n---\n${excerpt}\n---\n\nWrite a noon engagement text for today's webinar. Use {{firstName}} as the name placeholder:`;
+  const prompt = `Here's what the webinar covers:\n\n---\n${excerpt}\n---\n\nWrite a noon engagement text for today's webinar. MUST be under 160 characters. NO emoji. Use {{firstName}} as the name placeholder:`;
 
   try {
     const response = await routedLLMCall(FEATURES.WEBINAR_SMS_CONTENT, prompt, {
@@ -93,10 +108,15 @@ async function generateNoonEngagementMessage(transcript: string | null): Promise
       maxTokens: 200,
     });
 
-    return response.trim().replace(/^["']|["']$/g, '');
+    let msg = response.trim().replace(/^["']|["']$/g, '');
+    
+    // Strip any emoji that slipped through
+    msg = stripEmoji(msg);
+    
+    return msg;
   } catch (error) {
     console.error('[WebinarCron] Failed to generate noon engagement message:', error);
-    return `Hey {{firstName}}! 🔥 Today's the day — Coach Inayah goes LIVE at 4 PM EST. What are you most excited to learn about?`;
+    return `Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?`;
   }
 }
 
@@ -155,14 +175,20 @@ export async function executeNoonEngagement(scheduleId: number): Promise<{
     }
 
     // Personalize the message
-    const message = messageTemplate
+    let message = messageTemplate
       .replace(/\{\{firstName\}\}/g, reg.firstName || 'there')
       .replace(/\{\{webinarName\}\}/g, schedule.name)
       .replace(/\{\{liveRoomUrl\}\}/g, reg.liveRoomUrl || schedule.liveRoomUrl || '')
-      .replace(/\{\{startTime\}\}/g, schedule.startTime || '4 PM EST');
+      .replace(/\{\{startTime\}\}/g, schedule.startTime || '4 PM PT / 7 PM ET');
+
+    // Strip emoji and enforce 160-char limit
+    message = stripEmoji(message);
+    if (message.length > 160) {
+      message = message.substring(0, 157) + '...';
+    }
 
     try {
-      const result = await sendSms({ contactPhone: reg.phone, text: message });
+      const result = await sendSms({ contactPhone: reg.phone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
 
       // Log the outbound SMS
       await db.insert(smsConversations).values({
@@ -197,18 +223,18 @@ let lastNoShowFiredDate: string | null = null;
 let cronInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Get the current time in EST/EDT.
+ * Get the current time in Pacific timezone.
  */
-function getNowInEST(): { hour: number; minute: number; dayOfWeek: number; dateStr: string } {
+function getNowInPacific(): { hour: number; minute: number; dayOfWeek: number; dateStr: string } {
   const now = new Date();
-  const estStr = now.toLocaleString('en-US', { timeZone: WEBINAR_TZ });
-  const estDate = new Date(estStr);
+  const ptStr = now.toLocaleString('en-US', { timeZone: WEBINAR_TZ });
+  const ptDate = new Date(ptStr);
 
   return {
-    hour: estDate.getHours(),
-    minute: estDate.getMinutes(),
-    dayOfWeek: estDate.getDay(), // 0 = Sunday
-    dateStr: estDate.toISOString().split('T')[0],
+    hour: ptDate.getHours(),
+    minute: ptDate.getMinutes(),
+    dayOfWeek: ptDate.getDay(), // 0 = Sunday
+    dateStr: ptDate.toISOString().split('T')[0],
   };
 }
 
@@ -217,7 +243,7 @@ function getNowInEST(): { hour: number; minute: number; dayOfWeek: number; dateS
  * Runs every minute via setInterval.
  */
 async function cronTick(): Promise<void> {
-  const { hour, minute, dayOfWeek, dateStr } = getNowInEST();
+  const { hour, minute, dayOfWeek, dateStr } = getNowInPacific();
 
   // Only run on webinar days — check which schedules have today as their day
   const db = await getDb();
@@ -233,10 +259,10 @@ async function cronTick(): Promise<void> {
 
   if (todaySchedules.length === 0) return;
 
-  // NOON ENGAGEMENT: Fire at 12:00 PM EST
+  // NOON ENGAGEMENT: Fire at 12:00 PM Pacific
   if (hour === NOON_HOUR && minute === NOON_MINUTE && lastNoonFiredDate !== dateStr) {
     lastNoonFiredDate = dateStr;
-    console.log(`[WebinarCron] 🕛 Noon engagement time! Firing for ${todaySchedules.length} schedule(s)`);
+    console.log(`[WebinarCron] Noon engagement time! Firing for ${todaySchedules.length} schedule(s)`);
 
     for (const schedule of todaySchedules) {
       try {
@@ -248,10 +274,10 @@ async function cronTick(): Promise<void> {
     }
   }
 
-  // NO-SHOW BLAST: Fire at 4:10 PM EST
+  // NO-SHOW BLAST: Fire at 4:10 PM Pacific
   if (hour === NOSHOW_HOUR && minute === NOSHOW_MINUTE && lastNoShowFiredDate !== dateStr) {
     lastNoShowFiredDate = dateStr;
-    console.log(`[WebinarCron] 🚨 No-show blast time! Firing for ${todaySchedules.length} schedule(s)`);
+    console.log(`[WebinarCron] No-show blast time! Firing for ${todaySchedules.length} schedule(s)`);
 
     for (const schedule of todaySchedules) {
       try {
@@ -275,8 +301,8 @@ export function startWebinarCron(): void {
   }
 
   console.log('[WebinarCron] Starting cron scheduler (checking every 60s)');
-  console.log(`[WebinarCron] Noon engagement: ${NOON_HOUR}:${String(NOON_MINUTE).padStart(2, '0')} EST on webinar days`);
-  console.log(`[WebinarCron] No-show blast: ${NOSHOW_HOUR}:${String(NOSHOW_MINUTE).padStart(2, '0')} EST on webinar days`);
+  console.log(`[WebinarCron] Noon engagement: ${NOON_HOUR}:${String(NOON_MINUTE).padStart(2, '0')} Pacific on webinar days`);
+  console.log(`[WebinarCron] No-show blast: ${NOSHOW_HOUR}:${String(NOSHOW_MINUTE).padStart(2, '0')} Pacific on webinar days`);
 
   // Run a check immediately
   cronTick().catch(err => console.error('[WebinarCron] Initial tick failed:', err));
@@ -312,15 +338,15 @@ export function getNextFireTimes(): {
   noonEngagement: { time: string; firedToday: boolean };
   noShowBlast: { time: string; firedToday: boolean };
 } {
-  const { dateStr } = getNowInEST();
+  const { dateStr } = getNowInPacific();
 
   return {
     noonEngagement: {
-      time: `12:00 PM EST`,
+      time: `12:00 PM Pacific`,
       firedToday: lastNoonFiredDate === dateStr,
     },
     noShowBlast: {
-      time: `4:10 PM EST`,
+      time: `4:10 PM Pacific`,
       firedToday: lastNoShowFiredDate === dateStr,
     },
   };

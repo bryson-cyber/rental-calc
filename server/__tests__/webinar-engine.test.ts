@@ -373,32 +373,57 @@ describe('Webinar Router — Owner Access Control', () => {
 // ============================================================================
 
 describe('Default Reminder Templates', () => {
-  it('all 5 stages have default templates', () => {
+  it('all 5 stages have default templates with no emoji', () => {
     const DEFAULT_TEMPLATES: Record<number, string> = {
-      1: `Hey {{firstName}}! 👋 Just a reminder — Coach Inayah's LIVE webinar is TOMORROW at {{startTime}} PST.`,
-      2: `Good morning {{firstName}}! ☀️ Today's the day!`,
-      3: `{{firstName}}, we're going live in 1 HOUR! 🔥`,
-      4: `{{firstName}}, we're LIVE RIGHT NOW! 🚀`,
-      5: `Hey {{firstName}}, we're LIVE right now and you're missing out! 🔥`,
+      1: `Hey {{firstName}}! Coach Inayah goes LIVE tomorrow at {{startTime}}. You'll learn how to start your Airbnb business. Don't miss it!`,
+      2: `{{firstName}}, today's the day! Coach Inayah goes LIVE at {{startTime}}. See you there!`,
+      3: `{{firstName}}, we go live in 1 HOUR at {{startTime}}. Join here: {{liveRoomUrl}}`,
+      4: `{{firstName}}, we're LIVE RIGHT NOW. Jump in: {{liveRoomUrl}}`,
+      5: `{{firstName}}, we're LIVE right now covering {{noShowTeaser}}. Jump in: {{liveRoomUrl}}`,
     };
+
+    const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
 
     for (let stage = 1; stage <= 5; stage++) {
       expect(DEFAULT_TEMPLATES[stage]).toBeDefined();
       expect(DEFAULT_TEMPLATES[stage].length).toBeGreaterThan(0);
       expect(DEFAULT_TEMPLATES[stage]).toContain('{{firstName}}');
+      // No emoji in any template
+      expect(DEFAULT_TEMPLATES[stage].match(emojiRegex)).toBeNull();
     }
   });
 
   it('stage 3, 4, 5 templates include liveRoomUrl placeholder', () => {
-    // These stages should include the live room URL since the webinar is imminent
     const templates = {
-      3: `{{firstName}}, we're going live in 1 HOUR! 🔥 Coach Inayah's webinar starts at {{startTime}} PST. Here's your link to join: {{liveRoomUrl}}`,
-      4: `{{firstName}}, we're LIVE RIGHT NOW! 🚀 Coach Inayah just started. Jump in before you miss the good stuff: {{liveRoomUrl}}`,
-      5: `Hey {{firstName}}, we're LIVE right now and you're missing out! 🔥 We're just about to cover {{noShowTeaser}}. Join here before it's too late: {{liveRoomUrl}}`,
+      3: `{{firstName}}, we go live in 1 HOUR at {{startTime}}. Join here: {{liveRoomUrl}}`,
+      4: `{{firstName}}, we're LIVE RIGHT NOW. Jump in: {{liveRoomUrl}}`,
+      5: `{{firstName}}, we're LIVE right now covering {{noShowTeaser}}. Jump in: {{liveRoomUrl}}`,
     };
 
     for (const [stage, template] of Object.entries(templates)) {
       expect(template).toContain('{{liveRoomUrl}}');
+    }
+  });
+
+  it('all default templates are under 160 chars when rendered with short values', () => {
+    const DEFAULT_TEMPLATES: Record<number, string> = {
+      1: `Hey {{firstName}}! Coach Inayah goes LIVE tomorrow at {{startTime}}. You'll learn how to start your Airbnb business. Don't miss it!`,
+      2: `{{firstName}}, today's the day! Coach Inayah goes LIVE at {{startTime}}. See you there!`,
+      3: `{{firstName}}, we go live in 1 HOUR at {{startTime}}. Join here: {{liveRoomUrl}}`,
+      4: `{{firstName}}, we're LIVE RIGHT NOW. Jump in: {{liveRoomUrl}}`,
+      5: `{{firstName}}, we're LIVE right now covering {{noShowTeaser}}. Jump in: {{liveRoomUrl}}`,
+    };
+
+    for (let stage = 1; stage <= 5; stage++) {
+      const rendered = DEFAULT_TEMPLATES[stage]
+        .replace(/\{\{firstName\}\}/g, 'Sarah')
+        .replace(/\{\{startTime\}\}/g, '4 PM PT')
+        .replace(/\{\{webinarName\}\}/g, 'Webby')
+        .replace(/\{\{liveRoomUrl\}\}/g, 'https://wj.co/r')
+        .replace(/\{\{noShowTeaser\}\}/g, 'how to get funded')
+        .replace(/\{\{date\}\}/g, 'Sunday');
+      // With short placeholder values, templates should be under 160 chars
+      expect(rendered.length).toBeLessThanOrEqual(160);
     }
   });
 });

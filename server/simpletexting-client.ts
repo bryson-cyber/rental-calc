@@ -84,9 +84,17 @@ export interface CreateWebhookParams {
 }
 
 export interface WebhookResponse {
-  id: string;
+  /** SimpleTexting returns `webhookId` in list, `id` in create */
+  id?: string;
+  webhookId?: string;
   url: string;
   triggers: string[];
+  requestPerSecLimit?: number;
+}
+
+/** Helper to get the webhook ID regardless of field name */
+function getWebhookId(wh: WebhookResponse): string {
+  return wh.webhookId || wh.id || '';
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +252,16 @@ export async function listWebhooks(): Promise<WebhookResponse[]> {
     throw new Error(`SimpleTexting list webhooks failed: ${response.status} — ${errorText}`);
   }
 
-  return (await response.json()) as WebhookResponse[];
+  const data = await response.json() as { content?: WebhookResponse[] } | WebhookResponse[];
+
+  // SimpleTexting v2 wraps results in { content: [...], totalPages, totalElements }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.content)) {
+    return data.content;
+  }
+  return [];
 }
 
 /**

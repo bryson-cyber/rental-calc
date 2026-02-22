@@ -100,8 +100,8 @@ describe('Webinar Cron Module', () => {
       expect(times.noonEngagement).toHaveProperty('firedToday');
       expect(times.noShowBlast).toHaveProperty('time');
       expect(times.noShowBlast).toHaveProperty('firedToday');
-      expect(times.noonEngagement.time).toBe('12:00 PM EST');
-      expect(times.noShowBlast.time).toBe('4:10 PM EST');
+      expect(times.noonEngagement.time).toBe('12:00 PM Pacific');
+      expect(times.noShowBlast.time).toBe('4:10 PM Pacific');
     });
 
     it('should report firedToday as false initially', async () => {

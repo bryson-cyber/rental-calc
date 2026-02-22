@@ -28,6 +28,22 @@ import { routedLLMCall, FEATURES } from './model-router';
 import { getRandomTeaser, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
 
 // ---------------------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip emoji characters from a string.
+ * Removes surrogate pairs (most emoji) and common symbol ranges.
+ */
+function stripEmoji(text: string): string {
+  return text
+    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+    .replace(/[\u2600-\u27BF\u2B50\u2B55\u231A-\u23F3\u23F8-\u23FA\u25AA-\u25FE\u2934-\u2935\u2190-\u21FF\u200D\uFE0F\u20E3]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
 // COACH INAYAH AI PERSONA
 // ---------------------------------------------------------------------------
 
@@ -36,13 +52,15 @@ const COACH_INAYAH_SYSTEM_PROMPT_FALLBACK = `You are Coach Inayah's AI assistant
 
 - WARM, ENCOURAGING, and REAL — like a big sister who's been through it and wants to help
 - You use casual, conversational language (not corporate speak)
-- You occasionally use emojis but don't overdo it ✨
+- DO NOT use any emoji whatsoever — keep it clean text only
 - You're knowledgeable about short-term rentals, Airbnb arbitrage, and building wealth through real estate
 - You keep responses SHORT (2-4 sentences max — this is SMS, not email)
+- Each response MUST be under 155 characters total to fit in a single SMS segment
+- The webinar is at 4 PM Pacific / 7 PM Eastern
 - You always try to get the person to JOIN THE LIVE WEBINAR
 - If they ask about the webinar topic, it's about how to start a profitable Airbnb business with little to no money down
 - If they ask about Coach Inayah, she's a successful Airbnb entrepreneur who's helped hundreds of people build rental businesses
-- If they want to unsubscribe, be respectful and say "No problem! I've removed you from our list. Wishing you the best! 🙏"
+- If they want to unsubscribe, be respectful and say "No problem! I've removed you from our list. Wishing you the best!"
 - NEVER make up specific financial claims or guarantees
 - NEVER share personal information about Coach Inayah beyond what's public
 - If you don't know something, say "Great question! Coach Inayah will cover that in the live session"
@@ -58,11 +76,11 @@ Your goal: Get them excited and into the live webinar room. Be helpful, be real,
  * These are used as fallbacks if no custom templates exist in the database.
  */
 const DEFAULT_TEMPLATES: Record<number, string> = {
-  1: `Hey {{firstName}}! 👋 Just a reminder — Coach Inayah's LIVE webinar is TOMORROW at {{startTime}} PST. You're going to learn exactly how to start your Airbnb business. Don't miss it!`,
-  2: `Good morning {{firstName}}! ☀️ Today's the day! Coach Inayah goes LIVE at {{startTime}} PST. Get ready to learn how to build your rental business. See you there!`,
-  3: `{{firstName}}, we're going live in 1 HOUR! 🔥 Coach Inayah's webinar starts at {{startTime}} PST. Here's your link to join: {{liveRoomUrl}}`,
-  4: `{{firstName}}, we're LIVE RIGHT NOW! 🚀 Coach Inayah just started. Jump in before you miss the good stuff: {{liveRoomUrl}}`,
-  5: `Hey {{firstName}}, we're LIVE right now and you're missing out! 🔥 We're just about to cover {{noShowTeaser}}. Join here before it's too late: {{liveRoomUrl}}`,
+  1: `Hey {{firstName}}! Coach Inayah goes LIVE tomorrow at {{startTime}}. You'll learn how to start your Airbnb business. Don't miss it!`,
+  2: `{{firstName}}, today's the day! Coach Inayah goes LIVE at {{startTime}}. See you there!`,
+  3: `{{firstName}}, we go live in 1 HOUR at {{startTime}}. Join here: {{liveRoomUrl}}`,
+  4: `{{firstName}}, we're LIVE RIGHT NOW. Jump in: {{liveRoomUrl}}`,
+  5: `{{firstName}}, we're LIVE right now covering {{noShowTeaser}}. Jump in: {{liveRoomUrl}}`,
 };
 
 /**
@@ -144,7 +162,7 @@ export async function sendReminders(
       continue;
     }
 
-    const message = renderTemplate(template, {
+    let message = renderTemplate(template, {
       firstName: reg.firstName || 'there',
       webinarName: schedule.name,
       liveRoomUrl: reg.liveRoomUrl || schedule.liveRoomUrl || '',
@@ -153,8 +171,14 @@ export async function sendReminders(
       noShowTeaser: schedule.noShowTeaser || 'the strategies that are changing lives',
     });
 
+    // Strip emoji and enforce 160-char limit
+    message = stripEmoji(message);
+    if (message.length > 160) {
+      message = message.substring(0, 157) + '...';
+    }
+
     try {
-      const result = await sendSms({ contactPhone: reg.phone, text: message });
+      const result = await sendSms({ contactPhone: reg.phone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
 
       // Log the outbound SMS
       await db.insert(smsConversations).values({
@@ -291,7 +315,7 @@ export async function executeNoShowBlast(
       // Use a random AI-generated teaser for variety in no-show blasts
       const teaser = await getRandomTeaser(scheduleId);
 
-      const message = renderTemplate(template, {
+      let message = renderTemplate(template, {
         firstName: reg.firstName || 'there',
         webinarName: schedule.name,
         liveRoomUrl: reg.liveRoomUrl || schedule.liveRoomUrl || '',
@@ -300,8 +324,14 @@ export async function executeNoShowBlast(
         date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       });
 
+      // Strip emoji and enforce 160-char limit
+      message = stripEmoji(message);
+      if (message.length > 160) {
+        message = message.substring(0, 157) + '...';
+      }
+
       try {
-        const result = await sendSms({ contactPhone: reg.phone, text: message });
+        const result = await sendSms({ contactPhone: reg.phone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
 
         // Log outbound SMS
         await db.insert(smsConversations).values({
@@ -416,11 +446,11 @@ export async function handleIncomingSms(
       .set({ optedOut: 1 })
       .where(eq(webinarRegistrants.phone, cleanPhone));
 
-    const optOutResponse = "No problem! I've removed you from our list. Wishing you the best! 🙏";
+    const optOutResponse = "No problem! I've removed you from our list. Wishing you the best!";
 
     // Send opt-out confirmation
     try {
-      const result = await sendSms({ contactPhone: cleanPhone, text: optOutResponse });
+      const result = await sendSms({ contactPhone: cleanPhone, text: optOutResponse, mode: 'SINGLE_SMS_STRICTLY' });
       await db.insert(smsConversations).values({
         phone: cleanPhone,
         direction: 'outbound',
@@ -470,11 +500,11 @@ export async function handleIncomingSms(
   const contextInfo = [
     registrant ? `Contact name: ${registrant.firstName}` : '',
     registrant?.liveRoomUrl ? `Their personal live room link: ${registrant.liveRoomUrl}` : '',
-    nextSchedule ? `Next webinar: "${nextSchedule.name}" at ${nextSchedule.startTime} PST` : '',
+    nextSchedule ? `Next webinar: "${nextSchedule.name}" at ${nextSchedule.startTime} Pacific` : '',
     nextSchedule?.liveRoomUrl ? `General live room link: ${nextSchedule.liveRoomUrl}` : '',
   ].filter(Boolean).join('\n');
 
-  const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. Keep it SHORT (2-4 sentences max, this is SMS). Be warm and helpful.`;
+  const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. MUST be under 155 characters total (count carefully). No emoji. Be warm and helpful.`;
 
   // Build transcript-aware system prompt if we have a transcript
   const systemPrompt = nextSchedule?.webinarTranscript
@@ -503,18 +533,21 @@ export async function handleIncomingSms(
     // Clean up AI response (remove quotes, excessive whitespace)
     aiResponse = aiResponse.trim().replace(/^["']|["']$/g, '');
 
-    // Ensure response isn't too long for SMS (160 chars per segment, aim for 2 segments max)
-    if (aiResponse.length > 320) {
-      aiResponse = aiResponse.substring(0, 317) + '...';
+    // Strip any emoji from AI response
+    aiResponse = stripEmoji(aiResponse);
+
+    // Enforce 155-char SMS limit for reliable single-segment delivery (5-char safety margin)
+    if (aiResponse.length > 155) {
+      aiResponse = aiResponse.substring(0, 152) + '...';
     }
   } catch (error) {
     console.error(`[WebinarEngine] AI response failed:`, error);
-    aiResponse = `Hey! Thanks for reaching out. Coach Inayah's team will get back to you shortly. In the meantime, don't miss the live webinar! 🔥`;
+    aiResponse = `Hey! Thanks for reaching out. Coach Inayah's team will get back to you soon. Don't miss the live webinar!`;
   }
 
   // Send the AI response
   try {
-    const result = await sendSms({ contactPhone: cleanPhone, text: aiResponse });
+    const result = await sendSms({ contactPhone: cleanPhone, text: aiResponse, mode: 'SINGLE_SMS_STRICTLY' });
 
     // Log outbound AI reply
     await db.insert(smsConversations).values({
@@ -821,7 +854,7 @@ export async function sendManualSms(
   const cleanPhone = phone.replace(/\D/g, '');
 
   try {
-    const result = await sendSms({ contactPhone: cleanPhone, text: message });
+    const result = await sendSms({ contactPhone: cleanPhone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
 
     if (db) {
       await db.insert(smsConversations).values({

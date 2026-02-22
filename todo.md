@@ -12269,3 +12269,23 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Make registrants list prominent: added registrant count to schedule list cards, updated Engaged column
 - [x] Added createFromWebinarJam tRPC procedure for one-field schedule creation
 - [x] All 114 test files, 1692 tests passing
+
+### Timezone & SMS Fixes (Feb 22, 2026)
+- [ ] Fix webinar time to 4 PM Pacific / 7 PM Eastern (was incorrectly set to 4 PM EST)
+- [ ] Update cron scheduler: noon engagement at 12 PM Pacific, no-show blast at 4:10 PM Pacific
+- [ ] Update AI content generator to keep all SMS messages under 160 characters
+- [ ] Remove all emoji from AI-generated SMS messages
+- [ ] Update existing schedule timezone to America/Los_Angeles
+
+## Webinar SMS Fixes (Feb 22, 2026)
+
+- [x] Fix noon engagement message to say "today" instead of day name (already correct in cron-generated messages)
+- [x] Fix incoming SMS webhook — AI auto-reply not triggering (zero webhooks registered, auto-config parsing bug fixed)
+- [x] Fix SimpleTexting listWebhooks response parsing (paginated {content:[...]} vs flat array)
+- [x] Fix webhook ID field name mismatch (webhookId vs id)
+- [x] Register SimpleTexting webhook for incoming messages
+- [x] Switch all sendSms calls to SINGLE_SMS_STRICTLY mode for reliable carrier delivery
+- [x] Reduce AI response char limit from 160 to 155 (5-char safety margin)
+- [x] Update all system prompts to reference 155-char limit
+- [x] Update tests for 155-char limit and SINGLE_SMS_STRICTLY enforcement
+- [x] All 115 test files, 1716 tests passing

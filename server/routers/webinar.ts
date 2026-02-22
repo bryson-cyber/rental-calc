@@ -532,7 +532,7 @@ export const webinarRouter = router({
   /** Get webhook configuration status */
   getWebhookStatus: ownerProcedure.query(async () => {
     const { isPollingActive } = await import('../webhook-auto-config');
-    let simpleTextingWebhooks: Array<{ id: string; url: string; triggers: string[] }> = [];
+    let simpleTextingWebhooks: Array<{ id?: string; webhookId?: string; url: string; triggers: string[] }> = [];
     try {
       simpleTextingWebhooks = await listWebhooks();
     } catch {
@@ -547,7 +547,7 @@ export const webinarRouter = router({
     return {
       simpleTexting: {
         configured: !!ourWebhook,
-        webhookId: ourWebhook?.id ?? null,
+        webhookId: ourWebhook?.webhookId ?? ourWebhook?.id ?? null,
         webhookUrl: ourWebhook?.url ?? null,
         totalWebhooks: simpleTextingWebhooks.length,
       },
