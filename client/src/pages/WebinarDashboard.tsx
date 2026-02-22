@@ -154,10 +154,10 @@ function OverviewPanel({
           sublabel={`${stats?.totalSchedules ?? 0} total`}
         />
         <StatCard
-          icon={<Users className="w-5 h-5 text-blue-600" />}
-          label="Total Registrants"
-          value={stats?.totalRegistrants ?? 0}
-          sublabel={`${stats?.totalAttended ?? 0} attended`}
+          icon={<Phone className="w-5 h-5 text-blue-600" />}
+          label="Active Textable"
+          value={stats?.activeTextable ?? 0}
+          sublabel={`${stats?.totalRegistrants ?? 0} total registered`}
         />
         <StatCard
           icon={<Send className="w-5 h-5 text-green-600" />}
@@ -192,6 +192,44 @@ function OverviewPanel({
           Refresh
         </Button>
       </div>
+
+      {/* Active Numbers Breakdown */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Phone className="w-5 h-5 text-primary" />
+            Active Numbers Breakdown
+          </CardTitle>
+          <CardDescription>Live count of textable phone numbers for today's blasts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="text-2xl font-bold text-green-600">{stats?.activeTextable ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">Active Textable</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="text-2xl font-bold text-blue-600">{stats?.totalRegistrants ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">Total Registered</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="text-2xl font-bold text-red-600">{stats?.optedOut ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">Opted Out</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="text-2xl font-bold text-amber-600">{stats?.totalAttended ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">Attended</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <div className="text-2xl font-bold text-purple-600">{stats?.totalNoShows ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">No-Shows</div>
+            </div>
+          </div>
+          {stats?.noPhone ? (
+            <p className="text-xs text-muted-foreground mt-3">{stats.noPhone} registrant{stats.noPhone > 1 ? 's' : ''} without a phone number on file</p>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {/* AI Toggle & Sync Attendance */}
       <AiToggleCard />

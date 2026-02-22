@@ -12339,3 +12339,6 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Noon Engagement Message Fix (Feb 22, 2026)
 - [x] Replace AI-generated noon engagement with fixed message: "Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?"
+
+## Active Numbers Dashboard Card (Feb 22, 2026)
+- [x] Add live "Active Textable Numbers" breakdown card to Webinar Dashboard overview

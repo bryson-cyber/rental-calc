@@ -477,6 +477,11 @@ export const webinarRouter = router({
       .orderBy(desc(noShowBlasts.createdAt))
       .limit(5);
 
+    // Active textable numbers breakdown
+    const activeTextable = registrants.filter(r => r.phone && r.phone !== '' && r.optedOut === 0).length;
+    const optedOut = registrants.filter(r => r.optedOut === 1).length;
+    const noPhone = registrants.filter(r => !r.phone || r.phone === '').length;
+
     return {
       totalSchedules: schedules.length,
       activeSchedules: schedules.filter(s => s.isActive === 1).length,
@@ -485,6 +490,9 @@ export const webinarRouter = router({
       totalNoShows: registrants.filter(r => r.attendanceStatus === 'no_show').length,
       totalSmsSent: outboundSms[0]?.count ?? 0,
       totalConversations: uniquePhones[0]?.count ?? 0,
+      activeTextable,
+      optedOut,
+      noPhone,
       recentBlasts,
     };
   }),

@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT \n  ws.name AS schedule_name,\n  COUNT(*) AS total_registrants,\n  SUM(CASE WHEN wr.phone IS NOT NULL AND wr.phone != '' AND wr.optedOut = 0 THEN 1 ELSE 0 END) AS active_textable,\n  SUM(CASE WHEN wr.optedOut = 1 THEN 1 ELSE 0 END) AS opted_out,\n  SUM(CASE WHEN wr.phone IS NULL OR wr.phone = '' THEN 1 ELSE 0 END) AS no_phone,\n  SUM(CASE WHEN wr.attendanceStatus = 'attended' THEN 1 ELSE 0 END) AS attended,\n  SUM(CASE WHEN wr.attendanceStatus = 'no_show' THEN 1 ELSE 0 END) AS no_shows,\n  SUM(CASE WHEN wr.attendanceStatus = 'registered' THEN 1 ELSE 0 END) AS registered_only\nFROM webinar_registrants wr\nJOIN webinar_schedules ws ON wr.scheduleId = ws.id\nGROUP BY ws.id, ws.name\nORDER BY ws.id DESC\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute \nSELECT \n  ws.name AS schedule_name,\n  COUNT(*) AS total_registrants,\n  SUM(CASE WHEN wr.phone IS NOT NULL AND wr.phone != '' AND wr.optedOut = 0 THEN 1 ELSE 0 END) AS active_textable,\n  SUM(CASE WHEN wr.optedOut = 1 THEN 1 ELSE 0 END) AS opted_out,\n  SUM(CASE WHEN wr.phone IS NULL OR wr.phone = '' THEN 1 ELSE 0 END) AS no_phone,\n  SUM(CASE WHEN wr.attendanceStatus = 'attended' THEN 1 ELSE 0 END) AS attended,\n  SUM(CASE WHEN wr.attendanceStatus = 'no_show' THEN 1 ELSE 0 END) AS no_shows,\n  SUM(CASE WHEN wr.attendanceStatus = 'registered' THEN 1 ELSE 0 END) AS registered_only\nFROM webinar_registrants wr\nJOIN webinar_schedules ws ON wr.scheduleId = ws.id\nGROUP BY ws.id, ws.name\nORDER BY ws.id DESC\n",
+  "rows": [
+    {
+      "schedule_name": "Webby 2.22.26",
+      "total_registrants": "715",
+      "active_textable": "715",
+      "opted_out": "0",
+      "no_phone": "0",
+      "attended": "0",
+      "no_shows": "0",
+      "registered_only": "715"
+    }
+  ],
+  "messages": [],
+  "stdout": "schedule_name\ttotal_registrants\tactive_textable\topted_out\tno_phone\tattended\tno_shows\tregistered_only\nWebby 2.22.26\t715\t715\t0\t0\t0\t0\t715\n",
+  "stderr": "",
+  "execution_time_ms": 68
+}
