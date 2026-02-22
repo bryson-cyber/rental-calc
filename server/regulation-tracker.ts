@@ -286,20 +286,31 @@ function capitalizeWords(str: string): string {
  * Returns true if the URL is accessible (2xx or 3xx status)
  */
 async function validateUrl(url: string): Promise<boolean> {
+  // Use a realistic browser User-Agent to avoid being blocked by .gov sites
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  
   try {
-    // Skip validation for Google redirect URLs (they're always valid)
-    if (url.includes('vertexaisearch.cloud.google.com')) {
+    // Skip validation for Google redirect/search URLs (they're always valid)
+    if (url.includes('vertexaisearch.cloud.google.com') || url.includes('google.com/search')) {
+      return true;
+    }
+    
+    // Skip validation for .gov sites — they frequently block automated requests
+    // but the URLs are almost always valid official sources
+    if (url.includes('.gov')) {
       return true;
     }
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const response = await fetch(url, {
       method: 'HEAD',
       signal: controller.signal,
+      redirect: 'follow',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; RegulationTracker/1.0)'
+        'User-Agent': UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       }
     });
     
@@ -315,21 +326,25 @@ async function validateUrl(url: string): Promise<boolean> {
     // If HEAD fails, try GET (some servers don't support HEAD)
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
       const response = await fetch(url, {
         method: 'GET',
         signal: controller.signal,
+        redirect: 'follow',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RegulationTracker/1.0)'
+          'User-Agent': UA,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
       });
       
       clearTimeout(timeoutId);
       return response.status >= 200 && response.status < 400;
     } catch {
-      console.log(`[RegulationTracker] URL validation error: ${url}`);
-      return false;
+      // Network error or timeout — assume valid to avoid false negatives
+      // (better to show a potentially broken link than remove a valid one)
+      console.log(`[RegulationTracker] URL validation timeout/error (assuming valid): ${url}`);
+      return true;
     }
   }
 }
@@ -383,6 +398,25 @@ async function getCachedRegulation(city: string, state: string): Promise<Regulat
     if (cached.length > 0) {
       const record = cached[0];
       console.log(`[RegulationTracker] Cache hit for ${city}, ${state}`);
+      
+      // Re-validate cached source URLs to catch stale 404 links
+      let sources = (record.sources as RegulationSource[]) || [];
+      if (sources.length > 0) {
+        console.log('[RegulationTracker] Re-validating cached source URLs...');
+        const validatedSources = await validateSources(sources);
+        if (validatedSources.length === 0) {
+          // All cached sources are dead — provide a Google search fallback
+          sources = [{
+            title: `Search ${city} STR Regulations`,
+            url: `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} short term rental regulations site:gov`)}`,
+            type: 'official',
+            isOfficial: false
+          }];
+        } else {
+          sources = validatedSources;
+        }
+      }
+      
       return {
         city: record.city,
         state: record.state,
@@ -397,7 +431,7 @@ async function getCachedRegulation(city: string, state: string): Promise<Regulat
         registrationFee: record.registrationFee || undefined,
         occupancyTax: record.occupancyTax || undefined,
         zoningRestrictions: record.zoningRestrictions || undefined,
-        sources: (record.sources as RegulationSource[]) || [],
+        sources,
         lastUpdated: record.updatedAt.toISOString(),
         confidence: (record.confidence as any) || 'medium',
         warnings: (record.warnings as string[]) || [],

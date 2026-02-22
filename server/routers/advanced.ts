@@ -227,6 +227,17 @@ export const advancedRouter = router({
         monthly_rent: z.number().positive("Monthly rent must be positive"),
         bedrooms: z.number().int().min(1).max(20),
         bathrooms: z.number().min(0.5).max(20),
+        propertyType: z.string().optional(),
+        amenities: z.object({
+          pool: z.boolean().optional(),
+          hotTub: z.boolean().optional(),
+          petFriendly: z.boolean().optional(),
+          parking: z.boolean().optional(),
+          gym: z.boolean().optional(),
+          kitchen: z.boolean().optional(),
+          washerDryer: z.boolean().optional(),
+          aircon: z.boolean().optional(),
+        }).optional(),
         sessionId: z.string().optional(), // For progress tracking
         reportMode: z.enum(['pro', 'guided']).default('guided'),
         // Lead capture fields
@@ -274,7 +285,9 @@ export const advancedRouter = router({
             undefined, // zillow_url
             undefined, // attractive_features
             input.sessionId, // sessionId for progress tracking
-            input.reportMode // pro or guided mode
+            input.reportMode, // pro or guided mode
+            input.propertyType,
+            input.amenities
           );
           
           console.log('[LeadMagnet] Analysis complete');

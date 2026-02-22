@@ -1,0 +1,73 @@
+{
+  "query": "SELECT id, cacheKey, cacheType, createdAt, expiresAt FROM api_cache WHERE cacheKey LIKE '%Chaseridge%' OR cacheKey LIKE '%Missouri%' ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, cacheKey, cacheType, createdAt, expiresAt FROM api_cache WHERE cacheKey LIKE '%Chaseridge%' OR cacheKey LIKE '%Missouri%' ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "3600146",
+      "cacheKey": "property_comprehensive:15010 Chaseridge Drive, Missouri City, TX, USA:4:2:auto",
+      "cacheType": "property_details",
+      "createdAt": "2026-02-21 02:49:17",
+      "expiresAt": "2026-03-07 02:49:18"
+    },
+    {
+      "id": "3600128",
+      "cacheKey": "rentalizer:{\"address\":\"15010 Chaseridge Drive, Missouri City, TX, USA\",\"bathrooms\":2,\"bedrooms\":4}",
+      "cacheType": "rentalizer",
+      "createdAt": "2026-02-21 02:49:12",
+      "expiresAt": "2026-03-07 02:49:12"
+    },
+    {
+      "id": "3600134",
+      "cacheKey": "search_markets_api:{\"limit\":50,\"searchTerm\":\"Missouri Area\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-21 02:49:12",
+      "expiresAt": "2026-02-28 02:49:13"
+    },
+    {
+      "id": "3600129",
+      "cacheKey": "search_markets:{\"limit\":20,\"searchTerm\":\"Missouri City, TX\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-21 02:49:12",
+      "expiresAt": "2026-03-23 02:49:12"
+    },
+    {
+      "id": "3060250",
+      "cacheKey": "search_markets_api:{\"limit\":15,\"searchTerm\":\"Central West End, Missouri\"}",
+      "cacheType": "search_markets_api",
+      "createdAt": "2026-02-14 04:35:31",
+      "expiresAt": "2026-02-21 04:35:32"
+    },
+    {
+      "id": "3060063",
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"Benton Park, Missouri, Missouri\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-13 19:48:33",
+      "expiresAt": "2026-03-15 19:48:34"
+    },
+    {
+      "id": "3060062",
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"63118, Benton Park, Missouri\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-13 19:48:32",
+      "expiresAt": "2026-03-15 19:48:32"
+    },
+    {
+      "id": "2100011",
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"63116, Bevo Mill, Missouri\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-09 12:42:59",
+      "expiresAt": "2026-03-11 12:51:43"
+    },
+    {
+      "id": "2100005",
+      "cacheKey": "search_markets:{\"limit\":15,\"searchTerm\":\"Missouri\"}",
+      "cacheType": "search_markets",
+      "createdAt": "2026-02-09 12:38:19",
+      "expiresAt": "2026-03-11 12:38:20"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcacheKey\tcacheType\tcreatedAt\texpiresAt\n3600146\tproperty_comprehensive:15010 Chaseridge Drive, Missouri City, TX, USA:4:2:auto\tproperty_details\t2026-02-21 02:49:17\t2026-03-07 02:49:18\n3600128\trentalizer:{\"address\":\"15010 Chaseridge Drive, Missouri City, TX, USA\",\"bathrooms\":2,\"bedrooms\":4}\trentalizer\t2026-02-21 02:49:12\t2026-03-07 02:49:12\n3600134\tsearch_markets_api:{\"limit\":50,\"searchTerm\":\"Missouri Area\"}\tsearch_markets_api\t2026-02-21 02:49:12\t2026-02-28 02:49:13\n3600129\tsearch_markets:{\"limit\":20,\"searchTerm\":\"Missouri City, TX\"}\tsearch_markets\t2026-02-21 02:49:12\t2026-03-23 02:49:12\n3060250\tsearch_markets_api:{\"limit\":15,\"searchTerm\":\"Central West End, Missouri\"}\tsearch_markets_api\t2026-02-14 04:35:31\t2026-02-21 04:35:32\n3060063\tsearch_markets:{\"limit\":15,\"searchTerm\":\"Benton Park, Missouri, Missouri\"}\tsearch_markets\t2026-02-13 19:48:33\t2026-03-15 19:48:34\n3060062\tsearch_markets:{\"limit\":15,\"searchTerm\":\"63118, Benton Park, Missouri\"}\tsearch_markets\t2026-02-13 19:48:32\t2026-03-15 19:48:32\n2100011\tsearch_markets:{\"limit\":15,\"searchTerm\":\"63116, Bevo Mill, Missouri\"}\tsearch_markets\t2026-02-09 12:42:59\t2026-03-11 12:51:43\n2100005\tsearch_markets:{\"limit\":15,\"searchTerm\":\"Missouri\"}\tsearch_markets\t2026-02-09 12:38:19\t2026-03-11 12:38:20\n",
+  "stderr": "",
+  "execution_time_ms": 81
+}

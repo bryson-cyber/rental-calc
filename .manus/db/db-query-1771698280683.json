@@ -1,0 +1,73 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'regulation_cache' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'regulation_cache' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "locationKey"
+    },
+    {
+      "COLUMN_NAME": "city"
+    },
+    {
+      "COLUMN_NAME": "state"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "yesNoSummary"
+    },
+    {
+      "COLUMN_NAME": "summary"
+    },
+    {
+      "COLUMN_NAME": "simplifiedSummary"
+    },
+    {
+      "COLUMN_NAME": "keyRequirements"
+    },
+    {
+      "COLUMN_NAME": "permitRequired"
+    },
+    {
+      "COLUMN_NAME": "primaryResidenceOnly"
+    },
+    {
+      "COLUMN_NAME": "maxNightsPerYear"
+    },
+    {
+      "COLUMN_NAME": "registrationFee"
+    },
+    {
+      "COLUMN_NAME": "occupancyTax"
+    },
+    {
+      "COLUMN_NAME": "zoningRestrictions"
+    },
+    {
+      "COLUMN_NAME": "sources"
+    },
+    {
+      "COLUMN_NAME": "confidence"
+    },
+    {
+      "COLUMN_NAME": "warnings"
+    },
+    {
+      "COLUMN_NAME": "expiresAt"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nlocationKey\ncity\nstate\nstatus\nyesNoSummary\nsummary\nsimplifiedSummary\nkeyRequirements\npermitRequired\nprimaryResidenceOnly\nmaxNightsPerYear\nregistrationFee\noccupancyTax\nzoningRestrictions\nsources\nconfidence\nwarnings\nexpiresAt\ncreatedAt\nupdatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 75
+}

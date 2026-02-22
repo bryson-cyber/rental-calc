@@ -12198,3 +12198,31 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Wire streaming into full report generation — SSE endpoints /api/reports/stream/property and /api/reports/stream/market
 - [x] Wire streaming into narrative generation — AIAdvisorStep uses useStreamingReport hook for real-time rendering
 - [x] Write vitest tests for Gemini streaming (24 tests passing)
+
+### Amenity & Property Type Filters + Map Fix + Seasonality Redesign (Feb 20, 2026)
+- [x] Investigate AirDNA listing data for available amenities and property type fields
+- [x] Add optional amenity checkboxes to property search form (pool, hot tub, pet-friendly, etc. — based on AirDNA availability)
+- [x] Add optional property type selector to property search form (apartment, home, condo, etc.)
+- [x] Wire amenity filters into comp fetching — use OR logic (at least one match, parallel per-amenity API requests)
+- [x] Wire property type filter into comp fetching
+- [x] Propagate amenity/property type filters across dashboard (Step 5, comp tables, revenue scenarios, deal verdict)
+- [ ] Fix broken map feature
+- [ ] Redesign seasonality section in Step 5 for better intuitiveness
+- [x] Fix broken 404 source links in regulation reports — improved URL validation + re-validation on cache hits + Seattle cache cleared
+
+### Webinar Show-Up Machine (Feb 21, 2026)
+- [x] Set up SimpleTexting API key and WebinarJam API key as secrets
+- [x] Create database schema: webinar_schedules, webinar_registrants, sms_conversations, reminder_templates, no_show_blasts
+- [x] Push database migrations (all tables created)
+- [x] Build SimpleTexting API client (send SMS, bulk send, webhook parsing, template rendering)
+- [x] Build WebinarJam API client (list webinars, get registrants, detect no-shows, register person)
+- [x] Build Part 1: Pre-webinar reminder engine with configurable schedule (4-stage: 24h, morning-of, 1h, at-start)
+- [x] Build Part 2: No-show blaster — fetch no-shows from WebinarJam, send SMS with live room link
+- [x] Build Part 3: AI conversation engine — incoming SMS webhook, Claude/Gemini routing, auto-reply
+- [x] Draft Coach Inayah AI persona system prompt for SMS conversations
+- [x] Build Part 4: Owner-only admin dashboard UI (configurable schedule, registrant list, no-show blast button, conversation viewer)
+- [x] Lock all webinar features to owner profile only (no other users can access)
+- [x] Write vitest tests for webinar backend logic (110 test files, 1644 tests all passing)
+- [x] Add webhook endpoints for incoming SMS and WebinarJam registrations
+- [x] Add formatPhoneForApi utility to SimpleTexting client
+- [x] Add Webinar SMS tab to Unified Admin dashboard

@@ -36,3 +36,4 @@ export { myReportsRouter } from "./my-reports";
 export { voiceBugReportRouter } from "./voice-bug-report";
 export { translationRouter } from "./translation";
 export { contentStudioRouter } from "./content-studio";
+export { webinarRouter } from "./webinar";

@@ -2268,3 +2268,212 @@ export const videoJobs = mysqlTable("video_jobs", {
 ]);
 export type VideoJob = typeof videoJobs.$inferSelect;
 export type InsertVideoJob = typeof videoJobs.$inferInsert;
+
+
+// ===========================================================================
+// WEBINAR SHOW-UP MACHINE TABLES
+// ===========================================================================
+
+/**
+ * Webinar schedules — configurable webinar schedule (days, times)
+ * Owner can set recurring webinar days and times from the admin dashboard.
+ */
+export const webinarSchedules = mysqlTable("webinar_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Display name for this schedule (e.g., "Sunday Masterclass") */
+  name: varchar("name", { length: 255 }).notNull(),
+
+  /** WebinarJam webinar ID to pull registrants from */
+  webinarjamWebinarId: varchar("webinarjamWebinarId", { length: 64 }),
+
+  /** WebinarJam schedule ID (specific date/time slot) */
+  webinarjamScheduleId: varchar("webinarjamScheduleId", { length: 64 }),
+
+  /** Day of week: 0=Sunday, 1=Monday, ..., 6=Saturday */
+  dayOfWeek: int("dayOfWeek").notNull(),
+
+  /** Webinar start time in HH:MM format (24h, PST) */
+  startTime: varchar("startTime", { length: 5 }).notNull(),
+
+  /** Timezone (default PST) */
+  timezone: varchar("timezone", { length: 64 }).default("America/Los_Angeles").notNull(),
+
+  /** Whether this schedule is active */
+  isActive: int("isActive").default(1).notNull(),
+
+  /** Live room URL template (fallback if not available per-registrant) */
+  liveRoomUrl: text("liveRoomUrl"),
+
+  /** Exciting topic teaser for no-show blast message */
+  noShowTeaser: varchar("noShowTeaser", { length: 500 }),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("ws_day_idx").on(table.dayOfWeek),
+  index("ws_active_idx").on(table.isActive),
+]);
+export type WebinarSchedule = typeof webinarSchedules.$inferSelect;
+export type InsertWebinarSchedule = typeof webinarSchedules.$inferInsert;
+
+/**
+ * Webinar registrants — people who signed up for a webinar.
+ * Populated via WebinarJam webhook (Zapier/Make) or manual sync.
+ */
+export const webinarRegistrants = mysqlTable("webinar_registrants", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Link to webinar_schedules */
+  scheduleId: int("scheduleId").notNull(),
+
+  /** Registrant's first name */
+  firstName: varchar("firstName", { length: 255 }).notNull(),
+
+  /** Registrant's last name */
+  lastName: varchar("lastName", { length: 255 }),
+
+  /** Registrant's email */
+  email: varchar("email", { length: 320 }),
+
+  /** Registrant's phone number (E.164 format preferred) */
+  phone: varchar("phone", { length: 50 }).notNull(),
+
+  /** Phone country code */
+  phoneCountryCode: varchar("phoneCountryCode", { length: 10 }),
+
+  /** WebinarJam lead ID (for unsubscribe API) */
+  webinarjamLeadId: varchar("webinarjamLeadId", { length: 64 }),
+
+  /** Personal live room URL from WebinarJam */
+  liveRoomUrl: text("liveRoomUrl"),
+
+  /** Personal replay room URL from WebinarJam */
+  replayRoomUrl: text("replayRoomUrl"),
+
+  /** Attendance status: 'registered', 'attended', 'no_show' */
+  attendanceStatus: mysqlEnum("attendanceStatus", ["registered", "attended", "no_show"]).default("registered").notNull(),
+
+  /** Whether the welcome SMS was sent */
+  welcomeSent: int("welcomeSent").default(0).notNull(),
+
+  /** Whether the no-show blast was sent */
+  noShowBlastSent: int("noShowBlastSent").default(0).notNull(),
+
+  /** Which reminder stage was last sent (0=none, 1=24h, 2=morning, 3=1h, 4=start) */
+  lastReminderStage: int("lastReminderStage").default(0).notNull(),
+
+  /** Whether the registrant has opted out of SMS */
+  optedOut: int("optedOut").default(0).notNull(),
+
+  /** Registration date from WebinarJam */
+  registeredAt: timestamp("registeredAt"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("wr_schedule_idx").on(table.scheduleId),
+  index("wr_phone_idx").on(table.phone),
+  index("wr_email_idx").on(table.email),
+  index("wr_attendance_idx").on(table.attendanceStatus),
+  index("wr_created_idx").on(table.createdAt),
+]);
+export type WebinarRegistrant = typeof webinarRegistrants.$inferSelect;
+export type InsertWebinarRegistrant = typeof webinarRegistrants.$inferInsert;
+
+/**
+ * SMS conversation log — tracks all inbound/outbound messages for the AI conversation engine.
+ */
+export const smsConversations = mysqlTable("sms_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Phone number of the contact (E.164 format) */
+  phone: varchar("phone", { length: 50 }).notNull(),
+
+  /** Direction: 'inbound' (from contact) or 'outbound' (from bot) */
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+
+  /** The message text */
+  messageText: text("messageText").notNull(),
+
+  /** Which AI provider handled this (if outbound AI reply) */
+  aiProvider: varchar("aiProvider", { length: 50 }),
+
+  /** Message type: 'welcome', 'reminder', 'no_show_blast', 'ai_reply', 'manual' */
+  messageType: mysqlEnum("messageType", ["welcome", "reminder", "no_show_blast", "ai_reply", "manual"]).default("manual").notNull(),
+
+  /** SimpleTexting message ID (for tracking delivery) */
+  externalMessageId: varchar("externalMessageId", { length: 128 }),
+
+  /** Delivery status from SimpleTexting */
+  deliveryStatus: varchar("deliveryStatus", { length: 50 }),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("sc_phone_idx").on(table.phone),
+  index("sc_direction_idx").on(table.direction),
+  index("sc_type_idx").on(table.messageType),
+  index("sc_created_idx").on(table.createdAt),
+]);
+export type SmsConversation = typeof smsConversations.$inferSelect;
+export type InsertSmsConversation = typeof smsConversations.$inferInsert;
+
+/**
+ * Reminder templates — configurable SMS message templates for each reminder stage.
+ */
+export const reminderTemplates = mysqlTable("reminder_templates", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Reminder stage: 1=24h before, 2=morning of, 3=1h before, 4=at start, 5=no-show blast */
+  stage: int("stage").notNull(),
+
+  /** Template name for display */
+  name: varchar("name", { length: 255 }).notNull(),
+
+  /** Message template with placeholders: {{firstName}}, {{webinarName}}, {{liveRoomUrl}}, {{startTime}} */
+  messageTemplate: text("messageTemplate").notNull(),
+
+  /** Whether this template is active */
+  isActive: int("isActive").default(1).notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("rt_stage_idx").on(table.stage),
+  index("rt_active_idx").on(table.isActive),
+]);
+export type ReminderTemplate = typeof reminderTemplates.$inferSelect;
+export type InsertReminderTemplate = typeof reminderTemplates.$inferInsert;
+
+/**
+ * No-show blast log — tracks each blast event for analytics.
+ */
+export const noShowBlasts = mysqlTable("no_show_blasts", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Which webinar schedule this blast was for */
+  scheduleId: int("scheduleId").notNull(),
+
+  /** How many no-shows were found */
+  noShowCount: int("noShowCount").notNull(),
+
+  /** How many SMS were sent */
+  smsSentCount: int("smsSentCount").notNull(),
+
+  /** How many failed to send */
+  smsFailedCount: int("smsFailedCount").default(0).notNull(),
+
+  /** Who triggered the blast */
+  triggeredBy: varchar("triggeredBy", { length: 255 }),
+
+  /** Blast status */
+  status: mysqlEnum("status", ["in_progress", "completed", "failed"]).default("in_progress").notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("nsb_schedule_idx").on(table.scheduleId),
+  index("nsb_status_idx").on(table.status),
+  index("nsb_created_idx").on(table.createdAt),
+]);
+export type NoShowBlast = typeof noShowBlasts.$inferSelect;
+export type InsertNoShowBlast = typeof noShowBlasts.$inferInsert;

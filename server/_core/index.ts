@@ -1039,6 +1039,119 @@ async function startServer() {
   });
 
 
+  // ============================================================================
+  // WEBINAR SHOW-UP MACHINE — WEBHOOK ENDPOINTS
+  // ============================================================================
+
+  /**
+   * SimpleTexting Incoming SMS Webhook
+   * 
+   * SimpleTexting sends POST requests here when someone texts your number.
+   * This triggers the AI conversation engine to generate and send a reply.
+   * 
+   * Configure in SimpleTexting: Settings → Webhooks → Add webhook → INCOMING_MESSAGE
+   * URL: https://your-domain.com/api/webhooks/simpletexting
+   */
+  app.post('/api/webhooks/simpletexting', async (req, res) => {
+    try {
+      const { parseWebhookPayload } = await import('../simpletexting-client');
+      const { handleIncomingSms } = await import('../webinar-engine');
+
+      const payload = parseWebhookPayload(req.body);
+      if (!payload) {
+        console.warn('[Webhook:SimpleTexting] Invalid payload:', JSON.stringify(req.body).slice(0, 200));
+        return res.status(400).json({ error: 'Invalid webhook payload' });
+      }
+
+      if (payload.type === 'INCOMING_MESSAGE') {
+        const { contactPhone, text } = payload.values;
+        console.log(`[Webhook:SimpleTexting] Incoming SMS from ${contactPhone.slice(-4)}: "${text.slice(0, 50)}..."`);
+
+        // Handle the incoming message asynchronously (don't block the webhook response)
+        handleIncomingSms(contactPhone, text).catch(err => {
+          console.error('[Webhook:SimpleTexting] Failed to handle incoming SMS:', err);
+        });
+
+        return res.status(200).json({ received: true });
+      }
+
+      if (payload.type === 'UNSUBSCRIBE_REPORT') {
+        const { contactPhone } = payload.values;
+        console.log(`[Webhook:SimpleTexting] Unsubscribe from ${contactPhone.slice(-4)}`);
+        // Mark as opted out in our database
+        const { getDb } = await import('../db');
+        const { webinarRegistrants } = await import('../../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const db = await getDb();
+        if (db) {
+          const cleanPhone = contactPhone.replace(/\D/g, '');
+          await db.update(webinarRegistrants).set({ optedOut: 1 }).where(eq(webinarRegistrants.phone, cleanPhone));
+        }
+        return res.status(200).json({ received: true });
+      }
+
+      // Delivery reports and other types — just acknowledge
+      return res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('[Webhook:SimpleTexting] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * WebinarJam New Registrant Webhook
+   * 
+   * Called by Zapier/Make when someone registers for a webinar on WebinarJam.
+   * This adds the registrant to our database and sends a welcome SMS.
+   * 
+   * Expected payload (from Zapier/Make):
+   * {
+   *   scheduleId: number,     // Our local schedule ID
+   *   firstName: string,
+   *   lastName?: string,
+   *   email?: string,
+   *   phone: string,
+   *   liveRoomUrl?: string,
+   *   replayRoomUrl?: string,
+   *   webinarjamLeadId?: string
+   * }
+   */
+  app.post('/api/webhooks/webinarjam-register', async (req, res) => {
+    try {
+      const { addRegistrantFromWebhook } = await import('../webinar-engine');
+
+      const { scheduleId, firstName, lastName, email, phone, liveRoomUrl, replayRoomUrl, webinarjamLeadId } = req.body;
+
+      if (!scheduleId || !firstName || !phone) {
+        return res.status(400).json({
+          error: 'Missing required fields: scheduleId, firstName, phone',
+        });
+      }
+
+      console.log(`[Webhook:WebinarJam] New registrant: ${firstName} (${phone})`);
+
+      const result = await addRegistrantFromWebhook({
+        scheduleId: parseInt(String(scheduleId), 10),
+        firstName,
+        lastName,
+        email,
+        phone,
+        liveRoomUrl,
+        replayRoomUrl,
+        webinarjamLeadId,
+      });
+
+      return res.status(200).json({
+        success: true,
+        registrantId: result.registrantId,
+        welcomeSent: result.welcomeSent,
+      });
+    } catch (error) {
+      console.error('[Webhook:WebinarJam] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
