@@ -733,6 +733,7 @@ export const webinarRouter = router({
         fifteenMinReminder: 'Get your water, energy drink, paper and pen ready! We have 15 minutes until we are LIVE!\n{{liveRoomUrl}}',
         liveNow: 'we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}',
         noShowBlast: 'You\'re missing out! Coach Inayah is LIVE right now. Jump in: {{liveRoomUrl}}',
+        attendeeCta: 'Hey {{firstName}} it\'s Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: https://masterclass.coachinayah.com/the-turnkey-program',
       };
 
       // Merge saved overrides with defaults
@@ -778,6 +779,59 @@ export const webinarRouter = router({
         .where(eq(webinarSchedules.id, input.scheduleId));
 
       return { success: true, key: input.key };
+    }),
+
+  /** Send a test SMS to the owner for a specific blast template */
+  testSendBlast: ownerProcedure
+    .input(z.object({
+      scheduleId: z.number(),
+      blastKey: z.string(),
+      phone: z.string().min(10),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // Get the schedule for link and name
+      const [schedule] = await db.select().from(webinarSchedules).where(eq(webinarSchedules.id, input.scheduleId)).limit(1);
+      if (!schedule) throw new TRPCError({ code: 'NOT_FOUND', message: 'Schedule not found' });
+
+      // Get the template (DB override or default)
+      const defaults: Record<string, string> = {
+        noonEngagement: 'Hey {{firstName}}! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?',
+        twoHourReminder: 'We are 2 HOURS AWAY! Are you ready? Save your link: {{liveRoomUrl}}',
+        oneHourReminder: '1 hour warning!!! I am so excited to see you! {{liveRoomUrl}}',
+        fifteenMinReminder: 'Get your water, energy drink, paper and pen ready! We have 15 minutes until we are LIVE!\n{{liveRoomUrl}}',
+        liveNow: 'we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}',
+        noShowBlast: 'You\'re missing out! Coach Inayah is LIVE right now. Jump in: {{liveRoomUrl}}',
+        attendeeCta: 'Hey {{firstName}} it\'s Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: https://masterclass.coachinayah.com/the-turnkey-program',
+      };
+
+      let saved: Record<string, string> = {};
+      try {
+        if (schedule.messageTemplates) saved = JSON.parse(schedule.messageTemplates);
+      } catch { /* ignore */ }
+
+      const template = saved[input.blastKey] ?? defaults[input.blastKey];
+      if (!template) throw new TRPCError({ code: 'BAD_REQUEST', message: `Unknown blast key: ${input.blastKey}` });
+
+      // Personalize with test values
+      const liveUrl = schedule.liveRoomUrl || '(no link set)';
+      let message = template
+        .replace(/\{\{firstName\}\}/g, 'Test')
+        .replace(/\{\{webinarName\}\}/g, schedule.name)
+        .replace(/\{\{liveRoomUrl\}\}/g, liveUrl)
+        .replace(/\{\{startTime\}\}/g, '4 PM PT / 7 PM ET');
+
+      // Strip emoji and enforce limit
+      message = message.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '').replace(/\s{2,}/g, ' ').trim();
+      if (message.length > 160) message = message.substring(0, 157) + '...';
+
+      // Send via SimpleTexting
+      const { sendSms } = await import('../simpletexting-client');
+      const result = await sendSms({ contactPhone: input.phone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
+
+      return { success: true, message, externalId: result.id };
     }),
 
   /** Get delivery stats per blast type for today */

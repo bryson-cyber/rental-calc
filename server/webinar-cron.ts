@@ -1,7 +1,7 @@
 /**
  * Webinar Cron Scheduler
  * 
- * Six automated SMS actions on webinar day:
+ * Seven automated SMS actions on webinar day:
  * 
  * 1. NOON ENGAGEMENT (12:00 PM Pacific)
  *    - Texts all registrants asking what they're most excited to learn
@@ -21,7 +21,11 @@
  * 6. NO-SHOW BLAST (4:10 PM Pacific)
  *    - Checks who hasn't shown up 10 minutes after webinar starts
  *    - Sends AI-generated teaser from transcript to create FOMO
- * 
+ *
+ * 7. ATTENDEE CTA (5:00 PM Pacific)
+ *    - Sends Turnkey Program CTA ONLY to people who attended
+ *    - Does NOT text no-shows or people who never showed up
+ *
  * All times are in America/Los_Angeles (Pacific).
  * Webinar starts at 4 PM Pacific / 7 PM Eastern.
  * 
@@ -49,6 +53,9 @@ import { executeNoShowBlast, syncRegistrants } from './webinar-engine';
 /** Timezone for all webinar scheduling — Pacific Time */
 const WEBINAR_TZ = 'America/Los_Angeles';
 
+/** Turnkey CTA link */
+const TURNKEY_CTA_URL = 'https://masterclass.coachinayah.com/the-turnkey-program';
+
 /** Check interval: every 60 seconds */
 const CHECK_INTERVAL_MS = 60 * 1000;
 
@@ -71,6 +78,9 @@ const LIVE_NOW_MINUTE = 0;
 const NOSHOW_HOUR = 16;      // 4:10 PM
 const NOSHOW_MINUTE = 10;
 
+const CTA_HOUR = 17;          // 5:00 PM
+const CTA_MINUTE = 0;
+
 // ---------------------------------------------------------------------------
 // MESSAGE TEMPLATES
 // ---------------------------------------------------------------------------
@@ -89,6 +99,9 @@ const FIFTEEN_MIN_MESSAGE = `Get your water, energy drink, paper and pen ready! 
 
 /** Live now (4 PM PST) */
 const LIVE_NOW_MESSAGE = `we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}`;
+
+/** Post-webinar CTA (5 PM PST) — attendees only */
+const ATTENDEE_CTA_MESSAGE = `Hey {{firstName}} it's Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: ${TURNKEY_CTA_URL}`;
 
 /**
  * Strip emoji characters from a string.
@@ -214,6 +227,7 @@ const DEFAULT_TEMPLATES: Record<string, string> = {
   fifteenMinReminder: FIFTEEN_MIN_MESSAGE,
   liveNow: LIVE_NOW_MESSAGE,
   noShowBlast: `You're missing out! Coach Inayah is LIVE right now. Jump in: {{liveRoomUrl}}`,
+  attendeeCta: ATTENDEE_CTA_MESSAGE,
 };
 
 /**
@@ -271,6 +285,99 @@ export async function executeLiveNowBlast(scheduleId: number) {
   return sendBlast(scheduleId, template, 'reminder', 'live now');
 }
 
+/**
+ * Send post-webinar CTA blast to ATTENDEES ONLY.
+ * Filters for registrants with attendanceStatus = 'attended'.
+ */
+export async function executeAttendeeCta(scheduleId: number): Promise<{ sent: number; failed: number; skipped: number }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const template = await getTemplate(scheduleId, 'attendeeCta');
+
+  const [schedule] = await db
+    .select()
+    .from(webinarSchedules)
+    .where(eq(webinarSchedules.id, scheduleId))
+    .limit(1);
+
+  if (!schedule || !schedule.isActive) {
+    console.log(`[WebinarCron] Schedule ${scheduleId} not found or inactive for CTA`);
+    return { sent: 0, failed: 0, skipped: 0 };
+  }
+
+  // CRITICAL: Sync attendance from WebinarJam before sending CTA
+  try {
+    const syncResult = await syncRegistrants(scheduleId);
+    console.log(`[WebinarCron] Pre-CTA sync for "${schedule.name}": ${syncResult.updated} attendance updates`);
+  } catch (syncErr) {
+    console.warn(`[WebinarCron] Pre-CTA sync failed:`, syncErr);
+  }
+
+  // Only get registrants who ATTENDED (not no-shows, not just registered)
+  const attendees = await db
+    .select()
+    .from(webinarRegistrants)
+    .where(
+      and(
+        eq(webinarRegistrants.scheduleId, scheduleId),
+        eq(webinarRegistrants.optedOut, 0),
+        eq(webinarRegistrants.attendanceStatus, 'attended')
+      )
+    );
+
+  if (attendees.length === 0) {
+    console.log(`[WebinarCron] No attendees found for CTA blast on "${schedule.name}"`);
+    return { sent: 0, failed: 0, skipped: 0 };
+  }
+
+  console.log(`[WebinarCron] Sending attendee CTA to ${attendees.length} attendees for "${schedule.name}"`);
+
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const reg of attendees) {
+    if (!reg.phone) {
+      skipped++;
+      continue;
+    }
+
+    let message = template
+      .replace(/\{\{firstName\}\}/g, reg.firstName || 'there')
+      .replace(/\{\{webinarName\}\}/g, schedule.name)
+      .replace(/\{\{liveRoomUrl\}\}/g, reg.liveRoomUrl || schedule.liveRoomUrl || '')
+      .replace(/\{\{startTime\}\}/g, getLocalWebinarTime(reg.phone, 16));
+
+    message = stripEmoji(message);
+    if (message.length > 160) {
+      message = message.substring(0, 157) + '...';
+    }
+
+    try {
+      const result = await sendSms({ contactPhone: reg.phone, text: message, mode: 'SINGLE_SMS_STRICTLY' });
+
+      await db.insert(smsConversations).values({
+        phone: reg.phone,
+        direction: 'outbound',
+        messageText: message,
+        messageType: 'manual',
+        externalMessageId: result.id,
+      });
+
+      sent++;
+    } catch (error) {
+      console.error(`[WebinarCron] Failed to send CTA to ${reg.phone}:`, error);
+      failed++;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  console.log(`[WebinarCron] Attendee CTA complete: ${sent} sent, ${failed} failed, ${skipped} skipped`);
+  return { sent, failed, skipped };
+}
+
 // ---------------------------------------------------------------------------
 // CRON SCHEDULER
 // ---------------------------------------------------------------------------
@@ -282,6 +389,7 @@ let lastOneHourFiredDate: string | null = null;
 let lastFifteenMinFiredDate: string | null = null;
 let lastLiveNowFiredDate: string | null = null;
 let lastNoShowFiredDate: string | null = null;
+let lastCtaFiredDate: string | null = null;
 let cronInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
@@ -374,6 +482,13 @@ async function cronTick(): Promise<void> {
     await fireBlast(todaySchedules, executeLiveNowBlast, 'Live now');
   }
 
+  // ATTENDEE CTA: 5:00 PM Pacific — attendees only
+  if (hour === CTA_HOUR && minute === CTA_MINUTE && lastCtaFiredDate !== dateStr) {
+    lastCtaFiredDate = dateStr;
+    console.log(`[WebinarCron] Attendee CTA time! Firing for ${todaySchedules.length} schedule(s)`);
+    await fireBlast(todaySchedules, executeAttendeeCta, 'Attendee CTA');
+  }
+
   // NO-SHOW BLAST: 4:10 PM Pacific
   if (hour === NOSHOW_HOUR && minute === NOSHOW_MINUTE && lastNoShowFiredDate !== dateStr) {
     lastNoShowFiredDate = dateStr;
@@ -409,7 +524,7 @@ export function startWebinarCron(): void {
   }
 
   console.log('[WebinarCron] Starting cron scheduler (checking every 60s)');
-  console.log(`[WebinarCron] Schedule: 12:00 noon | 2:00 PM 2hr | 3:00 PM 1hr | 3:45 PM 15min | 4:00 PM live | 4:10 PM no-show`);
+  console.log(`[WebinarCron] Schedule: 12:00 noon | 2:00 PM 2hr | 3:00 PM 1hr | 3:45 PM 15min | 4:00 PM live | 4:10 PM no-show | 5:00 PM CTA (attendees only)`);
 
   // Run a check immediately
   cronTick().catch(err => console.error('[WebinarCron] Initial tick failed:', err));
@@ -448,6 +563,7 @@ export function getNextFireTimes(): {
   fifteenMinReminder: { time: string; firedToday: boolean };
   liveNow: { time: string; firedToday: boolean };
   noShowBlast: { time: string; firedToday: boolean };
+  attendeeCta: { time: string; firedToday: boolean };
 } {
   const { dateStr } = getNowInPacific();
 
@@ -475,6 +591,10 @@ export function getNextFireTimes(): {
     noShowBlast: {
       time: `4:10 PM Pacific`,
       firedToday: lastNoShowFiredDate === dateStr,
+    },
+    attendeeCta: {
+      time: `5:00 PM Pacific`,
+      firedToday: lastCtaFiredDate === dateStr,
     },
   };
 }

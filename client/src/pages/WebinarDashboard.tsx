@@ -1629,6 +1629,17 @@ function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
 
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+  const [testingKey, setTestingKey] = useState<string | null>(null);
+  const testSend = trpc.webinar.testSendBlast.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Test sent! Message: "${data.message}"`);
+      setTestingKey(null);
+    },
+    onError: (err: any) => {
+      toast.error(`Test send failed: ${err.message}`);
+      setTestingKey(null);
+    },
+  });
 
   if (isLoading) return null;
 
@@ -1639,6 +1650,7 @@ function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
     { label: '15-Min Reminder', key: 'fifteenMinReminder', time: '3:45 PM', dbType: 'reminder' },
     { label: 'LIVE NOW', key: 'liveNow', time: '4:00 PM', dbType: 'reminder' },
     { label: 'No-Show Blast', key: 'noShowBlast', time: '4:10 PM', dbType: 'no_show_blast' },
+    { label: 'Attendee CTA', key: 'attendeeCta', time: '5:00 PM', dbType: 'manual', attendeesOnly: true },
   ];
 
   // Map blast keys to messageType counts
@@ -1691,6 +1703,27 @@ function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
                       <Badge variant="outline" className="text-xs">
                         Pending
                       </Badge>
+                    )}
+                    {scheduleId && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        disabled={testSend.isPending && testingKey === blast.key}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Send a test of "${blast.label}" to 7025218792?`)) {
+                            setTestingKey(blast.key);
+                            testSend.mutate({ scheduleId: scheduleId!, blastKey: blast.key, phone: '7025218792' });
+                          }
+                        }}
+                      >
+                        {testSend.isPending && testingKey === blast.key ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <><Send className="w-3 h-3 mr-1" />Test</>
+                        )}
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -1750,7 +1783,7 @@ function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
           })}
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Placeholders: {'{{firstName}}'}, {'{{liveRoomUrl}}'}, {'{{webinarName}}'}, {'{{startTime}}'}. No-show blast only targets people not in the room.
+          Placeholders: {'{{firstName}}'}, {'{{liveRoomUrl}}'}, {'{{webinarName}}'}, {'{{startTime}}'}. No-show blast targets people not in the room. Attendee CTA only targets people who attended.
         </p>
       </CardContent>
     </Card>

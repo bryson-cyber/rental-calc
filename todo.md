@@ -12371,3 +12371,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Show delivery status per blast (sent count, delivered badge, pending badge)
 - [x] Store custom message overrides in the database (messageTemplates JSON on webinarSchedules)
 - [x] Cron reads from DB templates first, falls back to hardcoded defaults
+
+## Per-Blast Test Send + Post-Webinar Attendee CTA (Feb 22, 2026)
+- [x] Add per-blast "Test Send" button on each automated message so admin can preview any message
+- [x] Add post-webinar CTA blast (attendees only): "Hey {firstName} it's Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: https://masterclass.coachinayah.com/the-turnkey-program"
+- [x] CTA blast only goes to people who attended (attended_live = 1), NOT no-shows
+- [x] Add CTA blast to the Automated Schedule card as the 7th scheduled message
