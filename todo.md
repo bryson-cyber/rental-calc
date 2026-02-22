@@ -12389,3 +12389,11 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Fix: Attendee CTA Message Too Long (Feb 22, 2026)
 - [x] Shorten Attendee CTA from 186+ chars to under 160 chars for single SMS delivery
+
+## Fix: Attendee CTA Should Be Manual Only (Feb 22, 2026)
+- [x] Remove Attendee CTA from the automated cron timer (no longer fires at 5 PM automatically)
+- [x] Keep the manual trigger button on the dashboard so owner can fire it when ready
+- [x] Keep auto-tagging logic (moved to run after no-show blast at 4:10 PM)
+
+## Fix: Attendee CTA Link Not Working (Feb 22, 2026)
+- [x] Fix the CTA link in the Attendee CTA message — added https:// prefix so link is clickable in SMS

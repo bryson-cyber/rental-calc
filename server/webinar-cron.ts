@@ -101,8 +101,8 @@ const FIFTEEN_MIN_MESSAGE = `Get your water, energy drink, paper and pen ready! 
 /** Live now (4 PM PST) */
 const LIVE_NOW_MESSAGE = `we are live !!! LETSGOOOOO!\n{{liveRoomUrl}}`;
 
-/** Post-webinar CTA (5 PM PST) — attendees only (must stay under 160 chars after {{firstName}} substitution) */
-const ATTENDEE_CTA_MESSAGE = `Hey {{firstName}} its Inayah! Ready to start your Airbnb? I opened a few Turnkey spots. Book a free call: masterclass.coachinayah.com/the-turnkey-program`;
+/** Post-webinar CTA — attendees only, manual trigger (must stay under 160 chars after {{firstName}} substitution) */
+const ATTENDEE_CTA_MESSAGE = `Hey {{firstName}} its Inayah! Turnkey spots open - start your Airbnb! Book a free call: https://masterclass.coachinayah.com/the-turnkey-program`;
 
 /**
  * Strip emoji characters from a string.
@@ -523,22 +523,8 @@ async function cronTick(): Promise<void> {
     await fireBlast(todaySchedules, executeLiveNowBlast, 'Live now');
   }
 
-  // ATTENDEE CTA: 5:00 PM Pacific — attendees only
-  if (hour === CTA_HOUR && minute === CTA_MINUTE && lastCtaFiredDate !== dateStr) {
-    lastCtaFiredDate = dateStr;
-    console.log(`[WebinarCron] Attendee CTA time! Firing for ${todaySchedules.length} schedule(s)`);
-    await fireBlast(todaySchedules, executeAttendeeCta, 'Attendee CTA');
-
-    // Auto-tag attendees and no-shows in the suppression list for next week's logic
-    for (const schedule of todaySchedules) {
-      try {
-        const tagResult = await autoTagAfterWebinar(schedule.id);
-        console.log(`[WebinarCron] Auto-tagged for "${schedule.name}": ${tagResult.attendeesTagged} attendees, ${tagResult.noShowsTagged} no-shows`);
-      } catch (tagErr) {
-        console.error(`[WebinarCron] Auto-tag failed for "${schedule.name}":`, tagErr);
-      }
-    }
-  }
+  // ATTENDEE CTA: Manual only — removed from automated cron.
+  // Use manualTriggerAttendeeCta() from the admin dashboard.
 
   // NO-SHOW BLAST: 4:10 PM Pacific
   if (hour === NOSHOW_HOUR && minute === NOSHOW_MINUTE && lastNoShowFiredDate !== dateStr) {
@@ -561,6 +547,16 @@ async function cronTick(): Promise<void> {
         console.error(`[WebinarCron] No-show blast failed for "${schedule.name}":`, error);
       }
     }
+
+    // Auto-tag attendees and no-shows in the suppression list for next week's logic
+    for (const schedule of todaySchedules) {
+      try {
+        const tagResult = await autoTagAfterWebinar(schedule.id);
+        console.log(`[WebinarCron] Auto-tagged for "${schedule.name}": ${tagResult.attendeesTagged} attendees, ${tagResult.noShowsTagged} no-shows`);
+      } catch (tagErr) {
+        console.error(`[WebinarCron] Auto-tag failed for "${schedule.name}":`, tagErr);
+      }
+    }
   }
 }
 
@@ -575,7 +571,7 @@ export function startWebinarCron(): void {
   }
 
   console.log('[WebinarCron] Starting cron scheduler (checking every 60s)');
-  console.log(`[WebinarCron] Schedule: 12:00 noon | 2:00 PM 2hr | 3:00 PM 1hr | 3:45 PM 15min | 4:00 PM live | 4:10 PM no-show | 5:00 PM CTA (attendees only)`);
+  console.log(`[WebinarCron] Schedule: 12:00 noon | 2:00 PM 2hr | 3:00 PM 1hr | 3:45 PM 15min | 4:00 PM live | 4:10 PM no-show + auto-tag | CTA = manual only`);
 
   // Run a check immediately
   cronTick().catch(err => console.error('[WebinarCron] Initial tick failed:', err));
@@ -644,7 +640,7 @@ export function getNextFireTimes(): {
       firedToday: lastNoShowFiredDate === dateStr,
     },
     attendeeCta: {
-      time: `5:00 PM Pacific`,
+      time: `Manual Only`,
       firedToday: lastCtaFiredDate === dateStr,
     },
   };
@@ -706,4 +702,40 @@ export async function manualTriggerNoShowBlast(): Promise<{
   }
 
   return { schedulesFired: activeSchedules.length, totalNoShows, totalSent };
+}
+
+/**
+ * Manually trigger the Attendee CTA blast.
+ * This is the ONLY way to fire the CTA — it is NOT on the automated timer.
+ */
+export async function manualTriggerAttendeeCta(): Promise<{
+  schedulesFired: number;
+  totalSent: number;
+  totalFailed: number;
+  totalSkipped: number;
+}> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const activeSchedules = await db
+    .select()
+    .from(webinarSchedules)
+    .where(eq(webinarSchedules.isActive, 1));
+
+  let totalSent = 0;
+  let totalFailed = 0;
+  let totalSkipped = 0;
+
+  for (const schedule of activeSchedules) {
+    const result = await executeAttendeeCta(schedule.id);
+    totalSent += result.sent;
+    totalFailed += result.failed;
+    totalSkipped += result.skipped;
+  }
+
+  // Mark as fired so the status shows it
+  const { dateStr } = getNowInPacific();
+  lastCtaFiredDate = dateStr;
+
+  return { schedulesFired: activeSchedules.length, totalSent, totalFailed, totalSkipped };
 }

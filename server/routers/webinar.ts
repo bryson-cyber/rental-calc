@@ -609,6 +609,14 @@ export const webinarRouter = router({
       return executeNoShowBlast(input.scheduleId, 'manual');
     }),
 
+  /** Manually trigger the Attendee CTA blast (manual only — not on automated timer) */
+  triggerAttendeeCta: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .mutation(async ({ input }) => {
+      const { executeAttendeeCta } = await import('../webinar-cron');
+      return executeAttendeeCta(input.scheduleId);
+    }),
+
   // =========================================================================
   // SMS BLAST DELIVERY TRACKER
   // =========================================================================
