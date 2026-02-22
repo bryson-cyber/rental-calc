@@ -2305,8 +2305,14 @@ export const webinarSchedules = mysqlTable("webinar_schedules", {
   /** Live room URL template (fallback if not available per-registrant) */
   liveRoomUrl: text("liveRoomUrl"),
 
-  /** Exciting topic teaser for no-show blast message */
+  /** Exciting topic teaser for no-show blast message (AI-generated from transcript) */
   noShowTeaser: varchar("noShowTeaser", { length: 500 }),
+
+  /** Full webinar transcript — used as knowledge base for AI-generated SMS content */
+  webinarTranscript: text("webinarTranscript"),
+
+  /** AI-generated teasers cache (JSON array of teaser strings) */
+  generatedTeasers: text("generatedTeasers"),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

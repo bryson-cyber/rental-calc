@@ -324,6 +324,21 @@ function ScheduleDetailPanel({
 
   const [showAddRegistrant, setShowAddRegistrant] = useState(false);
   const [reminderStage, setReminderStage] = useState<number>(1);
+  const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
+
+  // AI Teasers
+  const { data: teasers, isLoading: teasersLoading, refetch: refetchTeasers } = trpc.webinar.getTeasers.useQuery(
+    { scheduleId },
+    { enabled: !!scheduleId }
+  );
+  const regenerateMut = trpc.webinar.regenerateTeasers.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Generated ${result.teasers.length} new teasers from transcript`);
+      refetchTeasers();
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   if (isLoading || !data) {
     return (
@@ -439,6 +454,85 @@ function ScheduleDetailPanel({
           </div>
         </CardContent>
       </Card>
+
+      {/* AI-Generated Teasers */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Bot className="w-5 h-5 text-primary" />
+                AI-Generated No-Show Teasers
+              </CardTitle>
+              <CardDescription>
+                {schedule.webinarTranscript
+                  ? 'Generated from your webinar transcript. Each no-show blast picks a random teaser for variety.'
+                  : 'Upload a transcript to auto-generate compelling teasers with AI.'}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTranscriptDialog(true)}
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                {schedule.webinarTranscript ? 'Update Transcript' : 'Add Transcript'}
+              </Button>
+              {schedule.webinarTranscript && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => regenerateMut.mutate({ scheduleId })}
+                  disabled={regenerateMut.isPending}
+                >
+                  {regenerateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+                  Regenerate
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {teasersLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : teasers && teasers.length > 0 ? (
+            <div className="space-y-2">
+              {teasers.map((teaser, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-medium text-primary">{i + 1}</span>
+                  </div>
+                  <p className="text-sm">{teaser}</p>
+                  {i === 0 && (
+                    <Badge variant="default" className="text-xs flex-shrink-0">Primary</Badge>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground mt-2">
+                The primary teaser is used as the default. During no-show blasts, a random teaser is picked for each message to add variety.
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Bot className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No teasers generated yet.</p>
+              <p className="text-xs mt-1">Upload a webinar transcript to generate AI-powered teasers.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Transcript Upload Dialog */}
+      <TranscriptDialog
+        open={showTranscriptDialog}
+        onOpenChange={setShowTranscriptDialog}
+        scheduleId={scheduleId}
+        currentTranscript={schedule.webinarTranscript || ''}
+        onUpdated={() => { refetch(); refetchTeasers(); }}
+      />
 
       {/* Registrants Table */}
       <Card>
@@ -826,13 +920,16 @@ function CreateScheduleDialog({
   const [dayOfWeek, setDayOfWeek] = useState('0');
   const [startTime, setStartTime] = useState('18:00');
   const [liveRoomUrl, setLiveRoomUrl] = useState('');
-  const [noShowTeaser, setNoShowTeaser] = useState('');
+  const [webinarTranscript, setWebinarTranscript] = useState('');
   const [wjWebinarId, setWjWebinarId] = useState('');
   const [wjScheduleId, setWjScheduleId] = useState('');
 
   const createMut = trpc.webinar.createSchedule.useMutation({
-    onSuccess: () => {
-      toast.success('Schedule created');
+    onSuccess: (result) => {
+      const syncMsg = result.syncResult
+        ? ` | ${result.syncResult.synced} registrants synced from WebinarJam`
+        : '';
+      toast.success(`Schedule created${syncMsg}`);
       onOpenChange(false);
       onCreated();
       // Reset form
@@ -840,7 +937,7 @@ function CreateScheduleDialog({
       setDayOfWeek('0');
       setStartTime('18:00');
       setLiveRoomUrl('');
-      setNoShowTeaser('');
+      setWebinarTranscript('');
       setWjWebinarId('');
       setWjScheduleId('');
     },
@@ -849,11 +946,11 @@ function CreateScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Webinar Schedule</DialogTitle>
           <DialogDescription>
-            Set up a recurring webinar schedule with SMS reminders.
+            Set up a recurring webinar schedule. Paste the transcript to auto-generate no-show teasers with AI.
           </DialogDescription>
         </DialogHeader>
 
@@ -901,17 +998,27 @@ function CreateScheduleDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium">No-Show Teaser</label>
-            <Input
-              placeholder="e.g., the 3-step strategy that changed everything"
-              value={noShowTeaser}
-              onChange={(e) => setNoShowTeaser(e.target.value)}
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Bot className="w-4 h-4 text-primary" />
+              Webinar Transcript
+            </label>
+            <Textarea
+              placeholder="Paste your webinar transcript here... AI will use it to generate compelling no-show teasers, reminder content, and power the conversation engine."
+              value={webinarTranscript}
+              onChange={(e) => setWebinarTranscript(e.target.value)}
+              rows={6}
+              className="mt-1"
             />
-            <p className="text-xs text-muted-foreground mt-1">Used in no-show blast messages to create urgency</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {webinarTranscript.length > 0 
+                ? `${webinarTranscript.length.toLocaleString()} characters — AI will auto-generate no-show teasers from this`
+                : 'Optional but recommended. Powers AI-generated teasers and conversation context.'}
+            </p>
           </div>
 
           <div className="border-t pt-4">
             <p className="text-sm font-medium mb-2">WebinarJam Integration (Optional)</p>
+            <p className="text-xs text-muted-foreground mb-3">Connect to auto-sync registrants when the schedule is created.</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground">Webinar ID</label>
@@ -946,7 +1053,7 @@ function CreateScheduleDialog({
                 dayOfWeek: parseInt(dayOfWeek),
                 startTime,
                 liveRoomUrl: liveRoomUrl || undefined,
-                noShowTeaser: noShowTeaser || undefined,
+                webinarTranscript: webinarTranscript.trim() || undefined,
                 webinarjamWebinarId: wjWebinarId || undefined,
                 webinarjamScheduleId: wjScheduleId || undefined,
               });
@@ -954,7 +1061,7 @@ function CreateScheduleDialog({
             disabled={createMut.isPending || !name.trim()}
           >
             {createMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-            Create Schedule
+            {createMut.isPending ? 'Creating...' : 'Create Schedule'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1049,6 +1156,92 @@ function AddRegistrantDialog({
           >
             {addMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
             Add & Send Welcome
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TRANSCRIPT DIALOG
+// ---------------------------------------------------------------------------
+
+function TranscriptDialog({
+  open,
+  onOpenChange,
+  scheduleId,
+  currentTranscript,
+  onUpdated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  scheduleId: number;
+  currentTranscript: string;
+  onUpdated: () => void;
+}) {
+  const [transcript, setTranscript] = useState(currentTranscript);
+
+  const updateMut = trpc.webinar.updateTranscript.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Transcript saved! Generated ${result.teasers.length} teasers.`);
+      onOpenChange(false);
+      onUpdated();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Sync local state when dialog opens with new transcript
+  const prevOpen = useState(false);
+  if (open && !prevOpen[0]) {
+    setTranscript(currentTranscript);
+  }
+  prevOpen[0] = open;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-primary" />
+            Webinar Transcript
+          </DialogTitle>
+          <DialogDescription>
+            Paste or update the webinar transcript. AI will use it to generate no-show teasers, reminder content, and power the conversation engine.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <Textarea
+            placeholder="Paste the full webinar transcript here..."
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            rows={16}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            {transcript.length.toLocaleString()} characters
+            {transcript.length > 0 && ' — AI will extract the most compelling moments for teasers'}
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (!transcript.trim()) {
+                toast.error('Transcript cannot be empty');
+                return;
+              }
+              updateMut.mutate({
+                scheduleId,
+                transcript: transcript.trim(),
+              });
+            }}
+            disabled={updateMut.isPending || !transcript.trim()}
+          >
+            {updateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Bot className="w-4 h-4 mr-1" />}
+            {updateMut.isPending ? 'Generating teasers...' : 'Save & Generate Teasers'}
           </Button>
         </DialogFooter>
       </DialogContent>

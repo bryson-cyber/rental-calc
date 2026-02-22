@@ -33,6 +33,7 @@ import {
   sendManualSms,
   getReminderTemplate,
 } from '../webinar-engine';
+import { generateAndCacheTeasers, getTeasers, generateTeasersFromTranscript } from '../webinar-ai-content';
 import { listWebhooks, createWebhook, deleteWebhook } from '../simpletexting-client';
 import { listWebinars, getWebinar } from '../webinarjam-client';
 
@@ -98,6 +99,7 @@ export const webinarRouter = router({
       timezone: z.string().default('America/Los_Angeles'),
       liveRoomUrl: z.string().optional(),
       noShowTeaser: z.string().optional(),
+      webinarTranscript: z.string().optional(),
       webinarjamWebinarId: z.string().optional(),
       webinarjamScheduleId: z.string().optional(),
     }))
@@ -112,12 +114,36 @@ export const webinarRouter = router({
         timezone: input.timezone,
         liveRoomUrl: input.liveRoomUrl || null,
         noShowTeaser: input.noShowTeaser || null,
+        webinarTranscript: input.webinarTranscript || null,
         webinarjamWebinarId: input.webinarjamWebinarId || null,
         webinarjamScheduleId: input.webinarjamScheduleId || null,
         isActive: 1,
       }).$returningId();
 
-      return { id: result.id, success: true };
+      const scheduleId = result.id;
+
+      // Auto-generate teasers from transcript if provided
+      if (input.webinarTranscript) {
+        try {
+          await generateAndCacheTeasers(scheduleId);
+          console.log(`[WebinarRouter] Auto-generated teasers for schedule ${scheduleId}`);
+        } catch (error) {
+          console.error(`[WebinarRouter] Failed to auto-generate teasers:`, error);
+        }
+      }
+
+      // Auto-sync registrants from WebinarJam if IDs provided
+      let syncResult = null;
+      if (input.webinarjamWebinarId && input.webinarjamScheduleId) {
+        try {
+          syncResult = await syncRegistrants(scheduleId);
+          console.log(`[WebinarRouter] Auto-synced ${syncResult.synced} registrants for schedule ${scheduleId}`);
+        } catch (error) {
+          console.error(`[WebinarRouter] Failed to auto-sync registrants:`, error);
+        }
+      }
+
+      return { id: scheduleId, success: true, syncResult };
     }),
 
   /** Update a webinar schedule */
@@ -130,6 +156,7 @@ export const webinarRouter = router({
       timezone: z.string().optional(),
       liveRoomUrl: z.string().optional(),
       noShowTeaser: z.string().optional(),
+      webinarTranscript: z.string().optional(),
       webinarjamWebinarId: z.string().optional(),
       webinarjamScheduleId: z.string().optional(),
       isActive: z.number().min(0).max(1).optional(),
@@ -149,6 +176,17 @@ export const webinarRouter = router({
       }
 
       await db.update(webinarSchedules).set(setValues).where(eq(webinarSchedules.id, id));
+
+      // If transcript was updated, regenerate teasers
+      if (input.webinarTranscript) {
+        try {
+          await generateAndCacheTeasers(id);
+          console.log(`[WebinarRouter] Regenerated teasers for schedule ${id} after transcript update`);
+        } catch (error) {
+          console.error(`[WebinarRouter] Failed to regenerate teasers:`, error);
+        }
+      }
+
       return { success: true };
     }),
 
@@ -417,6 +455,44 @@ export const webinarRouter = router({
       recentBlasts,
     };
   }),
+
+  // =========================================================================
+  // AI TEASER GENERATION
+  // =========================================================================
+
+  /** Get AI-generated teasers for a schedule */
+  getTeasers: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .query(async ({ input }) => {
+      return getTeasers(input.scheduleId);
+    }),
+
+  /** Regenerate teasers from transcript */
+  regenerateTeasers: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .mutation(async ({ input }) => {
+      return generateAndCacheTeasers(input.scheduleId);
+    }),
+
+  /** Upload/update transcript for a schedule */
+  updateTranscript: ownerProcedure
+    .input(z.object({
+      scheduleId: z.number(),
+      transcript: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      await db.update(webinarSchedules).set({
+        webinarTranscript: input.transcript,
+      }).where(eq(webinarSchedules.id, input.scheduleId));
+
+      // Auto-generate teasers from the new transcript
+      const result = await generateAndCacheTeasers(input.scheduleId);
+
+      return { success: true, teasers: result.teasers, primaryTeaser: result.primaryTeaser };
+    }),
 
   /** Check if current user is the owner (used by frontend to show/hide webinar nav) */
   isOwner: protectedProcedure.query(({ ctx }) => {

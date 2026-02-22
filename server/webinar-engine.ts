@@ -25,12 +25,14 @@ import { eq, and, lte, gte, desc, inArray, sql } from 'drizzle-orm';
 import { sendSms, sendBulkSms, renderTemplate } from './simpletexting-client';
 import { getNoShows, getRegistrants, syncRegistrantsFromWebinarJam } from './webinarjam-client';
 import { routedLLMCall, FEATURES } from './model-router';
+import { getRandomTeaser, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
 
 // ---------------------------------------------------------------------------
 // COACH INAYAH AI PERSONA
 // ---------------------------------------------------------------------------
 
-const COACH_INAYAH_SYSTEM_PROMPT = `You are Coach Inayah's AI assistant, texting on behalf of her webinar team. Your personality:
+// Static fallback system prompt (used when no transcript is available)
+const COACH_INAYAH_SYSTEM_PROMPT_FALLBACK = `You are Coach Inayah's AI assistant, texting on behalf of her webinar team. Your personality:
 
 - WARM, ENCOURAGING, and REAL — like a big sister who's been through it and wants to help
 - You use casual, conversational language (not corporate speak)
@@ -286,12 +288,15 @@ export async function executeNoShowBlast(
     let smsFailed = 0;
 
     for (const reg of noShowRegistrants) {
+      // Use a random AI-generated teaser for variety in no-show blasts
+      const teaser = await getRandomTeaser(scheduleId);
+
       const message = renderTemplate(template, {
         firstName: reg.firstName || 'there',
         webinarName: schedule.name,
         liveRoomUrl: reg.liveRoomUrl || schedule.liveRoomUrl || '',
         startTime: schedule.startTime,
-        noShowTeaser: schedule.noShowTeaser || 'the strategies that are changing lives',
+        noShowTeaser: teaser,
         date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       });
 
@@ -471,6 +476,11 @@ export async function handleIncomingSms(
 
   const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. Keep it SHORT (2-4 sentences max, this is SMS). Be warm and helpful.`;
 
+  // Build transcript-aware system prompt if we have a transcript
+  const systemPrompt = nextSchedule?.webinarTranscript
+    ? buildTranscriptAwareSystemPrompt(nextSchedule.webinarTranscript)
+    : COACH_INAYAH_SYSTEM_PROMPT_FALLBACK;
+
   // Route to AI provider
   const provider = routeToProvider(messageText);
   let aiResponse: string;
@@ -479,13 +489,13 @@ export async function handleIncomingSms(
     if (provider === 'gemini') {
       // Use Gemini for search-related queries (routed through model router as chat)
       aiResponse = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, prompt, {
-        systemPrompt: COACH_INAYAH_SYSTEM_PROMPT,
+        systemPrompt,
         maxTokens: 300, // Keep SMS responses short
       });
     } else {
       // Use Sonnet for conversational replies
       aiResponse = await routedLLMCall(FEATURES.CHAT_NON_STREAMING, prompt, {
-        systemPrompt: COACH_INAYAH_SYSTEM_PROMPT,
+        systemPrompt,
         maxTokens: 300,
       });
     }

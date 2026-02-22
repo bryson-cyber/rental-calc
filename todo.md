@@ -12226,3 +12226,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add webhook endpoints for incoming SMS and WebinarJam registrations
 - [x] Add formatPhoneForApi utility to SimpleTexting client
 - [x] Add Webinar SMS tab to Unified Admin dashboard
+
+### Webinar Show-Up Machine Enhancements (Feb 21, 2026)
+- [x] Store webinar transcript as knowledge base for AI-generated SMS content
+- [x] Build AI teaser generator: use transcript to auto-generate no-show teaser content (not manual input)
+- [x] Auto-populate registrants from WebinarJam when creating/syncing a schedule (should already have registrants)
+- [x] Update admin UI: remove manual no-show teaser input, show AI-generated teasers
+- [x] Use transcript context for all reminder/no-show SMS messages (AI writes messages based on what was taught)
+- [x] Write tests for AI teaser generation (111 test files, 1661 tests all passing)
