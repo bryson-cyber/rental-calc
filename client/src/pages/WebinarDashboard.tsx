@@ -142,16 +142,7 @@ function OverviewPanel({
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Active schedule for live room URL editing
-  const activeSchedule = schedules?.find(s => s.isActive);
+  // ALL hooks must be declared before any early return
   const [editingLiveUrl, setEditingLiveUrl] = useState(false);
   const [liveUrlDraft, setLiveUrlDraft] = useState('');
   const updateScheduleMut = trpc.webinar.updateSchedule.useMutation({
@@ -163,7 +154,6 @@ function OverviewPanel({
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Custom blast
   const [showCustomBlast, setShowCustomBlast] = useState(false);
   const [customMessage, setCustomMessage] = useState('');
   const customBlastMut = trpc.webinar.sendCustomBlast.useMutation({
@@ -174,6 +164,16 @@ function OverviewPanel({
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const activeSchedule = schedules?.find(s => s.isActive);
 
   return (
     <div className="space-y-6">
