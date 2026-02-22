@@ -1183,6 +1183,16 @@ async function startServer() {
         console.error('[Video Gen] Failed to resume incomplete jobs:', err),
       );
     }).catch(() => { /* video-generation module not critical */ });
+
+    // Seed webinar transcript and AI-generated SMS templates on startup
+    import('../webinar-transcript-seeder').then(({ runStartupSeed }) => {
+      // Delay slightly to let DB connections settle
+      setTimeout(() => {
+        runStartupSeed().catch((err) =>
+          console.error('[TranscriptSeeder] Startup seed failed:', err),
+        );
+      }, 5000);
+    }).catch(() => { /* transcript seeder not critical */ });
   });
 }
 

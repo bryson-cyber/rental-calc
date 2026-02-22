@@ -12234,3 +12234,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update admin UI: remove manual no-show teaser input, show AI-generated teasers
 - [x] Use transcript context for all reminder/no-show SMS messages (AI writes messages based on what was taught)
 - [x] Write tests for AI teaser generation (111 test files, 1661 tests all passing)
+
+### Permanent Transcript & Auto-Generated SMS (Feb 21, 2026)
+- [x] Pre-load webinar transcript permanently from CDN on server startup (216KB, cached in memory)
+- [x] Auto-generate all 5 SMS templates (4 reminders + no-show blast) from transcript on startup
+- [x] Auto-inject transcript into every new schedule (no manual paste needed)
+- [x] Remove TranscriptDialog upload UI — transcript is permanent
+- [x] Remove CreateScheduleDialog transcript textarea — auto-injected server-side
+- [x] Update admin UI descriptions to reflect permanent transcript
+- [x] Write tests for webinar-transcript-seeder module (112 test files, 1670 tests all passing)

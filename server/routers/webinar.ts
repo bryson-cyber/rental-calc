@@ -36,6 +36,7 @@ import {
 import { generateAndCacheTeasers, getTeasers, generateTeasersFromTranscript } from '../webinar-ai-content';
 import { listWebhooks, createWebhook, deleteWebhook } from '../simpletexting-client';
 import { listWebinars, getWebinar } from '../webinarjam-client';
+import { getTranscript } from '../webinar-transcript-seeder';
 
 // ---------------------------------------------------------------------------
 // OWNER-ONLY MIDDLEWARE
@@ -107,6 +108,17 @@ export const webinarRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
+      // Auto-inject the permanent transcript if none provided
+      let transcript = input.webinarTranscript || null;
+      if (!transcript) {
+        try {
+          transcript = await getTranscript();
+          console.log(`[WebinarRouter] Auto-injected permanent transcript (${transcript.length} chars)`);
+        } catch {
+          console.warn('[WebinarRouter] Could not load permanent transcript');
+        }
+      }
+
       const [result] = await db.insert(webinarSchedules).values({
         name: input.name,
         dayOfWeek: input.dayOfWeek,
@@ -114,7 +126,7 @@ export const webinarRouter = router({
         timezone: input.timezone,
         liveRoomUrl: input.liveRoomUrl || null,
         noShowTeaser: input.noShowTeaser || null,
-        webinarTranscript: input.webinarTranscript || null,
+        webinarTranscript: transcript,
         webinarjamWebinarId: input.webinarjamWebinarId || null,
         webinarjamScheduleId: input.webinarjamScheduleId || null,
         isActive: 1,
@@ -122,8 +134,8 @@ export const webinarRouter = router({
 
       const scheduleId = result.id;
 
-      // Auto-generate teasers from transcript if provided
-      if (input.webinarTranscript) {
+      // Auto-generate teasers from transcript (always, since transcript is always available)
+      if (transcript) {
         try {
           await generateAndCacheTeasers(scheduleId);
           console.log(`[WebinarRouter] Auto-generated teasers for schedule ${scheduleId}`);
