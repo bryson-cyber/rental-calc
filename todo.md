@@ -12311,3 +12311,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Build area code to timezone lookup utility (200+ US area codes mapped)
 - [x] Integrate timezone detection into AI conversation prompt so webinar time shows in registrant's local timezone
 - [x] Update noon engagement, no-show blast, and reminders to use registrant's local timezone
+
+## AI Link Placeholder Fix (Feb 22, 2026)
+- [x] Fix AI showing "[REGISTRATION LINK]" placeholder — now says "check your email for your personal link"
+- [x] When registrant asks for link, includes their live_room_url from the database (if available)
+- [x] If no link available, tells them to check email for their personal link
+
+## AI Conversation Fixes (Feb 22, 2026)
+- [x] Strip "Reply stop to stop" from conversation history so AI never echoes it
+- [x] AI must NEVER include opt-out language like "reply stop" in its responses
+- [x] Fix AI misreading "No" — now treats as disinterest with warm response
+- [x] AI must never output placeholder text like "[REGISTRATION LINK]" — post-processing replaces with helpful text
+- [x] When no link available, tells registrant to check email for their personal link

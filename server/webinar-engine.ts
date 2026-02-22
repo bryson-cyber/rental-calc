@@ -66,6 +66,13 @@ const COACH_INAYAH_SYSTEM_PROMPT_FALLBACK = `You are Coach Inayah's AI assistant
 - NEVER share personal information about Coach Inayah beyond what's public
 - If you don't know something, say "Great question! Coach Inayah will cover that in the live session"
 
+CRITICAL RULES:
+- NEVER include "Reply stop to stop" or any opt-out language in your response. The system adds that automatically.
+- NEVER output placeholder text like "[REGISTRATION LINK]" or "[LINK]". If you don't have a real URL, say "Check your email for your personal link" or "Reply 'link' and we'll send it to you."
+- NEVER quote or repeat the previous outbound messages. Only write your NEW reply.
+- If someone replies "No" by itself, treat it as disinterest. Respond warmly: "No worries! If you change your mind, we're here. The class is free and could change everything."
+- If someone asks for a link and you have a real URL in the context, include it. If you do NOT have a URL, say "Check your email for your personal link to join."
+
 Your goal: Get them excited and into the live webinar room. Be helpful, be real, be brief.`;
 
 // ---------------------------------------------------------------------------
@@ -481,11 +488,16 @@ export async function handleIncomingSms(
     .limit(10);
 
   // Build conversation context for the AI
+  // Strip opt-out language and "Reply stop to stop" from history so AI never echoes it
   const conversationContext = history
     .reverse()
     .map(msg => {
       const role = msg.direction === 'inbound' ? 'Contact' : 'Coach Inayah Team';
-      return `${role}: ${msg.messageText}`;
+      let text = msg.messageText || '';
+      // Remove opt-out footer from outbound messages so AI doesn't repeat it
+      text = text.replace(/\s*Reply stop to stop\.?\s*/gi, ' ').trim();
+      text = text.replace(/\s*Text STOP to opt out\.?\s*/gi, ' ').trim();
+      return `${role}: ${text}`;
     })
     .join('\n');
 
@@ -519,9 +531,9 @@ export async function handleIncomingSms(
   // Build the prompt
   const contextInfo = [
     registrant ? `Contact name: ${registrant.firstName}` : '',
-    registrant?.liveRoomUrl ? `Their personal live room link: ${registrant.liveRoomUrl}` : '',
+    (registrant?.liveRoomUrl && registrant.liveRoomUrl.startsWith('http')) ? `Their personal live room link: ${registrant.liveRoomUrl}` : 'No personal link available — tell them to check their email for their personal link.',
     nextSchedule ? `The webinar is ${webinarTimeLabel}. IMPORTANT: If the webinar is TODAY, always say "today" not the date. Use ONLY the time "${localTime}" when mentioning the webinar time — this is already converted to the contact's local timezone${contactTimezone ? ` (${contactTimezone})` : ''}.` : '',
-    nextSchedule?.liveRoomUrl ? `General live room link: ${nextSchedule.liveRoomUrl}` : '',
+    (nextSchedule?.liveRoomUrl && nextSchedule.liveRoomUrl.startsWith('http')) ? `General live room link: ${nextSchedule.liveRoomUrl}` : '',
   ].filter(Boolean).join('\n');
 
   const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. MUST be under 155 characters total (count carefully). No emoji. Be warm and helpful. If the webinar is today, say "today" not the date. Use the time "${localTime}" — it's already in their timezone.`;
@@ -555,6 +567,15 @@ export async function handleIncomingSms(
 
     // Strip any emoji from AI response
     aiResponse = stripEmoji(aiResponse);
+
+    // Strip opt-out language that the AI might echo from conversation history
+    aiResponse = aiResponse.replace(/\s*Reply stop to stop\.?\s*/gi, ' ').trim();
+    aiResponse = aiResponse.replace(/\s*Text STOP to opt out\.?\s*/gi, ' ').trim();
+
+    // Replace placeholder links with helpful text
+    aiResponse = aiResponse.replace(/\[REGISTRATION LINK\]/gi, 'check your email for your personal link');
+    aiResponse = aiResponse.replace(/\[LINK\]/gi, 'check your email for your personal link');
+    aiResponse = aiResponse.replace(/\[link\]/gi, 'check your email for your personal link');
 
     // Enforce 155-char SMS limit for reliable single-segment delivery (5-char safety margin)
     if (aiResponse.length > 155) {

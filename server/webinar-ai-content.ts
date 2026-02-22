@@ -254,6 +254,13 @@ export function buildTranscriptAwareSystemPrompt(transcript: string | null): str
 - NEVER share personal information about Coach Inayah beyond what's public
 - If you don't know something, say "Great question! Coach Inayah will cover that in the live session"
 
+CRITICAL RULES:
+- NEVER include "Reply stop to stop" or any opt-out language in your response. The system adds that automatically.
+- NEVER output placeholder text like "[REGISTRATION LINK]" or "[LINK]". If you don't have a real URL, say "Check your email for your personal link" or "Reply 'link' and we'll send it to you."
+- NEVER quote or repeat the previous outbound messages. Only write your NEW reply.
+- If someone replies "No" by itself, treat it as disinterest. Respond warmly: "No worries! If you change your mind, we're here. The class is free and could change everything."
+- If someone asks for a link and you have a real URL in the context, include it. If you do NOT have a URL, say "Check your email for your personal link to join."
+
 Your goal: Get them excited and into the live webinar room. Be helpful, be real, be brief.`;
 
   if (!transcript || transcript.trim().length < 100) {

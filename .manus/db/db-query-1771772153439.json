@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, firstName, phone, liveRoomUrl, replayRoomUrl, scheduleId FROM webinar_registrants WHERE phone LIKE '%7025218792%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, firstName, phone, liveRoomUrl, replayRoomUrl, scheduleId FROM webinar_registrants WHERE phone LIKE '%7025218792%' LIMIT 5;",
+  "rows": [
+    {
+      "id": "572",
+      "firstName": "bryson",
+      "phone": "17025218792",
+      "liveRoomUrl": "",
+      "replayRoomUrl": "",
+      "scheduleId": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfirstName\tphone\tliveRoomUrl\treplayRoomUrl\tscheduleId\n572\tbryson\t17025218792\t\t\t1\n",
+  "stderr": "",
+  "execution_time_ms": 48
+}
