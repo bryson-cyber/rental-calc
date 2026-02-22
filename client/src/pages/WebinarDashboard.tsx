@@ -56,6 +56,10 @@ import {
   Power,
   ShieldCheck,
   Download,
+  Activity,
+  CheckCircle,
+  XCircle,
+  MessageCircle,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -230,6 +234,9 @@ function OverviewPanel({
           ) : null}
         </CardContent>
       </Card>
+
+      {/* SMS Blast Delivery Tracker */}
+      <BlastDeliveryTracker />
 
       {/* AI Toggle & Sync Attendance */}
       <AiToggleCard />
@@ -1127,6 +1134,144 @@ function AddRegistrantDialog({
 // ---------------------------------------------------------------------------
 // UTILITY COMPONENTS
 // ---------------------------------------------------------------------------
+
+function BlastDeliveryTracker() {
+  const { data, isLoading, refetch } = trpc.webinar.getBlastDeliveryStats.useQuery(undefined, {
+    refetchInterval: 10_000, // auto-refresh every 10 seconds
+  });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  }, [refetch]);
+
+  if (isLoading) return null;
+
+  const blasts = data?.blasts ?? [];
+  const totalSent = blasts.reduce((sum, b) => sum + b.sent, 0);
+  const totalActive = data?.totalActiveRegistrants ?? 0;
+
+  const typeLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    engagement: { label: 'Noon Engagement', color: 'text-blue-600', icon: <Send className="w-4 h-4 text-blue-600" /> },
+    reminder: { label: 'Reminder', color: 'text-green-600', icon: <Bell className="w-4 h-4 text-green-600" /> },
+    noshow: { label: 'No-Show Blast', color: 'text-amber-600', icon: <AlertTriangle className="w-4 h-4 text-amber-600" /> },
+    manual: { label: 'Manual', color: 'text-purple-600', icon: <MessageSquare className="w-4 h-4 text-purple-600" /> },
+    ai_reply: { label: 'AI Reply', color: 'text-cyan-600', icon: <Bot className="w-4 h-4 text-cyan-600" /> },
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch { return dateStr; }
+  };
+
+  const maskPhone = (phone: string) => {
+    if (phone.length >= 4) return '***' + phone.slice(-4);
+    return phone;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              SMS Blast Tracker
+              <Badge variant="outline" className="text-xs font-normal ml-1">
+                Live
+              </Badge>
+            </CardTitle>
+            <CardDescription>Real-time delivery stats for today's SMS blasts (auto-refreshes every 10s)</CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Summary Row */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="text-center p-3 rounded-lg bg-primary/5 border">
+            <div className="text-2xl font-bold">{totalSent}</div>
+            <div className="text-xs text-muted-foreground">Total Sent Today</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+            <div className="text-2xl font-bold text-green-600">{data?.inboundReplies ?? 0}</div>
+            <div className="text-xs text-muted-foreground">Replies Received</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <div className="text-2xl font-bold text-blue-600">{totalActive}</div>
+            <div className="text-xs text-muted-foreground">Active Numbers</div>
+          </div>
+        </div>
+
+        {/* Per-Blast Breakdown */}
+        {blasts.length > 0 ? (
+          <div className="space-y-3 mb-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Blast Breakdown</p>
+            {blasts.map((blast) => {
+              const info = typeLabels[blast.type] ?? { label: blast.type, color: 'text-gray-600', icon: <Send className="w-4 h-4" /> };
+              const progress = totalActive > 0 ? Math.min((blast.sent / totalActive) * 100, 100) : 0;
+              return (
+                <div key={blast.type} className="p-3 rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {info.icon}
+                      <span className="text-sm font-medium">{info.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${info.color}`}>{blast.sent}</span>
+                      <span className="text-xs text-muted-foreground">/ {totalActive}</span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-muted rounded-full h-2 mb-1.5">
+                    <div
+                      className="h-2 rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{Math.round(progress)}% delivered</span>
+                    <span>
+                      {blast.firstSent && formatTime(blast.firstSent)}
+                      {blast.lastSent && blast.firstSent !== blast.lastSent && ` — ${formatTime(blast.lastSent)}`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground">
+            <Send className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No blasts sent in the last 24 hours</p>
+          </div>
+        )}
+
+        {/* Recent Messages Sample */}
+        {data?.recentMessages && data.recentMessages.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Latest Messages</p>
+            <div className="space-y-1.5">
+              {data.recentMessages.map((msg, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-muted/50">
+                  <MessageCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground font-mono">{maskPhone(msg.phone)}</span>
+                  <span className="truncate flex-1">{msg.messageText?.slice(0, 80)}...</span>
+                  <span className="text-muted-foreground flex-shrink-0">{formatTime(String(msg.createdAt))}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function AiToggleCard() {
   const { data: aiStatus, isLoading } = trpc.webinar.getAiStatus.useQuery();

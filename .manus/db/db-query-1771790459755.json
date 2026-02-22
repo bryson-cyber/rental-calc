@@ -1,0 +1,150 @@
+{
+  "query": "\nSELECT \n  phone,\n  messageText,\n  messageType,\n  direction,\n  createdAt\nFROM sms_conversations \nWHERE messageType = 'engagement' \nORDER BY createdAt DESC \nLIMIT 20;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute \nSELECT \n  phone,\n  messageText,\n  messageType,\n  direction,\n  createdAt\nFROM sms_conversations \nWHERE messageType = 'engagement' \nORDER BY createdAt DESC \nLIMIT 20;\n",
+  "rows": [
+    {
+      "phone": "13399336994",
+      "messageText": "Hey marckellah! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:59"
+    },
+    {
+      "phone": "17047942685",
+      "messageText": "Hey Nia! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:59"
+    },
+    {
+      "phone": "13017102488",
+      "messageText": "Hey Asya! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:59"
+    },
+    {
+      "phone": "16124564245",
+      "messageText": "Hey Dana! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:58"
+    },
+    {
+      "phone": "19702224458",
+      "messageText": "Hey Kerry! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:57"
+    },
+    {
+      "phone": "19737047996",
+      "messageText": "Hey Kudirat! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:57"
+    },
+    {
+      "phone": "19177360471",
+      "messageText": "Hey Nevaeh! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:57"
+    },
+    {
+      "phone": "13473733469",
+      "messageText": "Hey Destiny! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:56"
+    },
+    {
+      "phone": "19016146553",
+      "messageText": "Hey Tionne! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:56"
+    },
+    {
+      "phone": "17878136463",
+      "messageText": "Hey Alanis! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:56"
+    },
+    {
+      "phone": "14064031912",
+      "messageText": "Hey Taylee! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:56"
+    },
+    {
+      "phone": "12078042703",
+      "messageText": "Hey Binta! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:55"
+    },
+    {
+      "phone": "18709521158",
+      "messageText": "Hey Madison! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:55"
+    },
+    {
+      "phone": "14143062807",
+      "messageText": "Hey Bre! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:55"
+    },
+    {
+      "phone": "15867658276",
+      "messageText": "Hey Minyian! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:54"
+    },
+    {
+      "phone": "12604136144",
+      "messageText": "Hey Tasha! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:54"
+    },
+    {
+      "phone": "17588464786",
+      "messageText": "Hey Fariyad! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:53"
+    },
+    {
+      "phone": "18189160678",
+      "messageText": "Hey jewels! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:53"
+    },
+    {
+      "phone": "15624103922",
+      "messageText": "Hey Summer! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:53"
+    },
+    {
+      "phone": "12142877460",
+      "messageText": "Hey Savannah! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?",
+      "messageType": "engagement",
+      "direction": "outbound",
+      "createdAt": "2026-02-22 20:00:52"
+    }
+  ],
+  "messages": [],
+  "stdout": "phone\tmessageText\tmessageType\tdirection\tcreatedAt\n13399336994\tHey marckellah! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:59\n17047942685\tHey Nia! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:59\n13017102488\tHey Asya! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:59\n16124564245\tHey Dana! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:58\n19702224458\tHey Kerry! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:57\n19737047996\tHey Kudirat! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:57\n19177360471\tHey Nevaeh! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:57\n13473733469\tHey Destiny! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:56\n19016146553\tHey Tionne! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:56\n17878136463\tHey Alanis! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:56\n14064031912\tHey Taylee! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:56\n12078042703\tHey Binta! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:55\n18709521158\tHey Madison! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:55\n14143062807\tHey Bre! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:55\n15867658276\tHey Minyian! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:54\n12604136144\tHey Tasha! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:54\n17588464786\tHey Fariyad! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:53\n18189160678\tHey jewels! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:53\n15624103922\tHey Summer! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:53\n12142877460\tHey Savannah! Coach Inayah goes LIVE at 4 PM PT / 7 PM ET today. What are you most excited to learn about?\tengagement\toutbound\t2026-02-22 20:00:52\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

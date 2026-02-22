@@ -12342,3 +12342,6 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Active Numbers Dashboard Card (Feb 22, 2026)
 - [x] Add live "Active Textable Numbers" breakdown card to Webinar Dashboard overview
+
+## SMS Blast Delivery Tracker (Feb 22, 2026)
+- [x] Add live SMS blast delivery tracker card to Webinar Dashboard (shows sent/total, message preview, timestamps)

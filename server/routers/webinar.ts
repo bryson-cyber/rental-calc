@@ -609,6 +609,85 @@ export const webinarRouter = router({
     }),
 
   // =========================================================================
+  // SMS BLAST DELIVERY TRACKER
+  // =========================================================================
+
+  /** Get live SMS blast delivery stats — shows sent/failed/total for each message type */
+  getBlastDeliveryStats: ownerProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { blasts: [] };
+
+    // Get stats grouped by messageType for today's outbound messages
+    const stats = await db
+      .select({
+        messageType: smsConversations.messageType,
+        total: sql<number>`COUNT(*)`,
+        firstSent: sql<string>`MIN(${smsConversations.createdAt})`,
+        lastSent: sql<string>`MAX(${smsConversations.createdAt})`,
+      })
+      .from(smsConversations)
+      .where(
+        and(
+          eq(smsConversations.direction, 'outbound'),
+          sql`${smsConversations.createdAt} > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+        )
+      )
+      .groupBy(smsConversations.messageType);
+
+    // Get total active registrants for progress calculation
+    const [regCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(webinarRegistrants)
+      .where(
+        and(
+          eq(webinarRegistrants.optedOut, 0),
+          sql`${webinarRegistrants.phone} IS NOT NULL AND ${webinarRegistrants.phone} != ''`
+        )
+      );
+
+    // Get the last 5 outbound messages as a sample
+    const recentMessages = await db
+      .select({
+        phone: smsConversations.phone,
+        messageText: smsConversations.messageText,
+        messageType: smsConversations.messageType,
+        createdAt: smsConversations.createdAt,
+      })
+      .from(smsConversations)
+      .where(
+        and(
+          eq(smsConversations.direction, 'outbound'),
+          sql`${smsConversations.createdAt} > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+        )
+      )
+      .orderBy(desc(smsConversations.createdAt))
+      .limit(5);
+
+    // Get inbound reply count for today
+    const [inboundCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(smsConversations)
+      .where(
+        and(
+          eq(smsConversations.direction, 'inbound'),
+          sql`${smsConversations.createdAt} > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+        )
+      );
+
+    return {
+      blasts: stats.map(s => ({
+        type: s.messageType,
+        sent: s.total,
+        firstSent: s.firstSent,
+        lastSent: s.lastSent,
+      })),
+      totalActiveRegistrants: regCount?.count ?? 0,
+      recentMessages,
+      inboundReplies: inboundCount?.count ?? 0,
+    };
+  }),
+
+  // =========================================================================
   // AI TOGGLE
   // =========================================================================
 
