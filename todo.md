@@ -12252,3 +12252,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add Integrations status card to admin dashboard (green/red dots, Configure/Sync Now buttons)
 - [x] Add owner-only tRPC procedures: getWebhookStatus, configureWebhooks, pollRegistrants
 - [x] Write vitest tests for webhook-auto-config (113 test files, 1681 tests all passing)
+
+### Simplified Webinar SMS Flow (Feb 21, 2026)
+- [x] Build noon engagement blast: auto-send "What are you most excited to learn?" at 12:00 PM EST on webinar day
+- [x] Wire AI conversation engine to handle replies to noon engagement (Coach Inayah persona, transcript-aware)
+- [x] Build 4:10 PM no-show blast: auto-check who hasn't shown up, send AI-generated teaser
+- [x] Remove welcome SMS from registration webhook (user handles welcome texts separately)
+- [x] Add cron-based scheduler for both automated sends (noon + 4:10 PM EST, checks every 60s)
+- [x] Update admin UI: CronStatusCard, automated actions panel with Test Now buttons, removed old reminder stage selector
+- [x] Cleaned up unused imports (CheckCircle, XCircle), removed Welcome column from registrants table
+- [x] Write tests for webinar-cron module (114 test files, 1692 tests all passing)

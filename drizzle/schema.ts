@@ -2406,7 +2406,7 @@ export const smsConversations = mysqlTable("sms_conversations", {
   aiProvider: varchar("aiProvider", { length: 50 }),
 
   /** Message type: 'welcome', 'reminder', 'no_show_blast', 'ai_reply', 'manual' */
-  messageType: mysqlEnum("messageType", ["welcome", "reminder", "no_show_blast", "ai_reply", "manual"]).default("manual").notNull(),
+  messageType: mysqlEnum("messageType", ["welcome", "reminder", "no_show_blast", "ai_reply", "manual", "engagement"]).default("manual").notNull(),
 
   /** SimpleTexting message ID (for tracking delivery) */
   externalMessageId: varchar("externalMessageId", { length: 128 }),

@@ -589,42 +589,11 @@ export async function addRegistrantFromWebhook(params: {
     registeredAt: new Date(),
   }).$returningId();
 
-  // Get the schedule for welcome message context
-  const [schedule] = await db
-    .select()
-    .from(webinarSchedules)
-    .where(eq(webinarSchedules.id, params.scheduleId))
-    .limit(1);
+  // Welcome SMS is handled externally (not by this system)
+  // We just register the person and they'll get the noon engagement text on webinar day
+  console.log(`[WebinarEngine] Registrant added: ${params.firstName} (${fullPhone}) for schedule ${params.scheduleId}`);
 
-  // Send welcome SMS
-  let welcomeSent = false;
-  if (schedule) {
-    const welcomeMessage = `Hey ${params.firstName}! 👋 You're all set for Coach Inayah's "${schedule.name}" webinar. I'll text you reminders so you don't miss it! See you there ✨`;
-
-    try {
-      const result = await sendSms({ contactPhone: fullPhone, text: welcomeMessage });
-
-      await db.insert(smsConversations).values({
-        phone: fullPhone,
-        direction: 'outbound',
-        messageText: welcomeMessage,
-        messageType: 'welcome',
-        externalMessageId: result.id,
-      });
-
-      await db
-        .update(webinarRegistrants)
-        .set({ welcomeSent: 1 })
-        .where(eq(webinarRegistrants.id, newReg.id));
-
-      welcomeSent = true;
-      console.log(`[WebinarEngine] Welcome SMS sent to ${params.firstName} (${fullPhone})`);
-    } catch (error) {
-      console.error(`[WebinarEngine] Failed to send welcome SMS to ${fullPhone}:`, error);
-    }
-  }
-
-  return { registrantId: newReg.id, welcomeSent };
+  return { registrantId: newReg.id, welcomeSent: false };
 }
 
 /**

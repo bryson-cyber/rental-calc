@@ -551,6 +551,34 @@ export const webinarRouter = router({
     return pollWebinarJamRegistrants();
   }),
 
+  // =========================================================================
+  // CRON SCHEDULER
+  // =========================================================================
+
+  /** Get cron scheduler status and next fire times */
+  getCronStatus: ownerProcedure.query(async () => {
+    const { isCronActive, getNextFireTimes } = await import('../webinar-cron');
+    return {
+      active: isCronActive(),
+      ...getNextFireTimes(),
+    };
+  }),
+
+  /** Manually trigger the noon engagement blast (for testing) */
+  triggerNoonEngagement: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .mutation(async ({ input }) => {
+      const { executeNoonEngagement } = await import('../webinar-cron');
+      return executeNoonEngagement(input.scheduleId);
+    }),
+
+  /** Manually trigger the no-show blast (for testing) */
+  triggerNoShowBlast: ownerProcedure
+    .input(z.object({ scheduleId: z.number() }))
+    .mutation(async ({ input }) => {
+      return executeNoShowBlast(input.scheduleId, 'manual');
+    }),
+
   /** Check if current user is the owner (used by frontend to show/hide webinar nav) */
   isOwner: protectedProcedure.query(({ ctx }) => {
     const ownerOpenId = ENV.ownerOpenId;

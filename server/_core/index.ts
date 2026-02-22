@@ -1203,6 +1203,13 @@ async function startServer() {
         );
       }, 10000);
     }).catch(() => { /* webhook auto-config not critical */ });
+
+    // Start the webinar cron scheduler (noon engagement + 4:10 PM no-show blast)
+    import('../webinar-cron').then(({ startWebinarCron }) => {
+      setTimeout(() => {
+        startWebinarCron();
+      }, 12000);
+    }).catch(() => { /* webinar cron not critical */ });
   });
 }
 

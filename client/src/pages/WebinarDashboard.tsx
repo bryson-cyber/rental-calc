@@ -42,8 +42,7 @@ import {
   Phone,
   Clock,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
+
   Plus,
   ChevronRight,
   ArrowLeft,
@@ -190,6 +189,9 @@ function OverviewPanel({
         </Button>
       </div>
 
+      {/* Cron Scheduler Status */}
+      <CronStatusCard />
+
       {/* Webhook & Polling Status */}
       <WebhookStatusCard />
 
@@ -303,13 +305,6 @@ function ScheduleDetailPanel({
   onBack: () => void;
 }) {
   const { data, isLoading, refetch } = trpc.webinar.getSchedule.useQuery({ id: scheduleId });
-  const sendRemindersMut = trpc.webinar.sendReminders.useMutation({
-    onSuccess: (result) => {
-      toast.success(`Reminders sent: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped`);
-      refetch();
-    },
-    onError: (err) => toast.error(err.message),
-  });
   const blastMut = trpc.webinar.blastNoShows.useMutation({
     onSuccess: (result) => {
       toast.success(`No-show blast complete: ${result.smsSent} SMS sent to ${result.noShowCount} no-shows`);
@@ -325,8 +320,15 @@ function ScheduleDetailPanel({
     onError: (err) => toast.error(err.message),
   });
 
+  const noonEngagementMut = trpc.webinar.triggerNoonEngagement.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Noon engagement sent: ${result.sent} sent, ${result.failed} failed`);
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const [showAddRegistrant, setShowAddRegistrant] = useState(false);
-  const [reminderStage, setReminderStage] = useState<number>(1);
   // Transcript is permanent — no need for upload dialog
 
   // AI Teasers
@@ -387,8 +389,8 @@ function ScheduleDetailPanel({
               <p className="text-xs text-muted-foreground">No-Shows</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20">
-              <p className="text-2xl font-bold text-amber-600">{stats.welcomeSent}</p>
-              <p className="text-xs text-muted-foreground">Welcome Sent</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.welcomeSent || 0}</p>
+              <p className="text-xs text-muted-foreground">SMS Sent</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-950/20">
               <p className="text-2xl font-bold text-gray-600">{stats.optedOut}</p>
@@ -396,46 +398,56 @@ function ScheduleDetailPanel({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3">
-            {/* Send Reminders */}
-            <div className="flex items-center gap-2">
-              <Select value={String(reminderStage)} onValueChange={(v) => setReminderStage(Number(v))}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">24h Before</SelectItem>
-                  <SelectItem value="2">Morning Of</SelectItem>
-                  <SelectItem value="3">1 Hour Before</SelectItem>
-                  <SelectItem value="4">At Start Time</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                onClick={() => sendRemindersMut.mutate({ scheduleId, stage: reminderStage })}
-                disabled={sendRemindersMut.isPending}
-              >
-                {sendRemindersMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Bell className="w-4 h-4 mr-1" />}
-                Send Reminders
-              </Button>
+          {/* Automated Actions */}
+          <div className="bg-muted/30 rounded-lg p-4 mb-4 border">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Automated Actions (Sunday Webinar Day)</span>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-background border">
+                <div>
+                  <p className="text-sm font-medium">Noon Engagement</p>
+                  <p className="text-xs text-muted-foreground">12:00 PM EST — "What are you excited to learn?"</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (confirm('Send the noon engagement text to all registrants now? (This is normally automated at noon on webinar day)')) {
+                      noonEngagementMut.mutate({ scheduleId });
+                    }
+                  }}
+                  disabled={noonEngagementMut.isPending}
+                >
+                  {noonEngagementMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                  Test Now
+                </Button>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-background border">
+                <div>
+                  <p className="text-sm font-medium">No-Show Blast</p>
+                  <p className="text-xs text-muted-foreground">4:10 PM EST — AI teaser to pull no-shows in</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm('Send the no-show blast now? This will text all registrants who haven\'t attended.')) {
+                      blastMut.mutate({ scheduleId });
+                    }
+                  }}
+                  disabled={blastMut.isPending}
+                >
+                  {blastMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 mr-1" />}
+                  Test Now
+                </Button>
+              </div>
+            </div>
+          </div>
 
-            {/* No-Show Blast */}
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                if (confirm('Are you sure you want to send the no-show blast? This will SMS all registered contacts who haven\'t attended.')) {
-                  blastMut.mutate({ scheduleId });
-                }
-              }}
-              disabled={blastMut.isPending}
-            >
-              {blastMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Zap className="w-4 h-4 mr-1" />}
-              No-Show Blast
-            </Button>
-
+          {/* Manual Actions */}
+          <div className="flex flex-wrap gap-3">
             {/* Sync from WebinarJam */}
             {schedule.webinarjamWebinarId && (
               <Button
@@ -542,7 +554,6 @@ function ScheduleDetailPanel({
                     <TableHead>Email</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Reminders</TableHead>
-                    <TableHead>Welcome</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -565,13 +576,7 @@ function ScheduleDetailPanel({
                           Stage {reg.lastReminderStage}/4
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        {reg.welcomeSent ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-gray-300" />
-                        )}
-                      </TableCell>
+
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1061,7 +1066,7 @@ function AddRegistrantDialog({
 
   const addMut = trpc.webinar.addRegistrant.useMutation({
     onSuccess: (result) => {
-      toast.success(`Registrant added${result.welcomeSent ? ' (welcome SMS sent)' : ''}`);
+      toast.success('Registrant added');
       onOpenChange(false);
       onAdded();
       setFirstName('');
@@ -1128,7 +1133,7 @@ function AddRegistrantDialog({
             disabled={addMut.isPending || !firstName.trim() || !phone.trim()}
           >
             {addMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
-            Add & Send Welcome
+            Add Registrant
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1139,6 +1144,61 @@ function AddRegistrantDialog({
 // ---------------------------------------------------------------------------
 // UTILITY COMPONENTS
 // ---------------------------------------------------------------------------
+
+function CronStatusCard() {
+  const { data: cronStatus, isLoading } = trpc.webinar.getCronStatus.useQuery();
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" />
+          Automated Schedule
+        </CardTitle>
+        <CardDescription>Two automated SMS actions fire on webinar day</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${cronStatus?.active ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="text-sm font-medium">Noon Engagement</p>
+                <p className="text-xs text-muted-foreground">
+                  {cronStatus?.noonEngagement.time}
+                  {cronStatus?.noonEngagement.firedToday && ' \u2014 Fired today \u2705'}
+                </p>
+              </div>
+            </div>
+            <Badge variant={cronStatus?.active ? 'default' : 'secondary'} className="text-xs">
+              {cronStatus?.active ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${cronStatus?.active ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="text-sm font-medium">No-Show Blast</p>
+                <p className="text-xs text-muted-foreground">
+                  {cronStatus?.noShowBlast.time}
+                  {cronStatus?.noShowBlast.firedToday && ' \u2014 Fired today \u2705'}
+                </p>
+              </div>
+            </div>
+            <Badge variant={cronStatus?.active ? 'default' : 'secondary'} className="text-xs">
+              {cronStatus?.active ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          The AI reads the webinar transcript and generates all messages. Replies are handled by the AI conversation engine.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function WebhookStatusCard() {
   const { data: status, isLoading, refetch } = trpc.webinar.getWebhookStatus.useQuery();
