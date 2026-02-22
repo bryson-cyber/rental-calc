@@ -12352,3 +12352,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add 15-min reminder (3:45 PM PST): "Get your water, energy drink, paper and pen ready! We have 15 minutes until we are LIVE! {webinarjam_link}"
 - [x] Add live-now blast (4 PM PST): "we are live !!! LETSGOOOOO! {webinarjam_link}"
 - [x] Dynamically pull the WebinarJam link from the active schedule each week (not hardcoded)
+
+## Live Room URL Management (Feb 22, 2026)
+- [x] Add editable Live Room URL field to schedule detail on admin dashboard
+- [x] Store schedule-level live room URL in database
+- [x] Fix sync to backfill liveRoomUrl on existing registrants
+- [x] Test SMS with link — confirmed working

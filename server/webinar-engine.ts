@@ -808,12 +808,19 @@ export async function syncRegistrants(scheduleId: number): Promise<{
       .limit(1);
 
     if (existing) {
-      // Update attendance status
+      // Update attendance status and backfill liveRoomUrl if missing
       const newStatus = wjReg.attended_live === 1 ? 'attended' as const : existing.attendanceStatus;
-      if (newStatus !== existing.attendanceStatus) {
+      const newLiveRoom = wjReg.live_room || null;
+      const needsStatusUpdate = newStatus !== existing.attendanceStatus;
+      const needsLiveRoomUpdate = !existing.liveRoomUrl && newLiveRoom;
+
+      if (needsStatusUpdate || needsLiveRoomUpdate) {
+        const updates: Record<string, unknown> = {};
+        if (needsStatusUpdate) updates.attendanceStatus = newStatus;
+        if (needsLiveRoomUpdate) updates.liveRoomUrl = newLiveRoom;
         await db
           .update(webinarRegistrants)
-          .set({ attendanceStatus: newStatus })
+          .set(updates)
           .where(eq(webinarRegistrants.id, existing.id));
         updatedCount++;
       }

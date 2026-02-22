@@ -60,6 +60,9 @@ import {
   CheckCircle,
   XCircle,
   MessageCircle,
+  Link2,
+  Save,
+  ExternalLink,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -386,6 +389,18 @@ function ScheduleDetailPanel({
   const [showAddRegistrant, setShowAddRegistrant] = useState(false);
   // Transcript is permanent — no need for upload dialog
 
+  // Live Room URL editing
+  const [editingLiveUrl, setEditingLiveUrl] = useState(false);
+  const [liveUrlDraft, setLiveUrlDraft] = useState('');
+  const updateScheduleMut = trpc.webinar.updateSchedule.useMutation({
+    onSuccess: () => {
+      toast.success('Live room URL updated');
+      setEditingLiveUrl(false);
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   // AI Teasers
   const { data: teasers, isLoading: teasersLoading, refetch: refetchTeasers } = trpc.webinar.getTeasers.useQuery(
     { scheduleId },
@@ -499,6 +514,78 @@ function ScheduleDetailPanel({
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Live Room URL */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium">Live Room URL</span>
+              <span className="text-xs text-muted-foreground">(used in all reminder texts)</span>
+            </div>
+            {editingLiveUrl ? (
+              <div className="flex gap-2">
+                <Input
+                  value={liveUrlDraft}
+                  onChange={(e) => setLiveUrlDraft(e.target.value)}
+                  placeholder="https://event.webinarjam.com/..."
+                  className="flex-1 text-sm"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    updateScheduleMut.mutate({ id: scheduleId, liveRoomUrl: liveUrlDraft.trim() });
+                  }}
+                  disabled={updateScheduleMut.isPending}
+                >
+                  {updateScheduleMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                  Save
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingLiveUrl(false)}>Cancel</Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {schedule.liveRoomUrl ? (
+                  <>
+                    <a
+                      href={schedule.liveRoomUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline truncate max-w-md"
+                    >
+                      {schedule.liveRoomUrl}
+                      <ExternalLink className="w-3 h-3 inline ml-1" />
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setLiveUrlDraft(schedule.liveRoomUrl || '');
+                        setEditingLiveUrl(true);
+                      }}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-amber-600">No link set — reminders won't include a join link</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setLiveUrlDraft('');
+                        setEditingLiveUrl(true);
+                      }}
+                    >
+                      <Link2 className="w-3 h-3 mr-1" />
+                      Set Link
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Manual Actions */}
