@@ -113,7 +113,7 @@ function stripEmoji(text: string): string {
  * The liveRoomUrl is pulled from the registrant's personal link first,
  * then falls back to the schedule-level link.
  */
-async function sendBlast(
+export async function sendBlast(
   scheduleId: number,
   messageTemplate: string,
   messageType: 'welcome' | 'reminder' | 'no_show_blast' | 'ai_reply' | 'manual' | 'engagement',

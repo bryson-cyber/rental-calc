@@ -12358,3 +12358,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Store schedule-level live room URL in database
 - [x] Fix sync to backfill liveRoomUrl on existing registrants
 - [x] Test SMS with link — confirmed working
+
+## Webinar Dashboard UX Overhaul (Feb 22, 2026)
+- [x] Move Live Room URL to the overview panel — now the #1 card with blue highlight border
+- [x] Update CronStatusCard to show all 6 automated blasts
+- [x] Reorder overview: Live Room URL > Quick Actions > Blast Tracker > Schedule + Controls > Integrations
+- [x] Add "Send Custom Blast" button with message composer and confirmation
+- [x] Add sent/pending status indicators to the Automated Schedule card on overview

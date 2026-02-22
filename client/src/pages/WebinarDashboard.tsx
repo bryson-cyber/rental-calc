@@ -150,27 +150,52 @@ function OverviewPanel({
     );
   }
 
+  // Active schedule for live room URL editing
+  const activeSchedule = schedules?.find(s => s.isActive);
+  const [editingLiveUrl, setEditingLiveUrl] = useState(false);
+  const [liveUrlDraft, setLiveUrlDraft] = useState('');
+  const updateScheduleMut = trpc.webinar.updateSchedule.useMutation({
+    onSuccess: () => {
+      toast.success('Live room URL updated');
+      setEditingLiveUrl(false);
+      refetchSchedules();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Custom blast
+  const [showCustomBlast, setShowCustomBlast] = useState(false);
+  const [customMessage, setCustomMessage] = useState('');
+  const customBlastMut = trpc.webinar.sendCustomBlast.useMutation({
+    onSuccess: (result: any) => {
+      toast.success(`Custom blast sent: ${result.sent} delivered, ${result.failed} failed`);
+      setShowCustomBlast(false);
+      setCustomMessage('');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          icon={<Calendar className="w-5 h-5 text-amber-600" />}
-          label="Active Schedules"
-          value={stats?.activeSchedules ?? 0}
-          sublabel={`${stats?.totalSchedules ?? 0} total`}
-        />
-        <StatCard
-          icon={<Phone className="w-5 h-5 text-blue-600" />}
+          icon={<Phone className="w-5 h-5 text-green-600" />}
           label="Active Textable"
           value={stats?.activeTextable ?? 0}
           sublabel={`${stats?.totalRegistrants ?? 0} total registered`}
         />
         <StatCard
-          icon={<Send className="w-5 h-5 text-green-600" />}
+          icon={<Send className="w-5 h-5 text-blue-600" />}
           label="SMS Sent"
           value={stats?.totalSmsSent ?? 0}
           sublabel={`${stats?.totalConversations ?? 0} conversations`}
+        />
+        <StatCard
+          icon={<Users className="w-5 h-5 text-amber-600" />}
+          label="Attended"
+          value={stats?.totalAttended ?? 0}
+          sublabel={stats?.totalRegistrants ? `${Math.round((stats.totalAttended / stats.totalRegistrants) * 100)}% rate` : '0% rate'}
         />
         <StatCard
           icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
@@ -180,9 +205,99 @@ function OverviewPanel({
         />
       </div>
 
+      {/* ============================================================= */}
+      {/* SECTION 1: LIVE ROOM URL + QUICK ACTIONS (most important)      */}
+      {/* ============================================================= */}
+      <Card className="border-2 border-blue-500/30 bg-blue-500/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-blue-600" />
+            This Week's Live Room Link
+          </CardTitle>
+          <CardDescription>Paste the WebinarJam link here each week — all reminder texts will include it</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {editingLiveUrl ? (
+            <div className="flex gap-2">
+              <Input
+                value={liveUrlDraft}
+                onChange={(e) => setLiveUrlDraft(e.target.value)}
+                placeholder="https://event.webinarjam.com/..."
+                className="flex-1 text-sm"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (activeSchedule) {
+                    updateScheduleMut.mutate({ id: activeSchedule.id, liveRoomUrl: liveUrlDraft.trim() });
+                  }
+                }}
+                disabled={updateScheduleMut.isPending || !activeSchedule}
+              >
+                {updateScheduleMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                Save
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingLiveUrl(false)}>Cancel</Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {(activeSchedule as any)?.liveRoomUrl ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <a
+                    href={(activeSchedule as any).liveRoomUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline truncate flex-1"
+                  >
+                    {(activeSchedule as any).liveRoomUrl}
+                    <ExternalLink className="w-3 h-3 inline ml-1" />
+                  </a>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setLiveUrlDraft((activeSchedule as any).liveRoomUrl || '');
+                      setEditingLiveUrl(true);
+                    }}
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Change Link
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-sm text-amber-600 flex-1">No link set — reminder texts won't include a join link</span>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setLiveUrlDraft('');
+                      setEditingLiveUrl(true);
+                    }}
+                  >
+                    <Link2 className="w-3 h-3 mr-1" />
+                    Set Link
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button onClick={() => setShowCreateDialog(true)} size="sm">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setShowCustomBlast(!showCustomBlast)}
+        >
+          <Send className="w-4 h-4 mr-1" />
+          Send Custom Blast
+        </Button>
+        <Button onClick={() => setShowCreateDialog(true)} size="sm" variant="outline">
           <Plus className="w-4 h-4 mr-1" />
           New Schedule
         </Button>
@@ -200,61 +315,74 @@ function OverviewPanel({
         </Button>
       </div>
 
-      {/* Active Numbers Breakdown */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Phone className="w-5 h-5 text-primary" />
-            Active Numbers Breakdown
-          </CardTitle>
-          <CardDescription>Live count of textable phone numbers for today's blasts</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <div className="text-2xl font-bold text-green-600">{stats?.activeTextable ?? 0}</div>
-              <div className="text-xs text-muted-foreground mt-1">Active Textable</div>
+      {/* Custom Blast Composer */}
+      {showCustomBlast && activeSchedule && (
+        <Card className="border-2 border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Send Custom Blast
+            </CardTitle>
+            <CardDescription>
+              Send a one-off message to all {stats?.activeTextable ?? 0} active registrants for "{activeSchedule.name}"
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Textarea
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                placeholder={'Type your message here...\n\nPlaceholders: {{firstName}}, {{liveRoomUrl}}, {{webinarName}}, {{startTime}}'}
+                rows={3}
+                className="text-sm"
+              />
+              <div className="flex items-center justify-between">
+                <span className={`text-xs ${customMessage.length > 160 ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                  {customMessage.length}/160 characters {customMessage.length > 160 && '(will be truncated)'}
+                </span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setShowCustomBlast(false); setCustomMessage(''); }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Send this message to ${stats?.activeTextable ?? 0} people?\n\n"${customMessage}"`)) {
+                        customBlastMut.mutate({ scheduleId: activeSchedule.id, message: customMessage });
+                      }
+                    }}
+                    disabled={customBlastMut.isPending || !customMessage.trim()}
+                  >
+                    {customBlastMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Send className="w-3 h-3 mr-1" />}
+                    Send to {stats?.activeTextable ?? 0} People
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="text-2xl font-bold text-blue-600">{stats?.totalRegistrants ?? 0}</div>
-              <div className="text-xs text-muted-foreground mt-1">Total Registered</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-              <div className="text-2xl font-bold text-red-600">{stats?.optedOut ?? 0}</div>
-              <div className="text-xs text-muted-foreground mt-1">Opted Out</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="text-2xl font-bold text-amber-600">{stats?.totalAttended ?? 0}</div>
-              <div className="text-xs text-muted-foreground mt-1">Attended</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <div className="text-2xl font-bold text-purple-600">{stats?.totalNoShows ?? 0}</div>
-              <div className="text-xs text-muted-foreground mt-1">No-Shows</div>
-            </div>
-          </div>
-          {stats?.noPhone ? (
-            <p className="text-xs text-muted-foreground mt-3">{stats.noPhone} registrant{stats.noPhone > 1 ? 's' : ''} without a phone number on file</p>
-          ) : null}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* SMS Blast Delivery Tracker */}
+      {/* ============================================================= */}
+      {/* SECTION 2: LIVE DELIVERY TRACKER                               */}
+      {/* ============================================================= */}
       <BlastDeliveryTracker />
 
-      {/* AI Toggle & Sync Attendance */}
-      <AiToggleCard />
+      {/* ============================================================= */}
+      {/* SECTION 3: AUTOMATED SCHEDULE + CONTROLS                      */}
+      {/* ============================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CronStatusCard />
+        <AiToggleCard />
+      </div>
 
-      {/* Cron Scheduler Status */}
-      <CronStatusCard />
-
-      {/* Webhook & Polling Status */}
-      <WebhookStatusCard />
-
-      {/* Schedules List */}
+      {/* ============================================================= */}
+      {/* SECTION 4: SCHEDULES + REGISTRANT NUMBERS                     */}
+      {/* ============================================================= */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Webinar Schedules</CardTitle>
-          <CardDescription>Manage your webinar schedules and send reminders</CardDescription>
+          <CardDescription>Click a schedule to view registrants, sync attendance, and manage details</CardDescription>
         </CardHeader>
         <CardContent>
           {schedulesLoading ? (
@@ -286,7 +414,7 @@ function OverviewPanel({
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-medium">{(schedule as any).registrantCount ?? '—'} registrants</p>
+                      <p className="text-sm font-medium">{(schedule as any).registrantCount ?? '\u2014'} registrants</p>
                       {schedule.webinarjamWebinarId && (
                         <p className="text-xs text-muted-foreground">WebinarJam synced</p>
                       )}
@@ -299,6 +427,11 @@ function OverviewPanel({
           )}
         </CardContent>
       </Card>
+
+      {/* ============================================================= */}
+      {/* SECTION 5: INTEGRATIONS + HISTORY (less frequent)              */}
+      {/* ============================================================= */}
+      <WebhookStatusCard />
 
       {/* Recent Blasts */}
       {stats?.recentBlasts && stats.recentBlasts.length > 0 && (

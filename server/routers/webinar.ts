@@ -704,6 +704,17 @@ export const webinarRouter = router({
       return { enabled: isAiRepliesEnabled() };
     }),
 
+  /** Send a custom one-off blast to all active registrants for a schedule */
+  sendCustomBlast: ownerProcedure
+    .input(z.object({
+      scheduleId: z.number(),
+      message: z.string().min(1).max(300),
+    }))
+    .mutation(async ({ input }) => {
+      const { sendBlast } = await import('../webinar-cron');
+      return sendBlast(input.scheduleId, input.message, 'manual', 'custom blast');
+    }),
+
   /** Create a schedule from just a WebinarJam Webinar ID — auto-pulls everything */
   createFromWebinarJam: ownerProcedure
     .input(z.object({ webinarId: z.string().min(1) }))
