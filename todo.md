@@ -12397,3 +12397,14 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Fix: Attendee CTA Link Not Working (Feb 22, 2026)
 - [x] Fix the CTA link in the Attendee CTA message — added https:// prefix so link is clickable in SMS
+
+## Fix: Blast Dashboard Showing Shared Counts (Feb 22, 2026)
+- [x] Give each blast its own unique messageType (reminder_2hr, reminder_1hr, reminder_15min, live_now, attendee_cta)
+- [x] Update dashboard to map each blast to its unique messageType
+- [x] Fix Attendee CTA time display to show "Manual" instead of "5:00 PM"
+
+## Production Readiness for Next Webinar (Feb 22, 2026)
+- [x] Save checkpoint with all latest fixes
+- [ ] User publishes to production via Publish button
+- [ ] Verify SIMPLETEXTING_API_KEY is set in production Settings → Secrets
+- [ ] Verify WEBINARJAM_API_KEY is set in production Settings → Secrets

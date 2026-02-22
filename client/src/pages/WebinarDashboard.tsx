@@ -1663,12 +1663,12 @@ function CronStatusCard({ scheduleId }: { scheduleId?: number }) {
 
   const blasts = [
     { label: 'Noon Engagement', key: 'noonEngagement', time: '12:00 PM', dbType: 'engagement' },
-    { label: '2-Hour Reminder', key: 'twoHourReminder', time: '2:00 PM', dbType: 'reminder' },
-    { label: '1-Hour Reminder', key: 'oneHourReminder', time: '3:00 PM', dbType: 'reminder' },
-    { label: '15-Min Reminder', key: 'fifteenMinReminder', time: '3:45 PM', dbType: 'reminder' },
-    { label: 'LIVE NOW', key: 'liveNow', time: '4:00 PM', dbType: 'reminder' },
+    { label: '2-Hour Reminder', key: 'twoHourReminder', time: '2:00 PM', dbType: 'reminder_2hr' },
+    { label: '1-Hour Reminder', key: 'oneHourReminder', time: '3:00 PM', dbType: 'reminder_1hr' },
+    { label: '15-Min Reminder', key: 'fifteenMinReminder', time: '3:45 PM', dbType: 'reminder_15min' },
+    { label: 'LIVE NOW', key: 'liveNow', time: '4:00 PM', dbType: 'live_now' },
     { label: 'No-Show Blast', key: 'noShowBlast', time: '4:10 PM', dbType: 'no_show_blast' },
-    { label: 'Attendee CTA', key: 'attendeeCta', time: '5:00 PM', dbType: 'manual', attendeesOnly: true },
+    { label: 'Attendee CTA', key: 'attendeeCta', time: 'Manual', dbType: 'attendee_cta', attendeesOnly: true },
   ];
 
   // Map blast keys to messageType counts

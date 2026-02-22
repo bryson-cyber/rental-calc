@@ -2408,8 +2408,8 @@ export const smsConversations = mysqlTable("sms_conversations", {
   /** Which AI provider handled this (if outbound AI reply) */
   aiProvider: varchar("aiProvider", { length: 50 }),
 
-  /** Message type: 'welcome', 'reminder', 'no_show_blast', 'ai_reply', 'manual' */
-  messageType: mysqlEnum("messageType", ["welcome", "reminder", "no_show_blast", "ai_reply", "manual", "engagement"]).default("manual").notNull(),
+  /** Message type for tracking which blast sent this message */
+  messageType: mysqlEnum("messageType", ["welcome", "reminder", "reminder_2hr", "reminder_1hr", "reminder_15min", "live_now", "no_show_blast", "ai_reply", "manual", "engagement", "attendee_cta"]).default("manual").notNull(),
 
   /** SimpleTexting message ID (for tracking delivery) */
   externalMessageId: varchar("externalMessageId", { length: 128 }),

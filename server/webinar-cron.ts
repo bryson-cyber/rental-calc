@@ -142,7 +142,7 @@ function normalizePhoneForSuppression(phone: string): string | null {
 export async function sendBlast(
   scheduleId: number,
   messageTemplate: string,
-  messageType: 'welcome' | 'reminder' | 'no_show_blast' | 'ai_reply' | 'manual' | 'engagement',
+  messageType: 'welcome' | 'reminder' | 'reminder_2hr' | 'reminder_1hr' | 'reminder_15min' | 'live_now' | 'no_show_blast' | 'ai_reply' | 'manual' | 'engagement' | 'attendee_cta',
   label: string,
 ): Promise<{ sent: number; failed: number; skipped: number }> {
   const db = await getDb();
@@ -294,22 +294,22 @@ export async function executeNoonEngagement(scheduleId: number) {
 
 export async function executeTwoHourReminder(scheduleId: number) {
   const template = await getTemplate(scheduleId, 'twoHourReminder');
-  return sendBlast(scheduleId, template, 'reminder', '2-hour reminder');
+  return sendBlast(scheduleId, template, 'reminder_2hr', '2-hour reminder');
 }
 
 export async function executeOneHourReminder(scheduleId: number) {
   const template = await getTemplate(scheduleId, 'oneHourReminder');
-  return sendBlast(scheduleId, template, 'reminder', '1-hour reminder');
+  return sendBlast(scheduleId, template, 'reminder_1hr', '1-hour reminder');
 }
 
 export async function executeFifteenMinReminder(scheduleId: number) {
   const template = await getTemplate(scheduleId, 'fifteenMinReminder');
-  return sendBlast(scheduleId, template, 'reminder', '15-min reminder');
+  return sendBlast(scheduleId, template, 'reminder_15min', '15-min reminder');
 }
 
 export async function executeLiveNowBlast(scheduleId: number) {
   const template = await getTemplate(scheduleId, 'liveNow');
-  return sendBlast(scheduleId, template, 'reminder', 'live now');
+  return sendBlast(scheduleId, template, 'live_now', 'live now');
 }
 
 /**
@@ -402,7 +402,7 @@ export async function executeAttendeeCta(scheduleId: number): Promise<{ sent: nu
         phone: reg.phone,
         direction: 'outbound',
         messageText: message,
-        messageType: 'manual',
+        messageType: 'attendee_cta',
         externalMessageId: result.id,
       });
 
