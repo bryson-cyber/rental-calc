@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -2309,7 +2309,7 @@ export const webinarSchedules = mysqlTable("webinar_schedules", {
   noShowTeaser: varchar("noShowTeaser", { length: 500 }),
 
   /** Full webinar transcript — used as knowledge base for AI-generated SMS content */
-  webinarTranscript: text("webinarTranscript"),
+  webinarTranscript: longtext("webinarTranscript"),
 
   /** AI-generated teasers cache (JSON array of teaser strings) */
   generatedTeasers: text("generatedTeasers"),

@@ -154,19 +154,62 @@ export async function getWebinar(webinarId: string | number): Promise<WebinarJam
 
 /**
  * Fetch all registrants for a specific webinar + schedule.
+ * Handles paginated responses: { registrants: { current_page, data: [...], last_page } }
  */
 export async function getRegistrants(
   webinarId: string | number,
   scheduleId: string | number
 ): Promise<WebinarJamRegistrant[]> {
-  const data = await wjPost<{ registrants: WebinarJamRegistrant[] }>('/registrants', {
-    webinar_id: webinarId,
-    schedule_id: scheduleId,
-  });
+  let allRegistrants: WebinarJamRegistrant[] = [];
+  let page = 1;
+  let lastPage = 1;
 
-  const registrants = data.registrants ?? [];
-  console.log(`[WebinarJam] Fetched ${registrants.length} registrants for webinar ${webinarId}, schedule ${scheduleId}`);
-  return registrants;
+  do {
+    const data = await wjPost<{ registrants: unknown }>('/registrants', {
+      webinar_id: webinarId,
+      schedule_id: scheduleId,
+      page,
+    });
+
+    const raw = data.registrants;
+
+    // Handle paginated response: { current_page, data: [...], last_page }
+    if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'data' in raw) {
+      const paginated = raw as { data: WebinarJamRegistrant[]; last_page: number; current_page: number };
+      if (Array.isArray(paginated.data)) {
+        // Map API field names to our interface
+        const mapped = paginated.data.map((r: Record<string, unknown>) => ({
+          ...r,
+          first_name: (r.first_name as string) || '',
+          last_name: (r.last_name as string) || '',
+          email: (r.email as string) || '',
+          phone: (r.phone_number as string) || (r.phone as string) || '',
+          phone_country_code: (r.phone_country_code as string) || '+1',
+          attended_live: r.attended_live === 'Yes' || r.attended_live === 1 ? 1 : 0,
+          live_room: (r.live_room as string) || '',
+          replay_room: (r.replay_room as string) || '',
+          lead_id: Number(r.lead_id) || 0,
+          schedule: Number(r.schedule_id) || 0,
+          subscribed: Number(r.subscribed) || 0,
+          attended_replay: Number(r.attended_replay) || 0,
+        } as WebinarJamRegistrant));
+        allRegistrants = allRegistrants.concat(mapped);
+        lastPage = paginated.last_page || 1;
+      }
+    } else if (Array.isArray(raw)) {
+      // Direct array response (legacy format)
+      allRegistrants = allRegistrants.concat(raw);
+      break;
+    } else {
+      console.warn(`[WebinarJam] Unexpected registrants format on page ${page}`);
+      break;
+    }
+
+    page++;
+  } while (page <= lastPage);
+
+  console.log(`[WebinarJam] Fetched ${allRegistrants.length} registrants for webinar ${webinarId}, schedule ${scheduleId} (${lastPage} pages)`);
+  return allRegistrants;
 }
 
 /**

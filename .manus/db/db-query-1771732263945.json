@@ -1,0 +1,21 @@
+{
+  "query": "SELECT s.id, s.name, s.webinarjamWebinarId, s.webinarjamScheduleId, s.dayOfWeek, s.startTime, s.timezone, s.isActive, (SELECT COUNT(*) FROM webinar_registrants WHERE scheduleId = s.id) as registrant_count FROM webinar_schedules s;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT s.id, s.name, s.webinarjamWebinarId, s.webinarjamScheduleId, s.dayOfWeek, s.startTime, s.timezone, s.isActive, (SELECT COUNT(*) FROM webinar_registrants WHERE scheduleId = s.id) as registrant_count FROM webinar_schedules s;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Webby 2.22.26",
+      "webinarjamWebinarId": "370",
+      "webinarjamScheduleId": "652",
+      "dayOfWeek": "0",
+      "startTime": "19:00",
+      "timezone": "America/New_York",
+      "isActive": "1",
+      "registrant_count": "579"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\twebinarjamWebinarId\twebinarjamScheduleId\tdayOfWeek\tstartTime\ttimezone\tisActive\tregistrant_count\n1\tWebby 2.22.26\t370\t652\t0\t19:00\tAmerica/New_York\t1\t579\n",
+  "stderr": "",
+  "execution_time_ms": 86
+}

@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, LENGTH(webinarTranscript) as transcript_length, generatedTeasers IS NOT NULL as has_teasers FROM webinar_schedules;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, LENGTH(webinarTranscript) as transcript_length, generatedTeasers IS NOT NULL as has_teasers FROM webinar_schedules;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Webby 2.22.26",
+      "transcript_length": "216779",
+      "has_teasers": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\ttranscript_length\thas_teasers\n1\tWebby 2.22.26\t216779\t1\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}
