@@ -12300,3 +12300,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added OWNER_USER_ID constant to shared/const.ts
 - [x] Write tests to verify owner-only visibility (owner-only-report.test.ts — 5 tests)
 - [x] All 116 test files, 1721 tests passing
+
+## AI Conversation Engine Not Working (Feb 22, 2026)
+
+- [x] AI conversation engine falling back to generic "team will get back to you" instead of engaging (fixed with Forge LLM fallback)
+- [x] When user asks "when is the class", AI should respond with time and link
+- [x] Investigate why handleIncomingSms is not triggering the AI conversation flow (production had old code)
+- [x] Fix so AI actually converses with registrants who text back (added Forge LLM fallback + better error logging)
+- [x] AI should say "today" instead of the date when webinar is on the same day
+- [x] Build area code to timezone lookup utility (200+ US area codes mapped)
+- [x] Integrate timezone detection into AI conversation prompt so webinar time shows in registrant's local timezone
+- [x] Update noon engagement, no-show blast, and reminders to use registrant's local timezone

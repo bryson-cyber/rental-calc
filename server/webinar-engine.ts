@@ -26,6 +26,7 @@ import { sendSms, sendBulkSms, renderTemplate } from './simpletexting-client';
 import { getNoShows, getRegistrants, syncRegistrantsFromWebinarJam } from './webinarjam-client';
 import { routedLLMCall, FEATURES } from './model-router';
 import { getRandomTeaser, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
+import { getLocalWebinarTime, getTimezoneFromPhone } from './area-code-timezone';
 
 // ---------------------------------------------------------------------------
 // HELPERS
@@ -56,7 +57,7 @@ const COACH_INAYAH_SYSTEM_PROMPT_FALLBACK = `You are Coach Inayah's AI assistant
 - You're knowledgeable about short-term rentals, Airbnb arbitrage, and building wealth through real estate
 - You keep responses SHORT (2-4 sentences max — this is SMS, not email)
 - Each response MUST be under 155 characters total to fit in a single SMS segment
-- The webinar is at 4 PM Pacific / 7 PM Eastern
+- The webinar time will be provided in the contact's local timezone — use whatever time is given in the context
 - You always try to get the person to JOIN THE LIVE WEBINAR
 - If they ask about the webinar topic, it's about how to start a profitable Airbnb business with little to no money down
 - If they ask about Coach Inayah, she's a successful Airbnb entrepreneur who's helped hundreds of people build rental businesses
@@ -162,11 +163,14 @@ export async function sendReminders(
       continue;
     }
 
+    // Get timezone-aware time for this registrant
+    const localTime = getLocalWebinarTime(reg.phone, 16);
+
     let message = renderTemplate(template, {
       firstName: reg.firstName || 'there',
       webinarName: schedule.name,
       liveRoomUrl: reg.liveRoomUrl || schedule.liveRoomUrl || '',
-      startTime: schedule.startTime,
+      startTime: localTime,
       date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       noShowTeaser: schedule.noShowTeaser || 'the strategies that are changing lives',
     });
@@ -315,11 +319,14 @@ export async function executeNoShowBlast(
       // Use a random AI-generated teaser for variety in no-show blasts
       const teaser = await getRandomTeaser(scheduleId);
 
+      // Get timezone-aware time for this registrant
+      const localTime = getLocalWebinarTime(reg.phone, 16);
+
       let message = renderTemplate(template, {
         firstName: reg.firstName || 'there',
         webinarName: schedule.name,
         liveRoomUrl: reg.liveRoomUrl || schedule.liveRoomUrl || '',
-        startTime: schedule.startTime,
+        startTime: localTime,
         noShowTeaser: teaser,
         date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       });
@@ -496,15 +503,28 @@ export async function handleIncomingSms(
     .where(eq(webinarSchedules.isActive, 1))
     .limit(1);
 
+  // Determine if the webinar is today (Pacific time)
+  const now = new Date();
+  const pacificNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const todayDayOfWeek = pacificNow.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const isWebinarToday = nextSchedule?.dayOfWeek === todayDayOfWeek;
+
+  // Get the webinar time in the registrant's local timezone based on area code
+  const localTime = getLocalWebinarTime(cleanPhone, 16); // 16 = 4 PM Pacific
+  const contactTimezone = getTimezoneFromPhone(cleanPhone);
+  const webinarTimeLabel = isWebinarToday
+    ? `TODAY at ${localTime}`
+    : `${localTime}`;
+
   // Build the prompt
   const contextInfo = [
     registrant ? `Contact name: ${registrant.firstName}` : '',
     registrant?.liveRoomUrl ? `Their personal live room link: ${registrant.liveRoomUrl}` : '',
-    nextSchedule ? `Next webinar: "${nextSchedule.name}" at ${nextSchedule.startTime} Pacific` : '',
+    nextSchedule ? `The webinar is ${webinarTimeLabel}. IMPORTANT: If the webinar is TODAY, always say "today" not the date. Use ONLY the time "${localTime}" when mentioning the webinar time — this is already converted to the contact's local timezone${contactTimezone ? ` (${contactTimezone})` : ''}.` : '',
     nextSchedule?.liveRoomUrl ? `General live room link: ${nextSchedule.liveRoomUrl}` : '',
   ].filter(Boolean).join('\n');
 
-  const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. MUST be under 155 characters total (count carefully). No emoji. Be warm and helpful.`;
+  const prompt = `${contextInfo ? `Context:\n${contextInfo}\n\n` : ''}${conversationContext ? `Recent conversation:\n${conversationContext}\n\n` : ''}New message from contact: "${messageText}"\n\nReply as Coach Inayah's assistant. MUST be under 155 characters total (count carefully). No emoji. Be warm and helpful. If the webinar is today, say "today" not the date. Use the time "${localTime}" — it's already in their timezone.`;
 
   // Build transcript-aware system prompt if we have a transcript
   const systemPrompt = nextSchedule?.webinarTranscript
@@ -541,8 +561,52 @@ export async function handleIncomingSms(
       aiResponse = aiResponse.substring(0, 152) + '...';
     }
   } catch (error) {
-    console.error(`[WebinarEngine] AI response failed:`, error);
-    aiResponse = `Hey! Thanks for reaching out. Coach Inayah's team will get back to you soon. Don't miss the live webinar!`;
+    console.error(`[WebinarEngine] Primary AI failed for ${cleanPhone}:`, error instanceof Error ? error.message : error);
+    console.error(`[WebinarEngine] AI error details:`, JSON.stringify({
+      provider,
+      hasSchedule: !!nextSchedule,
+      hasRegistrant: !!registrant,
+      promptLength: prompt.length,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    }));
+
+    // Fallback 1: Try the built-in Forge LLM (always available on production)
+    try {
+      console.log(`[WebinarEngine] Trying Forge LLM fallback...`);
+      const { invokeLLM } = await import('./_core/llm');
+      const forgeResult = await invokeLLM({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+      });
+      const rawContent = forgeResult.choices?.[0]?.message?.content;
+      aiResponse = (typeof rawContent === 'string' ? rawContent : '').trim().replace(/^["']|["']$/g, '');
+      aiResponse = stripEmoji(aiResponse);
+      if (aiResponse.length > 155) {
+        aiResponse = aiResponse.substring(0, 152) + '...';
+      }
+      if (aiResponse) {
+        console.log(`[WebinarEngine] Forge LLM fallback succeeded (${aiResponse.length} chars)`);
+      }
+    } catch (forgeError) {
+      console.error(`[WebinarEngine] Forge LLM fallback also failed:`, forgeError instanceof Error ? forgeError.message : forgeError);
+      aiResponse = '';
+    }
+
+    // Fallback 2: Static smart message with webinar time and link (timezone-aware)
+    if (!aiResponse) {
+      if (isWebinarToday && nextSchedule?.liveRoomUrl) {
+        aiResponse = `Coach Inayah goes LIVE today at ${localTime}! Join here: ${nextSchedule.liveRoomUrl}`;
+      } else if (isWebinarToday) {
+        aiResponse = `Coach Inayah goes LIVE today at ${localTime}! Reply for your personal link.`;
+      } else {
+        aiResponse = `Hey! Coach Inayah's team will get back to you soon. Don't miss the live webinar!`;
+      }
+      if (aiResponse.length > 155) {
+        aiResponse = aiResponse.substring(0, 152) + '...';
+      }
+    }
   }
 
   // Send the AI response

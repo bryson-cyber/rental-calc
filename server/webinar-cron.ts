@@ -28,6 +28,7 @@ import { eq, and } from 'drizzle-orm';
 import { sendSms } from './simpletexting-client';
 import { getRandomTeaser, generateTeasersFromTranscript, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
 import { routedLLMCall, FEATURES } from './model-router';
+import { getLocalWebinarTime } from './area-code-timezone';
 import { executeNoShowBlast } from './webinar-engine';
 
 // ---------------------------------------------------------------------------
@@ -174,12 +175,13 @@ export async function executeNoonEngagement(scheduleId: number): Promise<{
       continue;
     }
 
-    // Personalize the message
+    // Personalize the message with timezone-aware time
+    const localTime = getLocalWebinarTime(reg.phone, 16); // 16 = 4 PM Pacific
     let message = messageTemplate
       .replace(/\{\{firstName\}\}/g, reg.firstName || 'there')
       .replace(/\{\{webinarName\}\}/g, schedule.name)
       .replace(/\{\{liveRoomUrl\}\}/g, reg.liveRoomUrl || schedule.liveRoomUrl || '')
-      .replace(/\{\{startTime\}\}/g, schedule.startTime || '4 PM PT / 7 PM ET');
+      .replace(/\{\{startTime\}\}/g, localTime);
 
     // Strip emoji and enforce 160-char limit
     message = stripEmoji(message);
