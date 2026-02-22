@@ -63,6 +63,13 @@ import {
   Link2,
   Save,
   ExternalLink,
+  Upload,
+  Trash2,
+  Search,
+  UserX,
+  ShieldAlert,
+  UserCheck,
+  Ban,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -72,7 +79,7 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 // ---------------------------------------------------------------------------
 
 export function WebinarDashboardTab() {
-  const [view, setView] = useState<'overview' | 'schedule' | 'conversations' | 'templates'>('overview');
+  const [view, setView] = useState<'overview' | 'schedule' | 'conversations' | 'templates' | 'suppression'>('overview');
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
 
@@ -100,6 +107,7 @@ export function WebinarDashboardTab() {
           onViewSchedule={(id) => { setSelectedScheduleId(id); setView('schedule'); }}
           onViewConversations={() => setView('conversations')}
           onViewTemplates={() => setView('templates')}
+          onViewSuppression={() => setView('suppression')}
         />
       )}
 
@@ -120,6 +128,10 @@ export function WebinarDashboardTab() {
       {view === 'templates' && (
         <TemplatesPanel />
       )}
+
+      {view === 'suppression' && (
+        <SuppressionPanel />
+      )}
     </div>
   );
 }
@@ -132,10 +144,12 @@ function OverviewPanel({
   onViewSchedule,
   onViewConversations,
   onViewTemplates,
+  onViewSuppression,
 }: {
   onViewSchedule: (id: number) => void;
   onViewConversations: () => void;
   onViewTemplates: () => void;
+  onViewSuppression: () => void;
 }) {
   const { data: stats, isLoading, refetch } = trpc.webinar.getDashboardStats.useQuery();
   const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = trpc.webinar.listSchedules.useQuery();
@@ -308,6 +322,10 @@ function OverviewPanel({
         <Button variant="outline" size="sm" onClick={onViewTemplates}>
           <Edit className="w-4 h-4 mr-1" />
           Edit Templates
+        </Button>
+        <Button variant="outline" size="sm" onClick={onViewSuppression}>
+          <ShieldCheck className="w-4 h-4 mr-1" />
+          Suppression List
         </Button>
         <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchSchedules(); }}>
           <RefreshCw className="w-4 h-4 mr-1" />
@@ -1937,4 +1955,544 @@ function formatRelativeTime(date: string | Date): string {
   if (diffHr < 24) return `${diffHr}h`;
   if (diffDay < 7) return `${diffDay}d`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ---------------------------------------------------------------------------
+// SUPPRESSION LIST PANEL
+// ---------------------------------------------------------------------------
+
+const TAG_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode; description: string }> = {
+  buyer: {
+    label: 'Buyer',
+    color: 'bg-red-100 text-red-700',
+    icon: <Ban className="w-4 h-4" />,
+    description: 'Program buyers — NEVER receive any texts',
+  },
+  past_attendee: {
+    label: 'Past Attendee',
+    color: 'bg-green-100 text-green-700',
+    icon: <UserCheck className="w-4 h-4" />,
+    description: 'Attended a webinar — skip weekly reminders, still get CTA',
+  },
+  past_noshow: {
+    label: 'Past No-Show',
+    color: 'bg-amber-100 text-amber-700',
+    icon: <UserX className="w-4 h-4" />,
+    description: 'Missed a webinar — keep re-inviting every week',
+  },
+  dnc: {
+    label: 'Do Not Contact',
+    color: 'bg-gray-100 text-gray-700',
+    icon: <ShieldAlert className="w-4 h-4" />,
+    description: 'Manual suppression — NEVER receive any texts',
+  },
+};
+
+function SuppressionPanel() {
+  const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+
+  const { data: statsData, refetch: refetchStats } = trpc.webinar.getSuppressionStats.useQuery();
+  const { data: contactsData, isLoading, refetch: refetchContacts } = trpc.webinar.getSuppressionContacts.useQuery({
+    tag: activeTag as any,
+    search: searchQuery || undefined,
+    page,
+    pageSize: 25,
+  });
+
+  const removeMut = trpc.webinar.removeSuppressionContact.useMutation({
+    onSuccess: () => {
+      toast.success('Contact removed from suppression list');
+      refetchContacts();
+      refetchStats();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const clearTagMut = trpc.webinar.clearSuppressionByTag.useMutation({
+    onSuccess: (result: any) => {
+      toast.success(`Removed ${result.deleted} contacts`);
+      refetchContacts();
+      refetchStats();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const totalPages = contactsData ? Math.ceil(contactsData.total / contactsData.pageSize) : 1;
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card
+          className={`cursor-pointer transition-colors ${!activeTag ? 'border-primary border-2' : 'hover:border-primary/50'}`}
+          onClick={() => { setActiveTag(undefined); setPage(1); }}
+        >
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Total</span>
+            </div>
+            <p className="text-2xl font-bold">{statsData?.total ?? 0}</p>
+          </CardContent>
+        </Card>
+        {Object.entries(TAG_LABELS).map(([tag, info]) => (
+          <Card
+            key={tag}
+            className={`cursor-pointer transition-colors ${activeTag === tag ? 'border-primary border-2' : 'hover:border-primary/50'}`}
+            onClick={() => { setActiveTag(activeTag === tag ? undefined : tag); setPage(1); }}
+          >
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="flex items-center gap-2 mb-1">
+                {info.icon}
+                <span className="text-xs font-medium text-muted-foreground">{info.label}</span>
+              </div>
+              <p className="text-2xl font-bold">{(statsData as any)?.[tag] ?? 0}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Suppression Rules Explanation */}
+      <Card className="bg-muted/30">
+        <CardContent className="pt-4 pb-3 px-4">
+          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4" />
+            How Suppression Works
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <Ban className="w-3 h-3 mt-0.5 text-red-500 flex-shrink-0" />
+              <span><strong>Buyers</strong> and <strong>DNC</strong> contacts are permanently blocked from ALL texts</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <UserCheck className="w-3 h-3 mt-0.5 text-green-500 flex-shrink-0" />
+              <span><strong>Past Attendees</strong> skip weekly reminders but still receive the post-webinar CTA</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <UserX className="w-3 h-3 mt-0.5 text-amber-500 flex-shrink-0" />
+              <span><strong>Past No-Shows</strong> keep getting invited every week until they attend</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <RefreshCw className="w-3 h-3 mt-0.5 text-blue-500 flex-shrink-0" />
+              <span>Attendees and no-shows are <strong>auto-tagged</strong> after each webinar (5 PM CTA blast)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions Bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            placeholder="Search by phone, email, or name..."
+            className="pl-9 text-sm"
+          />
+        </div>
+        <Button size="sm" onClick={() => setShowAddDialog(true)}>
+          <Plus className="w-4 h-4 mr-1" />
+          Add Contact
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setShowImportDialog(true)}>
+          <Upload className="w-4 h-4 mr-1" />
+          Import CSV
+        </Button>
+        {activeTag && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => {
+              if (confirm(`Remove ALL ${TAG_LABELS[activeTag]?.label} contacts (${(statsData as any)?.[activeTag] ?? 0} total)? This cannot be undone.`)) {
+                clearTagMut.mutate({ tag: activeTag as any });
+              }
+            }}
+            disabled={clearTagMut.isPending}
+          >
+            {clearTagMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Trash2 className="w-3 h-3 mr-1" />}
+            Clear All {TAG_LABELS[activeTag]?.label}
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={() => { refetchContacts(); refetchStats(); }}>
+          <RefreshCw className="w-4 h-4 mr-1" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Contacts Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !contactsData?.contacts.length ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <ShieldCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p>No suppressed contacts{activeTag ? ` with tag "${TAG_LABELS[activeTag]?.label}"` : ''}</p>
+              {searchQuery && <p className="text-sm mt-1">Try a different search term</p>}
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Tag</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Added</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contactsData.contacts.map((contact: any) => (
+                    <TableRow key={contact.id}>
+                      <TableCell className="text-sm">
+                        {[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}
+                      </TableCell>
+                      <TableCell className="text-sm font-mono">
+                        {contact.phone ? formatPhone(contact.phone) : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
+                        {contact.email || '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs ${TAG_LABELS[contact.tag]?.color ?? ''}`}>
+                          {TAG_LABELS[contact.tag]?.label ?? contact.tag}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {contact.source?.replace(/_/g, ' ')}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(contact.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                          onClick={() => {
+                            if (confirm(`Remove ${contact.firstName || contact.phone} from the suppression list?`)) {
+                              removeMut.mutate({ id: contact.id });
+                            }
+                          }}
+                          disabled={removeMut.isPending}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <span className="text-xs text-muted-foreground">
+                    Page {page} of {totalPages} ({contactsData.total} total)
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Contact Dialog */}
+      <AddSuppressionContactDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onAdded={() => { refetchContacts(); refetchStats(); }}
+      />
+
+      {/* Import CSV Dialog */}
+      <ImportSuppressionCsvDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImported={() => { refetchContacts(); refetchStats(); }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ADD SUPPRESSION CONTACT DIALOG
+// ---------------------------------------------------------------------------
+
+function AddSuppressionContactDialog({
+  open,
+  onOpenChange,
+  onAdded,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdded: () => void;
+}) {
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [tag, setTag] = useState<string>('buyer');
+
+  const addMut = trpc.webinar.addSuppressionContact.useMutation({
+    onSuccess: () => {
+      toast.success('Contact added to suppression list');
+      onOpenChange(false);
+      onAdded();
+      setPhone(''); setEmail(''); setFirstName(''); setLastName('');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Suppressed Contact</DialogTitle>
+          <DialogDescription>
+            Add a contact to the suppression list. They will be excluded from SMS blasts based on their tag.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">First Name</label>
+              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Last Name</label>
+              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Phone Number</label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Email</label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.com" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Suppression Tag</label>
+            <Select value={tag} onValueChange={setTag}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TAG_LABELS).map(([value, info]) => (
+                  <SelectItem key={value} value={value}>
+                    <span className="flex items-center gap-2">
+                      {info.icon}
+                      {info.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              {TAG_LABELS[tag]?.description}
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={() => addMut.mutate({ phone, email, firstName, lastName, tag: tag as any })}
+            disabled={addMut.isPending || (!phone && !email)}
+          >
+            {addMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+            Add to List
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// IMPORT CSV DIALOG
+// ---------------------------------------------------------------------------
+
+function ImportSuppressionCsvDialog({
+  open,
+  onOpenChange,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onImported: () => void;
+}) {
+  const [csvData, setCsvData] = useState<Array<{ phone?: string; email?: string; firstName?: string; lastName?: string }>>([]);
+  const [tag, setTag] = useState<string>('buyer');
+  const [fileName, setFileName] = useState('');
+  const [parsing, setParsing] = useState(false);
+
+  const importMut = trpc.webinar.importSuppressionContacts.useMutation({
+    onSuccess: (result: any) => {
+      toast.success(`Imported ${result.imported} contacts (${result.skipped} skipped)`);
+      onOpenChange(false);
+      onImported();
+      setCsvData([]); setFileName('');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setParsing(true);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          toast.error('CSV file appears to be empty');
+          setParsing(false);
+          return;
+        }
+
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        const phoneIdx = headers.findIndex(h => h.includes('phone') || h === 'mobile');
+        const emailIdx = headers.findIndex(h => h.includes('email'));
+        const firstNameIdx = headers.findIndex(h => h.includes('first') || h === 'firstname');
+        const lastNameIdx = headers.findIndex(h => h.includes('last') || h === 'lastname');
+
+        if (phoneIdx === -1 && emailIdx === -1) {
+          toast.error('CSV must have a "phone" or "email" column');
+          setParsing(false);
+          return;
+        }
+
+        // Parse rows
+        const parsed: typeof csvData = [];
+        for (let i = 1; i < lines.length; i++) {
+          // Simple CSV parsing (handles quoted fields)
+          const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(f => f.replace(/^"|"$/g, '').trim()) || lines[i].split(',').map(f => f.trim());
+          
+          const entry: typeof csvData[0] = {};
+          if (phoneIdx >= 0 && row[phoneIdx]) entry.phone = row[phoneIdx];
+          if (emailIdx >= 0 && row[emailIdx]) entry.email = row[emailIdx];
+          if (firstNameIdx >= 0 && row[firstNameIdx]) entry.firstName = row[firstNameIdx];
+          if (lastNameIdx >= 0 && row[lastNameIdx]) entry.lastName = row[lastNameIdx];
+
+          if (entry.phone || entry.email) {
+            parsed.push(entry);
+          }
+        }
+
+        setCsvData(parsed);
+        toast.success(`Parsed ${parsed.length} contacts from CSV`);
+      } catch (err) {
+        toast.error('Failed to parse CSV file');
+      }
+      setParsing(false);
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Import Contacts from CSV</DialogTitle>
+          <DialogDescription>
+            Upload a CSV file with phone numbers and/or emails. Contacts will be added to the suppression list with the selected tag.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">CSV File</label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm">
+                <Upload className="w-4 h-4" />
+                {fileName || 'Choose file...'}
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+              {parsing && <Loader2 className="w-4 h-4 animate-spin" />}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              CSV should have columns: phone, email, first name, last name (phone or email required)
+            </p>
+          </div>
+
+          {csvData.length > 0 && (
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm font-medium">{csvData.length} contacts ready to import</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {csvData.filter(c => c.phone).length} with phone, {csvData.filter(c => c.email).length} with email
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">Suppression Tag</label>
+            <Select value={tag} onValueChange={setTag}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TAG_LABELS).map(([value, info]) => (
+                  <SelectItem key={value} value={value}>
+                    <span className="flex items-center gap-2">
+                      {info.icon}
+                      {info.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => { onOpenChange(false); setCsvData([]); setFileName(''); }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => importMut.mutate({ contacts: csvData, tag: tag as any, source: 'csv_upload' as any })}
+            disabled={importMut.isPending || csvData.length === 0}
+          >
+            {importMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Upload className="w-3 h-3 mr-1" />}
+            Import {csvData.length} Contacts
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

@@ -27,6 +27,7 @@ import { getNoShows, getRegistrants, syncRegistrantsFromWebinarJam } from './web
 import { routedLLMCall, FEATURES } from './model-router';
 import { getRandomTeaser, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
 import { getLocalWebinarTime, getTimezoneFromPhone } from './area-code-timezone';
+import { getSuppressedPhones } from './suppression';
 
 // ---------------------------------------------------------------------------
 // AI REPLIES TOGGLE
@@ -356,6 +357,13 @@ export async function executeNoShowBlast(
     // Filter local registrants to only those in the no-show set
     const noShowRegistrants = localRegistrants.filter(r => noShowPhones.has(r.phone));
 
+    // Check suppression list — skip buyers and DNC (but NOT past_noshow, that's who we want!)
+    const noShowPhoneList = noShowRegistrants.map(r => r.phone).filter(Boolean) as string[];
+    const suppressedPhones = await getSuppressedPhones(noShowPhoneList, 'no_show');
+    if (suppressedPhones.size > 0) {
+      console.log(`[WebinarEngine] Suppressing ${suppressedPhones.size} contacts from no-show blast (buyers/DNC)`);
+    }
+
     // Get the no-show blast template
     const template = await getReminderTemplate(5);
 
@@ -363,6 +371,15 @@ export async function executeNoShowBlast(
     let smsFailed = 0;
 
     for (const reg of noShowRegistrants) {
+      // Check suppression list — skip buyers and DNC
+      if (reg.phone) {
+        const digits = reg.phone.replace(/\D/g, '');
+        const normalized = digits.length === 10 ? `+1${digits}` : digits.length === 11 && digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+        if (suppressedPhones.has(normalized)) {
+          continue; // Skip suppressed contacts
+        }
+      }
+
       // Use a random AI-generated teaser for variety in no-show blasts
       const teaser = await getRandomTeaser(scheduleId);
 

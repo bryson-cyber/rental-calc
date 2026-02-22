@@ -45,6 +45,7 @@ import { eq, and } from 'drizzle-orm';
 import { sendSms } from './simpletexting-client';
 import { getLocalWebinarTime } from './area-code-timezone';
 import { executeNoShowBlast, syncRegistrants } from './webinar-engine';
+import { getSuppressedPhones, autoTagAfterWebinar } from './suppression';
 
 // ---------------------------------------------------------------------------
 // CONSTANTS
@@ -116,6 +117,18 @@ function stripEmoji(text: string): string {
     .trim();
 }
 
+/**
+ * Normalize a phone number to the +1XXXXXXXXXX format used in suppression list.
+ */
+function normalizePhoneForSuppression(phone: string): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  if (digits.length > 7) return `+1${digits}`;
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // GENERIC BLAST SENDER
 // ---------------------------------------------------------------------------
@@ -162,7 +175,14 @@ export async function sendBlast(
     return { sent: 0, failed: 0, skipped: 0 };
   }
 
-  console.log(`[WebinarCron] Sending ${label} to ${registrants.length} registrants for "${schedule.name}"`);
+  // Check suppression list — skip buyers, past attendees, and DNC contacts
+  const allPhones = registrants.map(r => r.phone).filter(Boolean) as string[];
+  const suppressedPhones = await getSuppressedPhones(allPhones, 'reminder');
+  if (suppressedPhones.size > 0) {
+    console.log(`[WebinarCron] Suppressing ${suppressedPhones.size} contacts for ${label} (buyers/past attendees/DNC)`);
+  }
+
+  console.log(`[WebinarCron] Sending ${label} to ${registrants.length} registrants (${suppressedPhones.size} suppressed) for "${schedule.name}"`);
 
   let sent = 0;
   let failed = 0;
@@ -170,6 +190,13 @@ export async function sendBlast(
 
   for (const reg of registrants) {
     if (!reg.phone) {
+      skipped++;
+      continue;
+    }
+
+    // Check suppression list — skip buyers, past attendees, DNC
+    const normalizedPhone = normalizePhoneForSuppression(reg.phone);
+    if (normalizedPhone && suppressedPhones.has(normalizedPhone)) {
       skipped++;
       continue;
     }
@@ -331,7 +358,14 @@ export async function executeAttendeeCta(scheduleId: number): Promise<{ sent: nu
     return { sent: 0, failed: 0, skipped: 0 };
   }
 
-  console.log(`[WebinarCron] Sending attendee CTA to ${attendees.length} attendees for "${schedule.name}"`);
+  // Check suppression list — skip buyers and DNC (but NOT past_attendees, since they attended today)
+  const attendeePhones = attendees.map(r => r.phone).filter(Boolean) as string[];
+  const suppressedPhones = await getSuppressedPhones(attendeePhones, 'attendee_cta');
+  if (suppressedPhones.size > 0) {
+    console.log(`[WebinarCron] Suppressing ${suppressedPhones.size} contacts for CTA (buyers/DNC)`);
+  }
+
+  console.log(`[WebinarCron] Sending attendee CTA to ${attendees.length} attendees (${suppressedPhones.size} suppressed) for "${schedule.name}"`);
 
   let sent = 0;
   let failed = 0;
@@ -339,6 +373,13 @@ export async function executeAttendeeCta(scheduleId: number): Promise<{ sent: nu
 
   for (const reg of attendees) {
     if (!reg.phone) {
+      skipped++;
+      continue;
+    }
+
+    // Check suppression list — skip buyers and DNC
+    const normalizedPhone = normalizePhoneForSuppression(reg.phone);
+    if (normalizedPhone && suppressedPhones.has(normalizedPhone)) {
       skipped++;
       continue;
     }
@@ -487,6 +528,16 @@ async function cronTick(): Promise<void> {
     lastCtaFiredDate = dateStr;
     console.log(`[WebinarCron] Attendee CTA time! Firing for ${todaySchedules.length} schedule(s)`);
     await fireBlast(todaySchedules, executeAttendeeCta, 'Attendee CTA');
+
+    // Auto-tag attendees and no-shows in the suppression list for next week's logic
+    for (const schedule of todaySchedules) {
+      try {
+        const tagResult = await autoTagAfterWebinar(schedule.id);
+        console.log(`[WebinarCron] Auto-tagged for "${schedule.name}": ${tagResult.attendeesTagged} attendees, ${tagResult.noShowsTagged} no-shows`);
+      } catch (tagErr) {
+        console.error(`[WebinarCron] Auto-tag failed for "${schedule.name}":`, tagErr);
+      }
+    }
   }
 
   // NO-SHOW BLAST: 4:10 PM Pacific

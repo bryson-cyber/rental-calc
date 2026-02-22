@@ -12377,3 +12377,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add post-webinar CTA blast (attendees only): "Hey {firstName} it's Inayah. Ready to launch your first Airbnb w/o owning property? I opened a few Turnkey spots. Grab a free call here: https://masterclass.coachinayah.com/the-turnkey-program"
 - [x] CTA blast only goes to people who attended (attended_live = 1), NOT no-shows
 - [x] Add CTA blast to the Automated Schedule card as the 7th scheduled message
+
+## Contact Management & Suppression System (Feb 22, 2026)
+- [x] Add suppressionContacts table (phone, email, name, tag: buyer/past_attendee/past_noshow/dnc, source)
+- [x] Build CSV import endpoint for buyers (normalize phone numbers, dedupe)
+- [x] Import 4,535 buyers from HubSpot CSV as tag='buyer' (4,512 imported)
+- [x] Update ALL blast logic to skip buyers (tag='buyer' = never text)
+- [x] Add week-to-week re-engagement logic: skip past_attendees, re-invite past_noshows
+- [x] Auto-tag attendees as 'past_attendee' and no-shows as 'past_noshow' after each webinar
+- [x] Build admin UI: upload CSV, view suppression list with counts, manual add/remove

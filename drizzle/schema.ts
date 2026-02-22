@@ -2486,3 +2486,33 @@ export const noShowBlasts = mysqlTable("no_show_blasts", {
 ]);
 export type NoShowBlast = typeof noShowBlasts.$inferSelect;
 export type InsertNoShowBlast = typeof noShowBlasts.$inferInsert;
+
+
+/**
+ * Suppression contacts — people who should NOT receive certain SMS blasts.
+ * Tags control what gets suppressed:
+ *   - 'buyer': NEVER text (already purchased the program)
+ *   - 'past_attendee': Skip weekly re-engagement (already attended a webinar)
+ *   - 'past_noshow': Keep re-inviting until they attend
+ *   - 'dnc': Do Not Contact — manual suppression
+ */
+export const suppressionContacts = mysqlTable("suppression_contacts", {
+  id: int("id").autoincrement().primaryKey(),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 320 }),
+  firstName: varchar("firstName", { length: 255 }),
+  lastName: varchar("lastName", { length: 255 }),
+  tag: mysqlEnum("tag", ["buyer", "past_attendee", "past_noshow", "dnc"]).notNull(),
+  source: mysqlEnum("source", ["hubspot_import", "webinarjam_sync", "manual", "csv_import"]).notNull(),
+  hubspotRecordId: varchar("hubspotRecordId", { length: 50 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("suppression_phone_idx").on(table.phone),
+  index("suppression_email_idx").on(table.email),
+  index("suppression_tag_idx").on(table.tag),
+  index("suppression_phone_tag_idx").on(table.phone, table.tag),
+]);
+export type SuppressionContact = typeof suppressionContacts.$inferSelect;
+export type InsertSuppressionContact = typeof suppressionContacts.$inferInsert;

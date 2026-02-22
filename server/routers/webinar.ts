@@ -16,8 +16,9 @@ import {
   smsConversations,
   reminderTemplates,
   noShowBlasts,
+  suppressionContacts,
 } from '../../drizzle/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray, like, or, count } from 'drizzle-orm';
 import {
   sendReminders,
   executeNoShowBlast,
@@ -975,6 +976,183 @@ export const webinarRouter = router({
         registrantsSynced: syncResult?.synced ?? 0,
         totalSchedulesInWJ: webinar.schedules.length,
       };
+    }),
+
+  // ---------------------------------------------------------------------------
+  // SUPPRESSION / CONTACT MANAGEMENT
+  // ---------------------------------------------------------------------------
+
+  /** Get suppression list stats by tag */
+  getSuppressionStats: ownerProcedure.query(async () => {
+    const db = (await getDb())!;
+    const rows = await db
+      .select({ tag: suppressionContacts.tag, count: count() })
+      .from(suppressionContacts)
+      .groupBy(suppressionContacts.tag);
+    const stats: Record<string, number> = { buyer: 0, past_attendee: 0, past_noshow: 0, dnc: 0 };
+    for (const r of rows) stats[r.tag] = Number(r.count);
+    const totalRows = await db.select({ count: count() }).from(suppressionContacts);
+    return { ...stats, total: Number(totalRows[0]?.count ?? 0) };
+  }),
+
+  /** Get suppression contacts list with pagination and filtering */
+  getSuppressionContacts: ownerProcedure
+    .input(z.object({
+      tag: z.enum(['buyer', 'past_attendee', 'past_noshow', 'dnc']).optional(),
+      search: z.string().optional(),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(50),
+    }))
+    .query(async ({ input }) => {
+      const db = (await getDb())!;
+      const conditions = [];
+      if (input.tag) conditions.push(eq(suppressionContacts.tag, input.tag));
+      if (input.search) {
+        const s = `%${input.search}%`;
+        conditions.push(or(
+          like(suppressionContacts.phone, s),
+          like(suppressionContacts.email, s),
+          like(suppressionContacts.firstName, s),
+          like(suppressionContacts.lastName, s),
+        )!);
+      }
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const [rows, totalRows] = await Promise.all([
+        db.select().from(suppressionContacts)
+          .where(where)
+          .orderBy(desc(suppressionContacts.createdAt))
+          .limit(input.pageSize)
+          .offset((input.page - 1) * input.pageSize),
+        db.select({ count: count() }).from(suppressionContacts).where(where),
+      ]);
+      return { contacts: rows, total: Number(totalRows[0]?.count ?? 0), page: input.page, pageSize: input.pageSize };
+    }),
+
+  /** Import contacts from CSV data (parsed on the client) */
+  importSuppressionContacts: ownerProcedure
+    .input(z.object({
+      contacts: z.array(z.object({
+        phone: z.string().optional(),
+        email: z.string().optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        hubspotRecordId: z.string().optional(),
+      })),
+      tag: z.enum(['buyer', 'past_attendee', 'past_noshow', 'dnc']),
+      source: z.enum(['hubspot_import', 'csv_import', 'manual']),
+    }))
+    .mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      // Normalize phone numbers
+      const normalizePhone = (p?: string): string | null => {
+        if (!p) return null;
+        const digits = p.replace(/[^\d]/g, '');
+        if (digits.length === 10) return `+1${digits}`;
+        if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+        if (digits.length > 11) return `+${digits}`;
+        return digits.length >= 7 ? `+1${digits}` : null;
+      };
+
+      let imported = 0;
+      let skipped = 0;
+      const batchSize = 100;
+
+      for (let i = 0; i < input.contacts.length; i += batchSize) {
+        const batch = input.contacts.slice(i, i + batchSize);
+        const values = batch.map(c => ({
+          phone: normalizePhone(c.phone),
+          email: c.email?.trim() || null,
+          firstName: c.firstName?.trim() || null,
+          lastName: c.lastName?.trim() || null,
+          tag: input.tag,
+          source: input.source,
+          hubspotRecordId: c.hubspotRecordId || null,
+        })).filter(v => v.phone || v.email); // must have at least phone or email
+
+        if (values.length === 0) { skipped += batch.length; continue; }
+
+        // Use INSERT IGNORE to skip duplicates
+        try {
+          await db.insert(suppressionContacts).values(values).onDuplicateKeyUpdate({
+            set: { updatedAt: sql`NOW()` },
+          });
+          imported += values.length;
+          skipped += batch.length - values.length;
+        } catch {
+          // If batch fails, try one by one
+          for (const v of values) {
+            try {
+              await db.insert(suppressionContacts).values(v);
+              imported++;
+            } catch {
+              skipped++;
+            }
+          }
+        }
+      }
+
+      return { imported, skipped, total: input.contacts.length };
+    }),
+
+  /** Add a single suppression contact manually */
+  addSuppressionContact: ownerProcedure
+    .input(z.object({
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      tag: z.enum(['buyer', 'past_attendee', 'past_noshow', 'dnc']),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      const normalizePhone = (p?: string): string | null => {
+        if (!p) return null;
+        const digits = p.replace(/[^\d]/g, '');
+        if (digits.length === 10) return `+1${digits}`;
+        if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+        return digits.length >= 7 ? `+1${digits}` : null;
+      };
+      await db.insert(suppressionContacts).values({
+        phone: normalizePhone(input.phone),
+        email: input.email?.trim() || null,
+        firstName: input.firstName?.trim() || null,
+        lastName: input.lastName?.trim() || null,
+        tag: input.tag,
+        source: 'manual' as const,
+        notes: input.notes || null,
+      });
+      return { success: true };
+    }),
+
+  /** Remove a suppression contact */
+  removeSuppressionContact: ownerProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      await db.delete(suppressionContacts).where(eq(suppressionContacts.id, input.id));
+      return { success: true };
+    }),
+
+  /** Bulk remove suppression contacts by tag */
+  clearSuppressionByTag: ownerProcedure
+    .input(z.object({ tag: z.enum(['buyer', 'past_attendee', 'past_noshow', 'dnc']) }))
+    .mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      const result = await db.delete(suppressionContacts).where(eq(suppressionContacts.tag, input.tag));
+      return { deleted: (result as any)[0]?.affectedRows ?? 0 };
+    }),
+
+  /** Check if a phone number is suppressed */
+  checkSuppression: ownerProcedure
+    .input(z.object({ phone: z.string() }))
+    .query(async ({ input }) => {
+      const db = (await getDb())!;
+      const digits = input.phone.replace(/[^\d]/g, '');
+      const normalized = digits.length === 10 ? `+1${digits}` : digits.length === 11 && digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+      const rows = await db.select().from(suppressionContacts)
+        .where(eq(suppressionContacts.phone, normalized));
+      return { suppressed: rows.length > 0, tags: rows.map(r => r.tag), contacts: rows };
     }),
 
   /** Check if current user is the owner (used by frontend to show/hide webinar nav) */
