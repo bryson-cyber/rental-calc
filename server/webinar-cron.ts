@@ -29,7 +29,7 @@ import { sendSms } from './simpletexting-client';
 import { getRandomTeaser, generateTeasersFromTranscript, buildTranscriptAwareSystemPrompt } from './webinar-ai-content';
 import { routedLLMCall, FEATURES } from './model-router';
 import { getLocalWebinarTime } from './area-code-timezone';
-import { executeNoShowBlast } from './webinar-engine';
+import { executeNoShowBlast, syncRegistrants } from './webinar-engine';
 
 // ---------------------------------------------------------------------------
 // CONSTANTS
@@ -283,6 +283,17 @@ async function cronTick(): Promise<void> {
 
     for (const schedule of todaySchedules) {
       try {
+        // CRITICAL: Sync attendance from WebinarJam RIGHT BEFORE the blast
+        // so our local DB has the freshest attended_live data.
+        // This prevents texting people who joined the room in the last few minutes.
+        try {
+          // syncRegistrants is imported at the top of this file
+          const syncResult = await syncRegistrants(schedule.id);
+          console.log(`[WebinarCron] Pre-blast sync for "${schedule.name}": ${syncResult.updated} attendance updates`);
+        } catch (syncErr) {
+          console.warn(`[WebinarCron] Pre-blast sync failed (blast will still use WJ API directly):`, syncErr);
+        }
+
         const result = await executeNoShowBlast(schedule.id, 'cron');
         console.log(`[WebinarCron] No-show blast for "${schedule.name}": ${result.noShowCount} no-shows, ${result.smsSent} sent`);
       } catch (error) {

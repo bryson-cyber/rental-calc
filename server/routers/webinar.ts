@@ -32,6 +32,8 @@ import {
   getBlastHistory,
   sendManualSms,
   getReminderTemplate,
+  isAiRepliesEnabled,
+  setAiRepliesEnabled,
 } from '../webinar-engine';
 import { generateAndCacheTeasers, getTeasers, generateTeasersFromTranscript } from '../webinar-ai-content';
 import { listWebhooks, createWebhook, deleteWebhook } from '../simpletexting-client';
@@ -596,6 +598,23 @@ export const webinarRouter = router({
     .input(z.object({ scheduleId: z.number() }))
     .mutation(async ({ input }) => {
       return executeNoShowBlast(input.scheduleId, 'manual');
+    }),
+
+  // =========================================================================
+  // AI TOGGLE
+  // =========================================================================
+
+  /** Get the current AI auto-reply status */
+  getAiStatus: ownerProcedure.query(() => {
+    return { enabled: isAiRepliesEnabled() };
+  }),
+
+  /** Enable or disable AI auto-replies for incoming SMS */
+  setAiEnabled: ownerProcedure
+    .input(z.object({ enabled: z.boolean() }))
+    .mutation(({ input }) => {
+      setAiRepliesEnabled(input.enabled);
+      return { enabled: isAiRepliesEnabled() };
     }),
 
   /** Create a schedule from just a WebinarJam Webinar ID — auto-pulls everything */

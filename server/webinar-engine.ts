@@ -29,6 +29,31 @@ import { getRandomTeaser, buildTranscriptAwareSystemPrompt } from './webinar-ai-
 import { getLocalWebinarTime, getTimezoneFromPhone } from './area-code-timezone';
 
 // ---------------------------------------------------------------------------
+// AI REPLIES TOGGLE
+// ---------------------------------------------------------------------------
+
+/**
+ * Master toggle for AI auto-replies to incoming SMS.
+ * When false, incoming texts are logged but NO auto-reply is sent.
+ * The noon engagement blast and no-show blast still work (those are scripted, not AI).
+ * 
+ * Toggle via:
+ *   - Environment variable: SMS_AI_REPLIES_ENABLED=true/false
+ *   - Runtime: setAiRepliesEnabled(true/false)
+ *   - Admin UI: webinar.setAiEnabled mutation
+ */
+let _aiRepliesEnabled: boolean = process.env.SMS_AI_REPLIES_ENABLED === 'true';
+
+export function isAiRepliesEnabled(): boolean {
+  return _aiRepliesEnabled;
+}
+
+export function setAiRepliesEnabled(enabled: boolean): void {
+  _aiRepliesEnabled = enabled;
+  console.log(`[WebinarEngine] AI auto-replies ${enabled ? 'ENABLED' : 'DISABLED'}`);
+}
+
+// ---------------------------------------------------------------------------
 // HELPERS
 // ---------------------------------------------------------------------------
 
@@ -293,7 +318,10 @@ export async function executeNoShowBlast(
       return { blastId, noShowCount: 0, smsSent: 0, smsFailed: 0 };
     }
 
-    // If we have WebinarJam IDs, also cross-reference with their API
+    // Cross-reference with WebinarJam API to determine who actually attended.
+    // CRITICAL: We MUST check WebinarJam's attended_live field to avoid texting
+    // people who are in the room. If the API fails, we ABORT the blast rather
+    // than risk texting attendees.
     let noShowPhones = new Set<string>();
     if (schedule.webinarjamWebinarId && schedule.webinarjamScheduleId) {
       try {
@@ -304,13 +332,25 @@ export async function executeNoShowBlast(
         wjNoShows.forEach(ns => noShowPhones.add(ns.phone));
         console.log(`[WebinarEngine] WebinarJam reports ${wjNoShows.length} no-shows`);
       } catch (error) {
-        console.warn(`[WebinarEngine] WebinarJam API failed, using local data only:`, error);
-        // Fall back to local registrants only
-        localRegistrants.forEach(r => noShowPhones.add(r.phone));
+        // SAFETY: Do NOT fall back to blasting all registrants.
+        // If we can't verify who attended, we abort to avoid texting people in the room.
+        console.error(`[WebinarEngine] WebinarJam API failed — ABORTING no-show blast to protect attendees:`, error);
+        await db.update(noShowBlasts).set({
+          noShowCount: 0,
+          smsSentCount: 0,
+          status: 'failed',
+        }).where(eq(noShowBlasts.id, blastId));
+        return { blastId, noShowCount: 0, smsSent: 0, smsFailed: 0 };
       }
     } else {
-      // No WebinarJam integration — use all local registrants who haven't attended
-      localRegistrants.forEach(r => noShowPhones.add(r.phone));
+      // No WebinarJam integration — cannot determine attendance, abort blast
+      console.warn(`[WebinarEngine] No WebinarJam IDs on schedule ${scheduleId} — cannot determine who attended. Aborting no-show blast.`);
+      await db.update(noShowBlasts).set({
+        noShowCount: 0,
+        smsSentCount: 0,
+        status: 'failed',
+      }).where(eq(noShowBlasts.id, blastId));
+      return { blastId, noShowCount: 0, smsSent: 0, smsFailed: 0 };
     }
 
     // Filter local registrants to only those in the no-show set
@@ -477,6 +517,12 @@ export async function handleIncomingSms(
     }
 
     return { response: optOutResponse, optedOut: true };
+  }
+
+  // If AI replies are disabled, just log the message and return (no auto-reply)
+  if (!isAiRepliesEnabled()) {
+    console.log(`[WebinarEngine] AI replies DISABLED — logged inbound from ${cleanPhone.slice(-4)} but not replying`);
+    return { response: '', optedOut: false };
   }
 
   // Load recent conversation history (last 10 messages for context)

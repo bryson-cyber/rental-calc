@@ -12323,3 +12323,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix AI misreading "No" — now treats as disinterest with warm response
 - [x] AI must never output placeholder text like "[REGISTRATION LINK]" — post-processing replaces with helpful text
 - [x] When no link available, tells registrant to check email for their personal link
+
+## Disable AI Conversation Engine (Feb 22, 2026)
+- [x] Turn off AI auto-replies for incoming SMS — defaults to OFF (SMS_AI_REPLIES_ENABLED env var)
+- [x] Add admin toggle in webinar router to enable/disable AI at runtime (getAiStatus + setAiEnabled)
+- [x] Verify no-show blast only texts people NOT in the room (exclude actual attendees)
+- [x] Audit WebinarJam no-show detection logic end-to-end
+- [x] Fix critical bug: no-show blast now ABORTS if WebinarJam API fails (was falling back to ALL registrants)
+- [x] Add pre-blast sync: fresh attendance data pulled from WebinarJam right before no-show blast fires
+- [x] 14 new tests for AI toggle and no-show safety (118 files, 1760 tests passing)
