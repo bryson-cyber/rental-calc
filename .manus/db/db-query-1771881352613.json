@@ -1,0 +1,120 @@
+{
+  "query": "SELECT id, name, body FROM webinar_sms_templates ORDER BY id ASC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, body FROM webinar_sms_templates ORDER BY id ASC;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "2",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "3",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "4",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "5",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "6",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "7",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "8",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "9",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "10",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "11",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "12",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "13",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "14",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30001",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30002",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30003",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30004",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30005",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30006",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30007",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    },
+    {
+      "id": "30008",
+      "name": "Test Template",
+      "body": "Hey {{name}}, join our webinar!"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tbody\n1\tTest Template\tHey {{name}}, join our webinar!\n2\tTest Template\tHey {{name}}, join our webinar!\n3\tTest Template\tHey {{name}}, join our webinar!\n4\tTest Template\tHey {{name}}, join our webinar!\n5\tTest Template\tHey {{name}}, join our webinar!\n6\tTest Template\tHey {{name}}, join our webinar!\n7\tTest Template\tHey {{name}}, join our webinar!\n8\tTest Template\tHey {{name}}, join our webinar!\n9\tTest Template\tHey {{name}}, join our webinar!\n10\tTest Template\tHey {{name}}, join our webinar!\n11\tTest Template\tHey {{name}}, join our webinar!\n12\tTest Template\tHey {{name}}, join our webinar!\n13\tTest Template\tHey {{name}}, join our webinar!\n14\tTest Template\tHey {{name}}, join our webinar!\n30001\tTest Template\tHey {{name}}, join our webinar!\n30002\tTest Template\tHey {{name}}, join our webinar!\n30003\tTest Template\tHey {{name}}, join our webinar!\n30004\tTest Template\tHey {{name}}, join our webinar!\n30005\tTest Template\tHey {{name}}, join our webinar!\n30006\tTest Template\tHey {{name}}, join our webinar!\n30007\tTest Template\tHey {{name}}, join our webinar!\n30008\tTest Template\tHey {{name}}, join our webinar!\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

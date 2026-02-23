@@ -12330,3 +12330,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Make AI-composed SMS message a full multi-paragraph editable textarea (not a one-liner)
 - [x] Add "Send Test SMS" button to preview message to yourself before sending to all
 - [x] Skip email integration for now — focus on SMS only
+
+## Bug Fix: Failed Campaigns, Test SMS, Test Templates (Feb 23, 2026)
+- [x] Investigate why all campaigns show as "failed" — ROOT CAUSE: v1 API auth wrong + message too long (282 chars > 160 limit)
+- [x] Debug test SMS not delivering — ROOT CAUSE: v1 API required token in body, not Bearer header
+- [x] Switch from SimpleTexting v1 to v2 API (Bearer auth, JSON body, AUTO/MMS_PREFERRED modes)
+- [x] Add "Resend" button to campaign history to retry with same message
+- [x] Make sendCampaign non-blocking (background processing with progress tracking)
+- [x] Clean up 22 test/dummy templates from the database
+- [x] Add campaign progress polling (auto-refresh every 3s while sending)
+- [x] 9 new vitest tests passing for v2 API and resend logic

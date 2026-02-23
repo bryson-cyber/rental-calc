@@ -1056,11 +1056,20 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
 function CampaignHistory() {
   const [page, setPage] = useState(1);
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
-  const campaigns = trpc.webinarSms.listCampaigns.useQuery({ page, pageSize: 10 });
+  const campaigns = trpc.webinarSms.listCampaigns.useQuery({ page, pageSize: 10 }, {
+    refetchInterval: 5000, // Poll every 5s to catch background send progress
+  });
   const campaignDetails = trpc.webinarSms.getCampaignDetails.useQuery(
     { id: selectedCampaignId! },
     { enabled: !!selectedCampaignId }
   );
+  const resendCampaign = trpc.webinarSms.resendCampaign.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || `Resending to ${data.totalRecipients} recipients`);
+      campaigns.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   return (
     <Card>
@@ -1086,31 +1095,73 @@ function CampaignHistory() {
         ) : (
           <div className="space-y-2">
             {campaigns.data?.campaigns?.map((c: any) => (
-              <button
+              <div
                 key={c.id}
-                onClick={() => setSelectedCampaignId(c.id === selectedCampaignId ? null : c.id)}
                 className={`w-full text-left p-3 rounded-lg border transition-all ${
                   c.id === selectedCampaignId ? "border-amber-300 bg-amber-50/30" : "border-border hover:border-amber-200"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium">{c.name}</p>
-                  <StatusBadge status={c.status} />
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>{formatDate(c.createdAt)}</span>
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    {c.sentCount ?? 0} sent
-                  </span>
-                  {(c.failedCount ?? 0) > 0 && (
+                <button
+                  className="w-full text-left"
+                  onClick={() => setSelectedCampaignId(c.id === selectedCampaignId ? null : c.id)}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium">{c.name}</p>
+                    <StatusBadge status={c.status} />
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>{formatDate(c.createdAt)}</span>
                     <span className="flex items-center gap-1">
-                      <XCircle className="w-3 h-3 text-red-500" />
-                      {c.failedCount} failed
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      {c.sentCount ?? 0} sent
                     </span>
+                    {(c.failedCount ?? 0) > 0 && (
+                      <span className="flex items-center gap-1">
+                        <XCircle className="w-3 h-3 text-red-500" />
+                        {c.failedCount} failed
+                      </span>
+                    )}
+                    <span>{c.totalRecipients ?? 0} recipients</span>
+                  </div>
+
+                  {/* Progress bar for sending campaigns */}
+                  {c.status === "sending" && (
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className="bg-amber-500 h-1.5 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.round(((c.sentCount ?? 0) + (c.failedCount ?? 0)) / Math.max(c.totalRecipients ?? 1, 1) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Sending... {(c.sentCount ?? 0) + (c.failedCount ?? 0)} / {c.totalRecipients ?? 0}
+                      </p>
+                    </div>
                   )}
-                  <span>{c.totalRecipients ?? 0} recipients</span>
-                </div>
+                </button>
+
+                {/* Resend button for failed campaigns */}
+                {(c.status === "failed" || (c.status === "completed" && (c.failedCount ?? 0) > 0)) && (
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      disabled={resendCampaign.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        resendCampaign.mutate({ campaignId: c.id });
+                      }}
+                    >
+                      {resendCampaign.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                      )}
+                      Resend {c.failedCount ?? 0} Failed
+                    </Button>
+                  </div>
+                )}
 
                 {/* Expanded delivery details */}
                 {c.id === selectedCampaignId && campaignDetails.data && (
@@ -1121,14 +1172,14 @@ function CampaignHistory() {
                         <div key={d.id} className="flex items-center justify-between text-xs py-1">
                           <span className="text-muted-foreground">{formatPhone(d.phone)}</span>
                           <span className={d.deliveryStatus === "sent" ? "text-emerald-600" : d.deliveryStatus === "failed" ? "text-red-600" : "text-muted-foreground"}>
-                            {d.deliveryStatus === "sent" ? "✓ Delivered" : d.deliveryStatus === "failed" ? "✗ Failed" : d.deliveryStatus}
+                            {d.deliveryStatus === "sent" ? "✓ Delivered" : d.deliveryStatus === "failed" ? `✗ ${d.error || 'Failed'}` : d.deliveryStatus}
                           </span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
             ))}
 
             {/* Pagination */}

@@ -44,25 +44,58 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
     return { success: false, error: "SimpleTexting API key not configured" };
   }
 
+  // Strip phone to digits only (remove +, spaces, dashes, parens)
+  const cleanPhone = phone.replace(/[^\d]/g, "");
+  // For US numbers: ensure 10 digits (strip leading 1 if 11 digits)
+  const normalizedPhone = cleanPhone.length === 11 && cleanPhone.startsWith("1")
+    ? cleanPhone.slice(1)
+    : cleanPhone;
+  
+  if (normalizedPhone.length < 10) {
+    return { success: false, error: `Invalid phone number: ${phone} -> ${normalizedPhone} (too short)` };
+  }
+
+  // Use SimpleTexting v2 API with Bearer auth and JSON body
+  const endpoint = "https://api-app2.simpletexting.com/v2/api/messages";
+
+  // AUTO mode lets SimpleTexting decide SMS vs MMS based on content length
+  const requestBody = {
+    contactPhone: normalizedPhone,
+    mode: message.length > 160 ? "MMS_PREFERRED" : "AUTO",
+    text: message,
+  };
+
   try {
-    const body = new URLSearchParams({ phone, message });
-    const res = await fetch("https://app2.simpletexting.com/v1/send", {
+    console.log(`[WebinarSMS] Sending to ${normalizedPhone} via v2 API, mode: ${requestBody.mode}, message length: ${message.length}`);
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
       },
-      body: body.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const data = await res.json();
-    if (data.code === 1) {
-      return { success: true, smsId: data.smsid };
+    const text = await res.text();
+    console.log(`[WebinarSMS] SimpleTexting v2 response status: ${res.status}, body: ${text.substring(0, 500)}`);
+    
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, error: `SimpleTexting returned non-JSON (status ${res.status}): ${text.substring(0, 200)}` };
     }
-    return { success: false, error: data.message || "Unknown SimpleTexting error" };
+    
+    // v2 API returns 201 on success with { id, credits }
+    if (res.status === 201 && data.id) {
+      return { success: true, smsId: data.id };
+    }
+    
+    // Error responses
+    const errorMsg = data.message || data.errorMessage || data.error || JSON.stringify(data);
+    return { success: false, error: `SimpleTexting error (${res.status}): ${errorMsg}` };
   } catch (err: any) {
-    console.error("[WebinarSMS] SimpleTexting send error:", err.message);
+    console.error("[WebinarSMS] SimpleTexting v2 send error:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -162,6 +195,69 @@ function renderMessage(template: string, vars: Record<string, string>): string {
     result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
   }
   return result;
+}
+
+// ─── Helper: Background campaign send processing ───────────────────────────
+
+async function processCampaignSends(
+  campaignId: number,
+  recipients: Array<{ id: number; name: string; email: string | null; phone: string }>,
+  messageBody: string
+) {
+  const db = await getDb();
+  if (!db) {
+    console.error(`[WebinarSMS] Campaign ${campaignId}: Database unavailable for background sends`);
+    return;
+  }
+
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const recipient of recipients) {
+    const personalizedMessage = renderMessage(messageBody, {
+      name: recipient.name.split(" ")[0],
+      fullname: recipient.name,
+      email: recipient.email || "",
+    });
+
+    const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+
+    await db.insert(webinarSmsDeliveries).values({
+      campaignId,
+      registrantId: recipient.id,
+      phone: recipient.phone,
+      deliveryStatus: result.success ? "sent" : "failed",
+      externalMessageId: result.smsId,
+      error: result.error,
+    });
+
+    if (result.success) {
+      sentCount++;
+    } else {
+      failedCount++;
+    }
+
+    // Update counts periodically (every 10 sends) so frontend can poll progress
+    if ((sentCount + failedCount) % 10 === 0) {
+      await db.update(webinarSmsCampaigns).set({
+        sentCount,
+        failedCount,
+      }).where(eq(webinarSmsCampaigns.id, campaignId));
+    }
+
+    // Small delay between sends to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+
+  // Final update
+  await db.update(webinarSmsCampaigns).set({
+    sentCount,
+    failedCount,
+    status: failedCount === recipients.length ? "failed" : sentCount === 0 ? "failed" : "completed",
+    completedAt: new Date(),
+  }).where(eq(webinarSmsCampaigns.id, campaignId));
+
+  console.log(`[WebinarSMS] Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed out of ${recipients.length}`);
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -521,7 +617,7 @@ export const webinarSmsRouter = router({
   sendCampaign: adminProcedure
     .input(z.object({
       name: z.string().min(1),
-      messageBody: z.string().min(1).max(320),
+      messageBody: z.string().min(1).max(1600),
       templateId: z.number().optional(),
       /** Filter: only send to registrants matching these criteria */
       filter: z.object({
@@ -565,53 +661,98 @@ export const webinarSmsRouter = router({
       });
       const campaignId = campaignResult.insertId;
 
-      // Send messages (fire-and-forget pattern with tracking)
-      let sentCount = 0;
-      let failedCount = 0;
-
-      for (const recipient of recipients) {
-        const personalizedMessage = renderMessage(input.messageBody, {
-          name: recipient.name.split(" ")[0], // First name
-          fullname: recipient.name,
-          email: recipient.email || "",
-        });
-
-        const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
-
-        // Record delivery
-        await db.insert(webinarSmsDeliveries).values({
-          campaignId,
-          registrantId: recipient.id,
-          phone: recipient.phone,
-          deliveryStatus: result.success ? "sent" : "failed",
-          externalMessageId: result.smsId,
-          error: result.error,
-        });
-
-        if (result.success) {
-          sentCount++;
-        } else {
-          failedCount++;
-        }
-
-        // Small delay between sends to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      // Update campaign with final counts
-      await db.update(webinarSmsCampaigns).set({
-        sentCount,
-        failedCount,
-        status: failedCount === recipients.length ? "failed" : "completed",
-        completedAt: new Date(),
-      }).where(eq(webinarSmsCampaigns.id, campaignId));
+      // Return immediately, process sends in background to avoid timeout
+      processCampaignSends(campaignId, recipients, input.messageBody).catch((err: unknown) => {
+        console.error(`[WebinarSMS] Background campaign ${campaignId} error:`, err);
+      });
 
       return {
         success: true,
         campaignId,
         totalRecipients: recipients.length,
-        sent: sentCount,
-        failed: failedCount,
+        sent: 0,
+        failed: 0,
+        message: `Campaign started! Sending to ${recipients.length} recipients in the background.`,
+      };
+    }),
+
+  /** Resend a failed campaign with the same message to recipients that failed */
+  resendCampaign: adminProcedure
+    .input(z.object({ campaignId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get the original campaign
+      const [campaign] = await db.select().from(webinarSmsCampaigns).where(eq(webinarSmsCampaigns.id, input.campaignId));
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
+
+      // Get failed deliveries
+      const failedDeliveries = await db.select().from(webinarSmsDeliveries)
+        .where(and(
+          eq(webinarSmsDeliveries.campaignId, input.campaignId),
+          eq(webinarSmsDeliveries.deliveryStatus, "failed")
+        ));
+
+      if (failedDeliveries.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No failed deliveries to resend" });
+      }
+
+      // Get the registrant details for failed deliveries
+      const failedRegIds = failedDeliveries.map(d => d.registrantId).filter((id): id is number => id !== null);
+      const recipients = await db.select().from(webinarRegistrants)
+        .where(and(
+          inArray(webinarRegistrants.id, failedRegIds),
+          eq(webinarRegistrants.optedOut, 0)
+        ));
+
+      if (recipients.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No eligible recipients to resend to" });
+      }
+
+      // Create a new campaign for the resend
+      const [newCampaignResult] = await db.insert(webinarSmsCampaigns).values({
+        name: `${campaign.name} (Resend)`,
+        messageBody: campaign.messageBody,
+        templateId: campaign.templateId,
+        filterCriteria: { resendOf: input.campaignId } as Record<string, unknown>,
+        totalRecipients: recipients.length,
+        status: "sending",
+        createdBy: ctx.user.id,
+      });
+      const newCampaignId = newCampaignResult.insertId;
+
+      // Process in background
+      processCampaignSends(newCampaignId, recipients, campaign.messageBody).catch((err: unknown) => {
+        console.error(`[WebinarSMS] Background resend campaign ${newCampaignId} error:`, err);
+      });
+
+      return {
+        success: true,
+        campaignId: newCampaignId,
+        totalRecipients: recipients.length,
+        message: `Resending to ${recipients.length} failed recipients in the background.`,
+      };
+    }),
+
+  /** Get campaign send progress */
+  getCampaignProgress: adminProcedure
+    .input(z.object({ campaignId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [campaign] = await db.select().from(webinarSmsCampaigns).where(eq(webinarSmsCampaigns.id, input.campaignId));
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
+
+      return {
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        totalRecipients: campaign.totalRecipients,
+        sentCount: campaign.sentCount,
+        failedCount: campaign.failedCount,
+        completedAt: campaign.completedAt,
       };
     }),
 
@@ -619,10 +760,14 @@ export const webinarSmsRouter = router({
   sendTestSms: adminProcedure
     .input(z.object({
       phone: z.string().min(7),
-      message: z.string().min(1).max(320),
+      message: z.string().min(1).max(1600),
     }))
     .mutation(async ({ input }) => {
-      const result = await sendSms(normalizePhone(input.phone), input.message);
+      console.log(`[WebinarSMS] Test SMS requested to: ${input.phone}, message length: ${input.message.length}`);
+      const normalized = normalizePhone(input.phone);
+      console.log(`[WebinarSMS] Normalized phone: ${normalized}`);
+      const result = await sendSms(normalized, input.message);
+      console.log(`[WebinarSMS] Test SMS result:`, JSON.stringify(result));
       return result;
     }),
 
@@ -702,7 +847,8 @@ export const webinarSmsRouter = router({
     }
 
     try {
-      const res = await fetch("https://app2.simpletexting.com/v1/credits", {
+      // Use v2 API to check connection by listing campaigns
+      const res = await fetch("https://api-app2.simpletexting.com/v2/api/campaigns?page=0&size=1", {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
@@ -710,15 +856,14 @@ export const webinarSmsRouter = router({
         },
       });
 
-      const data = await res.json();
-      if (data.code === 1) {
+      if (res.status === 200) {
         return {
           success: true,
-          message: `Connected! ${data.credits ?? 'Unknown'} credits remaining.`,
-          credits: data.credits,
+          message: `Connected to SimpleTexting v2 API!`,
         };
       }
-      return { success: false, message: data.message || "API returned error" };
+      const data = await res.json().catch(() => ({}));
+      return { success: false, message: data.message || data.errorMessage || `API returned status ${res.status}` };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to connect" };
     }
