@@ -190,25 +190,44 @@ export async function rateLimitedAirDNARequest<T>(
   if (!options?.bypassRateLimit) {
     // 1. Check per-minute limit (memory-based, instant)
     // Admins are COMPLETELY EXEMPT from per-minute limits
-    const callsThisMinute = getCallsInLastMinute();
-    if (!isAdmin && callsThisMinute >= PER_MINUTE_LIMIT) {
-      console.warn(`[AirDNA-RateLimit] Per-minute limit hit: ${callsThisMinute}/${PER_MINUTE_LIMIT} (admin: ${isAdmin})`);
-      
-      logApiCall({
-        provider: 'airdna',
-        endpoint,
-        params: body,
-        statusCode: 429,
-        success: false,
-        errorMessage: `Per-minute rate limit: ${callsThisMinute}/${PER_MINUTE_LIMIT}`,
-        responseTimeMs: 0,
-        cacheHit: false,
-        source: source || 'rate_limited',
-      });
-
-      throw new AirDNARateLimitError('per_minute', callsThisMinute, PER_MINUTE_LIMIT);
-    } else if (isAdmin && callsThisMinute >= PER_MINUTE_LIMIT) {
-      console.log(`[AirDNA-RateLimit] Admin bypassing per-minute limit: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
+    // Non-admins: wait up to 60s for the per-minute window to clear instead of failing immediately
+    let callsThisMinute = getCallsInLastMinute();
+    if (callsThisMinute >= PER_MINUTE_LIMIT) {
+      if (isAdmin) {
+        console.log(`[AirDNA-RateLimit] Admin bypassing per-minute limit: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
+      } else {
+        // Wait for the per-minute window to clear (check every 5s, up to 60s)
+        console.log(`[AirDNA-RateLimit] Per-minute limit hit (${callsThisMinute}/${PER_MINUTE_LIMIT}), waiting for window to clear...`);
+        let waited = 0;
+        const MAX_WAIT_MS = 60_000;
+        const CHECK_INTERVAL_MS = 5_000;
+        while (waited < MAX_WAIT_MS) {
+          await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL_MS));
+          waited += CHECK_INTERVAL_MS;
+          callsThisMinute = getCallsInLastMinute();
+          if (callsThisMinute < PER_MINUTE_LIMIT) {
+            console.log(`[AirDNA-RateLimit] Per-minute window cleared after ${waited}ms (${callsThisMinute}/${PER_MINUTE_LIMIT})`);
+            break;
+          }
+          console.log(`[AirDNA-RateLimit] Still waiting... ${callsThisMinute}/${PER_MINUTE_LIMIT} (${waited}ms elapsed)`);
+        }
+        // If still over limit after waiting, throw
+        if (callsThisMinute >= PER_MINUTE_LIMIT) {
+          console.warn(`[AirDNA-RateLimit] Per-minute limit still exceeded after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
+          logApiCall({
+            provider: 'airdna',
+            endpoint,
+            params: body,
+            statusCode: 429,
+            success: false,
+            errorMessage: `Per-minute rate limit after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${PER_MINUTE_LIMIT}`,
+            responseTimeMs: Date.now() - startTime,
+            cacheHit: false,
+            source: source || 'rate_limited',
+          });
+          throw new AirDNARateLimitError('per_minute', callsThisMinute, PER_MINUTE_LIMIT);
+        }
+      }
     }
 
     // 2. Check daily limit using IN-MEMORY counter (PRIMARY gate - no DB dependency)
@@ -288,23 +307,29 @@ export async function rateLimitedAirDNARequest<T>(
   // ── Make the actual API request ──
   recordCall(); // Track for per-minute limiting
 
-  const fetchOptions: RequestInit = {
-    method,
-    headers: {
-      "Authorization": `Bearer ${ENV.airdnaApiKey}`,
-      "Content-Type": "application/json",
-    },
-  };
-
-  if (body && method === "POST") {
-    fetchOptions.body = JSON.stringify(body);
-  }
-
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
+    // Create a fresh AbortController per attempt with 30s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers: {
+        "Authorization": `Bearer ${ENV.airdnaApiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    };
+
+    if (body && method === "POST") {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
     try {
       const response = await fetch(url, fetchOptions);
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -364,8 +389,11 @@ export async function rateLimitedAirDNARequest<T>(
 
       return data as T;
     } catch (error) {
+      clearTimeout(timeoutId);
       if (error instanceof AirDNARateLimitError) throw error;
       lastError = error as Error;
+      const isAbort = (error as any)?.name === 'AbortError';
+      console.error(`[AirDNA-RateLimit] Attempt ${attempt + 1}/${retries} failed for ${endpoint}: ${isAbort ? 'TIMEOUT (30s)' : (lastError?.message || error)} (elapsed: ${Date.now() - startTime}ms)`);
       if (attempt < retries - 1) {
         const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));

@@ -12198,3 +12198,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Wire streaming into full report generation — SSE endpoints /api/reports/stream/property and /api/reports/stream/market
 - [x] Wire streaming into narrative generation — AIAdvisorStep uses useStreamingReport hook for real-time rendering
 - [x] Write vitest tests for Gemini streaming (24 tests passing)
+
+## Critical Production Bug Fixes (Feb 23, 2026)
+- [x] BUG FIX: Step 2 per-minute rate limit now waits instead of failing immediately
+- [x] BUG FIX: Step 2 getAirDNAEstimate now uses shared getRentalizerEstimate (DB caching + bathroom fallback + 3 retries)
+- [x] BUG FIX: AirDNA rate limiter fetch now has 30s AbortController timeout per attempt

@@ -21,9 +21,9 @@ const createTask = async (_opts: any): Promise<any> => ({ id: '' });
 const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps: [], output: '' });
 const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
-import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
+// rateLimitedAirDNARequest no longer used directly - getAirDNAEstimate now delegates to getRentalizerEstimate
 import { canPerformAnalysis, recordAnalysisUsage } from './usage-limits';
-import { getRentalizerComps } from './airdna';
+import { getRentalizerComps, getRentalizerEstimate } from './airdna';
 import { logActivity, ActionCategory, ActionType } from './activity';
 
 // ============================================
@@ -283,73 +283,43 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
   adr: number;
 } | null> {
   try {
-    const apiKey = ENV.airdnaApiKey;
-    if (!apiKey) return null;
-
     // Strip unit numbers from address - AirDNA works better with street addresses only
-    // Removes patterns like "#7", "Unit 2525", "Apt 101", "# H1464B", etc.
     let cleanAddress = address
-      .replace(/\s*#\s*[A-Za-z0-9-]+/gi, '') // #7, # H1464B
-      .replace(/\s*Unit\s*[A-Za-z0-9-]+/gi, '') // Unit 2525
-      .replace(/\s*Apt\.?\s*[A-Za-z0-9-]+/gi, '') // Apt 101, Apt. 101
-      .replace(/\s*Suite\s*[A-Za-z0-9-]+/gi, '') // Suite 200
-      .replace(/\s+/g, ' ') // Clean up extra spaces
+      .replace(/\s*#\s*[A-Za-z0-9-]+/gi, '')
+      .replace(/\s*Unit\s*[A-Za-z0-9-]+/gi, '')
+      .replace(/\s*Apt\.?\s*[A-Za-z0-9-]+/gi, '')
+      .replace(/\s*Suite\s*[A-Za-z0-9-]+/gi, '')
+      .replace(/\s+/g, ' ')
       .trim();
     
-    console.log(`[AirDNA] Original: ${address} -> Clean: ${cleanAddress}`);
+    console.log(`[AirDNA-DIAG] getAirDNAEstimate: ${address} -> Clean: ${cleanAddress}, beds: ${bedrooms}, baths: ${bathrooms}`);
 
-    // Check in-memory cache first (keyed by cleaned address + bedrooms + bathrooms)
-    const cacheKey = `opp_rentalizer_${cleanAddress}_${bedrooms}_${bathrooms}`;
-    if (!_oppCache) { _oppCache = new Map(); }
-    const cached = _oppCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
-      console.log(`[AirDNA] CACHE HIT for ${cleanAddress}`);
-      return cached.data;
-    }
+    // Use the shared getRentalizerEstimate which has:
+    // - DB-backed persistent caching
+    // - Bathroom fallback logic (tries multiple bath configs)
+    // - 3 retries with exponential backoff
+    const rentalizerResult = await getRentalizerEstimate({
+      address: cleanAddress,
+      bedrooms,
+      bathrooms,
+      accommodates: Math.max(bedrooms * 2, 2),
+      currency: 'usd',
+    });
 
-    let data: any;
-    try {
-      data = await rateLimitedAirDNARequest('/rentalizer/estimate', 'POST', {
-        address: cleanAddress,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
-        accommodates: Math.max(bedrooms * 2, 2),
-        currency: 'usd'
-      }, {
-        retries: 2,
-        source: 'opportunity-finder',
-      });
-    } catch (err: any) {
-      if (err?.isRateLimit) {
-        console.log(`[AirDNA] Rate limited for ${address}: ${err.message}`);
-        return null;
-      }
-      console.log(`[AirDNA] Error for ${address}: ${err}`);
+    if (!rentalizerResult) {
+      console.error(`[AirDNA-DIAG] getRentalizerEstimate returned null for ${cleanAddress}`);
       return null;
     }
-    console.log(`[AirDNA] Response status: ${data.status?.type}`);
-    
-    // Handle enterprise API response format - data is in payload.stats.future.summary
-    const stats = data.payload?.stats;
-    if (!stats?.future?.summary) {
-      console.log(`[AirDNA] No stats data found for ${cleanAddress}`);
-      console.log(`[AirDNA] Response payload keys:`, Object.keys(data.payload || {}));
-      return null;
-    }
-    
-    const summary = stats.future.summary;
-    
-    // Occupancy is returned as decimal (0.84), convert to percentage for display
+
     const result = {
-      revenue: summary.revenue || 0,
-      occupancy: (summary.occupancy || 0) * 100, // Convert to percentage
-      adr: summary.adr || 0,
+      revenue: rentalizerResult.estimates.annual_revenue || 0,
+      occupancy: (rentalizerResult.estimates.occupancy_rate || 0) * 100, // Convert to percentage
+      adr: rentalizerResult.estimates.average_daily_rate || 0,
     };
-    // Cache the result
-    _oppCache.set(cacheKey, { data: result, ts: Date.now() });
+    console.log(`[AirDNA-DIAG] SUCCESS for ${cleanAddress}: revenue=$${result.revenue}, occ=${result.occupancy}%, adr=$${result.adr}`);
     return result;
   } catch (error) {
-    console.error('[AirDNA] Error getting estimate:', error);
+    console.error('[AirDNA-DIAG] UNEXPECTED ERROR getting estimate:', error);
     return null;
   }
 }
@@ -1140,9 +1110,10 @@ export const opportunityFinderRouter = router({
         );
         
         if (!estimate || estimate.revenue === 0) {
+          console.error(`[AirDNA-DIAG] validateProperty FAILED for ${input.address}: estimate=${JSON.stringify(estimate)}`);
           return {
             success: false,
-            error: 'Could not get revenue estimate for this property. Try a different address.',
+            error: 'Could not get revenue estimate for this property. Try the full analysis for more options.',
             property: input,
           };
         }
