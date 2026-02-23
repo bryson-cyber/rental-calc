@@ -52,6 +52,7 @@ import {
   Play,
   Pause,
   Ban,
+  Sparkles,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -149,7 +150,7 @@ function WebinarHeader({
   const webinars = trpc.webinarSms.listWebinarsWithSchedules.useQuery();
   const saveSelection = trpc.webinarSms.saveWebinarSelection.useMutation({
     onSuccess: () => {
-      toast.success("Webinar selected");
+      toast.success("Webinar selected & credentials saved");
       settings.refetch();
       onWebinarChange();
     },
@@ -160,22 +161,45 @@ function WebinarHeader({
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [webinarApiKey, setWebinarApiKey] = useState("");
   const [webinarHash, setWebinarHash] = useState("");
+  const [webinarMemberId, setWebinarMemberId] = useState("");
+  const [webinarIntegrationId, setWebinarIntegrationId] = useState("");
+  const [loadingCreds, setLoadingCreds] = useState(false);
+
+  // Fetch saved credentials when a webinar is selected in the dropdown
+  const savedCreds = trpc.webinarSms.getWebinarCredentials.useQuery(
+    { webinarId: selectedId },
+    { enabled: !!selectedId && showSelector }
+  );
 
   // Pre-fill from saved settings when dialog opens
   useEffect(() => {
-    if (showSelector && settings.data) {
-      setWebinarApiKey(settings.data.webinarApiKey || "");
-      setWebinarHash(settings.data.webinarHash || "");
+    if (showSelector) {
       if (selectedWebinarId) setSelectedId(selectedWebinarId);
     }
-  }, [showSelector, settings.data]);
+  }, [showSelector]);
+
+  // When credentials load for the selected webinar, fill the fields
+  useEffect(() => {
+    if (savedCreds.data && selectedId) {
+      setWebinarApiKey(savedCreds.data.apiKey || "");
+      setWebinarHash(savedCreds.data.webinarHash || "");
+      setWebinarMemberId(savedCreds.data.memberId || "");
+      setWebinarIntegrationId(savedCreds.data.integrationWebinarId || "");
+    } else if (selectedId && !savedCreds.data?.found) {
+      // No saved creds for this webinar — clear fields
+      setWebinarApiKey("");
+      setWebinarHash("");
+      setWebinarMemberId("");
+      setWebinarIntegrationId("");
+    }
+  }, [savedCreds.data, selectedId]);
 
   const selectedWebinar = webinars.data?.webinars?.find((w: any) => w.id === selectedId) as any;
 
   return (
     <div className="space-y-4">
       {/* Top bar: API status indicators */}
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-4 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${apiStatus.data?.webinarjam?.configured ? "bg-emerald-500" : "bg-red-500"}`} />
           <span className="text-muted-foreground">WebinarJam</span>
@@ -230,13 +254,20 @@ function WebinarHeader({
 
       {/* Webinar selection dialog */}
       <Dialog open={showSelector} onOpenChange={setShowSelector}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Webinar</DialogTitle>
-            <DialogDescription>Choose the webinar you want to manage SMS campaigns for.</DialogDescription>
+            <DialogDescription>Choose the webinar you want to manage SMS campaigns for. Credentials are saved per webinar.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Select value={selectedId} onValueChange={setSelectedId}>
+            <Select value={selectedId} onValueChange={(val) => {
+              setSelectedId(val);
+              // Reset fields — they'll be filled by the useEffect when savedCreds loads
+              setWebinarApiKey("");
+              setWebinarHash("");
+              setWebinarMemberId("");
+              setWebinarIntegrationId("");
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose a webinar..." />
               </SelectTrigger>
@@ -263,14 +294,22 @@ function WebinarHeader({
               </Select>
             )}
 
-            {/* Per-webinar API credentials */}
+            {/* Per-webinar API credentials — all 4 fields */}
             <div className="border-t pt-4 mt-2">
-              <p className="text-sm font-medium text-foreground mb-1">Webinar API Credentials</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-medium text-foreground">Webinar API Credentials</p>
+                {savedCreds.isLoading && selectedId && (
+                  <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                )}
+                {savedCreds.data?.found && (
+                  <Badge variant="secondary" className="text-xs">Saved</Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mb-3">
                 Found in WebinarJam → Configuration → Advanced Integration → API custom integration
               </p>
-              <div className="space-y-3">
-                <div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
                   <label className="text-xs font-medium text-muted-foreground">API Key</label>
                   <Input
                     type="password"
@@ -285,6 +324,22 @@ function WebinarHeader({
                     placeholder="e.g., 076vwc5z"
                     value={webinarHash}
                     onChange={(e) => setWebinarHash(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Member ID</label>
+                  <Input
+                    placeholder="e.g., 12345"
+                    value={webinarMemberId}
+                    onChange={(e) => setWebinarMemberId(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">Webinar ID (from API integration)</label>
+                  <Input
+                    placeholder="e.g., 67890"
+                    value={webinarIntegrationId}
+                    onChange={(e) => setWebinarIntegrationId(e.target.value)}
                   />
                 </div>
               </div>
@@ -303,12 +358,14 @@ function WebinarHeader({
                   scheduleId: selectedSchedule && selectedSchedule !== "none" ? selectedSchedule : undefined,
                   webinarApiKey: webinarApiKey || undefined,
                   webinarHash: webinarHash || undefined,
+                  webinarMemberId: webinarMemberId || undefined,
+                  webinarIntegrationId: webinarIntegrationId || undefined,
                 });
                 setShowSelector(false);
               }}
             >
               {saveSelection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Select
+              Select & Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -508,13 +565,23 @@ function AttendanceDashboard({ webinarId }: { webinarId: string }) {
 // SECTION 3: Quick Send — One-Click Audience Texting
 // ═══════════════════════════════════════════════════════════════════════════
 
-function QuickSend({ webinarId }: { webinarId: string }) {
+function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?: string | null }) {
   const [audience, setAudience] = useState<"all" | "attended" | "not_attended">("all");
   const [message, setMessage] = useState("");
   const [campaignName, setCampaignName] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
   const templates = trpc.webinarSms.listTemplates.useQuery();
+  const composeMessage = trpc.webinarSms.composeMessage.useMutation({
+    onSuccess: (data) => {
+      setMessage(data.message);
+      setAiPrompt("");
+      toast.success("AI message composed! Review and edit before sending.");
+    },
+    onError: (err) => toast.error(`AI error: ${err.message}`),
+  });
   const sendCampaign = trpc.webinarSms.sendCampaign.useMutation({
     onSuccess: (data) => {
       toast.success(`Campaign sent! ${data.sent} delivered, ${data.failed} failed.`);
@@ -619,6 +686,49 @@ function QuickSend({ webinarId }: { webinarId: string }) {
           value={campaignName}
           onChange={(e) => setCampaignName(e.target.value)}
         />
+
+        {/* AI Message Composer */}
+        <div className="border rounded-lg p-3 bg-gradient-to-r from-amber-50/50 to-purple-50/50 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-medium">AI Message Composer</span>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Describe what you want to say... e.g., 'remind them about the replay link'"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && aiPrompt.trim()) {
+                  composeMessage.mutate({
+                    prompt: aiPrompt,
+                    audience,
+                    webinarName: webinarName || undefined,
+                  });
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!aiPrompt.trim() || composeMessage.isPending}
+              onClick={() => {
+                composeMessage.mutate({
+                  prompt: aiPrompt,
+                  audience,
+                  webinarName: webinarName || undefined,
+                });
+              }}
+            >
+              {composeMessage.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Just describe what you want to say and AI will craft the SMS with proper personalization variables.</p>
+        </div>
 
         {/* Message composer */}
         <div className="space-y-2">
@@ -1207,7 +1317,7 @@ export default function WebinarCampaignManager() {
 
             <TabsContent value="send" className="mt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <QuickSend webinarId={selectedWebinarId} />
+                <QuickSend webinarId={selectedWebinarId} webinarName={selectedWebinarName} />
                 <CampaignHistory />
               </div>
             </TabsContent>

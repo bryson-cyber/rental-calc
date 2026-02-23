@@ -8,6 +8,13 @@
       "when": 1771827274880,
       "tag": "0000_illegal_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771871605506,
+      "tag": "0001_special_random",
+      "breakpoints": true
     }
   ]
 }

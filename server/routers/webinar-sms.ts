@@ -29,8 +29,10 @@ import {
   webinarSmsDeliveries,
   webinarSmsSettings,
   scheduledSmsMessages,
+  webinarCredentials,
 } from "../../drizzle/schema";
-import { eq, desc, sql, and, inArray, count, lte, ne } from "drizzle-orm";
+import { invokeLLM } from "../_core/llm";
+import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
@@ -746,18 +748,39 @@ export const webinarSmsRouter = router({
       settings[row.settingKey] = row.settingValue;
     }
 
+    const selectedWebinarId = settings["selected_webinar_id"] || null;
+
+    // Load per-webinar credentials from the dedicated table
+    let creds: { apiKey: string | null; webinarHash: string | null; memberId: string | null; integrationWebinarId: string | null } = {
+      apiKey: null, webinarHash: null, memberId: null, integrationWebinarId: null,
+    };
+    if (selectedWebinarId) {
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, selectedWebinarId));
+      if (credRow) {
+        creds = {
+          apiKey: credRow.apiKey,
+          webinarHash: credRow.webinarHash,
+          memberId: credRow.memberId,
+          integrationWebinarId: credRow.integrationWebinarId,
+        };
+      }
+    }
+
     return {
-      selectedWebinarId: settings["selected_webinar_id"] || null,
+      selectedWebinarId,
       selectedWebinarName: settings["selected_webinar_name"] || null,
       selectedScheduleId: settings["selected_schedule_id"] || null,
       cronEnabled: settings["cron_enabled"] === "true",
       cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "30", 10),
       lastAutoImportAt: settings["last_auto_import_at"] || null,
       lastAutoImportResult: settings["last_auto_import_result"] || null,
-      webinarApiKey: settings["webinar_api_key"] || null,
-      webinarHash: settings["webinar_hash"] || null,
-      webinarApiKeyConfigured: !!settings["webinar_api_key"],
-      webinarHashConfigured: !!settings["webinar_hash"],
+      // Per-webinar credentials from dedicated table
+      webinarApiKey: creds.apiKey,
+      webinarHash: creds.webinarHash,
+      webinarMemberId: creds.memberId,
+      webinarIntegrationId: creds.integrationWebinarId,
+      webinarApiKeyConfigured: !!creds.apiKey,
+      webinarHashConfigured: !!creds.webinarHash,
     };
   }),
 
@@ -769,23 +792,20 @@ export const webinarSmsRouter = router({
       scheduleId: z.string().optional(),
       webinarApiKey: z.string().optional(),
       webinarHash: z.string().optional(),
+      webinarMemberId: z.string().optional(),
+      webinarIntegrationId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      // Save global selection settings
       const upserts = [
         { key: "selected_webinar_id", value: input.webinarId, desc: "Currently selected WebinarJam webinar ID" },
         { key: "selected_webinar_name", value: input.webinarName, desc: "Currently selected webinar name" },
       ];
       if (input.scheduleId) {
         upserts.push({ key: "selected_schedule_id", value: input.scheduleId, desc: "Currently selected schedule ID" });
-      }
-      if (input.webinarApiKey) {
-        upserts.push({ key: "webinar_api_key", value: input.webinarApiKey, desc: "Per-webinar API key from WebinarJam Advanced Integration" });
-      }
-      if (input.webinarHash) {
-        upserts.push({ key: "webinar_hash", value: input.webinarHash, desc: "Per-webinar hash from WebinarJam Advanced Integration" });
       }
 
       for (const u of upserts) {
@@ -794,7 +814,50 @@ export const webinarSmsRouter = router({
           .onDuplicateKeyUpdate({ set: { settingValue: u.value } });
       }
 
+      // Save per-webinar credentials to dedicated table (persists across webinar switches)
+      const hasAnyCred = input.webinarApiKey || input.webinarHash || input.webinarMemberId || input.webinarIntegrationId;
+      if (hasAnyCred) {
+        await db.insert(webinarCredentials)
+          .values({
+            webinarId: input.webinarId,
+            webinarName: input.webinarName,
+            apiKey: input.webinarApiKey || null,
+            webinarHash: input.webinarHash || null,
+            memberId: input.webinarMemberId || null,
+            integrationWebinarId: input.webinarIntegrationId || null,
+          })
+          .onDuplicateKeyUpdate({
+            set: {
+              webinarName: input.webinarName,
+              ...(input.webinarApiKey !== undefined ? { apiKey: input.webinarApiKey || null } : {}),
+              ...(input.webinarHash !== undefined ? { webinarHash: input.webinarHash || null } : {}),
+              ...(input.webinarMemberId !== undefined ? { memberId: input.webinarMemberId || null } : {}),
+              ...(input.webinarIntegrationId !== undefined ? { integrationWebinarId: input.webinarIntegrationId || null } : {}),
+            },
+          });
+      }
+
       return { success: true };
+    }),
+
+  /** Get saved credentials for a specific webinar (used when switching webinars in the dialog) */
+  getWebinarCredentials: adminProcedure
+    .input(z.object({ webinarId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [cred] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      if (!cred) {
+        return { found: false, apiKey: null, webinarHash: null, memberId: null, integrationWebinarId: null };
+      }
+      return {
+        found: true,
+        apiKey: cred.apiKey,
+        webinarHash: cred.webinarHash,
+        memberId: cred.memberId,
+        integrationWebinarId: cred.integrationWebinarId,
+      };
     }),
 
   /** Save cron configuration */
@@ -828,11 +891,9 @@ export const webinarSmsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      // Load per-webinar API key from settings
-      const settingsRows = await db.select().from(webinarSmsSettings);
-      const settingsMap: Record<string, string> = {};
-      for (const row of settingsRows) settingsMap[row.settingKey] = row.settingValue;
-      const perWebinarApiKey = settingsMap["webinar_api_key"] || undefined;
+      // Load per-webinar API key from credentials table
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
 
       // Fetch all registrants from WebinarJam
       let allRegistrants: any[] = [];
@@ -1189,11 +1250,14 @@ export const webinarSmsRouter = router({
     const webinarId = settings["selected_webinar_id"];
     const webinarName = settings["selected_webinar_name"] || "Unknown";
     const scheduleId = settings["selected_schedule_id"];
-    const perWebinarApiKey = settings["webinar_api_key"] || undefined;
 
     if (!webinarId) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "No webinar selected. Go to Settings and select a webinar first." });
     }
+
+    // Load per-webinar API key from credentials table
+    const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, webinarId));
+    const perWebinarApiKey = credRow?.apiKey || undefined;
 
     const result = await runWebinarImport(db, webinarId, webinarName, scheduleId ? parseInt(scheduleId, 10) : undefined, perWebinarApiKey);
 
@@ -1210,6 +1274,50 @@ export const webinarSmsRouter = router({
 
     return result;
   }),
+
+  /** AI Message Composer — takes natural language input and rewrites it with personalization variables */
+  composeMessage: adminProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(1000),
+      audience: z.enum(["all", "attended", "not_attended"]).default("all"),
+      webinarName: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const systemPrompt = `You are an SMS copywriter for webinar follow-up campaigns. Your job is to take a natural language description of what the user wants to say and turn it into a polished, concise SMS message (max 320 characters).
+
+IMPORTANT RULES:
+1. Always use %FIRST_NAME% for the recipient's first name (never use generic "Hey there" or "Hi friend")
+2. Available variables: %FIRST_NAME%, %FULL_NAME%, %EMAIL%
+3. Keep it under 320 characters
+4. Write in a warm, conversational but professional tone
+5. Include a clear call-to-action when appropriate
+6. Use emojis sparingly (1-2 max)
+7. The audience is: ${input.audience === "attended" ? "people who ATTENDED the webinar" : input.audience === "not_attended" ? "people who REGISTERED but DID NOT attend (no-shows)" : "all registrants"}
+${input.webinarName ? `8. The webinar name is: "${input.webinarName}"` : ""}
+
+Respond with ONLY the SMS message text. No quotes, no explanation, no preamble.`;
+
+      try {
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: input.prompt },
+          ],
+        });
+
+        const content = response.choices?.[0]?.message?.content;
+        const messageText = typeof content === "string" ? content.trim() : "";
+
+        if (!messageText) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "AI returned empty response" });
+        }
+
+        return { success: true, message: messageText };
+      } catch (err: any) {
+        console.error("[WebinarSMS] AI compose error:", err.message);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `AI composition failed: ${err.message}` });
+      }
+    }),
 });
 
 // ─── Shared import logic (used by manual trigger and cron) ──────────────────
@@ -1305,7 +1413,13 @@ export async function startWebinarImportCron() {
   const webinarId = settings["selected_webinar_id"];
   const webinarName = settings["selected_webinar_name"] || "Unknown";
   const scheduleId = settings["selected_schedule_id"];
-  const perWebinarApiKey = settings["webinar_api_key"] || undefined;
+
+  // Load per-webinar API key from credentials table
+  let perWebinarApiKey: string | undefined;
+  if (webinarId) {
+    const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, webinarId));
+    perWebinarApiKey = credRow?.apiKey || undefined;
+  }
 
   if (!enabled || !webinarId) {
     console.log(`[WebinarSMS Cron] Auto-import disabled or no webinar selected (enabled=${enabled}, webinarId=${webinarId})`);
@@ -1320,12 +1434,16 @@ export async function startWebinarImportCron() {
       const freshDb = await getDb();
       if (!freshDb) return;
 
+      // Re-fetch credentials each run in case they were updated
+      const [freshCred] = await freshDb.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, webinarId));
+      const freshApiKey = freshCred?.apiKey || undefined;
+
       const result = await runWebinarImport(
         freshDb,
         webinarId,
         webinarName,
         scheduleId ? parseInt(scheduleId, 10) : undefined,
-        perWebinarApiKey
+        freshApiKey
       );
 
       const now = new Date().toISOString();

@@ -12273,3 +12273,12 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Admin: Quick Access to Webinar Campaign Manager
 - [x] Add prominent button/card to admin dashboard linking to /webinar-campaigns
 - [x] Add Webinar Campaign Manager link to profile dropdown menu (above logout)
+
+## Webinar Settings: Full Credentials + AI Composer
+- [x] Add Member ID and Webinar ID fields to webinar settings (all 4 WebinarJam fields)
+- [x] Store credentials per webinar (not just global) so switching back loads saved values
+- [x] Create new DB table for per-webinar credentials storage
+- [x] Update server endpoints to save/load per-webinar credentials
+- [x] Update frontend dialog to show all 4 fields and pre-fill saved values
+- [x] Add AI message composer to Quick Send tab (type naturally, AI adds personalization variables)
+- [x] Add server-side LLM endpoint for AI message rewriting

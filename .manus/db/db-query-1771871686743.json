@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `webinar_credentials` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`webinarId` varchar(100) NOT NULL,\n\t`webinarName` varchar(500),\n\t`apiKey` text,\n\t`webinarHash` varchar(100),\n\t`memberId` varchar(100),\n\t`integrationWebinarId` varchar(100),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `webinar_credentials_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `webinar_credentials_webinarId_unique` UNIQUE(`webinarId`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE `webinar_credentials` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`webinarId` varchar(100) NOT NULL,\n\t`webinarName` varchar(500),\n\t`apiKey` text,\n\t`webinarHash` varchar(100),\n\t`memberId` varchar(100),\n\t`integrationWebinarId` varchar(100),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `webinar_credentials_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `webinar_credentials_webinarId_unique` UNIQUE(`webinarId`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 226
+}

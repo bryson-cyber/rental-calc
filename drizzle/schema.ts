@@ -2447,3 +2447,28 @@ export const scheduledSmsMessages = mysqlTable("scheduled_sms_messages", {
 ]);
 export type ScheduledSmsMessage = typeof scheduledSmsMessages.$inferSelect;
 export type InsertScheduledSmsMessage = typeof scheduledSmsMessages.$inferInsert;
+
+/**
+ * Per-Webinar API Credentials — stores all 4 WebinarJam API fields per webinar.
+ * Found in WebinarJam → Configuration → Advanced Integration → API custom integration.
+ * Each webinar has its own set of credentials (API Key, Webinar Hash, Member ID, Webinar ID).
+ */
+export const webinarCredentials = mysqlTable("webinar_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The WebinarJam webinar_id (from the webinar list API) — used as the lookup key */
+  webinarId: varchar("webinarId", { length: 100 }).notNull().unique(),
+  /** Human-readable webinar name for display */
+  webinarName: varchar("webinarName", { length: 500 }),
+  /** Per-webinar API Key from Advanced Integration */
+  apiKey: text("apiKey"),
+  /** Per-webinar Hash from Advanced Integration */
+  webinarHash: varchar("webinarHash", { length: 100 }),
+  /** Per-webinar Member ID from Advanced Integration */
+  memberId: varchar("memberId", { length: 100 }),
+  /** Per-webinar Webinar ID from Advanced Integration (may differ from the list API webinar_id) */
+  integrationWebinarId: varchar("integrationWebinarId", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WebinarCredential = typeof webinarCredentials.$inferSelect;
+export type InsertWebinarCredential = typeof webinarCredentials.$inferInsert;
