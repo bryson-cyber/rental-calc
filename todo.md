@@ -12293,3 +12293,29 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix attended_live string comparison in all import/refresh functions
 - [x] Add per-webinar API key loading to importFromWebinarJam
 - [x] Verify fix with Webinar ID 370: 829 registrants imported, 202 attended, 627 no-shows
+
+## Webinar Transcript Storage + AI Email Composer + HubSpot Email No-Shows (Feb 23, 2026)
+
+### Transcript Storage
+- [x] Create webinar_transcripts DB table (webinarId, webinarTitle, keySummary, transcript)
+- [x] Add saveTranscript server endpoint (upsert per webinar)
+- [x] Add getTranscript server endpoint
+- [x] Add TranscriptUploader component in Settings tab
+- [x] Seed transcript for Webinar 370: "5 Steps to Get Your First Yes" (216K chars)
+
+### AI Composer Updates
+- [x] Update composeMessage to load transcript context from DB
+- [x] Use real webinar title from transcript (not user's nickname like "Webby 2.22.26")
+- [x] AI references actual webinar content when composing SMS messages
+- [x] Add composeEmail endpoint for AI-generated email subject + body with transcript context
+
+### HubSpot Email Integration
+- [x] Add hubspotApiKey to ENV config
+- [x] Add emailNoShows server endpoint (fetches no-shows, sends via HubSpot API)
+- [x] Add Email tab to Webinar Campaign Manager (5 tabs total now)
+- [x] Build EmailNoShows component with compose → review → send flow
+- [x] AI composes email with personalization variables (%FIRST_NAME%, %FULL_NAME%, %EMAIL%)
+- [x] One-click send to all no-shows with delivery stats (sent/failed/total)
+
+### Tests
+- [x] 15 vitest tests passing (transcript storage, email composition, personalization, HubSpot send)

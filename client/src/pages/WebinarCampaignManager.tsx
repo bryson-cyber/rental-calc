@@ -703,7 +703,7 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
                   composeMessage.mutate({
                     prompt: aiPrompt,
                     audience,
-                    webinarName: webinarName || undefined,
+                    webinarId: webinarId || undefined,
                   });
                 }
               }}
@@ -716,7 +716,7 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
                 composeMessage.mutate({
                   prompt: aiPrompt,
                   audience,
-                  webinarName: webinarName || undefined,
+                  webinarId: webinarId || undefined,
                 });
               }}
             >
@@ -1083,7 +1083,7 @@ function CampaignHistory() {
 // SECTION 6: Settings Panel
 // ═══════════════════════════════════════════════════════════════════════════
 
-function SettingsPanel() {
+function SettingsPanel({ webinarId }: { webinarId: string }) {
   const settings = trpc.webinarSms.getSettings.useQuery();
   const apiStatus = trpc.webinarSms.getApiStatus.useQuery();
   const testWJ = trpc.webinarSms.testWebinarJamConnection.useMutation({
@@ -1199,6 +1199,244 @@ function SettingsPanel() {
           )}
         </CardContent>
       </Card>
+      {/* Transcript Upload */}
+      <Card className="border-border/50">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            Webinar Transcript
+          </CardTitle>
+          <CardDescription>Upload the transcript so the AI composer can reference actual webinar content</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TranscriptUploader webinarId={webinarId} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 7: Transcript Uploader
+// ═══════════════════════════════════════════════════════════════════════════
+
+function TranscriptUploader({ webinarId }: { webinarId: string }) {
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const existing = trpc.webinarSms.getTranscript.useQuery(
+    { webinarId },
+    { enabled: !!webinarId }
+  );
+
+  const save = trpc.webinarSms.saveTranscript.useMutation({
+    onSuccess: () => {
+      toast.success("Transcript saved");
+      existing.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  useEffect(() => {
+    if (existing.data && !loaded) {
+      setTitle(existing.data.webinarTitle || "");
+      setSummary(existing.data.keySummary || "");
+      setTranscript(existing.data.transcript || "");
+      setLoaded(true);
+    }
+  }, [existing.data, loaded]);
+
+  // Reset when webinarId changes
+  useEffect(() => {
+    setLoaded(false);
+    setTitle("");
+    setSummary("");
+    setTranscript("");
+  }, [webinarId]);
+
+  return (
+    <div className="space-y-4">
+      {existing.data && (
+        <Badge variant="outline" className="text-green-600 border-green-600/30">
+          <CheckCircle2 className="w-3 h-3 mr-1" /> Transcript saved ({existing.data.transcript.length.toLocaleString()} chars)
+        </Badge>
+      )}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Webinar Title</label>
+        <Input
+          placeholder="e.g., 5 Steps to Get Your First Yes"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Key Summary (optional — helps AI focus)</label>
+        <Textarea
+          placeholder="Brief summary of key topics covered..."
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          rows={3}
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Full Transcript</label>
+        <Textarea
+          placeholder="Paste the full webinar transcript here..."
+          value={transcript}
+          onChange={(e) => setTranscript(e.target.value)}
+          rows={8}
+          className="font-mono text-xs"
+        />
+      </div>
+      <Button
+        onClick={() => save.mutate({ webinarId, webinarTitle: title || undefined, keySummary: summary || undefined, transcript })}
+        disabled={!transcript || save.isPending}
+      >
+        {save.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+        Save Transcript
+      </Button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 8: Email No-Shows (HubSpot Integration)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function EmailNoShows({ webinarId }: { webinarId: string }) {
+  const [prompt, setPrompt] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [step, setStep] = useState<"compose" | "review" | "sending" | "done">("compose");
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
+
+  const compose = trpc.webinarSms.composeEmail.useMutation({
+    onSuccess: (data) => {
+      setSubject(data.subject);
+      setBody(data.body);
+      setStep("review");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const sendEmails = trpc.webinarSms.emailNoShows.useMutation({
+    onSuccess: (data) => {
+      setSendResult({ sent: data.sent, failed: data.failed, total: data.total ?? 0 });
+      setStep("done");
+      toast.success(`Sent ${data.sent} emails`);
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      setStep("review");
+    },
+  });
+
+  const handleCompose = () => {
+    if (!prompt.trim()) return;
+    compose.mutate({ prompt, webinarId });
+  };
+
+  const handleSend = () => {
+    if (!subject || !body) return;
+    setStep("sending");
+    sendEmails.mutate({ webinarId, subject, body });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="w-5 h-5 text-amber-500" />
+            Email No-Shows via HubSpot
+          </CardTitle>
+          <CardDescription>
+            Use AI to compose a follow-up email, then send it to all no-shows with one click via HubSpot
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {step === "compose" && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">What do you want to say?</label>
+                <Textarea
+                  placeholder='e.g., "Hey, you missed the class but I have the replay ready for you. Let them know the key topics we covered and why they should watch it."'
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <Button onClick={handleCompose} disabled={!prompt.trim() || compose.isPending}>
+                {compose.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                Compose Email with AI
+              </Button>
+            </>
+          )}
+
+          {step === "review" && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">Subject Line</label>
+                <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">Email Body</label>
+                <Textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={12}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Variables: %FIRST_NAME%, %FULL_NAME%, %EMAIL%</p>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={handleSend} disabled={sendEmails.isPending}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send to All No-Shows
+                </Button>
+                <Button variant="outline" onClick={() => setStep("compose")}>
+                  Back to Compose
+                </Button>
+              </div>
+            </>
+          )}
+
+          {step === "sending" && (
+            <div className="flex items-center gap-3 py-8 justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+              <span className="text-muted-foreground">Sending emails via HubSpot...</span>
+            </div>
+          )}
+
+          {step === "done" && sendResult && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-medium">Emails sent successfully</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-green-500/10 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{sendResult.sent}</div>
+                  <div className="text-xs text-muted-foreground">Sent</div>
+                </div>
+                <div className="text-center p-3 bg-red-500/10 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{sendResult.failed}</div>
+                  <div className="text-xs text-muted-foreground">Failed</div>
+                </div>
+                <div className="text-center p-3 bg-blue-500/10 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{sendResult.total}</div>
+                  <div className="text-xs text-muted-foreground">Total No-Shows</div>
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => { setStep("compose"); setPrompt(""); setSubject(""); setBody(""); setSendResult(null); }}>
+                Compose Another Email
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1292,7 +1530,7 @@ export default function WebinarCampaignManager() {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 w-full max-w-lg">
+            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Audience</span>
@@ -1304,6 +1542,10 @@ export default function WebinarCampaignManager() {
               <TabsTrigger value="sequence" className="flex items-center gap-1.5">
                 <CalendarClock className="w-4 h-4" />
                 <span className="hidden sm:inline">Sequence</span>
+              </TabsTrigger>
+              <TabsTrigger value="email" className="flex items-center gap-1.5">
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Email</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-1.5">
                 <Settings className="w-4 h-4" />
@@ -1326,8 +1568,12 @@ export default function WebinarCampaignManager() {
               <SequenceBuilder webinarId={selectedWebinarId} />
             </TabsContent>
 
+            <TabsContent value="email" className="mt-6">
+              <EmailNoShows webinarId={selectedWebinarId} />
+            </TabsContent>
+
             <TabsContent value="settings" className="mt-6">
-              <SettingsPanel />
+              <SettingsPanel webinarId={selectedWebinarId} />
             </TabsContent>
           </Tabs>
         )}

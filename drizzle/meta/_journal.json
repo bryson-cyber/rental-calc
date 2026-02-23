@@ -15,6 +15,13 @@
       "when": 1771871605506,
       "tag": "0001_special_random",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771877485140,
+      "tag": "0002_eminent_brood",
+      "breakpoints": true
     }
   ]
 }

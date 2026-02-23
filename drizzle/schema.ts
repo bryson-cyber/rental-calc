@@ -2472,3 +2472,16 @@ export const webinarCredentials = mysqlTable("webinar_credentials", {
 });
 export type WebinarCredential = typeof webinarCredentials.$inferSelect;
 export type InsertWebinarCredential = typeof webinarCredentials.$inferInsert;
+
+// ─── Webinar Transcripts (per-webinar transcript storage for AI context) ───
+export const webinarTranscripts = mysqlTable("webinar_transcripts", {
+  id: int("id").autoincrement().primaryKey(),
+  webinarId: varchar("webinarId", { length: 100 }).notNull().unique(),
+  webinarTitle: varchar("webinarTitle", { length: 500 }),
+  keySummary: text("keySummary"),
+  transcript: text("transcript").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WebinarTranscript = typeof webinarTranscripts.$inferSelect;
+export type InsertWebinarTranscript = typeof webinarTranscripts.$inferInsert;

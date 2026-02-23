@@ -17,6 +17,7 @@ export const ENV = {
   simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
   zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
   webinarjamApiKey: process.env.WEBINARJAM_API_KEY ?? "",
+  hubspotApiKey: process.env.HUBSPOT_API_KEY ?? "",
   golpoApiKey: process.env.GOLPO_API_KEY ?? "",
   devMockApi: process.env.DEV_MOCK_API === "true",
 };

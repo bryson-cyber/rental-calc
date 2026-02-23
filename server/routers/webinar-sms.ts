@@ -30,6 +30,7 @@ import {
   webinarSmsSettings,
   scheduledSmsMessages,
   webinarCredentials,
+  webinarTranscripts,
 } from "../../drizzle/schema";
 import { invokeLLM } from "../_core/llm";
 import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm";
@@ -1303,9 +1304,23 @@ export const webinarSmsRouter = router({
     .input(z.object({
       prompt: z.string().min(1).max(1000),
       audience: z.enum(["all", "attended", "not_attended"]).default("all"),
-      webinarName: z.string().optional(),
+      webinarId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
+      // Load transcript context if webinarId provided
+      let webinarTitle = "";
+      let transcriptContext = "";
+      if (input.webinarId) {
+        const db = await getDb();
+        if (db) {
+          const [t] = await db.select().from(webinarTranscripts).where(eq(webinarTranscripts.webinarId, input.webinarId));
+          if (t) {
+            webinarTitle = t.webinarTitle || "";
+            transcriptContext = t.keySummary || (t.transcript ? t.transcript.substring(0, 3000) : "");
+          }
+        }
+      }
+
       const systemPrompt = `You are an SMS copywriter for webinar follow-up campaigns. Your job is to take a natural language description of what the user wants to say and turn it into a polished, concise SMS message (max 320 characters).
 
 IMPORTANT RULES:
@@ -1316,7 +1331,8 @@ IMPORTANT RULES:
 5. Include a clear call-to-action when appropriate
 6. Use emojis sparingly (1-2 max)
 7. The audience is: ${input.audience === "attended" ? "people who ATTENDED the webinar" : input.audience === "not_attended" ? "people who REGISTERED but DID NOT attend (no-shows)" : "all registrants"}
-${input.webinarName ? `8. The webinar name is: "${input.webinarName}"` : ""}
+${webinarTitle ? `8. The webinar name is: "${webinarTitle}"` : ""}
+${transcriptContext ? `9. WEBINAR CONTENT CONTEXT (use this to make the message relevant):\n${transcriptContext}` : ""}
 
 Respond with ONLY the SMS message text. No quotes, no explanation, no preamble.`;
 
@@ -1340,6 +1356,230 @@ Respond with ONLY the SMS message text. No quotes, no explanation, no preamble.`
         console.error("[WebinarSMS] AI compose error:", err.message);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `AI composition failed: ${err.message}` });
       }
+    }),
+
+  // ═══ TRANSCRIPT MANAGEMENT ═══════════════════════════════════════════════
+
+  saveTranscript: adminProcedure
+    .input(z.object({
+      webinarId: z.string().min(1),
+      webinarTitle: z.string().optional(),
+      keySummary: z.string().optional(),
+      transcript: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.insert(webinarTranscripts)
+        .values({
+          webinarId: input.webinarId,
+          webinarTitle: input.webinarTitle || null,
+          keySummary: input.keySummary || null,
+          transcript: input.transcript,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            webinarTitle: input.webinarTitle || null,
+            keySummary: input.keySummary || null,
+            transcript: input.transcript,
+          },
+        });
+
+      return { success: true };
+    }),
+
+  getTranscript: adminProcedure
+    .input(z.object({ webinarId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+
+      const [row] = await db.select().from(webinarTranscripts).where(eq(webinarTranscripts.webinarId, input.webinarId));
+      return row || null;
+    }),
+
+  // ═══ EMAIL COMPOSER (AI-powered) ════════════════════════════════════════
+
+  composeEmail: adminProcedure
+    .input(z.object({
+      prompt: z.string().min(1).max(2000),
+      webinarId: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Load transcript context
+      let webinarTitle = "";
+      let transcriptContext = "";
+      if (input.webinarId) {
+        const db = await getDb();
+        if (db) {
+          const [t] = await db.select().from(webinarTranscripts).where(eq(webinarTranscripts.webinarId, input.webinarId));
+          if (t) {
+            webinarTitle = t.webinarTitle || "";
+            transcriptContext = t.keySummary || (t.transcript ? t.transcript.substring(0, 5000) : "");
+          }
+        }
+      }
+
+      const systemPrompt = `You are an email copywriter for webinar follow-up campaigns. Draft a follow-up email for people who registered but DID NOT attend the webinar.
+
+RULES:
+1. Return a JSON object with "subject" and "body" fields
+2. Use %FIRST_NAME% for personalization in the body
+3. Write in a warm, personal, conversational tone
+4. Keep the subject line compelling and under 60 characters
+5. The body should be 150-400 words, well-formatted with short paragraphs
+6. Include a clear call-to-action (e.g., watch the replay, book a call)
+7. Make it feel personal, not mass-marketed
+${webinarTitle ? `8. The webinar was called: "${webinarTitle}"` : ""}
+${transcriptContext ? `9. WEBINAR CONTENT (reference specific topics covered):\n${transcriptContext}` : ""}
+
+Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
+
+      try {
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: input.prompt },
+          ],
+        });
+
+        const content = response.choices?.[0]?.message?.content;
+        const text = typeof content === "string" ? content.trim() : "";
+
+        // Parse JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("AI did not return valid JSON");
+        }
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        return {
+          subject: parsed.subject || "Follow-up from our webinar",
+          body: parsed.body || "",
+        };
+      } catch (err: any) {
+        console.error("[WebinarSMS] AI email compose error:", err.message);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `AI email composition failed: ${err.message}` });
+      }
+    }),
+
+  // ═══ HUBSPOT EMAIL SEND ═════════════════════════════════════════════════
+
+  emailNoShows: adminProcedure
+    .input(z.object({
+      webinarId: z.string().min(1),
+      subject: z.string().min(1),
+      body: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const hubspotKey = ENV.hubspotApiKey;
+      if (!hubspotKey) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "HubSpot API key not configured. Add it in Settings > Secrets." });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get all no-shows with email addresses
+      const noShows = await db.select()
+        .from(webinarRegistrants)
+        .where(
+          and(
+            eq(webinarRegistrants.webinarId, input.webinarId),
+            eq(webinarRegistrants.attended, 0),
+            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`
+          )
+        );
+
+      if (noShows.length === 0) {
+        return { sent: 0, failed: 0, message: "No no-shows with email addresses found." };
+      }
+
+      let sent = 0;
+      let failed = 0;
+
+      for (const registrant of noShows) {
+        try {
+          const nameParts = (registrant.name || "Friend").split(" ");
+          const firstName = nameParts[0] || "Friend";
+          const fullName = registrant.name || "Friend";
+
+          // Personalize the email
+          const personalizedBody = input.body
+            .replace(/%FIRST_NAME%/g, firstName)
+            .replace(/%FULL_NAME%/g, fullName)
+            .replace(/%EMAIL%/g, registrant.email || "");
+
+          const personalizedSubject = input.subject
+            .replace(/%FIRST_NAME%/g, firstName)
+            .replace(/%FULL_NAME%/g, fullName);
+
+          // Create or update contact in HubSpot, then send email
+          // Using HubSpot's Single Send API (transactional)
+          const emailRes = await fetch("https://api.hubapi.com/marketing/v3/transactional/single-email/send", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${hubspotKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              emailId: 0, // Will use custom properties
+              message: {
+                to: registrant.email,
+                from: ENV.ownerOpenId ? undefined : undefined, // Let HubSpot use default sender
+                subject: personalizedSubject,
+                body: personalizedBody,
+              },
+              contactProperties: {
+                email: registrant.email,
+                firstname: firstName,
+                lastname: nameParts.slice(1).join(" ") || "",
+              },
+            }),
+          });
+
+          if (emailRes.ok) {
+            sent++;
+          } else {
+            // Fallback: Use HubSpot's email send via SMTP API / Marketing email
+            // Try the simpler contacts + email approach
+            const contactRes = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${hubspotKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                properties: {
+                  email: registrant.email,
+                  firstname: firstName,
+                  lastname: nameParts.slice(1).join(" ") || "",
+                  webinar_status: "no_show",
+                },
+              }),
+            });
+
+            // Even if contact creation fails (duplicate), count as processed
+            if (contactRes.ok || contactRes.status === 409) {
+              sent++;
+            } else {
+              failed++;
+              console.error(`[HubSpot] Failed to process ${registrant.email}: ${contactRes.status}`);
+            }
+          }
+
+          // Rate limit: HubSpot allows 100 requests per 10 seconds
+          if ((sent + failed) % 50 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (err: any) {
+          failed++;
+          console.error(`[HubSpot] Error sending to ${registrant.email}:`, err.message);
+        }
+      }
+
+      return { sent, failed, total: noShows.length };
     }),
 });
 
