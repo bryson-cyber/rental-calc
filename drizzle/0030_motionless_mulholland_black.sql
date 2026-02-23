@@ -1,0 +1,1 @@
+ALTER TABLE `sms_conversations` MODIFY COLUMN `messageType` enum('welcome','reminder','no_show_blast','ai_reply','manual','engagement') NOT NULL DEFAULT 'manual';

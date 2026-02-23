@@ -1,0 +1,1 @@
+ALTER TABLE `webinar_schedules` ADD `messageTemplates` text;
