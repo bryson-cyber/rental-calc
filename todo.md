@@ -12272,3 +12272,4 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Admin: Quick Access to Webinar Campaign Manager
 - [x] Add prominent button/card to admin dashboard linking to /webinar-campaigns
+- [x] Add Webinar Campaign Manager link to profile dropdown menu (above logout)
