@@ -31,7 +31,7 @@ import { canPerformAnalysis, recordAnalysisUsage, canPerformMarketResearch, reco
 // Input validation schemas
 export const rentalizerInputSchema = z.object({
   address: z.string().min(1, "Address is required"),
-  bedrooms: z.number().int().min(1).max(20).optional(),
+  bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
   currency: z.string().default("usd"),
@@ -50,7 +50,7 @@ export const leadInputSchema = z.object({
 
 export const propertyReportInputSchema = z.object({
   address: z.string().min(1, "Address is required"),
-  bedrooms: z.number().int().min(1).max(20).optional(),
+  bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
   leadName: z.string().optional(),
@@ -62,7 +62,7 @@ export const propertyReportInputSchema = z.object({
 export const aiPropertyReportInputSchema = z.object({
   address: z.string().min(1, "Address is required"),
   monthlyRent: z.number().min(0, "Monthly rent is required"),
-  bedrooms: z.number().int().min(1).max(20).optional(),
+  bedrooms: z.number().int().min(0).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
   propertyType: z.string().optional(),

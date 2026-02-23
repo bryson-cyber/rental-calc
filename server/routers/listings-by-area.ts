@@ -7,7 +7,7 @@ export const listingsByAreaRouter = router({
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         radiusMeters: z.number().int().min(100).max(50000).default(3000),
-        bedrooms: z.number().int().min(1).max(20).optional(),
+        bedrooms: z.number().int().min(0).max(20).optional(),
         bathrooms: z.number().min(0.5).max(20).optional(),
         minRating: z.number().min(0).max(5).optional(),
         minRevenue: z.number().min(0).optional(),

@@ -12203,3 +12203,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] BUG FIX: Step 2 per-minute rate limit now waits instead of failing immediately
 - [x] BUG FIX: Step 2 getAirDNAEstimate now uses shared getRentalizerEstimate (DB caching + bathroom fallback + 3 retries)
 - [x] BUG FIX: AirDNA rate limiter fetch now has 30s AbortController timeout per attempt
+- [ ] BUG: Step 2 not loading any properties after rate limit fix
+- [x] BUG: Studio apartments (0 bedrooms) fail validateProperty with "bedrooms >= 1" validation error — fixed across all 10 endpoints

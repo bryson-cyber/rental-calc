@@ -13,7 +13,7 @@ export const compDataRouter = router({
         pageSize: z.number().int().min(1).max(100).default(25),
         orderBy: z.enum(['revenue', 'adr', 'occupancy', 'rating']).default('revenue'),
         orderDirection: z.enum(['asc', 'desc']).default('desc'),
-        bedrooms: z.number().int().min(1).max(20).optional(), // Filter by specific bedroom count
+        bedrooms: z.number().int().min(0).max(20).optional(), // Filter by specific bedroom count
       }))
       .query(async ({ input, ctx }) => {
         try {
@@ -101,7 +101,7 @@ export const compDataRouter = router({
         submarketId: z.string(),
         isMarketLevel: z.boolean().default(false),
         maxListings: z.number().int().min(25).max(500).default(200),
-        bedrooms: z.number().int().min(1).max(20).optional(),
+        bedrooms: z.number().int().min(0).max(20).optional(),
       }))
       .query(async ({ input, ctx }) => {
         try {

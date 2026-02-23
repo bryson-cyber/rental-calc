@@ -1080,7 +1080,7 @@ export const opportunityFinderRouter = router({
     .input(z.object({
       address: z.string().min(1, 'Address is required'),
       rent: z.number().min(0, 'Rent is required'),
-      bedrooms: z.number().min(1),
+      bedrooms: z.number().min(0),
       bathrooms: z.number().min(0.5),
       zillowUrl: z.string().optional(),
       image: z.string().optional(),

@@ -186,7 +186,7 @@ export const advancedRouter = router({
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         monthlyRent: z.number().min(0, "Monthly rent is required"),
-        bedrooms: z.number().int().min(1).max(20).optional(),
+        bedrooms: z.number().int().min(0).max(20).optional(),
         bathrooms: z.number().min(0.5).max(20).optional(),
       }))
       .mutation(async ({ input }) => {
@@ -225,7 +225,7 @@ export const advancedRouter = router({
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         monthly_rent: z.number().positive("Monthly rent must be positive"),
-        bedrooms: z.number().int().min(1).max(20),
+        bedrooms: z.number().int().min(0).max(20),
         bathrooms: z.number().min(0.5).max(20),
         sessionId: z.string().optional(), // For progress tracking
         reportMode: z.enum(['pro', 'guided']).default('guided'),

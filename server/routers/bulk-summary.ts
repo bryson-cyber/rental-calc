@@ -7,7 +7,7 @@ export const bulkSummaryRouter = router({
       .input(z.object({
         queries: z.array(z.object({
           address: z.string().min(1),
-          bedrooms: z.number().int().min(1).max(20).optional(),
+          bedrooms: z.number().int().min(0).max(20).optional(),
           bathrooms: z.number().min(0.5).max(20).optional(),
           accommodates: z.number().int().min(1).max(50).optional(),
         })).min(1).max(25),

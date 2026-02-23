@@ -869,7 +869,7 @@ export const sharedReportsRouter = router({
     generateFromAddress: protectedProcedure
       .input(z.object({
         address: z.string().min(5),
-        bedrooms: z.number().int().min(1).max(10),
+        bedrooms: z.number().int().min(0).max(10),
         bathrooms: z.number().min(1).max(10),
         accommodates: z.number().int().min(1).max(20).optional(),
         monthlyRent: z.number().optional(),
