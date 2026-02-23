@@ -2268,3 +2268,125 @@ export const videoJobs = mysqlTable("video_jobs", {
 ]);
 export type VideoJob = typeof videoJobs.$inferSelect;
 export type InsertVideoJob = typeof videoJobs.$inferInsert;
+
+
+// ============================================
+// WEBINAR SMS SYSTEM (Isolated Module)
+// These tables are completely self-contained.
+// ============================================
+
+/**
+ * Webinar registrants imported from WebinarJam or Zapier webhook.
+ * Each registrant has a phone number for SMS outreach.
+ */
+export const webinarRegistrants = mysqlTable("webinar_registrants", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Source webinar ID from WebinarJam */
+  webinarId: varchar("webinarId", { length: 100 }),
+  /** Registrant's name */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Registrant's email */
+  email: varchar("email", { length: 320 }),
+  /** Registrant's phone number (E.164 format preferred) */
+  phone: varchar("phone", { length: 50 }).notNull(),
+  /** Import source: 'webinarjam', 'zapier', 'manual', 'csv' */
+  source: varchar("source", { length: 50 }).default("manual").notNull(),
+  /** Webinar name/title for grouping */
+  webinarName: varchar("webinarName", { length: 500 }),
+  /** Webinar scheduled date */
+  webinarDate: timestamp("webinarDate"),
+  /** Whether registrant attended the webinar */
+  attended: int("attended").default(0), // 0 = no, 1 = yes
+  /** Whether registrant has opted out of SMS */
+  optedOut: int("optedOut").default(0), // 0 = no, 1 = yes
+  /** Tags for segmentation (JSON array of strings) */
+  tags: json("tags").$type<string[]>(),
+  /** Extra metadata from the import source */
+  metadata: json("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("wr_phone_idx").on(table.phone),
+  index("wr_email_idx").on(table.email),
+  index("wr_webinar_id_idx").on(table.webinarId),
+  index("wr_source_idx").on(table.source),
+  index("wr_created_idx").on(table.createdAt),
+]);
+export type WebinarRegistrant = typeof webinarRegistrants.$inferSelect;
+export type InsertWebinarRegistrant = typeof webinarRegistrants.$inferInsert;
+
+/**
+ * SMS message templates for quick reuse.
+ */
+export const webinarSmsTemplates = mysqlTable("webinar_sms_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Template name for easy identification */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Message body with optional {{name}} placeholder */
+  body: text("body").notNull(),
+  /** Template category: 'reminder', 'followup', 'promo', 'custom' */
+  category: varchar("category", { length: 50 }).default("custom").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WebinarSmsTemplate = typeof webinarSmsTemplates.$inferSelect;
+export type InsertWebinarSmsTemplate = typeof webinarSmsTemplates.$inferInsert;
+
+/**
+ * SMS campaigns — each send operation creates a campaign record.
+ * Individual message delivery is tracked per-registrant.
+ */
+export const webinarSmsCampaigns = mysqlTable("webinar_sms_campaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign name/label */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** The message body that was sent */
+  messageBody: text("messageBody").notNull(),
+  /** Template ID if sent from a template */
+  templateId: int("templateId"),
+  /** Filter criteria used to select recipients (JSON) */
+  filterCriteria: json("filterCriteria").$type<Record<string, unknown>>(),
+  /** Total recipients targeted */
+  totalRecipients: int("totalRecipients").default(0).notNull(),
+  /** Successfully sent count */
+  sentCount: int("sentCount").default(0).notNull(),
+  /** Failed count */
+  failedCount: int("failedCount").default(0).notNull(),
+  /** Campaign status */
+  status: mysqlEnum("campaignStatus", ["draft", "sending", "completed", "failed"]).default("draft").notNull(),
+  /** Who initiated the campaign (admin user ID) */
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+}, (table) => [
+  index("wsc_status_idx").on(table.status),
+  index("wsc_created_idx").on(table.createdAt),
+]);
+export type WebinarSmsCampaign = typeof webinarSmsCampaigns.$inferSelect;
+export type InsertWebinarSmsCampaign = typeof webinarSmsCampaigns.$inferInsert;
+
+/**
+ * Individual SMS delivery records — one per message sent.
+ */
+export const webinarSmsDeliveries = mysqlTable("webinar_sms_deliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign this delivery belongs to */
+  campaignId: int("campaignId").notNull(),
+  /** Registrant who received the message */
+  registrantId: int("registrantId").notNull(),
+  /** Phone number the message was sent to */
+  phone: varchar("phone", { length: 50 }).notNull(),
+  /** Delivery status from SimpleTexting */
+  deliveryStatus: varchar("deliveryStatus", { length: 50 }).default("pending").notNull(),
+  /** SimpleTexting message ID for tracking */
+  externalMessageId: varchar("externalMessageId", { length: 255 }),
+  /** Error message if delivery failed */
+  error: text("error"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+}, (table) => [
+  index("wsd_campaign_idx").on(table.campaignId),
+  index("wsd_registrant_idx").on(table.registrantId),
+  index("wsd_status_idx").on(table.deliveryStatus),
+]);
+export type WebinarSmsDelivery = typeof webinarSmsDeliveries.$inferSelect;
+export type InsertWebinarSmsDelivery = typeof webinarSmsDeliveries.$inferInsert;

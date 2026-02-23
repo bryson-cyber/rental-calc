@@ -12208,3 +12208,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] BUG: Step 2 search shows "This operation was aborted" — fixed with timeouts, retry logic, enrichment fallback, and user-facing toast errors
 - [x] FEATURE: Step 2 progressive loading — skip enrichment on initial load, page 1 only, Load More for rest
 - [x] BUG: Step 2 still not working on production — fixed by removing upfront enrichment and multi-page fetch
+
+## Webinar SMS System (Isolated Module)
+- [x] DB: Create webinar_registrants table (isolated from existing tables)
+- [x] DB: Create webinar_sms_campaigns table for tracking sent messages
+- [x] DB: Create webinar_sms_templates table for reusable message templates
+- [x] Server: Create server/routers/webinar-sms.ts (completely isolated router)
+- [x] Server: Wire webinar-sms router into routers.ts with minimal touch
+- [x] Server: SimpleTexting API integration for sending SMS
+- [x] Server: WebinarJam API integration for fetching registrants
+- [x] Server: Zapier webhook endpoint for auto-importing new registrants
+- [x] Frontend: Create /admin/webinar-sms page (admin-only, tab in UnifiedAdmin)
+- [x] Frontend: Registrant list with search/filter
+- [x] Frontend: SMS compose and send interface
+- [x] Frontend: Campaign history and delivery status
+- [x] Frontend: SMS templates management
+- [x] Tests: Write vitest tests for webinar-sms router (15/15 passing)
+- [x] Verify: Confirm existing features still work after adding webinar SMS (0 TS errors, 1599 existing tests pass)

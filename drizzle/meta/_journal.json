@@ -253,6 +253,13 @@
       "when": 1771805710415,
       "tag": "0035_dark_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1771811779465,
+      "tag": "0036_illegal_ultimates",
+      "breakpoints": true
     }
   ]
 }
