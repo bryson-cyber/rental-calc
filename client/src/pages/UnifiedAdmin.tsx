@@ -497,6 +497,26 @@ export default function UnifiedAdmin() {
                   </Card>
                 </div>
 
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/webinar-campaigns">
+                    <Card className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all duration-200 group h-full">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                            <Send className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground text-lg">Webinar Campaign Manager</h3>
+                            <p className="text-muted-foreground text-sm">Import registrants, track attendance, send SMS follow-ups</p>
+                          </div>
+                          <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+
                 {/* Activity by Category */}
                 <Card>
                   <CardHeader>

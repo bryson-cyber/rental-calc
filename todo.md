@@ -12264,7 +12264,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Browser test: all 4 tabs (Audience, Send, Sequence, Settings) render correctly
 
 ## Fix: Per-Webinar API Key and Hash
-- [ ] Update webinar_sms_settings table to store per-webinar API key and hash
-- [ ] Update server import/attendance endpoints to use per-webinar API key
-- [ ] Update frontend webinar selector to include API key and hash input fields
-- [ ] Test import with correct per-webinar credentials
+- [x] Update webinar_sms_settings table to store per-webinar API key and hash
+- [x] Update server import/attendance endpoints to use per-webinar API key
+- [x] Update frontend webinar selector to include API key and hash input fields
+- [x] Browser test: dialog shows API Key + Webinar Hash fields with instructions
+- [ ] Test import with correct per-webinar credentials (user needs to enter key)
+
+## Admin: Quick Access to Webinar Campaign Manager
+- [x] Add prominent button/card to admin dashboard linking to /webinar-campaigns
