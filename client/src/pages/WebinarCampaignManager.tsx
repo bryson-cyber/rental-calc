@@ -158,6 +158,17 @@ function WebinarHeader({
   const [showSelector, setShowSelector] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState("");
+  const [webinarApiKey, setWebinarApiKey] = useState("");
+  const [webinarHash, setWebinarHash] = useState("");
+
+  // Pre-fill from saved settings when dialog opens
+  useEffect(() => {
+    if (showSelector && settings.data) {
+      setWebinarApiKey(settings.data.webinarApiKey || "");
+      setWebinarHash(settings.data.webinarHash || "");
+      if (selectedWebinarId) setSelectedId(selectedWebinarId);
+    }
+  }, [showSelector, settings.data]);
 
   const selectedWebinar = webinars.data?.webinars?.find((w: any) => w.id === selectedId) as any;
 
@@ -177,6 +188,13 @@ function WebinarHeader({
           <span className="text-muted-foreground">SimpleTexting</span>
           {apiStatus.data?.simpletexting?.configured && (
             <span className="text-xs text-muted-foreground/60">{apiStatus.data.simpletexting.keyPreview}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${settings.data?.webinarApiKeyConfigured ? "bg-emerald-500" : "bg-amber-500"}`} />
+          <span className="text-muted-foreground">Webinar Key</span>
+          {!settings.data?.webinarApiKeyConfigured && (
+            <span className="text-xs text-amber-500">Not set</span>
           )}
         </div>
         {settings.data?.cronEnabled && (
@@ -244,6 +262,33 @@ function WebinarHeader({
                 </SelectContent>
               </Select>
             )}
+
+            {/* Per-webinar API credentials */}
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium text-foreground mb-1">Webinar API Credentials</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Found in WebinarJam → Configuration → Advanced Integration → API custom integration
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">API Key</label>
+                  <Input
+                    type="password"
+                    placeholder="Paste the per-webinar API key..."
+                    value={webinarApiKey}
+                    onChange={(e) => setWebinarApiKey(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Webinar Hash</label>
+                  <Input
+                    placeholder="e.g., 076vwc5z"
+                    value={webinarHash}
+                    onChange={(e) => setWebinarHash(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSelector(false)}>Cancel</Button>
@@ -256,6 +301,8 @@ function WebinarHeader({
                   webinarId: selectedId,
                   webinarName: webinar.name,
                   scheduleId: selectedSchedule && selectedSchedule !== "none" ? selectedSchedule : undefined,
+                  webinarApiKey: webinarApiKey || undefined,
+                  webinarHash: webinarHash || undefined,
                 });
                 setShowSelector(false);
               }}

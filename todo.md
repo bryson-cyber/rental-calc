@@ -12262,3 +12262,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Webinar selector (pick this week's webinar)
 - [x] Build standalone page at /webinar-campaigns route
 - [x] Browser test: all 4 tabs (Audience, Send, Sequence, Settings) render correctly
+
+## Fix: Per-Webinar API Key and Hash
+- [ ] Update webinar_sms_settings table to store per-webinar API key and hash
+- [ ] Update server import/attendance endpoints to use per-webinar API key
+- [ ] Update frontend webinar selector to include API key and hash input fields
+- [ ] Test import with correct per-webinar credentials

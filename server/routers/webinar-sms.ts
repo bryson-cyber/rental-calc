@@ -87,9 +87,10 @@ async function fetchWebinarJamWebinars(): Promise<any[]> {
 async function fetchWebinarJamRegistrants(
   webinarId: string,
   scheduleId?: number,
-  page: number = 1
+  page: number = 1,
+  overrideApiKey?: string
 ): Promise<{ registrants: any[]; hasMore: boolean }> {
-  const apiKey = ENV.webinarjamApiKey;
+  const apiKey = overrideApiKey || ENV.webinarjamApiKey;
   if (!apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "WebinarJam API key not configured" });
 
   const params: Record<string, string> = {
@@ -114,8 +115,8 @@ async function fetchWebinarJamRegistrants(
   throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: data.message || "Failed to fetch registrants" });
 }
 
-async function fetchWebinarJamDetails(webinarId: string): Promise<any> {
-  const apiKey = ENV.webinarjamApiKey;
+async function fetchWebinarJamDetails(webinarId: string, overrideApiKey?: string): Promise<any> {
+  const apiKey = overrideApiKey || ENV.webinarjamApiKey;
   if (!apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "WebinarJam API key not configured" });
 
   const body = new URLSearchParams({ api_key: apiKey, webinar_id: webinarId });
@@ -753,6 +754,10 @@ export const webinarSmsRouter = router({
       cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "30", 10),
       lastAutoImportAt: settings["last_auto_import_at"] || null,
       lastAutoImportResult: settings["last_auto_import_result"] || null,
+      webinarApiKey: settings["webinar_api_key"] || null,
+      webinarHash: settings["webinar_hash"] || null,
+      webinarApiKeyConfigured: !!settings["webinar_api_key"],
+      webinarHashConfigured: !!settings["webinar_hash"],
     };
   }),
 
@@ -762,6 +767,8 @@ export const webinarSmsRouter = router({
       webinarId: z.string().min(1),
       webinarName: z.string().min(1),
       scheduleId: z.string().optional(),
+      webinarApiKey: z.string().optional(),
+      webinarHash: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -773,6 +780,12 @@ export const webinarSmsRouter = router({
       ];
       if (input.scheduleId) {
         upserts.push({ key: "selected_schedule_id", value: input.scheduleId, desc: "Currently selected schedule ID" });
+      }
+      if (input.webinarApiKey) {
+        upserts.push({ key: "webinar_api_key", value: input.webinarApiKey, desc: "Per-webinar API key from WebinarJam Advanced Integration" });
+      }
+      if (input.webinarHash) {
+        upserts.push({ key: "webinar_hash", value: input.webinarHash, desc: "Per-webinar hash from WebinarJam Advanced Integration" });
       }
 
       for (const u of upserts) {
@@ -815,12 +828,18 @@ export const webinarSmsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      // Load per-webinar API key from settings
+      const settingsRows = await db.select().from(webinarSmsSettings);
+      const settingsMap: Record<string, string> = {};
+      for (const row of settingsRows) settingsMap[row.settingKey] = row.settingValue;
+      const perWebinarApiKey = settingsMap["webinar_api_key"] || undefined;
+
       // Fetch all registrants from WebinarJam
       let allRegistrants: any[] = [];
       let page = 1;
       let hasMore = true;
       while (hasMore && page <= 100) {
-        const result = await fetchWebinarJamRegistrants(input.webinarId, undefined, page);
+        const result = await fetchWebinarJamRegistrants(input.webinarId, undefined, page, perWebinarApiKey);
         allRegistrants = allRegistrants.concat(result.registrants);
         hasMore = result.hasMore;
         page++;
@@ -1170,12 +1189,13 @@ export const webinarSmsRouter = router({
     const webinarId = settings["selected_webinar_id"];
     const webinarName = settings["selected_webinar_name"] || "Unknown";
     const scheduleId = settings["selected_schedule_id"];
+    const perWebinarApiKey = settings["webinar_api_key"] || undefined;
 
     if (!webinarId) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "No webinar selected. Go to Settings and select a webinar first." });
     }
 
-    const result = await runWebinarImport(db, webinarId, webinarName, scheduleId ? parseInt(scheduleId, 10) : undefined);
+    const result = await runWebinarImport(db, webinarId, webinarName, scheduleId ? parseInt(scheduleId, 10) : undefined, perWebinarApiKey);
 
     const now = new Date().toISOString();
     const resultStr = `Imported ${result.imported}, skipped ${result.skipped} (total ${result.total}) at ${now}`;
@@ -1198,14 +1218,15 @@ async function runWebinarImport(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   webinarId: string,
   webinarName: string,
-  scheduleId?: number
+  scheduleId?: number,
+  overrideApiKey?: string
 ): Promise<{ success: boolean; imported: number; skipped: number; total: number }> {
   let allRegistrants: any[] = [];
   let page = 1;
   let hasMore = true;
 
   while (hasMore && page <= 100) {
-    const result = await fetchWebinarJamRegistrants(webinarId, scheduleId, page);
+    const result = await fetchWebinarJamRegistrants(webinarId, scheduleId, page, overrideApiKey);
     allRegistrants = allRegistrants.concat(result.registrants);
     hasMore = result.hasMore;
     page++;
@@ -1284,6 +1305,7 @@ export async function startWebinarImportCron() {
   const webinarId = settings["selected_webinar_id"];
   const webinarName = settings["selected_webinar_name"] || "Unknown";
   const scheduleId = settings["selected_schedule_id"];
+  const perWebinarApiKey = settings["webinar_api_key"] || undefined;
 
   if (!enabled || !webinarId) {
     console.log(`[WebinarSMS Cron] Auto-import disabled or no webinar selected (enabled=${enabled}, webinarId=${webinarId})`);
@@ -1302,7 +1324,8 @@ export async function startWebinarImportCron() {
         freshDb,
         webinarId,
         webinarName,
-        scheduleId ? parseInt(scheduleId, 10) : undefined
+        scheduleId ? parseInt(scheduleId, 10) : undefined,
+        perWebinarApiKey
       );
 
       const now = new Date().toISOString();
