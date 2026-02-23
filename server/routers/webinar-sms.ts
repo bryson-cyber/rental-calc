@@ -801,7 +801,111 @@ export const webinarSmsRouter = router({
         .values({ settingKey: "cron_interval_minutes", settingValue: String(input.intervalMinutes), description: "Auto-import interval in minutes" })
         .onDuplicateKeyUpdate({ set: { settingValue: String(input.intervalMinutes) } });
 
-      return { success: true };
+      // Restart cron with new config
+      await restartWebinarImportCron();
+
+      return { success: true, cronEnabled: input.enabled, intervalMinutes: input.intervalMinutes };
+    }),
+
+  /** Refresh attendance data from WebinarJam for existing registrants */
+  refreshAttendance: adminProcedure
+    .input(z.object({ webinarId: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Fetch all registrants from WebinarJam
+      let allRegistrants: any[] = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore && page <= 100) {
+        const result = await fetchWebinarJamRegistrants(input.webinarId, undefined, page);
+        allRegistrants = allRegistrants.concat(result.registrants);
+        hasMore = result.hasMore;
+        page++;
+      }
+
+      // Build phone -> attendance map
+      const attendanceMap = new Map<string, number>();
+      for (const r of allRegistrants) {
+        const phone = normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || ""));
+        if (phone.length >= 7) {
+          attendanceMap.set(phone, r.attended_live === 1 ? 1 : 0);
+        }
+      }
+
+      // Get existing registrants for this webinar
+      const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
+        .from(webinarRegistrants)
+        .where(eq(webinarRegistrants.webinarId, input.webinarId));
+
+      let updated = 0;
+      for (const row of existing) {
+        const normalizedPhone = normalizePhone(row.phone);
+        const attended = attendanceMap.get(normalizedPhone);
+        if (attended !== undefined) {
+          await db.insert(webinarRegistrants)
+            .values({ ...row, attended } as any)
+            .onDuplicateKeyUpdate({ set: { attended } });
+          updated++;
+        }
+      }
+
+      return {
+        success: true,
+        message: `Refreshed attendance for ${updated} of ${existing.length} registrants (${allRegistrants.length} found in WebinarJam)`,
+        updated,
+        total: existing.length,
+      };
+    }),
+
+  /** Get paginated delivery details for a campaign with status filtering */
+  getCampaignDeliveries: adminProcedure
+    .input(z.object({
+      campaignId: z.number(),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(50),
+      status: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const offset = (input.page - 1) * input.pageSize;
+      const conditions = [eq(webinarSmsDeliveries.campaignId, input.campaignId)];
+      if (input.status) {
+        conditions.push(eq(webinarSmsDeliveries.deliveryStatus, input.status));
+      }
+      const where = conditions.length === 1 ? conditions[0] : and(...conditions);
+
+      const [deliveries, countResult, statusSummary] = await Promise.all([
+        db.select()
+          .from(webinarSmsDeliveries)
+          .where(where!)
+          .orderBy(desc(webinarSmsDeliveries.sentAt))
+          .limit(input.pageSize)
+          .offset(offset),
+        db.select({ total: count() })
+          .from(webinarSmsDeliveries)
+          .where(where!),
+        db.select({
+          status: webinarSmsDeliveries.deliveryStatus,
+          count: count(),
+        })
+          .from(webinarSmsDeliveries)
+          .where(eq(webinarSmsDeliveries.campaignId, input.campaignId))
+          .groupBy(webinarSmsDeliveries.deliveryStatus),
+      ]);
+
+      const total = countResult[0]?.total ?? 0;
+
+      return {
+        deliveries,
+        total,
+        page: input.page,
+        totalPages: Math.ceil(total / input.pageSize),
+        statusSummary: statusSummary.map(s => ({ status: s.status, count: Number(s.count) })),
+      };
     }),
 
   /** Trigger a manual import from the currently selected webinar */

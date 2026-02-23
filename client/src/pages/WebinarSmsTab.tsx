@@ -118,6 +118,7 @@ function RegistrantsTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [attendanceFilter, setAttendanceFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showCsvDialog, setShowCsvDialog] = useState(false);
@@ -167,6 +168,17 @@ function RegistrantsTab() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  const refreshAttendanceMutation = trpc.webinarSms.refreshAttendance.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      utils.webinarSms.listRegistrants.invalidate();
+      utils.webinarSms.getDashboardStats.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const { data: settingsData } = trpc.webinarSms.getSettings.useQuery();
 
   const handleCsvImport = () => {
     const lines = csvText.trim().split('\n');
@@ -240,6 +252,29 @@ function RegistrantsTab() {
             <SelectItem value="csv">CSV Import</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select value={attendanceFilter} onValueChange={v => { setAttendanceFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Attendance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Attendance</SelectItem>
+            <SelectItem value="attended">Attended</SelectItem>
+            <SelectItem value="not_attended">Not Attended</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {settingsData?.selectedWebinarId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refreshAttendanceMutation.mutate({ webinarId: settingsData.selectedWebinarId! })}
+            disabled={refreshAttendanceMutation.isPending}
+          >
+            {refreshAttendanceMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+            Refresh Attendance
+          </Button>
+        )}
 
         {selectedIds.length > 0 && (
           <Button
@@ -367,7 +402,13 @@ function RegistrantsTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data?.registrants?.map(r => (
+                  data?.registrants
+                  ?.filter(r => {
+                    if (attendanceFilter === 'attended') return r.attended === 1;
+                    if (attendanceFilter === 'not_attended') return !r.attended && !r.optedOut;
+                    return true;
+                  })
+                  ?.map(r => (
                     <TableRow key={r.id}>
                       <TableCell>
                         <input
@@ -914,8 +955,7 @@ function CampaignsTab() {
               <div>
                 <CardTitle className="text-base">{campaignDetail.campaign.name}</CardTitle>
                 <CardDescription>
-                  Sent {new Date(campaignDetail.campaign.createdAt).toLocaleString()} · 
-                  {campaignDetail.campaign.sentCount} delivered · {campaignDetail.campaign.failedCount} failed
+                  Sent {new Date(campaignDetail.campaign.createdAt).toLocaleString()}
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setSelectedCampaignId(null)}>
@@ -924,8 +964,30 @@ function CampaignsTab() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Delivery Status Summary */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{campaignDetail.campaign.sentCount}</div>
+                <div className="text-xs text-green-600 dark:text-green-500 flex items-center justify-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Delivered
+                </div>
+              </div>
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-red-700 dark:text-red-400">{campaignDetail.campaign.failedCount}</div>
+                <div className="text-xs text-red-600 dark:text-red-500 flex items-center justify-center gap-1">
+                  <XCircle className="w-3 h-3" /> Failed
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{campaignDetail.campaign.totalRecipients}</div>
+                <div className="text-xs text-blue-600 dark:text-blue-500 flex items-center justify-center gap-1">
+                  <Users className="w-3 h-3" /> Total Recipients
+                </div>
+              </div>
+            </div>
+
             <div className="bg-muted/50 p-3 rounded-lg mb-3 text-sm">{campaignDetail.campaign.messageBody}</div>
-            <div className="max-h-[200px] overflow-y-auto">
+            <div className="max-h-[300px] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -941,7 +1003,7 @@ function CampaignsTab() {
                       <TableCell className="font-mono text-sm">{d.phone}</TableCell>
                       <TableCell>
                         {d.deliveryStatus === 'sent' ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs">
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
                             <CheckCircle className="w-3 h-3 mr-1" /> Sent
                           </Badge>
                         ) : d.deliveryStatus === 'failed' ? (

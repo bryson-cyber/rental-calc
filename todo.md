@@ -12239,3 +12239,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verify WebinarJam API calls match official docs
 - [x] Write vitest tests for new settings endpoints (9/9 passing)
 - [x] Browser test: Settings tab renders, webinar dropdown loads, save works, toast confirms
+
+## Webinar SMS: Attendance Tracking, Delivery Status, Cron Auto-Start
+- [x] Add refreshAttendance endpoint to re-pull attendance data from WebinarJam
+- [x] Add getCampaignDeliveries endpoint with pagination and status filtering
+- [x] Add attendance filter dropdown (All/Attended/Not Attended) to Registrants tab
+- [x] Add "Refresh Attendance" button to Registrants toolbar
+- [x] Add delivery status summary panel (Delivered/Failed/Total) to campaign detail
+- [x] Wire cron auto-start into server boot (server/_core/index.ts)
+- [x] Wire saveCronConfig to restart cron when settings change
+- [x] Write vitest tests for refreshAttendance and getCampaignDeliveries endpoints (14 tests passing)

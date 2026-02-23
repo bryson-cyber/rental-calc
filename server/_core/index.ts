@@ -1070,6 +1070,13 @@ async function startServer() {
         console.error('[Video Gen] Failed to resume incomplete jobs:', err),
       );
     }).catch(() => { /* video-generation module not critical */ });
+
+    // Start webinar SMS auto-import cron if configured
+    import('../routers/webinar-sms').then(({ startWebinarImportCron }) => {
+      startWebinarImportCron().catch((err) =>
+        console.error('[WebinarSMS Cron] Failed to start auto-import cron:', err),
+      );
+    }).catch(() => { /* webinar-sms module not critical */ });
   });
 }
 
