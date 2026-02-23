@@ -12206,3 +12206,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] BUG: Step 2 not loading any properties after rate limit fix
 - [x] BUG: Studio apartments (0 bedrooms) fail validateProperty with "bedrooms >= 1" validation error — fixed across all 10 endpoints
 - [x] BUG: Step 2 search shows "This operation was aborted" — fixed with timeouts, retry logic, enrichment fallback, and user-facing toast errors
+- [x] FEATURE: Step 2 progressive loading — skip enrichment on initial load, page 1 only, Load More for rest
+- [x] BUG: Step 2 still not working on production — fixed by removing upfront enrichment and multi-page fetch

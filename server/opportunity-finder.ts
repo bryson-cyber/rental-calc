@@ -712,8 +712,8 @@ export const opportunityFinderRouter = router({
           };
         }
         
-        // Initial search: fetch first 3 pages for comprehensive results
-        // This fixes the issue where only ~37 of 97 rentals were returned
+        // Initial search: fetch page 1 FAST with no enrichment
+        // Properties load instantly, enrichment happens on-demand via Analyze
         const firstResult = await searchZillowListingsWithEnrichment(
           {
             keyword: disambiguatedLocation,
@@ -728,7 +728,7 @@ export const opportunityFinderRouter = router({
             page: 1,
             filterZipCode,
           },
-          { maxEnrichments: 15 }
+          { skipEnrichment: true }
         );
         
         if (!firstResult.success) {
@@ -743,46 +743,13 @@ export const opportunityFinderRouter = router({
         
         // Estimate ~40 properties per page
         const estimatedTotalPages = Math.ceil(totalResults / 40);
-        // Fetch first 3 pages on initial load for comprehensive coverage
-        const initialPagesToFetch = Math.min(3, estimatedTotalPages);
+        // Only fetch page 1 initially for fast load, user can Load More for additional pages
+        const initialPagesToFetch = 1;
         
-        console.log(`[Opportunity Finder] Rentals total: ${totalResults}, estimated pages: ${estimatedTotalPages}, fetching initial ${initialPagesToFetch} pages`);
-        
-        // Fetch pages 2-3 in parallel for initial load
-        if (initialPagesToFetch > 1) {
-          const pagePromises = [];
-          for (let page = 2; page <= initialPagesToFetch; page++) {
-            pagePromises.push(
-              searchZillowListings({
-                keyword: disambiguatedLocation,
-                type: 'forRent',
-                priceMin: input.priceMin,
-                priceMax: input.priceMax,
-                bedsMin: input.bedsMin,
-                bedsMax: input.bedsMax,
-                bathsMin: input.bathsMin,
-                bathsMax: input.bathsMax,
-                homeTypes: input.homeTypes,
-                page,
-                filterZipCode,
-              })
-            );
-          }
-          
-          const additionalResults = await Promise.all(pagePromises);
-          
-          for (const result of additionalResults) {
-            if (result.success && result.properties.length > 0) {
-              // Deduplicate by property ID
-              const existingIds = new Set(allProperties.map(p => p.id));
-              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
-              allProperties.push(...newProperties);
-            }
-          }
-        }
+        console.log(`[Opportunity Finder] Rentals total: ${totalResults}, estimated pages: ${estimatedTotalPages}, returning page 1 fast (${allProperties.length} properties)`);
         
         // Determine if there are more pages to load
-        const hasMore = initialPagesToFetch < estimatedTotalPages;
+        const hasMore = estimatedTotalPages > 1;
         
         console.log(`[Opportunity Finder] Fetched ${allProperties.length} total rental properties, hasMore: ${hasMore}`);
         
@@ -909,7 +876,8 @@ export const opportunityFinderRouter = router({
           };
         }
         
-        // Initial search: fetch first 3 pages for faster initial load
+        // Initial search: fetch page 1 FAST with no enrichment
+        // Properties load instantly, enrichment happens on-demand via Analyze
         const firstResult = await searchZillowListingsWithEnrichment(
           {
             keyword: disambiguatedLocation,
@@ -924,7 +892,7 @@ export const opportunityFinderRouter = router({
             page: 1,
             filterZipCode,
           },
-          { maxEnrichments: 15 }
+          { skipEnrichment: true }
         );
         
         if (!firstResult.success) {
@@ -939,46 +907,13 @@ export const opportunityFinderRouter = router({
         
         // Estimate ~40 properties per page
         const estimatedTotalPages = Math.ceil(totalResults / 40);
-        // Fetch first 3 pages on initial load for faster response
-        const initialPagesToFetch = Math.min(3, estimatedTotalPages);
+        // Only fetch page 1 initially for fast load, user can Load More for additional pages
+        const initialPagesToFetch = 1;
         
-        console.log(`[Opportunity Finder] Total results: ${totalResults}, estimated pages: ${estimatedTotalPages}, fetching initial ${initialPagesToFetch} pages`);
-        
-        // Fetch pages 2-3 in parallel for initial load
-        if (initialPagesToFetch > 1) {
-          const pagePromises = [];
-          for (let page = 2; page <= initialPagesToFetch; page++) {
-            pagePromises.push(
-              searchZillowListings({
-                keyword: disambiguatedLocation,
-                type: 'forSale',
-                priceMin: input.priceMin,
-                priceMax: input.priceMax,
-                bedsMin: input.bedsMin,
-                bedsMax: input.bedsMax,
-                bathsMin: input.bathsMin,
-                bathsMax: input.bathsMax,
-                homeTypes: input.homeTypes,
-                page,
-                filterZipCode,
-              })
-            );
-          }
-          
-          const additionalResults = await Promise.all(pagePromises);
-          
-          for (const result of additionalResults) {
-            if (result.success && result.properties.length > 0) {
-              // Deduplicate by property ID
-              const existingIds = new Set(allProperties.map(p => p.id));
-              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
-              allProperties.push(...newProperties);
-            }
-          }
-        }
+        console.log(`[Opportunity Finder] For sale total: ${totalResults}, estimated pages: ${estimatedTotalPages}, returning page 1 fast (${allProperties.length} properties)`);
         
         // Determine if there are more pages to load
-        const hasMore = initialPagesToFetch < estimatedTotalPages;
+        const hasMore = estimatedTotalPages > 1;
         
         console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties for sale, hasMore: ${hasMore}`);
         
