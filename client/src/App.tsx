@@ -56,7 +56,8 @@ const DealAlertsPage = lazy(() => import("./pages/DealAlertsPage"));
 const MarketEvaluationPage = lazy(() => import("./pages/MarketEvaluationPage"));
 const MyReportsPage = lazy(() => import("./pages/MyReportsPage"));
 const ContentStudioPage = lazy(() => import("./pages/ContentStudioPage"));
-const WebinarCampaignManager = lazy(() => import("./pages/WebinarCampaignManager"));
+const WebinarCampaignManager = lazy(() => import('./pages/WebinarCampaignManager'));
+const AdminViewReport = lazy(() => import('./pages/AdminViewReport'));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -155,6 +156,9 @@ function Router() {
         {/* Analysis routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />
         <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
+        
+        {/* Admin View Report - view a specific report by ID */}
+        <Route path="/admin/report/:id" component={AdminViewReport} />
         
         {/* Unified Admin Dashboard - all admin functionality in one place */}
         <Route path={"/admin/dashboard"} component={UnifiedAdmin} />

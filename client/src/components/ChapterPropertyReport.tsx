@@ -49,6 +49,7 @@ import { CompsMapView } from './CompsMapView';
 import { ShareReportButton } from './ShareReportButton';
 import { StandaloneMarketAdvisor } from './StandaloneMarketAdvisor';
 import OpportunityFinderStep from './OpportunityFinderStep';
+import RentometerSection from './RentometerSection';
 
 
 // Helper function to extract Airbnb listing ID and construct image URL
@@ -352,10 +353,11 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
     { id: 2, title: 'Local Market Analysis' },
     { id: 3, title: 'Study the Competition' },
     { id: 4, title: 'Project the Profit' },
-    { id: 5, title: 'Setting Up for Success' },
-    { id: 6, title: 'Market Advisor' },
-    { id: 7, title: 'AI Property Advisor' },
-    { id: 8, title: 'Opportunity Finder' }
+    { id: 5, title: 'Rent Market Validation' },
+    { id: 6, title: 'Setting Up for Success' },
+    { id: 7, title: 'Market Advisor' },
+    { id: 8, title: 'AI Property Advisor' },
+    { id: 9, title: 'Opportunity Finder' }
   ];
 
   const scrollToChapter = (id: number) => {
@@ -1236,8 +1238,24 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
 
           </ChapterSection>
 
-          {/* Chapter 5: What It Really Takes */}
-          <ChapterSection id="chapter-5" title="5. Setting Up for Success">
+          {/* Chapter 5: Rent Market Validation */}
+          <ChapterSection id="chapter-5" title="5. How Does the Rent Compare?">
+            <p className="text-lg text-[oklch(0.15_0_0)]/80 mb-8 leading-relaxed">
+              Before committing to a lease for arbitrage, you need to understand the <strong>long-term rental market</strong> in this area.
+              This section compares your monthly rent against what other landlords charge for similar properties nearby,
+              so you can see if you're getting a <strong>good deal on your lease</strong>.
+            </p>
+
+            <RentometerSection
+              address={property.address}
+              bedrooms={property.bedrooms}
+              monthlyRent={property.monthlyRent}
+              preloadedData={(data as any)?.rentometer_data}
+            />
+          </ChapterSection>
+
+          {/* Chapter 6: What It Really Takes */}
+          <ChapterSection id="chapter-6" title="6. Setting Up for Success">
             <p className="text-lg text-[oklch(0.15_0_0)]/80 mb-8 leading-relaxed">
               The difference between average and top-performing Airbnbs comes down to <strong>how they're set up from day one</strong>. 
               The right property selection, design choices, and listing optimization can mean the difference between $34K and $67K in annual revenue.
@@ -1555,8 +1573,8 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             </div>
           </ChapterSection>
 
-          {/* Chapter 6: Market Advisor */}
-          <ChapterSection id="chapter-6" title="6. Is This Market Worth Investing In?">
+          {/* Chapter 7: Market Advisor */}
+          <ChapterSection id="chapter-7" title="7. Is This Market Worth Investing In?">
             <p className="text-lg text-[oklch(0.15_0_0)]/80 mb-8 leading-relaxed">
               Before committing to a property, it's important to understand the <strong>overall health of the market</strong>. 
               This analysis looks at market-wide trends, seasonality, and competition to help you decide if this is the right area to invest in.
@@ -1570,8 +1588,8 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             />
           </ChapterSection>
 
-          {/* Chapter 7: AI Property Advisor */}
-          <ChapterSection id="chapter-7" title="7. What Does All This Data Mean For You?">
+          {/* Chapter 8: AI Property Advisor */}
+          <ChapterSection id="chapter-8" title="8. What Does All This Data Mean For You?">
             <p className="text-lg text-[oklch(0.15_0_0)]/80 mb-8 leading-relaxed">
               Now let's put all the pieces together. Our AI advisor analyzes your specific property against the market data 
               to give you a <strong>personalized assessment</strong> of the opportunity.
@@ -1592,8 +1610,8 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             </div>
           </ChapterSection>
 
-          {/* Chapter 8: Opportunity Finder */}
-          <ChapterSection id="chapter-8" title="8. Find More Opportunities">
+          {/* Chapter 9: Opportunity Finder */}
+          <ChapterSection id="chapter-9" title="9. Find More Opportunities">
             <p className="text-lg text-[oklch(0.15_0_0)]/80 mb-8 leading-relaxed">
               Ready to explore more properties? Use our <strong>Opportunity Finder</strong> to browse available rentals 
               in any market and validate them with one click.

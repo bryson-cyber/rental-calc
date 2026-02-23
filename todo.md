@@ -12350,3 +12350,18 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Realistic level highlighted as "Target" with accent styling
 - [x] Annual Profit by Level section added below recovery time
 - [x] Safety score now based on realistic scenario metrics
+
+## Rentometer Section + Admin View Report + Shared Reports Fix (Feb 23, 2026)
+- [x] Fix shared reports (/report/:shareId) to not require login
+- [x] Build RentometerSection component with rent summary, nearby comps, property rents
+- [x] Integrate RentometerSection into ChapterPropertyReport as new chapter
+- [x] Add View Report button to admin properties table
+- [x] Create AdminViewReport page for viewing reports by ID
+- [x] Expand Rentometer API with property_rents, nearby_comps, and comprehensive data endpoints
+- [x] Add Rentometer "Rent Market Analysis" section to FullPropertyReport (investor report)
+- [x] Add "Rent Analysis" tab to FullPropertyReport section navigation
+- [x] Fix OAuth return URL: users now redirected back to original page after login
+- [x] Suppress ReportModeOnboarding modal on shared report pages (/report/*, /share/*)
+- [x] Add getReportById admin endpoint for fetching full report data by ID
+- [x] Add hasFullData flag to admin getReports query
+- [x] Write vitest tests for admin getReportById, Rentometer input validation, OAuth state encoding

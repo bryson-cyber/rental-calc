@@ -18,7 +18,16 @@ export function ReportModeOnboarding() {
   const [selected, setSelected] = useState<ReportMode | null>(null);
   const [hoveredMode, setHoveredMode] = useState<ReportMode | null>(null);
 
-  if (!needsOnboarding) return null;
+  // Don't show onboarding modal on shared/public report pages
+  const isSharedPage = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/report/') ||
+    window.location.pathname.startsWith('/share/') ||
+    window.location.pathname.startsWith('/view-report/') ||
+    window.location.pathname.startsWith('/regulation/') ||
+    window.location.pathname.startsWith('/bug/')
+  );
+
+  if (!needsOnboarding || isSharedPage) return null;
 
   const handleContinue = () => {
     if (selected) {

@@ -1294,6 +1294,7 @@ export default function UnifiedAdmin() {
                             <TableHead>Verdict</TableHead>
                             <TableHead>Lead</TableHead>
                             <TableHead>Date</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1343,11 +1344,26 @@ export default function UnifiedAdmin() {
                               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                                 {formatDate(report.createdAt)}
                               </TableCell>
+                              <TableCell>
+                                {report.hasFullData ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => window.open(`/admin/report/${report.id}`, '_blank')}
+                                  >
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    View
+                                  </Button>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                           {(!reportsQuery.data?.reports || reportsQuery.data.reports.length === 0) && (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                              <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                                 No properties analyzed yet
                               </TableCell>
                             </TableRow>

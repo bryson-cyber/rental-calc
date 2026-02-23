@@ -204,6 +204,8 @@ export const adminRouter = router({
             leadName: analysisReports.leadName,
             leadEmail: analysisReports.leadEmail,
             leadPhone: analysisReports.leadPhone,
+            // Flag to indicate if full report data exists
+            hasFullData: sql<boolean>`${analysisReports.fullAnalysisData} IS NOT NULL`.as('hasFullData'),
           })
           .from(analysisReports)
           .where(whereClause)
@@ -1055,6 +1057,43 @@ export const adminRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to get today's API count",
+        });
+      }
+    }),
+
+  // Get a single report by ID with full analysis data
+  getReportById: adminProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        const [report] = await db
+          .select()
+          .from(analysisReports)
+          .where(eq(analysisReports.id, input.id))
+          .limit(1);
+
+        if (!report) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Report not found",
+          });
+        }
+
+        return report;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error("[Admin] Error getting report by ID:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get report",
         });
       }
     }),

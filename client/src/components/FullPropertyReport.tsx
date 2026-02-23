@@ -79,6 +79,7 @@ import { lazy, Suspense } from 'react';
 
 
 const SendToSlackModal = lazy(() => import('./SendToSlackModal'));
+const RentometerSection = lazy(() => import('./RentometerSection'));
 
 // ============================================================
 // TYPES
@@ -523,6 +524,7 @@ const SECTIONS = [
   { id: 'expenses', label: 'Expenses', icon: Wallet },
   { id: 'market', label: 'Market', icon: BarChart3 },
   { id: 'competition', label: 'Competition', icon: Target },
+  { id: 'rentometer', label: 'Rent Analysis', icon: DollarSign },
   { id: 'regulation', label: 'Regulations', icon: BookOpen },
   { id: 'stress', label: 'Stress Test', icon: AlertTriangle },
   { id: 'sales', label: 'Comp Sales', icon: Landmark },
@@ -548,6 +550,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
     if (s.id === 'rental' && !hasRental) return false;
     if (s.id === 'purchase' && !hasPurchase) return false;
     if (s.id === 'expenses' && !hasExpenses) return false;
+    // rentometer section always visible — data fetched on demand
     if (s.id === 'regulation' && !hasRegulation) return false;
     if (s.id === 'stress' && !hasStressTest) return false;
     if (s.id === 'sales' && !hasSales) return false;
@@ -2276,6 +2279,25 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               />
             </div>
           )}
+        </section>
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: RENT ANALYSIS (RENTOMETER) */}
+        {/* ---------------------------------------------------------- */}
+        <section id="section-rentometer" className="scroll-mt-24 mb-16">
+          <SectionHeader icon={DollarSign} title="Rent Market Analysis" subtitle="Long-term rental rates and comparable properties in this area" tooltip="This section shows long-term (traditional) rental market data for the area. It helps you understand what similar properties rent for monthly, which is essential for rental arbitrage analysis — comparing short-term rental income against the cost of leasing the property." />
+          <Suspense fallback={
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-[oklch(0.55_0.14_75)] mx-auto mb-3" />
+              <p className="text-[oklch(0.45_0.01_265)]">Loading rent analysis...</p>
+            </div>
+          }>
+            <RentometerSection
+              address={property.address}
+              bedrooms={property.bedrooms}
+              monthlyRent={rental_arbitrage?.monthlyRent}
+            />
+          </Suspense>
         </section>
 
         {/* ---------------------------------------------------------- */}
