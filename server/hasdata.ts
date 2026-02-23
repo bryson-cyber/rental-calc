@@ -222,7 +222,72 @@ export async function searchZillowListings(
       properties: filteredProperties
     };
 
-  } catch (error) {
+  } catch (error: any) {
+    // On timeout/abort, retry once with a fresh connection
+    if (error?.name === 'AbortError') {
+      console.warn(`[HasData] Search timed out for ${params.keyword}, retrying once...`);
+      try {
+        const retryController = new AbortController();
+        const retryTimeoutId = setTimeout(() => retryController.abort(), 120000);
+        const retryUrl = `https://api.hasdata.com/scrape/zillow/listing?${new URLSearchParams({
+          keyword: params.keyword,
+          type: params.type,
+          ...(params.page ? { page: params.page.toString() } : {}),
+        }).toString()}`;
+        
+        const retryResponse = await fetch(retryUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey
+          },
+          signal: retryController.signal
+        });
+        clearTimeout(retryTimeoutId);
+        
+        if (retryResponse.ok) {
+          const data = await retryResponse.json();
+          const properties: ZillowProperty[] = (data.properties || data.results || []).map((prop: any) => {
+            const addressObj = typeof prop.address === 'object' ? prop.address : null;
+            const addressStr = typeof prop.address === 'string' ? prop.address : prop.addressRaw || '';
+            return {
+              id: prop.zpid || prop.id || String(Math.random()),
+              url: prop.detailUrl || prop.url || `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
+              address: addressObj 
+                ? `${addressObj.street || ''}, ${addressObj.city || ''}, ${addressObj.state || ''} ${addressObj.zipcode || ''}`.trim()
+                : (prop.streetAddress || addressStr || ""),
+              city: addressObj?.city || prop.city || extractCity(addressStr) || "",
+              state: addressObj?.state || prop.state || extractState(addressStr) || "",
+              zipCode: addressObj?.zipcode || prop.zipcode || prop.zipCode || extractZipCode(addressStr) || "",
+              price: prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0,
+              bedrooms: prop.bedrooms || prop.beds || 0,
+              bathrooms: prop.bathrooms || prop.baths || 0,
+              squareFeet: prop.livingArea || prop.area || prop.sqft || undefined,
+              homeType: normalizeHomeType(prop.homeType || prop.propertyType || ""),
+              image: prop.imgSrc || prop.image || (prop.photos && prop.photos[0]) || prop.thumbnail || "",
+              photos: Array.isArray(prop.photos) ? prop.photos : (prop.imgSrc ? [prop.imgSrc] : []),
+              status: prop.homeStatus || prop.status || params.type,
+              daysOnZillow: prop.daysOnZillow || undefined,
+              latitude: prop.latitude || prop.lat || undefined,
+              longitude: prop.longitude || prop.lng || undefined
+            };
+          });
+          const propertiesWithPrice = properties.filter(p => p.price > 0);
+          const totalResults = data.searchInformation?.totalResults || data.totalResultCount || properties.length;
+          console.log(`[HasData] Retry succeeded: ${propertiesWithPrice.length} properties`);
+          return {
+            success: true,
+            totalResults,
+            totalPages: Math.ceil(totalResults / 40) || 1,
+            currentPage: params.page || 1,
+            properties: propertiesWithPrice.length > 0 ? propertiesWithPrice : properties
+          };
+        }
+      } catch (retryError) {
+        console.error("[HasData] Retry also failed:", retryError);
+      }
+    }
+    
     console.error("[HasData] Error searching Zillow:", error);
     return {
       success: false,
@@ -230,7 +295,9 @@ export async function searchZillowListings(
       totalPages: 0,
       currentPage: params.page || 1,
       properties: [],
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error?.name === 'AbortError' 
+        ? "Search timed out. The market may be very large — try searching by zip code instead."
+        : (error instanceof Error ? error.message : "Unknown error")
     };
   }
 }
@@ -246,6 +313,9 @@ export async function getZillowProperty(propertyUrl: string): Promise<ZillowProp
     return null;
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  
   try {
     const queryParams = new URLSearchParams();
     queryParams.set("url", propertyUrl);
@@ -259,8 +329,11 @@ export async function getZillowProperty(propertyUrl: string): Promise<ZillowProp
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey
-      }
+      },
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`[HasData] Property API error: ${response.status}`);
@@ -289,8 +362,13 @@ export async function getZillowProperty(propertyUrl: string): Promise<ZillowProp
       longitude: data.longitude || undefined
     };
 
-  } catch (error) {
-    console.error("[HasData] Error getting property:", error);
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error?.name === 'AbortError') {
+      console.warn(`[HasData] Property detail request timed out (15s): ${propertyUrl}`);
+    } else {
+      console.error("[HasData] Error getting property:", error);
+    }
     return null;
   }
 }
@@ -618,31 +696,52 @@ export async function searchZillowListingsWithEnrichment(
     return response;
   }
   
-  // Enrich ALL properties that are missing price or coordinates
-  // Use higher limit to ensure Map tab works properly
-  const enrichedProperties = await enrichPropertiesWithPrice(
-    response.properties,
-    enrichmentOptions?.maxEnrichments || 20 // Increased default to enrich more properties
-  );
-  
-  // Deduplicate properties by ID to prevent React key errors
-  const seenIds = new Set<string>();
-  const deduplicatedProperties = enrichedProperties.filter(prop => {
-    if (seenIds.has(prop.id)) {
-      console.log(`[HasData] Removing duplicate property: ${prop.id}`);
-      return false;
+  // Enrich properties with an overall 45-second timeout
+  // If enrichment takes too long, return unenriched results rather than failing entirely
+  try {
+    const enrichmentPromise = enrichPropertiesWithPrice(
+      response.properties,
+      enrichmentOptions?.maxEnrichments || 20
+    );
+    
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.warn('[HasData] Enrichment timed out after 45s, returning unenriched results');
+        resolve(null);
+      }, 45000);
+    });
+    
+    const enrichedProperties = await Promise.race([enrichmentPromise, timeoutPromise]);
+    
+    // If enrichment timed out, return original results (still useful without enrichment)
+    if (enrichedProperties === null) {
+      // Filter to properties with price even without enrichment
+      const usableProperties = response.properties.filter(p => p.price > 0);
+      return {
+        ...response,
+        properties: usableProperties.length > 0 ? usableProperties : response.properties,
+      };
     }
-    seenIds.add(prop.id);
-    return true;
-  });
-  
-  // Preserve the original pagination info, don't override totalResults
-  // The totalResults should reflect the total available in the market, not just what we have
-  return {
-    ...response,
-    properties: deduplicatedProperties,
-    // Keep original totalResults for pagination calculation
-  };
+    
+    // Deduplicate properties by ID to prevent React key errors
+    const seenIds = new Set<string>();
+    const deduplicatedProperties = enrichedProperties.filter(prop => {
+      if (seenIds.has(prop.id)) {
+        console.log(`[HasData] Removing duplicate property: ${prop.id}`);
+        return false;
+      }
+      seenIds.add(prop.id);
+      return true;
+    });
+    
+    return {
+      ...response,
+      properties: deduplicatedProperties,
+    };
+  } catch (enrichError) {
+    console.error('[HasData] Enrichment failed, returning unenriched results:', enrichError);
+    return response;
+  }
 }
 
 

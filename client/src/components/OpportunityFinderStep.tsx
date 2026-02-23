@@ -629,8 +629,17 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         hasMore: result.hasMore || false,
         hasSearched: true
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Search error:', error);
+      const errorMsg = error?.message || '';
+      if (errorMsg.includes('aborted') || errorMsg.includes('timed out')) {
+        // Search timed out — show a helpful message
+        toast.error('Search is taking longer than expected. Try searching by zip code for faster results.', { duration: 6000 });
+      } else if (errorMsg.includes('limit')) {
+        toast.error('Daily search limit reached. Please try again tomorrow.', { duration: 5000 });
+      } else {
+        toast.error('Search failed. Please try again.', { duration: 4000 });
+      }
     } finally {
       setIsLoadingMore(false);
     }

@@ -12205,3 +12205,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] BUG FIX: AirDNA rate limiter fetch now has 30s AbortController timeout per attempt
 - [ ] BUG: Step 2 not loading any properties after rate limit fix
 - [x] BUG: Studio apartments (0 bedrooms) fail validateProperty with "bedrooms >= 1" validation error — fixed across all 10 endpoints
+- [x] BUG: Step 2 search shows "This operation was aborted" — fixed with timeouts, retry logic, enrichment fallback, and user-facing toast errors
