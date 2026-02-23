@@ -877,18 +877,7 @@ export async function generateFullArbitrageAnalysis(
   zillow_url?: string,
   attractive_features?: string[],
   sessionId?: string,
-  reportMode?: 'pro' | 'guided',
-  propertyType?: string,
-  amenities?: {
-    pool?: boolean;
-    hotTub?: boolean;
-    petFriendly?: boolean;
-    parking?: boolean;
-    gym?: boolean;
-    kitchen?: boolean;
-    washerDryer?: boolean;
-    aircon?: boolean;
-  }
+  reportMode?: 'pro' | 'guided'
 ): Promise<{
   report: string;
   percentiles: MarketPercentiles;
@@ -2856,9 +2845,7 @@ export async function generateFullArbitrageAnalysis(
     // Add 10 second timeout to prevent long waits on flaky network
     const radiusPromise = exploreListingsInRadius(address, searchRadius, {
       bedrooms: actualBedrooms,
-      minRevenue: 10000, // Only include listings with meaningful revenue
-      propertyType,
-      amenities,
+      minRevenue: 10000 // Only include listings with meaningful revenue
     }, 25);
     const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Radius search timeout after 10s')), 10000)

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
-import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { sharedReports } from "../../drizzle/schema";
 import { eq, desc, or } from "drizzle-orm";
@@ -881,11 +880,6 @@ export const sharedReportsRouter = router({
         preparedFor: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        // Owner-only: only the site owner (user id 1) can generate full reports
-        if (!ctx.user || ctx.user.id !== 1) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Full report generation is restricted to the site owner.' });
-        }
-        
         const db = await getDb();
         if (!db) throw new Error('Database not available');
         

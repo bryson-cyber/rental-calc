@@ -15,7 +15,6 @@ export const ENV = {
   hasdataApiKey: process.env.HASDATA_API_KEY ?? "",
   rentometerApiKey: process.env.RENTOMETER_API_KEY ?? "",
   simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
-  webinarjamApiKey: process.env.WEBINARJAM_API_KEY ?? "",
   zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
   golpoApiKey: process.env.GOLPO_API_KEY ?? "",
   devMockApi: process.env.DEV_MOCK_API === "true",

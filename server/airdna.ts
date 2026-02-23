@@ -2296,23 +2296,11 @@ export async function exploreListingsInRadius(
     bedrooms?: number;
     bathrooms?: number;
     minRevenue?: number;
-    propertyType?: string;
-    amenities?: {
-      pool?: boolean;
-      hotTub?: boolean;
-      petFriendly?: boolean;
-      parking?: boolean;
-      gym?: boolean;
-      kitchen?: boolean;
-      washerDryer?: boolean;
-      aircon?: boolean;
-    };
   },
   limit: number = 25
 ): Promise<ListingData[]> {
   // ── Cache radius searches to prevent redundant API calls ──
-  const amenityKey = filters?.amenities ? Object.entries(filters.amenities).filter(([,v]) => v).map(([k]) => k).sort().join(',') : 'none';
-  const radiusCacheKey = `radius_listings:${address}:${radiusMeters}:br${filters?.bedrooms ?? 'all'}:ba${filters?.bathrooms ?? 'all'}:rev${filters?.minRevenue ?? 0}:pt${filters?.propertyType ?? 'all'}:am${amenityKey}:lim${limit}`;
+  const radiusCacheKey = `radius_listings:${address}:${radiusMeters}:br${filters?.bedrooms ?? 'all'}:ba${filters?.bathrooms ?? 'all'}:rev${filters?.minRevenue ?? 0}:lim${limit}`;
   const cachedListings = await apiCache.getAsync<ListingData[]>(radiusCacheKey);
   if (cachedListings) {
     console.log(`[Radius Search] CACHE HIT for ${address} (${filters?.bedrooms ?? 'all'}BR, ${radiusMeters}m) — ${cachedListings.length} listings`);
@@ -2337,42 +2325,7 @@ export async function exploreListingsInRadius(
         value: filters.bathrooms,
       });
     }
-
-    // Property type filter
-    if (filters?.propertyType) {
-      filterArray.push({
-        type: "multi_select",
-        field: "property_type",
-        value: [filters.propertyType],
-      });
-    }
-
-    // Amenity filter: AirDNA uses AND logic (all selected must match).
-    // For OR logic (at least one match), we handle it as follows:
-    // - Single amenity: use AirDNA filter directly (AND = OR for 1 item)
-    // - Multiple amenities: make parallel requests per amenity and merge/deduplicate
-    const amenitiesObj: Record<string, boolean> = {};
-    if (filters?.amenities) {
-      if (filters.amenities.pool) amenitiesObj.has_pool = true;
-      if (filters.amenities.hotTub) amenitiesObj.has_hottub = true;
-      if (filters.amenities.petFriendly) amenitiesObj.has_pets_allowed = true;
-      if (filters.amenities.parking) amenitiesObj.has_parking = true;
-      if (filters.amenities.gym) amenitiesObj.has_gym = true;
-      if (filters.amenities.kitchen) amenitiesObj.has_kitchen = true;
-      if (filters.amenities.washerDryer) amenitiesObj.has_washer = true;
-      if (filters.amenities.aircon) amenitiesObj.has_aircon = true;
-    }
-    const selectedAmenityCount = Object.keys(amenitiesObj).length;
-    // For single amenity, apply directly in filter
-    if (selectedAmenityCount === 1) {
-      filterArray.push({
-        type: "jsonb_boolean",
-        field: "amenities",
-        value: amenitiesObj,
-      });
-    }
-    // For multiple amenities with OR logic, we handle after the main fetch below
-
+    
     type CompsAreaListing = {
       property_id: string;
       title: string;
@@ -2458,70 +2411,6 @@ export async function exploreListingsInRadius(
     // Filter by minimum revenue if specified
     if (filters?.minRevenue) {
       listings = listings.filter((l: ListingData) => l.annual_revenue >= filters.minRevenue!);
-    }
-
-    // OR-logic for multiple amenities: make parallel per-amenity requests and merge
-    if (selectedAmenityCount > 1) {
-      console.log(`[Radius Search] Multiple amenities (${selectedAmenityCount}) selected — fetching per-amenity with OR logic`);
-      const amenityKeys = Object.keys(amenitiesObj);
-      // Build base filters (without amenities) for per-amenity requests
-      const baseFilters = filterArray.slice(); // already excludes amenity filter
-      
-      const perAmenityResults = await Promise.allSettled(
-        amenityKeys.map(async (amenityKey) => {
-          const amenityFilter = [...baseFilters, {
-            type: "jsonb_boolean",
-            field: "amenities",
-            value: { [amenityKey]: true },
-          }];
-          const response = await makeApiRequest<{
-            payload: { listings?: CompsAreaListing[]; };
-          }>("/listing/comps/area", "POST", {
-            address,
-            radius: radiusMeters,
-            filters: amenityFilter,
-            pagination: { page_size: 25, offset: 0 },
-            sort_order: "revenue",
-            sort_direction: "descending",
-          });
-          return (response.payload.listings || []).map((r: CompsAreaListing) => ({
-            id: r.property_id || '',
-            title: r.title || 'Untitled Listing',
-            airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
-            image_url: r.images?.[0] || '',
-            bedrooms: r.bedrooms ?? 0,
-            bathrooms: r.bathrooms ?? 0,
-            accommodates: r.accommodates || 0,
-            property_type: r.property_type || 'Unknown',
-            rating: r.rating ?? null,
-            reviews: r.reviews || 0,
-            annual_revenue: r.revenue_ltm || 0,
-            adr: r.average_daily_rate_ltm || 0,
-            occupancy: r.occupancy_rate_ltm || 0,
-            last_review_date: r.last_scraped_date || '',
-            superhost: r.superhost ?? false,
-            professionally_managed: r.professionally_managed ?? false,
-            host_size: r.host_size || 'unknown',
-            latitude: r.location?.lat ?? null,
-            longitude: r.location?.lng ?? null,
-            zipcode: r.zipcode || '',
-          } as ListingData));
-        })
-      );
-      
-      // Merge and deduplicate by listing ID
-      const seenIds = new Set(listings.map(l => l.id));
-      for (const result of perAmenityResults) {
-        if (result.status === 'fulfilled') {
-          for (const listing of result.value) {
-            if (!seenIds.has(listing.id) && (!filters?.minRevenue || listing.annual_revenue >= filters.minRevenue)) {
-              seenIds.add(listing.id);
-              listings.push(listing);
-            }
-          }
-        }
-      }
-      console.log(`[Radius Search] OR-merged ${listings.length} unique listings from ${amenityKeys.length} amenity queries`);
     }
     
     // Sort by revenue (highest first)
@@ -2793,18 +2682,7 @@ export async function getComprehensivePropertyReport(
   address: string,
   bedrooms?: number,
   bathrooms?: number,
-  accommodates?: number,
-  propertyType?: string,
-  amenities?: {
-    pool?: boolean;
-    hotTub?: boolean;
-    petFriendly?: boolean;
-    parking?: boolean;
-    gym?: boolean;
-    kitchen?: boolean;
-    washerDryer?: boolean;
-    aircon?: boolean;
-  }
+  accommodates?: number
 ): Promise<{
   property: RentalizerResponse;
   market: {
@@ -2838,8 +2716,7 @@ export async function getComprehensivePropertyReport(
   };
 } | null> {
   // ── Top-level cache: return instantly on repeat lookups ──
-  const amenityCacheKey = amenities ? Object.entries(amenities).filter(([,v]) => v).map(([k]) => k).sort().join(',') : 'none';
-  const reportCacheKey = `property_comprehensive:${address}:${bedrooms || 'auto'}:${bathrooms || 'auto'}:${accommodates || 'auto'}:pt${propertyType || 'all'}:am${amenityCacheKey}`;
+  const reportCacheKey = `property_comprehensive:${address}:${bedrooms || 'auto'}:${bathrooms || 'auto'}:${accommodates || 'auto'}`;
   const cachedReport = await apiCache.getAsync<Awaited<ReturnType<typeof getComprehensivePropertyReport>>>(reportCacheKey);
   if (cachedReport) {
     // Check if cached result has comp-median adjustment applied (indicated by _original_rentalizer)
@@ -3654,13 +3531,10 @@ export async function getComprehensivePropertyReport(
   const compSearchRadius = propertyBedrooms >= 5 ? 8000 : propertyBedrooms >= 4 ? 5000 : 3000;
   
   // First try: search with BOTH bedroom AND bathroom filter for exact matches
-  // Also pass amenity and property type filters if the user specified them
   let radiusComps = await exploreListingsInRadius(address, compSearchRadius, {
     bedrooms: propertyBedrooms,
     bathrooms: propertyBathrooms,
     minRevenue: 5000,
-    propertyType,
-    amenities,
   }, 50);
   
   // If exact match yields too few results, fall back to bedroom-only search
@@ -3671,8 +3545,6 @@ export async function getComprehensivePropertyReport(
     const allBedroomRadiusComps = await exploreListingsInRadius(address, compSearchRadius, {
       bedrooms: propertyBedrooms,
       minRevenue: 5000,
-      propertyType,
-      amenities,
     }, 50);
     
     // Separate into exact BA match and different BA
@@ -3705,8 +3577,6 @@ export async function getComprehensivePropertyReport(
           return await exploreListingsInRadius(address, compSearchRadius, {
             bedrooms: adjBr,
             minRevenue: 5000,
-            propertyType,
-            amenities,
           }, 15);
         } catch (e) {
           console.log(`[Comps] Adjacent BR search failed for ${adjBr}BR`);

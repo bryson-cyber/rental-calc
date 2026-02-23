@@ -58,7 +58,6 @@ export const FEATURES = {
   DEAL_ALERT_SNIPPET: 'deal-alert-snippet',
   AI_FALLBACK: 'ai-fallback',
   HEALTH_CHECK: 'health-check',
-  WEBINAR_SMS_CONTENT: 'webinar-sms-content',
 } as const;
 
 export type FeatureName = (typeof FEATURES)[keyof typeof FEATURES];
@@ -115,7 +114,6 @@ const ROUTING_TABLE: Record<FeatureName, RouteConfig> = {
   [FEATURES.DEAL_ALERT_SNIPPET]: { provider: 'sonnet', effort: 'low', label: 'Deal Alert Snippet' },
   [FEATURES.AI_FALLBACK]: { provider: 'sonnet', effort: 'medium', label: 'AI Fallback' },
   [FEATURES.HEALTH_CHECK]: { provider: 'sonnet', effort: 'low', label: 'Health Check' },
-  [FEATURES.WEBINAR_SMS_CONTENT]: { provider: 'sonnet', effort: 'medium', label: 'Webinar SMS Content' },
 };
 
 // ---------------------------------------------------------------------------

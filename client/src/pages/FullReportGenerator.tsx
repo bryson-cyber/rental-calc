@@ -125,9 +125,9 @@ export default function FullReportGenerator() {
     if (urlPreparedFor) setPreparedFor(decodeURIComponent(urlPreparedFor));
   }, [searchString]);
   
-  // Owner-only: silently redirect non-owner users to home page
+  // Admin-only: silently redirect non-admin users to Step 5 (main tool)
   useEffect(() => {
-    if (!authLoading && (!user || user.id !== 1)) {
+    if (!authLoading && (!user || user.role !== 'admin')) {
       navigate('/');
     }
   }, [authLoading, user, navigate]);

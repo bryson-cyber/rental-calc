@@ -311,9 +311,7 @@ export default function RentalEstimator() {
           bathrooms: bathrooms ? parseFloat(bathrooms) : 1,
           accommodates: beds * 2,
           monthlyRent: rent ? parseInt(rent) : 0,
-          propertyType: '' as string,
-          amenities: {} as Record<string, boolean>,
-          _showAdvanced: false,
+          propertyType: 'House'
         };
       }
     }
@@ -323,9 +321,7 @@ export default function RentalEstimator() {
       bathrooms: 1,
       accommodates: 4,
       monthlyRent: 0,
-      propertyType: '' as string,
-      amenities: {} as Record<string, boolean>,
-      _showAdvanced: false,
+      propertyType: 'House'
     };
   };
   
@@ -406,20 +402,12 @@ export default function RentalEstimator() {
         zillow_url: zillowUrl || undefined,
       });
 
-      // Build amenities filter (only include selected amenities)
-      const selectedAmenities = Object.entries(formData.amenities || {})
-        .filter(([, v]) => v)
-        .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {} as Record<string, boolean>);
-      const hasAmenities = Object.keys(selectedAmenities).length > 0;
-
       // Run comprehensive analysis with progress tracking
       const result = await analyzePropertyMutation.mutateAsync({
         address: formData.address,
         monthly_rent: formData.monthlyRent,
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
-        propertyType: formData.propertyType || undefined,
-        amenities: hasAmenities ? selectedAmenities : undefined,
         sessionId: trackingSessionId, // Enable real-time progress updates
         reportMode: reportMode,
       });
@@ -772,92 +760,6 @@ export default function RentalEstimator() {
                     </select>
                   </div>
                 </div>
-              </div>
-
-              {/* Optional: Property Type & Amenities (Collapsible) */}
-              <div className="mb-6">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, _showAdvanced: !prev._showAdvanced }))}
-                  className="flex items-center gap-2 text-sm font-medium text-[#0F172A]/60 hover:text-[#D4A84B] transition-colors font-sans"
-                >
-                  <ChevronRight className={`w-4 h-4 transition-transform ${formData._showAdvanced ? 'rotate-90' : ''}`} />
-                  Refine Your Comps (Optional)
-                </button>
-                
-                {formData._showAdvanced && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 space-y-4"
-                  >
-                    {/* Property Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
-                        Property Type
-                      </label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F172A]/40" />
-                        <select
-                          value={formData.propertyType}
-                          onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
-                        >
-                          <option value="">Any Type</option>
-                          <option value="house">House</option>
-                          <option value="apartment">Apartment</option>
-                          <option value="condo">Condo</option>
-                          <option value="townhouse">Townhouse</option>
-                          <option value="cabin">Cabin</option>
-                          <option value="cottage">Cottage</option>
-                          <option value="villa">Villa</option>
-                          <option value="loft">Loft</option>
-                          <option value="guest_suite">Guest Suite</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Amenities */}
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
-                        My Property Has
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {[
-                          { key: 'pool', label: 'Pool', icon: '\uD83C\uDFCA' },
-                          { key: 'hotTub', label: 'Hot Tub', icon: '\u2668\uFE0F' },
-                          { key: 'petFriendly', label: 'Pet Friendly', icon: '\uD83D\uDC3E' },
-                          { key: 'parking', label: 'Parking', icon: '\uD83C\uDD7F\uFE0F' },
-                          { key: 'gym', label: 'Gym', icon: '\uD83C\uDFCB\uFE0F' },
-                          { key: 'kitchen', label: 'Kitchen', icon: '\uD83C\uDF73' },
-                          { key: 'washerDryer', label: 'Washer/Dryer', icon: '\uD83E\uDDFA' },
-                          { key: 'aircon', label: 'A/C', icon: '\u2744\uFE0F' },
-                        ].map(({ key, label, icon }) => (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setFormData(prev => ({
-                              ...prev,
-                              amenities: { ...prev.amenities, [key]: !prev.amenities[key] }
-                            }))}
-                            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-sans transition-all duration-200 ${
-                              formData.amenities[key]
-                                ? 'border-[#D4A84B] bg-[#D4A84B]/10 text-[#0F172A] font-medium'
-                                : 'border-[#0F172A]/10 text-[#0F172A]/60 hover:border-[#D4A84B]/40'
-                            }`}
-                          >
-                            <span className="text-base">{icon}</span>
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-[#0F172A]/40 mt-2 font-sans">
-                        Select amenities to compare against similar properties. Comps will include properties with at least one matching amenity.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
               </div>
               
               {/* Submit Button */}

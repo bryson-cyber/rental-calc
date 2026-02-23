@@ -12,7 +12,6 @@ import { useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 
 const ContentStudioTabLazy = lazy(() => import('./ContentStudioPage').then(m => ({ default: m.ContentStudioTab })));
-const WebinarDashboardTabLazy = lazy(() => import('./WebinarDashboard').then(m => ({ default: m.WebinarDashboardTab })));
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -425,10 +424,6 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="data-policy" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
               Data Policy
-            </TabsTrigger>
-            <TabsTrigger value="webinar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Send className="w-4 h-4 mr-2" />
-              Webinar SMS
             </TabsTrigger>
           </TabsList>
 
@@ -1516,15 +1511,6 @@ export default function UnifiedAdmin() {
 
           <TabsContent value="data-policy" className="space-y-6">
             <DataPolicyTab />
-          </TabsContent>
-
-          {/* ============================================ */}
-          {/* WEBINAR SHOW-UP MACHINE TAB */}
-          {/* ============================================ */}
-          <TabsContent value="webinar" className="space-y-6">
-            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
-              <WebinarDashboardTabLazy />
-            </Suspense>
           </TabsContent>
         </Tabs>
       </main>

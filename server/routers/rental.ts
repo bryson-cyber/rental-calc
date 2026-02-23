@@ -48,24 +48,11 @@ export const leadInputSchema = z.object({
   zillow_url: z.string().optional(),
 });
 
-const amenitiesSchema = z.object({
-  pool: z.boolean().optional(),
-  hotTub: z.boolean().optional(),
-  petFriendly: z.boolean().optional(),
-  parking: z.boolean().optional(),
-  gym: z.boolean().optional(),
-  kitchen: z.boolean().optional(),
-  washerDryer: z.boolean().optional(),
-  aircon: z.boolean().optional(),
-}).optional();
-
 export const propertyReportInputSchema = z.object({
   address: z.string().min(1, "Address is required"),
   bedrooms: z.number().int().min(1).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
-  propertyType: z.string().optional(),
-  amenities: amenitiesSchema,
   leadName: z.string().optional(),
   leadEmail: z.string().email().optional(),
   leadPhone: z.string().optional(),
@@ -79,7 +66,6 @@ export const aiPropertyReportInputSchema = z.object({
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
   propertyType: z.string().optional(),
-  amenities: amenitiesSchema,
   squareFootage: z.number().optional(),
   reportMode: z.enum(['pro', 'guided']).default('guided'),
 });
@@ -1068,9 +1054,7 @@ export const rentalRouter = router({
             input.address,
             input.bedrooms,
             input.bathrooms,
-            input.accommodates,
-            input.propertyType,
-            input.amenities
+            input.accommodates
           );
 
           if (!report) {
@@ -1186,9 +1170,7 @@ export const rentalRouter = router({
             input.address,
             input.bedrooms,
             input.bathrooms,
-            input.accommodates,
-            input.propertyType,
-            input.amenities
+            input.accommodates
           );
 
           if (!baseReport) {
