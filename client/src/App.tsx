@@ -56,6 +56,7 @@ const DealAlertsPage = lazy(() => import("./pages/DealAlertsPage"));
 const MarketEvaluationPage = lazy(() => import("./pages/MarketEvaluationPage"));
 const MyReportsPage = lazy(() => import("./pages/MyReportsPage"));
 const ContentStudioPage = lazy(() => import("./pages/ContentStudioPage"));
+const WebinarCampaignManager = lazy(() => import("./pages/WebinarCampaignManager"));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -147,6 +148,9 @@ function Router() {
         
         {/* Content Studio - Script Generator */}
         {/* Content Studio is now in admin portal at /admin/dashboard?tab=content-studio */}
+        
+        {/* Webinar Campaign Manager - Standalone SMS hub */}
+        <Route path="/webinar-campaigns" component={WebinarCampaignManager} />
         
         {/* Analysis routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />

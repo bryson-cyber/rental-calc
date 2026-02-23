@@ -28,8 +28,9 @@ import {
   webinarSmsCampaigns,
   webinarSmsDeliveries,
   webinarSmsSettings,
+  scheduledSmsMessages,
 } from "../../drizzle/schema";
-import { eq, desc, sql, and, inArray, count } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, count, lte, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
@@ -905,6 +906,253 @@ export const webinarSmsRouter = router({
         page: input.page,
         totalPages: Math.ceil(total / input.pageSize),
         statusSummary: statusSummary.map(s => ({ status: s.status, count: Number(s.count) })),
+      };
+    }),
+
+  // ═══ SCHEDULED MESSAGES ══════════════════════════════════════════════════
+
+  /** List scheduled messages for a webinar */
+  listScheduledMessages: adminProcedure
+    .input(z.object({ webinarId: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const conditions = input.webinarId ? [eq(scheduledSmsMessages.webinarId, input.webinarId)] : [];
+      const messages = await db.select().from(scheduledSmsMessages)
+        .where(conditions.length ? and(...conditions) : undefined)
+        .orderBy(scheduledSmsMessages.sequenceOrder);
+
+      return { messages };
+    }),
+
+  /** Create or update a scheduled message */
+  upsertScheduledMessage: adminProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      webinarId: z.string().min(1),
+      sequenceName: z.string().min(1),
+      sequenceOrder: z.number().min(1),
+      messageBody: z.string().min(1),
+      scheduledAt: z.string(), // ISO date string
+      audience: z.enum(["all", "attended", "not_attended"]).default("all"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const scheduledDate = new Date(input.scheduledAt);
+
+      if (input.id) {
+        // Update existing
+        await db.update(scheduledSmsMessages).set({
+          sequenceName: input.sequenceName,
+          sequenceOrder: input.sequenceOrder,
+          messageBody: input.messageBody,
+          scheduledAt: scheduledDate,
+          audience: input.audience,
+        }).where(eq(scheduledSmsMessages.id, input.id));
+        return { success: true, id: input.id };
+      } else {
+        // Insert new
+        const [result] = await db.insert(scheduledSmsMessages).values({
+          webinarId: input.webinarId,
+          sequenceName: input.sequenceName,
+          sequenceOrder: input.sequenceOrder,
+          messageBody: input.messageBody,
+          scheduledAt: scheduledDate,
+          audience: input.audience,
+        });
+        return { success: true, id: result.insertId };
+      }
+    }),
+
+  /** Delete a scheduled message */
+  deleteScheduledMessage: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.delete(scheduledSmsMessages).where(eq(scheduledSmsMessages.id, input.id));
+      return { success: true };
+    }),
+
+  /** Cancel a scheduled message */
+  cancelScheduledMessage: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.update(scheduledSmsMessages).set({ status: "cancelled" })
+        .where(eq(scheduledSmsMessages.id, input.id));
+      return { success: true };
+    }),
+
+  /** Generate a pre-built SMS sequence for a webinar */
+  generateSequence: adminProcedure
+    .input(z.object({
+      webinarId: z.string().min(1),
+      webinarDate: z.string(), // ISO date string of the webinar
+      webinarLink: z.string().optional(),
+      replayLink: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const webinarDate = new Date(input.webinarDate);
+      const link = input.webinarLink || "[WEBINAR_LINK]";
+      const replay = input.replayLink || "[REPLAY_LINK]";
+
+      // Pre-built 9-message sequence
+      const sequence = [
+        {
+          sequenceName: "Registration Confirmation",
+          sequenceOrder: 1,
+          messageBody: `Hey %FIRST_NAME%! Thanks for registering for our live workshop. Save this number so you don't miss any updates! 🎯`,
+          scheduledAt: new Date(webinarDate.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "2 Days Before Reminder",
+          sequenceOrder: 2,
+          messageBody: `Hey %FIRST_NAME%! Quick reminder — our live call is in 2 days. You won't want to miss this one. Mark your calendar! 📅`,
+          scheduledAt: new Date(webinarDate.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "Day Before Reminder",
+          sequenceOrder: 3,
+          messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat — we have a lot of people registered. See you there! 🔥`,
+          scheduledAt: new Date(webinarDate.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "Morning Of",
+          sequenceOrder: 4,
+          messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early — seats fill up fast! 💪`,
+          scheduledAt: new Date(webinarDate.getTime() - 4 * 60 * 60 * 1000), // 4 hours before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "1 Hour Warning",
+          sequenceOrder: 5,
+          messageBody: `%FIRST_NAME% — we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
+          scheduledAt: new Date(webinarDate.getTime() - 1 * 60 * 60 * 1000), // 1 hour before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "Going Live NOW",
+          sequenceOrder: 6,
+          messageBody: `🔴 WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
+          scheduledAt: new Date(webinarDate.getTime() - 5 * 60 * 1000), // 5 min before
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "Thank You (Attended)",
+          sequenceOrder: 7,
+          messageBody: `Thanks for showing up today %FIRST_NAME%! 🙏 Here's the replay if you want to rewatch: ${replay}`,
+          scheduledAt: new Date(webinarDate.getTime() + 1 * 60 * 60 * 1000), // 1 hour after
+          audience: "attended" as const,
+        },
+        {
+          sequenceName: "Missed You (No-Show)",
+          sequenceOrder: 8,
+          messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
+          scheduledAt: new Date(webinarDate.getTime() + 2 * 60 * 60 * 1000), // 2 hours after
+          audience: "not_attended" as const,
+        },
+        {
+          sequenceName: "Follow-Up CTA",
+          sequenceOrder: 9,
+          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details. 🚀`,
+          scheduledAt: new Date(webinarDate.getTime() + 24 * 60 * 60 * 1000), // 1 day after
+          audience: "all" as const,
+        },
+      ];
+
+      // Delete existing sequence for this webinar
+      await db.delete(scheduledSmsMessages).where(eq(scheduledSmsMessages.webinarId, input.webinarId));
+
+      // Insert all messages
+      for (const msg of sequence) {
+        await db.insert(scheduledSmsMessages).values({
+          webinarId: input.webinarId,
+          ...msg,
+        });
+      }
+
+      return { success: true, count: sequence.length };
+    }),
+
+  /** Get registrant counts by attendance status for a webinar */
+  getAttendanceSummary: adminProcedure
+    .input(z.object({ webinarId: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const conditions = input.webinarId ? [eq(webinarRegistrants.webinarId, input.webinarId)] : [];
+      const baseWhere = conditions.length ? and(...conditions) : undefined;
+
+      const [totalResult, attendedResult, noShowResult, optedOutResult] = await Promise.all([
+        db.select({ count: count() }).from(webinarRegistrants).where(baseWhere),
+        db.select({ count: count() }).from(webinarRegistrants).where(
+          baseWhere
+            ? and(baseWhere, eq(webinarRegistrants.attended, 1))
+            : eq(webinarRegistrants.attended, 1)
+        ),
+        db.select({ count: count() }).from(webinarRegistrants).where(
+          baseWhere
+            ? and(baseWhere, eq(webinarRegistrants.attended, 0))
+            : eq(webinarRegistrants.attended, 0)
+        ),
+        db.select({ count: count() }).from(webinarRegistrants).where(
+          baseWhere
+            ? and(baseWhere, eq(webinarRegistrants.optedOut, 1))
+            : eq(webinarRegistrants.optedOut, 1)
+        ),
+      ]);
+
+      return {
+        total: Number(totalResult[0]?.count ?? 0),
+        attended: Number(attendedResult[0]?.count ?? 0),
+        noShow: Number(noShowResult[0]?.count ?? 0),
+        optedOut: Number(optedOutResult[0]?.count ?? 0),
+      };
+    }),
+
+  /** List registrants filtered by attendance status */
+  listRegistrantsByAttendance: adminProcedure
+    .input(z.object({
+      webinarId: z.string().optional(),
+      attended: z.number().optional(), // 1 = attended, 0 = no-show
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(50),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const conditions: any[] = [eq(webinarRegistrants.optedOut, 0)];
+      if (input.webinarId) conditions.push(eq(webinarRegistrants.webinarId, input.webinarId));
+      if (input.attended !== undefined) conditions.push(eq(webinarRegistrants.attended, input.attended));
+
+      const offset = (input.page - 1) * input.pageSize;
+      const where = and(...conditions);
+
+      const [registrants, totalResult] = await Promise.all([
+        db.select().from(webinarRegistrants).where(where).orderBy(desc(webinarRegistrants.createdAt)).limit(input.pageSize).offset(offset),
+        db.select({ count: count() }).from(webinarRegistrants).where(where),
+      ]);
+
+      return {
+        registrants,
+        total: Number(totalResult[0]?.count ?? 0),
+        page: input.page,
+        totalPages: Math.ceil(Number(totalResult[0]?.count ?? 0) / input.pageSize),
       };
     }),
 

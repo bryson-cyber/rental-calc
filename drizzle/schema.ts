@@ -2408,3 +2408,42 @@ export const webinarSmsSettings = mysqlTable("webinar_sms_settings", {
 });
 export type WebinarSmsSetting = typeof webinarSmsSettings.$inferSelect;
 export type InsertWebinarSmsSetting = typeof webinarSmsSettings.$inferInsert;
+
+/**
+ * Scheduled SMS Messages — messages queued to send at a specific time.
+ * Used for the webinar SMS sequence (reminders, follow-ups).
+ */
+export const scheduledSmsMessages = mysqlTable("scheduled_sms_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Which webinar this scheduled message belongs to */
+  webinarId: varchar("webinarId", { length: 100 }).notNull(),
+  /** Human-readable name for this message in the sequence (e.g., "1 Hour Before", "Going Live Now") */
+  sequenceName: varchar("sequenceName", { length: 255 }).notNull(),
+  /** Position in the sequence (1-9) for ordering */
+  sequenceOrder: int("sequenceOrder").notNull(),
+  /** The SMS message body (supports %FIRST_NAME% variable substitution) */
+  messageBody: text("messageBody").notNull(),
+  /** When this message should be sent (UTC timestamp) */
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  /** Current status of this scheduled message */
+  status: mysqlEnum("status", ["pending", "sending", "sent", "failed", "cancelled"]).default("pending").notNull(),
+  /** Target audience for this message */
+  audience: mysqlEnum("audience", ["all", "attended", "not_attended"]).default("all").notNull(),
+  /** How many messages were actually sent */
+  sentCount: int("sentCount").default(0),
+  /** How many messages failed */
+  failedCount: int("failedCount").default(0),
+  /** When the message was actually sent */
+  sentAt: timestamp("sentAt"),
+  /** Error message if sending failed */
+  error: text("error"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("ssm_webinar_idx").on(table.webinarId),
+  index("ssm_status_idx").on(table.status),
+  index("ssm_scheduled_at_idx").on(table.scheduledAt),
+  index("ssm_sequence_order_idx").on(table.sequenceOrder),
+]);
+export type ScheduledSmsMessage = typeof scheduledSmsMessages.$inferSelect;
+export type InsertScheduledSmsMessage = typeof scheduledSmsMessages.$inferInsert;

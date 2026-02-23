@@ -12249,3 +12249,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Wire cron auto-start into server boot (server/_core/index.ts)
 - [x] Wire saveCronConfig to restart cron when settings change
 - [x] Write vitest tests for refreshAttendance and getCampaignDeliveries endpoints (14 tests passing)
+
+## Webinar Campaign Manager — Standalone Page
+- [ ] Fix DB migration for scheduled_sms_messages table (old migration conflict)
+- [ ] One-click "Text All Attended" button with message composer
+- [ ] One-click "Text All No-Shows" button with message composer
+- [ ] Real-time delivery tracking: who received and who didn't per campaign
+- [ ] Attendance split view: Attended (left) vs No-Show (right) with counts
+- [ ] Scheduled SMS sequence builder with pre-built templates
+- [ ] Auto-import cron status and controls
+- [ ] API status indicators (WebinarJam + SimpleTexting locked in)
+- [ ] Webinar selector (pick this week's webinar)
+- [ ] Build standalone page at /webinar-campaigns route
