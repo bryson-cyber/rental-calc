@@ -12217,7 +12217,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Server: Wire webinar-sms router into routers.ts with minimal touch
 - [x] Server: SimpleTexting API integration for sending SMS
 - [x] Server: WebinarJam API integration for fetching registrants
-- [x] Server: Zapier webhook endpoint for auto-importing new registrants
+- [x] Server: Zapier webhook endpoint for auto-importing new registrants (REPLACED with cron-based auto-import)
 - [x] Frontend: Create /admin/webinar-sms page (admin-only, tab in UnifiedAdmin)
 - [x] Frontend: Registrant list with search/filter
 - [x] Frontend: SMS compose and send interface
@@ -12225,3 +12225,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Frontend: SMS templates management
 - [x] Tests: Write vitest tests for webinar-sms router (15/15 passing)
 - [x] Verify: Confirm existing features still work after adding webinar SMS (0 TS errors, 1599 existing tests pass)
+
+## Webinar SMS: Replace Zapier with Cron + Settings Tab
+- [x] Remove Zapier webhook dependency from webinar-sms router
+- [x] Add cron job for auto-importing WebinarJam registrants (configurable interval)
+- [x] Add webinar_sms_settings table to store selected webinar ID and cron config
+- [x] Add server endpoints: getApiStatus, testWebinarJamConnection, testSimpleTextingConnection
+- [x] Add server endpoints: listWebinarsWithSchedules, saveWebinarSelection, saveCronConfig, triggerManualImport
+- [x] Build Settings sub-tab in WebinarSmsTab with API key status display
+- [x] Build webinar picker (select this week's webinar + schedule)
+- [x] Build cron controls and manual import trigger button
+- [x] Verify SimpleTexting V1 API calls match official docs
+- [x] Verify WebinarJam API calls match official docs
+- [x] Write vitest tests for new settings endpoints (9/9 passing)
+- [x] Browser test: Settings tab renders, webinar dropdown loads, save works, toast confirms

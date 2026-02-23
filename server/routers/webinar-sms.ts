@@ -27,6 +27,7 @@ import {
   webinarSmsTemplates,
   webinarSmsCampaigns,
   webinarSmsDeliveries,
+  webinarSmsSettings,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -632,36 +633,347 @@ export const webinarSmsRouter = router({
     };
   }),
 
-  // ═══ ZAPIER WEBHOOK RECEIVER ═══════════════════════════════════════════════
+  // ═══ SETTINGS & CONFIGURATION ═════════════════════════════════════════════
 
-  /** Receive registrant data from Zapier webhook */
-  zapierWebhook: adminProcedure
+  /** Get API key configuration status (shows which keys are set, not the values) */
+  getApiStatus: adminProcedure.query(async () => {
+    return {
+      webinarjam: {
+        configured: !!ENV.webinarjamApiKey,
+        keyPreview: ENV.webinarjamApiKey
+          ? `${ENV.webinarjamApiKey.slice(0, 6)}...${ENV.webinarjamApiKey.slice(-4)}`
+          : null,
+      },
+      simpletexting: {
+        configured: !!ENV.simpletextingApiKey,
+        keyPreview: ENV.simpletextingApiKey
+          ? `${ENV.simpletextingApiKey.slice(0, 6)}...${ENV.simpletextingApiKey.slice(-4)}`
+          : null,
+      },
+    };
+  }),
+
+  /** Test WebinarJam API connection */
+  testWebinarJamConnection: adminProcedure.mutation(async () => {
+    try {
+      const webinars = await fetchWebinarJamWebinars();
+      return {
+        success: true,
+        message: `Connected! Found ${webinars.length} webinar(s).`,
+        webinarCount: webinars.length,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || "Failed to connect to WebinarJam",
+        webinarCount: 0,
+      };
+    }
+  }),
+
+  /** Test SimpleTexting API connection by checking credits */
+  testSimpleTextingConnection: adminProcedure.mutation(async () => {
+    const apiKey = ENV.simpletextingApiKey;
+    if (!apiKey) {
+      return { success: false, message: "SimpleTexting API key not configured" };
+    }
+
+    try {
+      const res = await fetch("https://app2.simpletexting.com/v1/credits", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Accept": "application/json",
+        },
+      });
+
+      const data = await res.json();
+      if (data.code === 1) {
+        return {
+          success: true,
+          message: `Connected! ${data.credits ?? 'Unknown'} credits remaining.`,
+          credits: data.credits,
+        };
+      }
+      return { success: false, message: data.message || "API returned error" };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to connect" };
+    }
+  }),
+
+  /** List webinars with schedule details for selection */
+  listWebinarsWithSchedules: adminProcedure.query(async () => {
+    try {
+      const webinars = await fetchWebinarJamWebinars();
+      const enriched = await Promise.all(
+        webinars.slice(0, 10).map(async (w: any) => {
+          try {
+            const details = await fetchWebinarJamDetails(String(w.webinar_id));
+            return {
+              id: String(w.webinar_id),
+              name: w.name || details?.name || 'Unnamed',
+              schedules: (details?.schedules || []).map((s: any) => ({
+                id: s.schedule,
+                date: s.date,
+                comment: s.comment,
+              })),
+            };
+          } catch {
+            return {
+              id: String(w.webinar_id),
+              name: w.name || 'Unnamed',
+              schedules: [],
+            };
+          }
+        })
+      );
+      return { webinars: enriched };
+    } catch (err: any) {
+      return { webinars: [] };
+    }
+  }),
+
+  /** Get current settings (selected webinar, cron config, last import) */
+  getSettings: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+    const rows = await db.select().from(webinarSmsSettings);
+    const settings: Record<string, string> = {};
+    for (const row of rows) {
+      settings[row.settingKey] = row.settingValue;
+    }
+
+    return {
+      selectedWebinarId: settings["selected_webinar_id"] || null,
+      selectedWebinarName: settings["selected_webinar_name"] || null,
+      selectedScheduleId: settings["selected_schedule_id"] || null,
+      cronEnabled: settings["cron_enabled"] === "true",
+      cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "30", 10),
+      lastAutoImportAt: settings["last_auto_import_at"] || null,
+      lastAutoImportResult: settings["last_auto_import_result"] || null,
+    };
+  }),
+
+  /** Save webinar selection (which webinar + schedule to auto-import from) */
+  saveWebinarSelection: adminProcedure
     .input(z.object({
-      name: z.string().min(1),
-      email: z.string().optional(),
-      phone: z.string().min(7),
-      webinarId: z.string().optional(),
-      webinarName: z.string().optional(),
-      attended: z.number().optional(),
-      tags: z.array(z.string()).optional(),
-      metadata: z.record(z.string(), z.unknown()).optional(),
+      webinarId: z.string().min(1),
+      webinarName: z.string().min(1),
+      scheduleId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      const [result] = await db.insert(webinarRegistrants).values({
-        name: input.name,
-        email: input.email,
-        phone: normalizePhone(input.phone),
-        source: "zapier",
-        webinarId: input.webinarId,
-        webinarName: input.webinarName,
-        attended: input.attended ?? 0,
-        tags: input.tags,
-        metadata: input.metadata,
-      });
+      const upserts = [
+        { key: "selected_webinar_id", value: input.webinarId, desc: "Currently selected WebinarJam webinar ID" },
+        { key: "selected_webinar_name", value: input.webinarName, desc: "Currently selected webinar name" },
+      ];
+      if (input.scheduleId) {
+        upserts.push({ key: "selected_schedule_id", value: input.scheduleId, desc: "Currently selected schedule ID" });
+      }
 
-      return { success: true, id: result.insertId };
+      for (const u of upserts) {
+        await db.insert(webinarSmsSettings)
+          .values({ settingKey: u.key, settingValue: u.value, description: u.desc })
+          .onDuplicateKeyUpdate({ set: { settingValue: u.value } });
+      }
+
+      return { success: true };
     }),
+
+  /** Save cron configuration */
+  saveCronConfig: adminProcedure
+    .input(z.object({
+      enabled: z.boolean(),
+      intervalMinutes: z.number().min(5).max(1440).default(30),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.insert(webinarSmsSettings)
+        .values({ settingKey: "cron_enabled", settingValue: String(input.enabled), description: "Whether auto-import cron is enabled" })
+        .onDuplicateKeyUpdate({ set: { settingValue: String(input.enabled) } });
+
+      await db.insert(webinarSmsSettings)
+        .values({ settingKey: "cron_interval_minutes", settingValue: String(input.intervalMinutes), description: "Auto-import interval in minutes" })
+        .onDuplicateKeyUpdate({ set: { settingValue: String(input.intervalMinutes) } });
+
+      return { success: true };
+    }),
+
+  /** Trigger a manual import from the currently selected webinar */
+  triggerManualImport: adminProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+    const rows = await db.select().from(webinarSmsSettings);
+    const settings: Record<string, string> = {};
+    for (const row of rows) {
+      settings[row.settingKey] = row.settingValue;
+    }
+
+    const webinarId = settings["selected_webinar_id"];
+    const webinarName = settings["selected_webinar_name"] || "Unknown";
+    const scheduleId = settings["selected_schedule_id"];
+
+    if (!webinarId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "No webinar selected. Go to Settings and select a webinar first." });
+    }
+
+    const result = await runWebinarImport(db, webinarId, webinarName, scheduleId ? parseInt(scheduleId, 10) : undefined);
+
+    const now = new Date().toISOString();
+    const resultStr = `Imported ${result.imported}, skipped ${result.skipped} (total ${result.total}) at ${now}`;
+
+    await db.insert(webinarSmsSettings)
+      .values({ settingKey: "last_auto_import_at", settingValue: now, description: "Timestamp of last auto-import" })
+      .onDuplicateKeyUpdate({ set: { settingValue: now } });
+
+    await db.insert(webinarSmsSettings)
+      .values({ settingKey: "last_auto_import_result", settingValue: resultStr, description: "Result of last auto-import" })
+      .onDuplicateKeyUpdate({ set: { settingValue: resultStr } });
+
+    return result;
+  }),
 });
+
+// ─── Shared import logic (used by manual trigger and cron) ──────────────────
+
+async function runWebinarImport(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  webinarId: string,
+  webinarName: string,
+  scheduleId?: number
+): Promise<{ success: boolean; imported: number; skipped: number; total: number }> {
+  let allRegistrants: any[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore && page <= 100) {
+    const result = await fetchWebinarJamRegistrants(webinarId, scheduleId, page);
+    allRegistrants = allRegistrants.concat(result.registrants);
+    hasMore = result.hasMore;
+    page++;
+  }
+
+  if (allRegistrants.length === 0) {
+    return { success: true, imported: 0, skipped: 0, total: 0 };
+  }
+
+  const existingRows = await db.select({ phone: webinarRegistrants.phone })
+    .from(webinarRegistrants)
+    .where(eq(webinarRegistrants.webinarId, webinarId));
+  const existingPhones = new Set(existingRows.map(r => normalizePhone(r.phone)));
+
+  const newRegistrants = allRegistrants
+    .filter(r => {
+      const phone = normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || ""));
+      return phone.length >= 7 && !existingPhones.has(phone);
+    })
+    .map(r => ({
+      webinarId,
+      name: [r.first_name, r.last_name].filter(Boolean).join(" ") || "Unknown",
+      email: r.email || null,
+      phone: normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || "")),
+      source: "webinarjam" as const,
+      webinarName,
+      attended: r.attended_live === 1 ? 1 : 0,
+      metadata: {
+        signup_date: r.signup_date,
+        attended_live: r.attended_live,
+        attended_replay: r.attended_replay,
+        time_live: r.time_live,
+        utm_source: r.utm_source,
+      },
+    }));
+
+  let imported = 0;
+  for (let i = 0; i < newRegistrants.length; i += 500) {
+    const batch = newRegistrants.slice(i, i + 500);
+    await db.insert(webinarRegistrants).values(batch);
+    imported += batch.length;
+  }
+
+  return {
+    success: true,
+    imported,
+    skipped: allRegistrants.length - newRegistrants.length,
+    total: allRegistrants.length,
+  };
+}
+
+// ─── Cron: Auto-import registrants from selected webinar ────────────────────
+
+let cronInterval: ReturnType<typeof setInterval> | null = null;
+
+export async function startWebinarImportCron() {
+  if (cronInterval) {
+    clearInterval(cronInterval);
+    cronInterval = null;
+  }
+
+  const db = await getDb();
+  if (!db) {
+    console.log("[WebinarSMS Cron] Database unavailable, skipping cron setup");
+    return;
+  }
+
+  const rows = await db.select().from(webinarSmsSettings);
+  const settings: Record<string, string> = {};
+  for (const row of rows) {
+    settings[row.settingKey] = row.settingValue;
+  }
+
+  const enabled = settings["cron_enabled"] === "true";
+  const intervalMinutes = parseInt(settings["cron_interval_minutes"] || "30", 10);
+  const webinarId = settings["selected_webinar_id"];
+  const webinarName = settings["selected_webinar_name"] || "Unknown";
+  const scheduleId = settings["selected_schedule_id"];
+
+  if (!enabled || !webinarId) {
+    console.log(`[WebinarSMS Cron] Auto-import disabled or no webinar selected (enabled=${enabled}, webinarId=${webinarId})`);
+    return;
+  }
+
+  console.log(`[WebinarSMS Cron] Starting auto-import every ${intervalMinutes} minutes for webinar "${webinarName}" (${webinarId})`);
+
+  const runImport = async () => {
+    try {
+      console.log(`[WebinarSMS Cron] Running auto-import for webinar ${webinarId}...`);
+      const freshDb = await getDb();
+      if (!freshDb) return;
+
+      const result = await runWebinarImport(
+        freshDb,
+        webinarId,
+        webinarName,
+        scheduleId ? parseInt(scheduleId, 10) : undefined
+      );
+
+      const now = new Date().toISOString();
+      const resultStr = `[CRON] Imported ${result.imported}, skipped ${result.skipped} (total ${result.total}) at ${now}`;
+
+      await freshDb.insert(webinarSmsSettings)
+        .values({ settingKey: "last_auto_import_at", settingValue: now, description: "Timestamp of last auto-import" })
+        .onDuplicateKeyUpdate({ set: { settingValue: now } });
+
+      await freshDb.insert(webinarSmsSettings)
+        .values({ settingKey: "last_auto_import_result", settingValue: resultStr, description: "Result of last auto-import" })
+        .onDuplicateKeyUpdate({ set: { settingValue: resultStr } });
+
+      console.log(`[WebinarSMS Cron] ${resultStr}`);
+    } catch (err: any) {
+      console.error(`[WebinarSMS Cron] Import failed:`, err.message);
+    }
+  };
+
+  runImport();
+  cronInterval = setInterval(runImport, intervalMinutes * 60 * 1000);
+}
+
+export async function restartWebinarImportCron() {
+  await startWebinarImportCron();
+}

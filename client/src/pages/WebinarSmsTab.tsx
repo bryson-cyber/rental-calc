@@ -8,7 +8,7 @@
  * 4. Campaigns — send and track SMS campaigns
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import {
   Users,
@@ -64,6 +65,11 @@ import {
   Download,
   FileText,
   Zap,
+  Settings,
+  Key,
+  Play,
+  Timer,
+  AlertCircle,
 } from 'lucide-react';
 
 // ─── Dashboard Stats ─────────────────────────────────────────────────────────
@@ -1017,6 +1023,327 @@ function CampaignsTab() {
   );
 }
 
+// ─── Settings Tab ────────────────────────────────────────────────────────────
+
+function SettingsTab() {
+  const apiStatus = trpc.webinarSms.getApiStatus.useQuery();
+  const settings = trpc.webinarSms.getSettings.useQuery();
+  const webinarsList = trpc.webinarSms.listWebinarsWithSchedules.useQuery(undefined, {
+    enabled: !!apiStatus.data?.webinarjam?.configured,
+  });
+
+  const testWJ = trpc.webinarSms.testWebinarJamConnection.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success(data.message);
+      else toast.error(data.message);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const testST = trpc.webinarSms.testSimpleTextingConnection.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success(data.message);
+      else toast.error(data.message);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const utils = trpc.useUtils();
+
+  const saveWebinar = trpc.webinarSms.saveWebinarSelection.useMutation({
+    onSuccess: () => {
+      toast.success('Webinar selection saved');
+      utils.webinarSms.getSettings.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const saveCron = trpc.webinarSms.saveCronConfig.useMutation({
+    onSuccess: () => {
+      toast.success('Cron configuration saved');
+      utils.webinarSms.getSettings.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const manualImport = trpc.webinarSms.triggerManualImport.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Imported ${data.imported} registrants (${data.skipped} skipped, ${data.total} total)`);
+      utils.webinarSms.getSettings.invalidate();
+      utils.webinarSms.listRegistrants.invalidate();
+      utils.webinarSms.getDashboardStats.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [selectedWebinarId, setSelectedWebinarId] = useState('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [cronEnabled, setCronEnabled] = useState(false);
+  const [cronInterval, setCronInterval] = useState(30);
+
+  // Sync settings to local state when loaded
+  useEffect(() => {
+    if (settings.data) {
+      setSelectedWebinarId(settings.data.selectedWebinarId || '');
+      setSelectedScheduleId(settings.data.selectedScheduleId || '');
+      setCronEnabled(settings.data.cronEnabled);
+      setCronInterval(settings.data.cronIntervalMinutes);
+    }
+  }, [settings.data]);
+
+  const selectedWebinar = webinarsList.data?.webinars?.find(w => w.id === selectedWebinarId);
+
+  return (
+    <div className="space-y-6">
+      {/* API Key Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Key className="w-4 h-4" /> API Key Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* WebinarJam */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">WebinarJam API</span>
+                {apiStatus.data?.webinarjam?.configured ? (
+                  <span className="flex items-center gap-1 text-green-600 text-sm">
+                    <CheckCircle className="w-4 h-4" /> Configured
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-red-500 text-sm">
+                    <XCircle className="w-4 h-4" /> Not Set
+                  </span>
+                )}
+              </div>
+              {apiStatus.data?.webinarjam?.keyPreview && (
+                <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                  {apiStatus.data.webinarjam.keyPreview}
+                </p>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => testWJ.mutate()}
+                disabled={!apiStatus.data?.webinarjam?.configured || testWJ.isPending}
+              >
+                {testWJ.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                Test Connection
+              </Button>
+            </div>
+
+            {/* SimpleTexting */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">SimpleTexting API</span>
+                {apiStatus.data?.simpletexting?.configured ? (
+                  <span className="flex items-center gap-1 text-green-600 text-sm">
+                    <CheckCircle className="w-4 h-4" /> Configured
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-red-500 text-sm">
+                    <XCircle className="w-4 h-4" /> Not Set
+                  </span>
+                )}
+              </div>
+              {apiStatus.data?.simpletexting?.keyPreview && (
+                <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                  {apiStatus.data.simpletexting.keyPreview}
+                </p>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => testST.mutate()}
+                disabled={!apiStatus.data?.simpletexting?.configured || testST.isPending}
+              >
+                {testST.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                Test Connection
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            API keys are managed in the project Settings &gt; Secrets panel. Update them there if needed.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Webinar Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BarChart3 className="w-4 h-4" /> Select This Week's Webinar
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!apiStatus.data?.webinarjam?.configured ? (
+            <div className="flex items-center gap-2 text-amber-600 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              Configure WebinarJam API key first to load webinars.
+            </div>
+          ) : webinarsList.isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading webinars from WebinarJam...
+            </div>
+          ) : webinarsList.data?.webinars?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No webinars found in your WebinarJam account.</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Webinar</label>
+                <Select value={selectedWebinarId} onValueChange={setSelectedWebinarId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a webinar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {webinarsList.data?.webinars?.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedWebinar && selectedWebinar.schedules.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Schedule (optional)</label>
+                  <Select value={selectedScheduleId} onValueChange={setSelectedScheduleId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All schedules" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All schedules</SelectItem>
+                      {selectedWebinar.schedules.map((s: { id: string | number; date: string; comment?: string }) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.date} {s.comment ? `(${s.comment})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <Button
+                onClick={() => {
+                  if (!selectedWebinarId) {
+                    toast.error('Please select a webinar');
+                    return;
+                  }
+                  const webinar = webinarsList.data?.webinars?.find(w => w.id === selectedWebinarId);
+                  saveWebinar.mutate({
+                    webinarId: selectedWebinarId,
+                    webinarName: webinar?.name || 'Unknown',
+                    scheduleId: selectedScheduleId && selectedScheduleId !== 'all' ? selectedScheduleId : undefined,
+                  });
+                }}
+                disabled={!selectedWebinarId || saveWebinar.isPending}
+              >
+                {saveWebinar.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                Save Webinar Selection
+              </Button>
+
+              {settings.data?.selectedWebinarName && (
+                <p className="text-sm text-muted-foreground">
+                  Currently selected: <strong>{settings.data.selectedWebinarName}</strong>
+                  {settings.data.selectedScheduleId ? ` (Schedule: ${settings.data.selectedScheduleId})` : ''}
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auto-Import Cron */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Timer className="w-4 h-4" /> Auto-Import Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Enable Auto-Import</p>
+              <p className="text-xs text-muted-foreground">
+                Automatically pull new registrants from WebinarJam on a schedule
+              </p>
+            </div>
+            <Switch
+              checked={cronEnabled}
+              onCheckedChange={(checked) => setCronEnabled(checked)}
+            />
+          </div>
+
+          {cronEnabled && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Import Interval</label>
+              <Select value={String(cronInterval)} onValueChange={(v) => setCronInterval(parseInt(v, 10))}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">Every 5 minutes</SelectItem>
+                  <SelectItem value="15">Every 15 minutes</SelectItem>
+                  <SelectItem value="30">Every 30 minutes</SelectItem>
+                  <SelectItem value="60">Every hour</SelectItem>
+                  <SelectItem value="120">Every 2 hours</SelectItem>
+                  <SelectItem value="360">Every 6 hours</SelectItem>
+                  <SelectItem value="720">Every 12 hours</SelectItem>
+                  <SelectItem value="1440">Once a day</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Button
+            onClick={() => saveCron.mutate({ enabled: cronEnabled, intervalMinutes: cronInterval })}
+            disabled={saveCron.isPending}
+          >
+            {saveCron.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+            Save Cron Config
+          </Button>
+
+          <div className="border-t pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Manual Import</p>
+                <p className="text-xs text-muted-foreground">
+                  Pull registrants from the selected webinar right now
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => manualImport.mutate()}
+                disabled={manualImport.isPending || !settings.data?.selectedWebinarId}
+              >
+                {manualImport.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                ) : (
+                  <Download className="w-4 h-4 mr-1" />
+                )}
+                Import Now
+              </Button>
+            </div>
+
+            {settings.data?.lastAutoImportAt && (
+              <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
+                <p><strong>Last Import:</strong> {new Date(settings.data.lastAutoImportAt).toLocaleString()}</p>
+                {settings.data.lastAutoImportResult && (
+                  <p className="text-muted-foreground">{settings.data.lastAutoImportResult}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export function WebinarSmsTab() {
@@ -1045,6 +1372,9 @@ export function WebinarSmsTab() {
           <TabsTrigger value="campaigns">
             <Send className="w-4 h-4 mr-1" /> Campaigns
           </TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings className="w-4 h-4 mr-1" /> Settings
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="registrants">
@@ -1057,6 +1387,10 @@ export function WebinarSmsTab() {
 
         <TabsContent value="campaigns">
           <CampaignsTab />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <SettingsTab />
         </TabsContent>
       </Tabs>
     </div>

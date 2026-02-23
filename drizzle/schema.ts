@@ -2390,3 +2390,21 @@ export const webinarSmsDeliveries = mysqlTable("webinar_sms_deliveries", {
 ]);
 export type WebinarSmsDelivery = typeof webinarSmsDeliveries.$inferSelect;
 export type InsertWebinarSmsDelivery = typeof webinarSmsDeliveries.$inferInsert;
+
+/**
+ * Webinar SMS Settings — key-value store for configuration.
+ * Uses key-value pattern for flexibility.
+ */
+export const webinarSmsSettings = mysqlTable("webinar_sms_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Setting key (e.g., 'selected_webinar_id', 'selected_schedule_id', 'cron_enabled', 'cron_interval_minutes') */
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  /** Setting value (stored as string, parsed by application) */
+  settingValue: text("settingValue").notNull(),
+  /** Optional description of the setting */
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WebinarSmsSetting = typeof webinarSmsSettings.$inferSelect;
+export type InsertWebinarSmsSetting = typeof webinarSmsSettings.$inferInsert;
