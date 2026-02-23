@@ -278,6 +278,22 @@ export const advancedRouter = router({
           );
           
           console.log('[LeadMagnet] Analysis complete');
+
+          // Pre-fetch Rentometer data and attach to analysis
+          try {
+            const { getComprehensiveRentometerData } = await import('../rentometer');
+            const rentometerData = await getComprehensiveRentometerData({
+              address: input.address,
+              bedrooms: input.bedrooms || 2,
+              baths: input.bathrooms ? String(input.bathrooms) : undefined,
+              userRent: input.monthly_rent,
+            });
+            (analysis as any).rentometer_data = rentometerData;
+            console.log('[LeadMagnet] Rentometer data pre-fetched successfully');
+          } catch (rentErr) {
+            console.warn('[LeadMagnet] Rentometer pre-fetch failed (non-blocking):', rentErr);
+            // Non-blocking: report still works without Rentometer data
+          }
           
           // Save report to database for admin access
           console.log('[LeadMagnet] Attempting to save report to database...');

@@ -163,6 +163,7 @@ interface ComprehensiveReportData {
   bedroom_performance: BedroomPerformance[];
   generated_at: string;
   enhanced_narrative_report?: EnhancedNarrativeReport;
+  rentometer_data?: any;
 }
 
 // Animated counter component
@@ -473,6 +474,7 @@ export default function RentalEstimator() {
           bedroom_performance: [],
           generated_at: new Date().toISOString(),
           enhanced_narrative_report: analysisData.enhanced_narrative_report as EnhancedNarrativeReport | undefined,
+          rentometer_data: analysisData.rentometer_data || null,
         };
         setReportData(reportData);
         setStep('results');
@@ -1087,7 +1089,8 @@ export default function RentalEstimator() {
         listing_count: market?.listing_count || 0
       },
       bedroom_performance: (bedroom_performance || []) as any,
-      revenue_percentiles: (market as any)?.revenue_percentiles
+      revenue_percentiles: (market as any)?.revenue_percentiles,
+      rentometer_data: (reportData as any)?.rentometer_data || null
     };
 
     return (

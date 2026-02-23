@@ -1064,6 +1064,21 @@ export const rentalRouter = router({
               data: null,
             };
           }
+
+          // Pre-fetch Rentometer data and attach to report
+          try {
+            const { getComprehensiveRentometerData } = await import('../rentometer');
+            const rentometerData = await getComprehensiveRentometerData({
+              address: input.address,
+              bedrooms: input.bedrooms || 2,
+              baths: input.bathrooms ? String(input.bathrooms) : undefined,
+            });
+            (report as any).rentometer_data = rentometerData;
+            console.log('[Rental] Rentometer data pre-fetched successfully');
+          } catch (rentErr) {
+            console.warn('[Rental] Rentometer pre-fetch failed (non-blocking):', rentErr);
+            // Non-blocking: report still works without Rentometer data
+          }
           
           // Save lead capture data if provided
           if (input.leadEmail) {

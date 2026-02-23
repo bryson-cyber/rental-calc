@@ -2296,6 +2296,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               address={property.address}
               bedrooms={property.bedrooms}
               monthlyRent={rental_arbitrage?.monthlyRent}
+              preloadedData={(data as any)?.rentometer_data}
             />
           </Suspense>
         </section>

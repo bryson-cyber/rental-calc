@@ -12365,3 +12365,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add getReportById admin endpoint for fetching full report data by ID
 - [x] Add hasFullData flag to admin getReports query
 - [x] Write vitest tests for admin getReportById, Rentometer input validation, OAuth state encoding
+
+## Pre-fetch Rentometer Data During Report Generation (Feb 23, 2026)
+- [x] Add Rentometer data fetch to report generation pipeline (rental.ts and advanced.ts)
+- [x] Store rentometer_data in fullAnalysisData JSON
+- [x] Pass preloadedData to RentometerSection from Home.tsx, SharedReportPage, AdminViewReport
+- [x] Verify RentometerSection uses preloaded data when available (skips on-demand fetch)
+- [x] Write tests for pre-fetch integration
