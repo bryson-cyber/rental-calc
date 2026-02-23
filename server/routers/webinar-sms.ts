@@ -191,8 +191,20 @@ function normalizePhone(phone: string): string {
 
 function renderMessage(template: string, vars: Record<string, string>): string {
   let result = template;
+  // Support both {{var}} and %VAR% formats
   for (const [key, value] of Object.entries(vars)) {
+    // Replace {{key}} format
     result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+  }
+  // Also replace %FIRST_NAME%, %FULL_NAME%, %EMAIL% format (used by AI composer and templates)
+  if (vars.name) {
+    result = result.replace(/%FIRST_NAME%/g, vars.name);
+  }
+  if (vars.fullname) {
+    result = result.replace(/%FULL_NAME%/g, vars.fullname);
+  }
+  if (vars.email) {
+    result = result.replace(/%EMAIL%/g, vars.email);
   }
   return result;
 }
@@ -761,12 +773,23 @@ export const webinarSmsRouter = router({
     .input(z.object({
       phone: z.string().min(7),
       message: z.string().min(1).max(1600),
+      testName: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       console.log(`[WebinarSMS] Test SMS requested to: ${input.phone}, message length: ${input.message.length}`);
+      // Render personalization variables with test data
+      const testFirstName = input.testName || ctx.user?.name?.split(" ")[0] || "Friend";
+      const testFullName = input.testName || ctx.user?.name || "Test User";
+      const testEmail = ctx.user?.email || "test@example.com";
+      const personalizedMessage = renderMessage(input.message, {
+        name: testFirstName,
+        fullname: testFullName,
+        email: testEmail,
+      });
+      console.log(`[WebinarSMS] Personalized test message: ${personalizedMessage.substring(0, 100)}...`);
       const normalized = normalizePhone(input.phone);
       console.log(`[WebinarSMS] Normalized phone: ${normalized}`);
-      const result = await sendSms(normalized, input.message);
+      const result = await sendSms(normalized, personalizedMessage);
       console.log(`[WebinarSMS] Test SMS result:`, JSON.stringify(result));
       return result;
     }),

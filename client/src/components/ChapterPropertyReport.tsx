@@ -1141,6 +1141,10 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                 estimatedADR={revenue_estimate.nightly}
                 estimatedOccupancy={revenue_estimate.occupancy}
                 estimatedMonthlyRevenue={revenue_estimate.monthly}
+                conservativeRevenue={conservativeRevenue}
+                realisticRevenue={realisticRevenue}
+                optimisticRevenue={optimisticRevenue}
+                annualExpenses={annualExpenses}
               />
             </div>
 

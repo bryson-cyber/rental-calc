@@ -2,16 +2,23 @@
  * BreakEvenCalculator Component
  * 
  * Comprehensive break-even analysis for rental arbitrage.
- * Shows break-even occupancy, ADR, cushion indicators, and scenario analysis.
+ * Shows break-even occupancy, ADR, cushion indicators, and 3-level scenario analysis
+ * matching the Conservative/Realistic/Optimistic profit tiers.
  */
 import { useState, useMemo } from 'react';
-import { Calculator, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info, DollarSign } from 'lucide-react';
+import { Calculator, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info, DollarSign, Clock, Target } from 'lucide-react';
 
 interface BreakEvenCalculatorProps {
   monthlyRent: number;
   estimatedADR: number;
   estimatedOccupancy: number; // as decimal (e.g., 0.65 for 65%)
   estimatedMonthlyRevenue: number;
+  // 3-level revenue scenarios (annual)
+  conservativeRevenue?: number;
+  realisticRevenue?: number;
+  optimisticRevenue?: number;
+  // Annual expenses (rent + utilities + supplies etc.)
+  annualExpenses?: number;
 }
 
 // Simple tooltip component
@@ -31,6 +38,10 @@ export default function BreakEvenCalculator({
   estimatedADR,
   estimatedOccupancy,
   estimatedMonthlyRevenue,
+  conservativeRevenue,
+  realisticRevenue,
+  optimisticRevenue,
+  annualExpenses,
 }: BreakEvenCalculatorProps) {
   const [startupCosts, setStartupCosts] = useState(5000);
   
@@ -40,37 +51,46 @@ export default function BreakEvenCalculator({
     const daysInMonth = 30;
     
     // Break-even occupancy: What occupancy do you need to cover rent?
-    // Revenue = ADR * Occupancy * Days
-    // Rent = ADR * BreakEvenOccupancy * Days
-    // BreakEvenOccupancy = Rent / (ADR * Days)
     const breakEvenOccupancy = monthlyRent / (estimatedADR * daysInMonth);
     
     // Break-even ADR: What nightly rate do you need to cover rent?
-    // Rent = BreakEvenADR * Occupancy * Days
-    // BreakEvenADR = Rent / (Occupancy * Days)
     const breakEvenADR = monthlyRent / (estimatedOccupancy * daysInMonth);
     
     // Cushion: How much room do you have before losing money?
     const occupancyCushion = estimatedOccupancy - breakEvenOccupancy;
     const adrCushion = estimatedADR - breakEvenADR;
     
-    // Monthly profit
-    const monthlyProfit = estimatedMonthlyRevenue - monthlyRent;
+    // Use the 3-level revenue scenarios if provided, otherwise fall back to estimate-based
+    const totalAnnualExpenses = annualExpenses || (monthlyRent * 12);
+    const monthlyExpenses = totalAnnualExpenses / 12;
     
-    // Months to recover startup costs
-    const monthsToBreakEven = monthlyProfit > 0 ? startupCosts / monthlyProfit : Infinity;
+    // 3-level monthly profits
+    const conservativeMonthlyProfit = conservativeRevenue 
+      ? (conservativeRevenue / 12) - monthlyExpenses
+      : estimatedMonthlyRevenue * 0.7 - monthlyRent; // fallback: -30% bookings
     
-    // Scenario analysis
-    const worstCaseOccupancy = estimatedOccupancy * 0.7; // 30% drop
-    const worstCaseRevenue = estimatedADR * worstCaseOccupancy * daysInMonth;
-    const worstCaseProfit = worstCaseRevenue - monthlyRent;
+    const realisticMonthlyProfit = realisticRevenue
+      ? (realisticRevenue / 12) - monthlyExpenses
+      : estimatedMonthlyRevenue - monthlyRent;
     
-    const bestCaseOccupancy = Math.min(estimatedOccupancy * 1.2, 0.95); // 20% increase, capped at 95%
-    const bestCaseRevenue = estimatedADR * bestCaseOccupancy * daysInMonth;
-    const bestCaseProfit = bestCaseRevenue - monthlyRent;
+    const optimisticMonthlyProfit = optimisticRevenue
+      ? (optimisticRevenue / 12) - monthlyExpenses
+      : Math.min(estimatedMonthlyRevenue * 1.2, estimatedADR * 0.95 * daysInMonth) - monthlyRent; // fallback: +20% capped at 95%
+    
+    // 3-level break-even times
+    const conservativeMonthsToBreakEven = conservativeMonthlyProfit > 0 
+      ? startupCosts / conservativeMonthlyProfit : Infinity;
+    const realisticMonthsToBreakEven = realisticMonthlyProfit > 0 
+      ? startupCosts / realisticMonthlyProfit : Infinity;
+    const optimisticMonthsToBreakEven = optimisticMonthlyProfit > 0 
+      ? startupCosts / optimisticMonthlyProfit : Infinity;
+    
+    // 3-level annual profits for display
+    const conservativeAnnualProfit = conservativeMonthlyProfit * 12;
+    const realisticAnnualProfit = realisticMonthlyProfit * 12;
+    const optimisticAnnualProfit = optimisticMonthlyProfit * 12;
     
     // Investment safety score (0-100)
-    // Based on: occupancy cushion, profit margin, break-even speed
     let safetyScore = 0;
     
     // Occupancy cushion (0-30 points)
@@ -79,33 +99,38 @@ export default function BreakEvenCalculator({
     else if (occupancyCushion > 0.1) safetyScore += 15;
     else if (occupancyCushion > 0) safetyScore += 5;
     
-    // Profit margin (0-40 points)
-    const profitMargin = monthlyProfit / estimatedMonthlyRevenue;
+    // Profit margin based on realistic scenario (0-40 points)
+    const profitMargin = realisticMonthlyProfit / (realisticRevenue ? realisticRevenue / 12 : estimatedMonthlyRevenue);
     if (profitMargin > 0.4) safetyScore += 40;
     else if (profitMargin > 0.3) safetyScore += 30;
     else if (profitMargin > 0.2) safetyScore += 20;
     else if (profitMargin > 0.1) safetyScore += 10;
     else if (profitMargin > 0) safetyScore += 5;
     
-    // Break-even speed (0-30 points)
-    if (monthsToBreakEven <= 3) safetyScore += 30;
-    else if (monthsToBreakEven <= 6) safetyScore += 25;
-    else if (monthsToBreakEven <= 9) safetyScore += 15;
-    else if (monthsToBreakEven <= 12) safetyScore += 10;
-    else if (monthsToBreakEven < Infinity) safetyScore += 5;
+    // Break-even speed based on realistic (0-30 points)
+    if (realisticMonthsToBreakEven <= 3) safetyScore += 30;
+    else if (realisticMonthsToBreakEven <= 6) safetyScore += 25;
+    else if (realisticMonthsToBreakEven <= 9) safetyScore += 15;
+    else if (realisticMonthsToBreakEven <= 12) safetyScore += 10;
+    else if (realisticMonthsToBreakEven < Infinity) safetyScore += 5;
     
     return {
       breakEvenOccupancy,
       breakEvenADR,
       occupancyCushion,
       adrCushion,
-      monthlyProfit,
-      monthsToBreakEven,
-      worstCaseProfit,
-      bestCaseProfit,
+      conservativeMonthlyProfit,
+      realisticMonthlyProfit,
+      optimisticMonthlyProfit,
+      conservativeAnnualProfit,
+      realisticAnnualProfit,
+      optimisticAnnualProfit,
+      conservativeMonthsToBreakEven,
+      realisticMonthsToBreakEven,
+      optimisticMonthsToBreakEven,
       safetyScore,
     };
-  }, [monthlyRent, estimatedADR, estimatedOccupancy, estimatedMonthlyRevenue, startupCosts]);
+  }, [monthlyRent, estimatedADR, estimatedOccupancy, estimatedMonthlyRevenue, startupCosts, conservativeRevenue, realisticRevenue, optimisticRevenue, annualExpenses]);
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -118,6 +143,16 @@ export default function BreakEvenCalculator({
   
   const formatPercent = (value: number) => {
     return `${Math.round(value * 100)}%`;
+  };
+  
+  const formatMonths = (months: number) => {
+    if (months === Infinity) return '—';
+    if (months < 1) return '< 1 mo';
+    if (months < 12) return `${months.toFixed(1)} mo`;
+    const years = Math.floor(months / 12);
+    const remainingMonths = Math.round(months % 12);
+    if (remainingMonths === 0) return `${years}y`;
+    return `${years}y ${remainingMonths}mo`;
   };
   
   // Safety score color
@@ -206,12 +241,13 @@ export default function BreakEvenCalculator({
         </div>
       </div>
 
-      {/* Startup Cost Recovery */}
+      {/* Startup Cost Recovery — 3 Levels */}
       <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1">
+            <Clock className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
             <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Startup Cost Recovery</span>
-            <Tooltip text="How long until you earn back your initial investment (furniture, deposits, supplies). Adjust the slider to match your expected startup costs.">
+            <Tooltip text="How long until you earn back your initial investment (furniture, deposits, supplies) at each profit level. Adjust the slider to match your expected startup costs.">
               <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
             </Tooltip>
           </div>
@@ -230,72 +266,147 @@ export default function BreakEvenCalculator({
           className="w-full h-2 bg-[oklch(0.90_0.01_265)] rounded-lg appearance-none cursor-pointer accent-[oklch(0.55_0.14_75)]"
         />
         
-        <div className="flex justify-between text-xs text-[oklch(0.50_0_0)] mt-1">
+        <div className="flex justify-between text-xs text-[oklch(0.50_0_0)] mt-1 mb-5">
           <span>$2,000</span>
           <span>$20,000</span>
         </div>
         
-        <div className="mt-4 text-center">
-          {calculations.monthsToBreakEven < Infinity ? (
-            <div>
-              <span className="text-3xl font-bold text-[oklch(0.55_0.14_75)]">
-                {calculations.monthsToBreakEven.toFixed(1)}
-              </span>
-              <span className="text-lg text-[oklch(0.45_0_0)] ml-2">months to recover</span>
+        {/* 3-Level Break-Even Grid */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* Conservative */}
+          <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0.01_265)] text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-3">
+              <TrendingDown className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-medium text-[oklch(0.45_0_0)]">Conservative</span>
             </div>
-          ) : (
-            <div className="text-red-600">
-              <AlertTriangle className="w-5 h-5 inline mr-2" />
-              Not profitable - cannot recover costs
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-1">Average performer</div>
+            <div className={`text-sm font-semibold mb-2 ${calculations.conservativeMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.conservativeMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.conservativeMonthlyProfit)}/mo
             </div>
-          )}
+            <div className="border-t border-[oklch(0.92_0.01_265)] pt-2">
+              {calculations.conservativeMonthsToBreakEven < Infinity ? (
+                <>
+                  <div className="text-xl font-bold text-[oklch(0.35_0_0)]">
+                    {formatMonths(calculations.conservativeMonthsToBreakEven)}
+                  </div>
+                  <div className="text-[10px] text-[oklch(0.55_0_0)]">to recover</div>
+                </>
+              ) : (
+                <div className="text-sm text-red-500 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+                  Not profitable
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Realistic — highlighted */}
+          <div className="bg-[oklch(0.55_0.14_75)]/5 rounded-xl p-4 border-2 border-[oklch(0.55_0.14_75)]/30 text-center relative">
+            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[oklch(0.55_0.14_75)] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Target
+            </div>
+            <div className="flex items-center justify-center gap-1.5 mb-3">
+              <Target className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+              <span className="text-xs font-medium text-[oklch(0.35_0_0)]">Realistic</span>
+            </div>
+            <div className="text-xs text-[oklch(0.50_0_0)] mb-1">Our target</div>
+            <div className={`text-sm font-bold mb-2 ${calculations.realisticMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.realisticMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.realisticMonthlyProfit)}/mo
+            </div>
+            <div className="border-t border-[oklch(0.55_0.14_75)]/20 pt-2">
+              {calculations.realisticMonthsToBreakEven < Infinity ? (
+                <>
+                  <div className="text-2xl font-bold text-[oklch(0.55_0.14_75)]">
+                    {formatMonths(calculations.realisticMonthsToBreakEven)}
+                  </div>
+                  <div className="text-[10px] text-[oklch(0.45_0_0)] font-medium">to recover</div>
+                </>
+              ) : (
+                <div className="text-sm text-red-500 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+                  Not profitable
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Optimistic */}
+          <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0.01_265)] text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-3">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-xs font-medium text-[oklch(0.45_0_0)]">Optimistic</span>
+            </div>
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-1">Superstar performer</div>
+            <div className={`text-sm font-semibold mb-2 ${calculations.optimisticMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.optimisticMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticMonthlyProfit)}/mo
+            </div>
+            <div className="border-t border-[oklch(0.92_0.01_265)] pt-2">
+              {calculations.optimisticMonthsToBreakEven < Infinity ? (
+                <>
+                  <div className="text-xl font-bold text-green-600">
+                    {formatMonths(calculations.optimisticMonthsToBreakEven)}
+                  </div>
+                  <div className="text-[10px] text-[oklch(0.55_0_0)]">to recover</div>
+                </>
+              ) : (
+                <div className="text-sm text-red-500 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+                  Not profitable
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Scenario Analysis */}
+      {/* Scenario Analysis — 3 Levels */}
       <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
         <div className="flex items-center gap-1 mb-4">
-          <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Scenario Analysis</span>
-          <Tooltip text="What happens if bookings are better or worse than expected? This shows your profit in different situations.">
+          <DollarSign className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+          <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Annual Profit by Level</span>
+          <Tooltip text="Your projected annual profit at each performance level, after all expenses. These match the 3 revenue tiers from the profitability analysis above.">
             <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
           </Tooltip>
         </div>
         
         <div className="grid grid-cols-3 gap-4 text-center">
-          {/* Worst Case */}
+          {/* Conservative */}
           <div>
             <div className="flex items-center justify-center gap-1 mb-2">
-              <TrendingDown className="w-4 h-4 text-red-500" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Worst Case</span>
+              <TrendingDown className="w-4 h-4 text-amber-500" />
+              <span className="text-xs text-[oklch(0.50_0_0)]">Conservative</span>
             </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">-30% bookings</div>
-            <div className={`text-lg font-semibold ${calculations.worstCaseProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.worstCaseProfit >= 0 ? '+' : ''}{formatCurrency(calculations.worstCaseProfit)}
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Average performer</div>
+            <div className={`text-lg font-semibold ${calculations.conservativeAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.conservativeAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.conservativeAnnualProfit)}
             </div>
+            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
           </div>
           
-          {/* Expected */}
+          {/* Realistic */}
           <div className="border-x border-[oklch(0.90_0.01_265)]">
             <div className="flex items-center justify-center gap-1 mb-2">
-              <DollarSign className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Expected</span>
+              <Target className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+              <span className="text-xs text-[oklch(0.50_0_0)]">Realistic</span>
             </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Current estimate</div>
-            <div className={`text-lg font-semibold ${calculations.monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.monthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.monthlyProfit)}
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Our target</div>
+            <div className={`text-lg font-bold ${calculations.realisticAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.realisticAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.realisticAnnualProfit)}
             </div>
+            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
           </div>
           
-          {/* Best Case */}
+          {/* Optimistic */}
           <div>
             <div className="flex items-center justify-center gap-1 mb-2">
               <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Best Case</span>
+              <span className="text-xs text-[oklch(0.50_0_0)]">Optimistic</span>
             </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">+20% bookings</div>
-            <div className={`text-lg font-semibold ${calculations.bestCaseProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.bestCaseProfit >= 0 ? '+' : ''}{formatCurrency(calculations.bestCaseProfit)}
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Superstar</div>
+            <div className={`text-lg font-semibold ${calculations.optimisticAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.optimisticAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticAnnualProfit)}
             </div>
+            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
           </div>
         </div>
       </div>

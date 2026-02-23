@@ -12340,3 +12340,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Clean up 22 test/dummy templates from the database
 - [x] Add campaign progress polling (auto-refresh every 3s while sending)
 - [x] 9 new vitest tests passing for v2 API and resend logic
+
+## Bug Fix: SMS First Name Variable + Break-Even 3 Levels (Feb 23, 2026)
+- [x] Fix SMS first name personalization code — renderMessage now handles both {{name}} and %FIRST_NAME% formats
+- [x] Fix sendTestSms to also render personalization variables with test name
+- [x] Update break-even calculator to show 3-level recovery time (Conservative/Realistic/Optimistic)
+- [x] Pass conservativeRevenue, realisticRevenue, optimisticRevenue, annualExpenses to BreakEvenCalculator
+- [x] Each level shows monthly profit and time to recover startup costs
+- [x] Realistic level highlighted as "Target" with accent styling
+- [x] Annual Profit by Level section added below recovery time
+- [x] Safety score now based on realistic scenario metrics
