@@ -571,14 +571,15 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
   const [campaignName, setCampaignName] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [showTestDialog, setShowTestDialog] = useState(false);
   const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
   const templates = trpc.webinarSms.listTemplates.useQuery();
   const composeMessage = trpc.webinarSms.composeMessage.useMutation({
     onSuccess: (data) => {
       setMessage(data.message);
       setAiPrompt("");
-      toast.success("AI message composed! Review and edit before sending.");
+      toast.success("AI message composed! Review and edit below before sending.");
     },
     onError: (err) => toast.error(`AI error: ${err.message}`),
   });
@@ -590,6 +591,13 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
       setShowConfirm(false);
     },
     onError: (err) => toast.error(err.message),
+  });
+  const sendTestSms = trpc.webinarSms.sendTestSms.useMutation({
+    onSuccess: () => {
+      toast.success("Test SMS sent! Check your phone.");
+      setShowTestDialog(false);
+    },
+    onError: (err) => toast.error(`Test failed: ${err.message}`),
   });
 
   const recipientCount = audience === "attended"
@@ -611,6 +619,14 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
         attended: audience === "attended" ? 1 : audience === "not_attended" ? 0 : undefined,
       },
     });
+  };
+
+  // Personalize message for test preview (replace variables with sample data)
+  const getTestPreview = (msg: string) => {
+    return msg
+      .replace(/%FIRST_NAME%/g, "Bryson")
+      .replace(/%FULL_NAME%/g, "Bryson Blocker")
+      .replace(/%EMAIL%/g, "bryson@stayly.com");
   };
 
   return (
@@ -687,78 +703,132 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
           onChange={(e) => setCampaignName(e.target.value)}
         />
 
-        {/* AI Message Composer */}
-        <div className="border rounded-lg p-3 bg-gradient-to-r from-amber-50/50 to-purple-50/50 space-y-3">
-          <div className="flex items-center gap-2">
+        {/* AI Message Composer — expanded */}
+        <div className="border rounded-xl p-4 bg-gradient-to-r from-amber-50/50 to-purple-50/50 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-medium">AI Message Composer</span>
+            <span className="text-sm font-semibold">AI Message Composer</span>
           </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Describe what you want to say... e.g., 'remind them about the replay link'"
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && aiPrompt.trim()) {
-                  composeMessage.mutate({
-                    prompt: aiPrompt,
-                    audience,
-                    webinarId: webinarId || undefined,
-                  });
-                }
-              }}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!aiPrompt.trim() || composeMessage.isPending}
-              onClick={() => {
-                composeMessage.mutate({
-                  prompt: aiPrompt,
-                  audience,
-                  webinarId: webinarId || undefined,
-                });
-              }}
-            >
-              {composeMessage.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">Just describe what you want to say and AI will craft the SMS with proper personalization variables.</p>
+          <p className="text-xs text-muted-foreground">Describe what you want to say in plain English. The AI will craft a professional SMS using your webinar content and add personalization variables automatically.</p>
+          <Textarea
+            placeholder="e.g., 'Tell the no-shows they missed an amazing class about rental arbitrage and that the replay is available for 48 hours. Create urgency and mention what they'll learn about getting their first Airbnb without owning property.'"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            rows={4}
+            className="bg-white/80 resize-y"
+          />
+          <Button
+            size="sm"
+            disabled={!aiPrompt.trim() || composeMessage.isPending}
+            onClick={() => {
+              composeMessage.mutate({
+                prompt: aiPrompt,
+                audience,
+                webinarId: webinarId || undefined,
+              });
+            }}
+            className="w-full"
+          >
+            {composeMessage.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Composing...</>
+            ) : (
+              <><Sparkles className="w-4 h-4 mr-2" /> Compose with AI</>
+            )}
+          </Button>
         </div>
 
-        {/* Message composer */}
+        {/* Message editor — full multi-line textarea */}
         <div className="space-y-2">
+          <label className="text-sm font-medium">Message</label>
           <Textarea
-            placeholder="Type your message... Use %FIRST_NAME% for personalization"
+            placeholder="Type your message here or use AI to compose it above...\n\nUse %FIRST_NAME% for personalization.\n\nExample:\nHey %FIRST_NAME%! You missed an incredible class last night. We covered how to get your first Airbnb without owning property. The replay is live for 48 hours — don't miss it again!"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-            maxLength={320}
+            rows={8}
+            className="resize-y text-sm leading-relaxed"
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Variables: %FIRST_NAME%, %FULL_NAME%, %EMAIL%</span>
-            <span>{message.length}/320</span>
+            <span>Variables: <code className="bg-muted px-1 rounded">%FIRST_NAME%</code> <code className="bg-muted px-1 rounded">%FULL_NAME%</code> <code className="bg-muted px-1 rounded">%EMAIL%</code></span>
+            <span className={message.length > 300 ? "text-amber-600 font-medium" : ""}>{message.length} chars</span>
           </div>
         </div>
 
-        {/* Send button */}
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={!message.trim() || !campaignName.trim() || recipientCount === 0 || sendCampaign.isPending}
-          onClick={() => setShowConfirm(true)}
-        >
-          {sendCampaign.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          ) : (
-            <Send className="w-4 h-4 mr-2" />
-          )}
-          Send to {recipientCount} {audience === "attended" ? "Attendees" : audience === "not_attended" ? "No-Shows" : "Registrants"}
-        </Button>
+        {/* Action buttons row */}
+        <div className="flex gap-3">
+          {/* Test SMS button */}
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={!message.trim()}
+            onClick={() => setShowTestDialog(true)}
+            className="flex-shrink-0"
+          >
+            <Phone className="w-4 h-4 mr-2" />
+            Send Test
+          </Button>
+
+          {/* Send to all button */}
+          <Button
+            className="flex-1"
+            size="lg"
+            disabled={!message.trim() || !campaignName.trim() || recipientCount === 0 || sendCampaign.isPending}
+            onClick={() => setShowConfirm(true)}
+          >
+            {sendCampaign.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
+            Send to {recipientCount} {audience === "attended" ? "Attendees" : audience === "not_attended" ? "No-Shows" : "Registrants"}
+          </Button>
+        </div>
+
+        {/* Test SMS dialog */}
+        <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Test SMS</DialogTitle>
+              <DialogDescription>
+                Send this message to your phone first to see how it looks before sending to everyone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Your Phone Number</label>
+                <Input
+                  placeholder="+1 (555) 123-4567"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Preview (with sample data)</label>
+                <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed">
+                  {getTestPreview(message) || <span className="text-muted-foreground italic">No message to preview</span>}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowTestDialog(false)}>Cancel</Button>
+              <Button
+                onClick={() => {
+                  if (!testPhone.trim()) {
+                    toast.error("Enter your phone number");
+                    return;
+                  }
+                  sendTestSms.mutate({
+                    phone: testPhone,
+                    message: getTestPreview(message),
+                  });
+                }}
+                disabled={sendTestSms.isPending || !testPhone.trim()}
+              >
+                {sendTestSms.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
+                Send Test
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Confirmation dialog */}
         <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
@@ -769,11 +839,24 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
                 You're about to send an SMS to <strong>{recipientCount}</strong> {audience === "attended" ? "attendees" : audience === "not_attended" ? "no-shows" : "registrants"}.
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap">{message}</div>
-            <DialogFooter>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Message Preview</label>
+              <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">{message}</div>
+            </div>
+            <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setShowTestDialog(true);
+                }}
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                Send Test First
+              </Button>
               <Button onClick={handleSend} disabled={sendCampaign.isPending}>
-                {sendCampaign.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {sendCampaign.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 Send Now
               </Button>
             </DialogFooter>

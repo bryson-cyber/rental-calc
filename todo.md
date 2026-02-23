@@ -12319,3 +12319,14 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ### Tests
 - [x] 15 vitest tests passing (transcript storage, email composition, personalization, HubSpot send)
+
+## Bug Fix: Email No-Shows Send Error + UI Improvements (Feb 23, 2026)
+- [ ] Fix HubSpot email send timeout (server returns HTML 502 instead of JSON when sending 627+ emails)
+- [ ] Make email send async/batched with progress tracking to prevent timeout
+- [ ] Fix AI email composer textarea — should be multi-paragraph editable area, not a one-liner
+- [ ] Add "Send Test Email" button to preview email to yourself before sending to all no-shows
+
+## Fix: SMS AI Composer UI + Test SMS Button (Feb 23, 2026)
+- [x] Make AI-composed SMS message a full multi-paragraph editable textarea (not a one-liner)
+- [x] Add "Send Test SMS" button to preview message to yourself before sending to all
+- [x] Skip email integration for now — focus on SMS only
