@@ -12282,3 +12282,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update frontend dialog to show all 4 fields and pre-fill saved values
 - [x] Add AI message composer to Quick Send tab (type naturally, AI adds personalization variables)
 - [x] Add server-side LLM endpoint for AI message rewriting
+## Bug Fix: Webinar ID 370 Shows No Registrants/Attendees
+- [x] Investigate why import shows 0 registrants for webinar with 200+ people
+- [x] ROOT CAUSE 1: API returns paginated object {data: [...], current_page, last_page} but code expected flat array
+- [x] ROOT CAUSE 2: API returns phone_number field but code looked for phone field
+- [x] ROOT CAUSE 3: API returns attended_live as string "Yes"/"No" but code compared to integer 1/0
+- [x] ROOT CAUSE 4: importFromWebinarJam didn't load per-webinar API key from credentials table
+- [x] Fix fetchWebinarJamRegistrants pagination handling
+- [x] Fix phone field mapping in importFromWebinarJam and runWebinarImport
+- [x] Fix attended_live string comparison in all import/refresh functions
+- [x] Add per-webinar API key loading to importFromWebinarJam
+- [x] Verify fix with Webinar ID 370: 829 registrants imported, 202 attended, 627 no-shows

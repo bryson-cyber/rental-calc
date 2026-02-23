@@ -111,8 +111,13 @@ async function fetchWebinarJamRegistrants(
 
   const data = await res.json();
   if (data.status === "success") {
-    const registrants = data.registrants || [];
-    return { registrants, hasMore: registrants.length >= 50 };
+    // WebinarJam API returns a paginated object: { current_page, data: [...], per_page, last_page, total }
+    const paginatedResult = data.registrants || {};
+    const registrants = Array.isArray(paginatedResult) ? paginatedResult : (paginatedResult.data || []);
+    const currentPage = paginatedResult.current_page || page;
+    const lastPage = paginatedResult.last_page || 1;
+    const hasMore = currentPage < lastPage;
+    return { registrants, hasMore };
   }
   throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: data.message || "Failed to fetch registrants" });
 }
@@ -338,13 +343,17 @@ export const webinarSmsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      // Load per-webinar API key from credentials table
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+
       let allRegistrants: any[] = [];
       let page = 1;
       let hasMore = true;
 
       // Paginate through all registrants
       while (hasMore && page <= 100) {
-        const result = await fetchWebinarJamRegistrants(input.webinarId, input.scheduleId, page);
+        const result = await fetchWebinarJamRegistrants(input.webinarId, input.scheduleId, page, perWebinarApiKey);
         allRegistrants = allRegistrants.concat(result.registrants);
         hasMore = result.hasMore;
         page++;
@@ -362,25 +371,34 @@ export const webinarSmsRouter = router({
 
       const newRegistrants = allRegistrants
         .filter(r => {
-          const phone = normalizePhone(r.phone || r.phone_country_code + r.phone || "");
+          // API returns phone_number (not phone) and phone_country_code
+          const rawPhone = r.phone_number || r.phone || "";
+          const fullPhone = (r.phone_country_code || "") + rawPhone;
+          const phone = normalizePhone(fullPhone);
           return phone.length >= 7 && !existingPhones.has(phone);
         })
-        .map(r => ({
-          webinarId: input.webinarId,
-          name: [r.first_name, r.last_name].filter(Boolean).join(" ") || "Unknown",
-          email: r.email || null,
-          phone: normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || "")),
-          source: "webinarjam" as const,
-          webinarName: input.webinarName,
-          attended: r.attended_live === 1 ? 1 : 0,
-          metadata: {
-            signup_date: r.signup_date,
-            attended_live: r.attended_live,
-            attended_replay: r.attended_replay,
-            time_live: r.time_live,
-            utm_source: r.utm_source,
-          },
-        }));
+        .map(r => {
+          const rawPhone = r.phone_number || r.phone || "";
+          const fullPhone = (r.phone_country_code || "") + rawPhone;
+          // attended_live is a string "Yes"/"No" (not integer 1/0)
+          const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+          return {
+            webinarId: input.webinarId,
+            name: [r.first_name, r.last_name].filter(Boolean).join(" ") || "Unknown",
+            email: r.email || null,
+            phone: normalizePhone(fullPhone),
+            source: "webinarjam" as const,
+            webinarName: input.webinarName,
+            attended: attendedLive ? 1 : 0,
+            metadata: {
+              signup_date: r.signup_date,
+              attended_live: r.attended_live,
+              attended_replay: r.attended_replay,
+              time_live: r.time_live,
+              utm_source: r.utm_source,
+            },
+          };
+        });
 
       // Insert in batches
       let imported = 0;
@@ -909,9 +927,14 @@ export const webinarSmsRouter = router({
       // Build phone -> attendance map
       const attendanceMap = new Map<string, number>();
       for (const r of allRegistrants) {
-        const phone = normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || ""));
+        // API returns phone_number (not phone) and phone_country_code
+        const rawPhone = r.phone_number || r.phone || "";
+        const fullPhone = (r.phone_country_code || "") + rawPhone;
+        const phone = normalizePhone(fullPhone);
         if (phone.length >= 7) {
-          attendanceMap.set(phone, r.attended_live === 1 ? 1 : 0);
+          // attended_live is a string "Yes"/"No" (not integer 1/0)
+          const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+          attendanceMap.set(phone, attendedLive ? 1 : 0);
         }
       }
 
@@ -1351,25 +1374,34 @@ async function runWebinarImport(
 
   const newRegistrants = allRegistrants
     .filter(r => {
-      const phone = normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || ""));
+      // API returns phone_number (not phone) and phone_country_code
+      const rawPhone = r.phone_number || r.phone || "";
+      const fullPhone = (r.phone_country_code || "") + rawPhone;
+      const phone = normalizePhone(fullPhone);
       return phone.length >= 7 && !existingPhones.has(phone);
     })
-    .map(r => ({
-      webinarId,
-      name: [r.first_name, r.last_name].filter(Boolean).join(" ") || "Unknown",
-      email: r.email || null,
-      phone: normalizePhone(r.phone || (r.phone_country_code || "") + (r.phone || "")),
-      source: "webinarjam" as const,
-      webinarName,
-      attended: r.attended_live === 1 ? 1 : 0,
-      metadata: {
-        signup_date: r.signup_date,
-        attended_live: r.attended_live,
-        attended_replay: r.attended_replay,
-        time_live: r.time_live,
-        utm_source: r.utm_source,
-      },
-    }));
+    .map(r => {
+      const rawPhone = r.phone_number || r.phone || "";
+      const fullPhone = (r.phone_country_code || "") + rawPhone;
+      // attended_live is a string "Yes"/"No" (not integer 1/0)
+      const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+      return {
+        webinarId,
+        name: [r.first_name, r.last_name].filter(Boolean).join(" ") || "Unknown",
+        email: r.email || null,
+        phone: normalizePhone(fullPhone),
+        source: "webinarjam" as const,
+        webinarName,
+        attended: attendedLive ? 1 : 0,
+        metadata: {
+          signup_date: r.signup_date,
+          attended_live: r.attended_live,
+          attended_replay: r.attended_replay,
+          time_live: r.time_live,
+          utm_source: r.utm_source,
+        },
+      };
+    });
 
   let imported = 0;
   for (let i = 0; i < newRegistrants.length; i += 500) {

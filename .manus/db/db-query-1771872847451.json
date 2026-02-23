@@ -1,0 +1,58 @@
+{
+  "query": "SELECT * FROM webinar_sms_settings;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM webinar_sms_settings;",
+  "rows": [
+    {
+      "id": "1",
+      "settingKey": "selected_webinar_id",
+      "settingValue": "370",
+      "description": "Currently selected WebinarJam webinar ID",
+      "createdAt": "2026-02-23 03:31:52",
+      "updatedAt": "2026-02-23 18:49:06"
+    },
+    {
+      "id": "2",
+      "settingKey": "selected_webinar_name",
+      "settingValue": "Webby 2.22.26",
+      "description": "Currently selected webinar name",
+      "createdAt": "2026-02-23 03:31:52",
+      "updatedAt": "2026-02-23 18:49:06"
+    },
+    {
+      "id": "5",
+      "settingKey": "last_auto_import_at",
+      "settingValue": "2026-02-23T06:24:22.152Z",
+      "description": "Timestamp of last auto-import",
+      "createdAt": "2026-02-23 06:24:22",
+      "updatedAt": "2026-02-23 06:24:22"
+    },
+    {
+      "id": "6",
+      "settingKey": "last_auto_import_result",
+      "settingValue": "Imported 0, skipped 1 (total 1) at 2026-02-23T06:24:22.152Z",
+      "description": "Result of last auto-import",
+      "createdAt": "2026-02-23 06:24:22",
+      "updatedAt": "2026-02-23 06:24:22"
+    },
+    {
+      "id": "30005",
+      "settingKey": "webinar_api_key",
+      "settingValue": "96d3cde3-8579-4464-9365-3904158ed9f3",
+      "description": "Per-webinar API key from WebinarJam Advanced Integration",
+      "createdAt": "2026-02-23 18:25:37",
+      "updatedAt": "2026-02-23 18:25:37"
+    },
+    {
+      "id": "30006",
+      "settingKey": "webinar_hash",
+      "settingValue": "076vwc5z",
+      "description": "Per-webinar hash from WebinarJam Advanced Integration",
+      "createdAt": "2026-02-23 18:25:37",
+      "updatedAt": "2026-02-23 18:25:37"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsettingKey\tsettingValue\tdescription\tcreatedAt\tupdatedAt\n1\tselected_webinar_id\t370\tCurrently selected WebinarJam webinar ID\t2026-02-23 03:31:52\t2026-02-23 18:49:06\n2\tselected_webinar_name\tWebby 2.22.26\tCurrently selected webinar name\t2026-02-23 03:31:52\t2026-02-23 18:49:06\n5\tlast_auto_import_at\t2026-02-23T06:24:22.152Z\tTimestamp of last auto-import\t2026-02-23 06:24:22\t2026-02-23 06:24:22\n6\tlast_auto_import_result\tImported 0, skipped 1 (total 1) at 2026-02-23T06:24:22.152Z\tResult of last auto-import\t2026-02-23 06:24:22\t2026-02-23 06:24:22\n30005\twebinar_api_key\t96d3cde3-8579-4464-9365-3904158ed9f3\tPer-webinar API key from WebinarJam Advanced Integration\t2026-02-23 18:25:37\t2026-02-23 18:25:37\n30006\twebinar_hash\t076vwc5z\tPer-webinar hash from WebinarJam Advanced Integration\t2026-02-23 18:25:37\t2026-02-23 18:25:37\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}
