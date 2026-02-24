@@ -12372,3 +12372,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Pass preloadedData to RentometerSection from Home.tsx, SharedReportPage, AdminViewReport
 - [x] Verify RentometerSection uses preloaded data when available (skips on-demand fetch)
 - [x] Write tests for pre-fetch integration
+
+## Feed Rentometer Data into Gemini AI Prompts (Feb 23, 2026)
+- [x] Add Rentometer data to Property AI Advisor Gemini prompt (rent summary, nearby comps, property rents)
+- [x] Add Rentometer data to Full Report Summary Gemini prompt (long-term rental market section)
+- [x] Update data flow to pass Rentometer data from report generation to advisor functions
+- [x] Pass rentometerData through shared-reports.ts summaryInput construction (all 3 locations)
+- [x] Write tests for Rentometer data in Gemini prompts (13 tests passing)
+- [ ] Market AI Advisor — skipped (no specific property address available at market level)

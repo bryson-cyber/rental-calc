@@ -22,7 +22,7 @@ import {
 } from "../report-generator";
 import { getAIAdvisorResponse, type ChatMessage } from "../ai-advisor";
 import { generateFullArbitrageAnalysis } from "../sop-reports";
-import { getRentSummary } from "../rentometer";
+import { getRentSummary, getComprehensiveRentometerData } from "../rentometer";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "../notification-service";
 import { canPerformAnalysis, recordAnalysisUsage } from "../usage-limits";
@@ -807,51 +807,70 @@ export const advancedRouter = router({
           
           console.log('[AI Advisor Max] Cache MISS - Generating maximum capacity property advice for:', input.property.address);
           
-          // Fetch Rentometer data for long-term rental market comparison
+          // Fetch comprehensive Rentometer data for long-term rental market comparison
           let rentometerData: MaxPropertyAdvisorInput['rentometerData'] = undefined;
           try {
-            console.log('[AI Advisor Max] Fetching Rentometer data for:', input.property.address);
-            const rentData = await getRentSummary({
+            console.log('[AI Advisor Max] Fetching comprehensive Rentometer data for:', input.property.address);
+            const comprehensiveData = await getComprehensiveRentometerData({
               address: input.property.address,
               bedrooms: input.property.bedrooms,
               buildingType: 'apartment', // Default to apartment for arbitrage
+              userRent: input.property.monthlyRent,
             });
             
-            rentometerData = {
-              median: rentData.median,
-              mean: rentData.mean,
-              percentile25: rentData.percentile_25,
-              percentile75: rentData.percentile_75,
-              min: rentData.min,
-              max: rentData.max,
-              samples: rentData.samples,
-              radiusMiles: rentData.radius_miles,
-            };
-            
-            // If user provided monthly rent, calculate comparison metrics
-            if (input.property.monthlyRent) {
-              const userRent = input.property.monthlyRent;
-              const rentAdvantage = rentData.median - userRent;
-              const rentAdvantagePercent = Math.round((rentAdvantage / rentData.median) * 100);
+            if (comprehensiveData.summary) {
+              const rentData = comprehensiveData.summary;
+              rentometerData = {
+                median: rentData.median,
+                mean: rentData.mean,
+                percentile25: rentData.percentile_25,
+                percentile75: rentData.percentile_75,
+                min: rentData.min,
+                max: rentData.max,
+                samples: rentData.samples,
+                radiusMiles: rentData.radius_miles,
+              };
               
-              let percentilePosition: string;
-              if (userRent <= rentData.percentile_25) {
-                percentilePosition = 'bottom 25% (excellent deal)';
-              } else if (userRent <= rentData.median) {
-                percentilePosition = 'below median (good deal)';
-              } else if (userRent <= rentData.percentile_75) {
-                percentilePosition = 'above median (fair)';
-              } else {
-                percentilePosition = 'top 25% (premium rent)';
+              // Add user rent comparison if available
+              if (comprehensiveData.analysis?.userRentComparison) {
+                const comp = comprehensiveData.analysis.userRentComparison;
+                rentometerData.userRent = comp.userRent;
+                rentometerData.rentAdvantage = comp.rentAdvantage;
+                rentometerData.rentAdvantagePercent = comp.rentAdvantagePercent;
+                rentometerData.percentilePosition = comp.percentilePosition;
               }
               
-              rentometerData.userRent = userRent;
-              rentometerData.rentAdvantage = rentAdvantage;
-              rentometerData.rentAdvantagePercent = rentAdvantagePercent;
-              rentometerData.percentilePosition = percentilePosition;
+              // Add nearby comps for the AI to reference
+              if (comprehensiveData.nearbyComps?.nearby_properties?.length) {
+                rentometerData.nearbyComps = comprehensiveData.nearbyComps.nearby_properties.map(p => ({
+                  address: p.address,
+                  distance: p.distance,
+                  price: p.price,
+                  bedrooms: p.bedrooms,
+                  baths: p.baths,
+                  propertyType: p.property_type,
+                  sqft: p.sqft,
+                  lastSeen: p.last_seen,
+                }));
+              }
+              
+              // Add property-level rent listings
+              if (comprehensiveData.propertyRents?.property_listings?.length) {
+                rentometerData.propertyRents = comprehensiveData.propertyRents.property_listings.map(l => ({
+                  bedrooms: l.bedrooms,
+                  baths: l.baths,
+                  price: l.price,
+                  sqft: l.sqft,
+                  lastSeen: l.last_seen,
+                }));
+              }
+              
+              console.log(`[AI Advisor Max] Comprehensive Rentometer data fetched: median=$${rentData.median}, samples=${rentData.samples}, nearbyComps=${comprehensiveData.nearbyComps?.count || 0}, propertyRents=${comprehensiveData.propertyRents?.count || 0}`);
             }
             
-            console.log('[AI Advisor Max] Rentometer data fetched: median=$' + rentData.median + ', samples=' + rentData.samples);
+            if (comprehensiveData.errors.length > 0) {
+              console.warn('[AI Advisor Max] Rentometer partial errors:', comprehensiveData.errors);
+            }
           } catch (rentError) {
             console.warn('[AI Advisor Max] Could not fetch Rentometer data:', rentError);
             // Continue without Rentometer data - it's optional

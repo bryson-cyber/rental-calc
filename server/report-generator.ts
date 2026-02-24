@@ -822,6 +822,25 @@ export interface MaxPropertyAdvisorInput {
     rentAdvantage?: number;
     rentAdvantagePercent?: number;
     percentilePosition?: string;
+    // Nearby comparable long-term rentals
+    nearbyComps?: Array<{
+      address: string;
+      distance: number; // miles
+      price: number;
+      bedrooms: number;
+      baths: string;
+      propertyType: string;
+      sqft: number;
+      lastSeen: string;
+    }>;
+    // Property-level rent listings at this address
+    propertyRents?: Array<{
+      bedrooms: number;
+      baths: string;
+      price: number;
+      sqft: number;
+      lastSeen: string;
+    }>;
   };
   
   // Supply Trend Data (from market historical active_listings)
@@ -1193,7 +1212,7 @@ ${sameBedroomComps.map((c, i) =>
 ${rentometerData ? `
 
 SECTION 7: LONG-TERM RENTAL MARKET COMPARISON (Rentometer Data)
-TRADITIONAL RENTAL MARKET
+TRADITIONAL RENTAL MARKET OVERVIEW
 Median Long-Term Rent: $${rentometerData.median.toLocaleString()}/month
 Mean Long-Term Rent: $${rentometerData.mean.toLocaleString()}/month
 25th Percentile: $${rentometerData.percentile25.toLocaleString()}/month
@@ -1204,12 +1223,28 @@ Sample Size: ${rentometerData.samples} comparable rentals within ${rentometerDat
 ${rentometerData.userRent ? `User's Proposed Rent: $${rentometerData.userRent.toLocaleString()}/month
 Rent Position: ${rentometerData.percentilePosition}
 Rent Advantage: ${rentometerData.rentAdvantage && rentometerData.rentAdvantage > 0 ? `$${rentometerData.rentAdvantage.toLocaleString()}/month below median (${rentometerData.rentAdvantagePercent}% savings)` : rentometerData.rentAdvantage && rentometerData.rentAdvantage < 0 ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/month above median (${Math.abs(rentometerData.rentAdvantagePercent || 0)}% premium)` : 'At market median'}` : ''}
+${rentometerData.nearbyComps && rentometerData.nearbyComps.length > 0 ? `
+NEARBY COMPARABLE LONG-TERM RENTALS (${rentometerData.nearbyComps.length} properties):
+${rentometerData.nearbyComps.slice(0, 15).map((c, i) => 
+  `${i+1}. ${c.address} | $${c.price.toLocaleString()}/mo | ${c.bedrooms}BR/${c.baths}BA | ${c.propertyType} | ${c.sqft > 0 ? c.sqft + ' sqft' : 'N/A'} | ${c.distance.toFixed(1)} mi away | Last seen: ${c.lastSeen}`
+).join('\n')}
+Avg Nearby Rent: $${Math.round(rentometerData.nearbyComps.reduce((s, c) => s + c.price, 0) / rentometerData.nearbyComps.length).toLocaleString()}/mo
+Closest Comp: $${rentometerData.nearbyComps[0].price.toLocaleString()}/mo (${rentometerData.nearbyComps[0].distance.toFixed(2)} mi)` : ''}
+${rentometerData.propertyRents && rentometerData.propertyRents.length > 0 ? `
+PROPERTY-LEVEL RENT HISTORY (${rentometerData.propertyRents.length} listings at this address):
+${rentometerData.propertyRents.map((r, i) => 
+  `${i+1}. ${r.bedrooms}BR/${r.baths}BA | $${r.price.toLocaleString()}/mo | ${r.sqft > 0 ? r.sqft + ' sqft ($' + (r.price / r.sqft * 1000).toFixed(0) + '/1000sqft)' : 'N/A'} | Last seen: ${r.lastSeen}`
+).join('\n')}
+Avg Listed Rent at Property: $${Math.round(rentometerData.propertyRents.reduce((s, r) => s + r.price, 0) / rentometerData.propertyRents.length).toLocaleString()}/mo` : ''}
 
 ARBITRAGE OPPORTUNITY ANALYSIS
-- Compare the STR revenue potential to traditional rental market rates
-- Is the rent being asked reasonable for this market?
+- Compare the STR revenue potential ($${revenue.projected.toLocaleString()}/yr = $${Math.round(revenue.projected / 12).toLocaleString()}/mo) to traditional rental market rates ($${rentometerData.median.toLocaleString()}/mo median)
+- STR Premium: ${Math.round(((revenue.projected / 12) / rentometerData.median - 1) * 100)}% above traditional rent
+- Is the rent being asked reasonable for this market? Reference the nearby comps.
 - What's the spread between STR income and traditional rent?
 - How does this affect the arbitrage opportunity?
+${rentometerData.nearbyComps && rentometerData.nearbyComps.length > 0 ? '- Use the nearby long-term rental comps to validate whether the proposed rent is competitive' : ''}
+${rentometerData.propertyRents && rentometerData.propertyRents.length > 0 ? '- Reference the property-level rent history to show what this specific building has rented for' : ''}
 
 ` : ''}
 
@@ -1971,10 +2006,37 @@ export interface FullReportSummaryInput {
     occupancy: number;
     adr: number;
   }>;
+  // Rentometer long-term rental market data
+  rentometerData?: {
+    summary?: {
+      median: number;
+      mean: number;
+      percentile_25: number;
+      percentile_75: number;
+      min: number;
+      max: number;
+      samples: number;
+      radius_miles: number;
+    };
+    nearbyComps?: Array<{
+      address: string;
+      distance: number;
+      price: number;
+      bedrooms: number;
+      baths: string;
+      property_type: string;
+    }>;
+    propertyRents?: Array<{
+      bedrooms: number;
+      baths: string;
+      price: number;
+      sqft: number;
+    }>;
+  };
 }
 
 export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
-  const { reportMode = 'guided', property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales, revenueSource, exactMatchCompCount } = input;
+  const { reportMode = 'guided', property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales, revenueSource, exactMatchCompCount, rentometerData } = input;
   
   // Import pro mode overrides
   const { getProModeOverride } = await import('./pro-mode-prompts');
@@ -2090,6 +2152,27 @@ HISTORICAL TRENDS:
 - Market Trend: ${trend}`;
   }
 
+  // Rentometer long-term rental market data
+  let rentometerSection = '';
+  if (rentometerData?.summary) {
+    const s = rentometerData.summary;
+    const strMonthly = revenue.monthly;
+    const ltrMonthly = s.median;
+    const strPremium = ltrMonthly > 0 ? ((strMonthly - ltrMonthly) / ltrMonthly * 100).toFixed(0) : 'N/A';
+    rentometerSection = `
+LONG-TERM RENTAL MARKET (RENTOMETER DATA):
+- Median Long-Term Rent: $${s.median.toLocaleString()}/mo
+- Mean Long-Term Rent: $${s.mean.toLocaleString()}/mo
+- 25th Percentile: $${s.percentile_25.toLocaleString()}/mo
+- 75th Percentile: $${s.percentile_75.toLocaleString()}/mo
+- Rent Range: $${s.min.toLocaleString()} – $${s.max.toLocaleString()}/mo
+- Sample Size: ${s.samples} comparable rentals within ${s.radius_miles} mile radius
+- STR vs LTR Comparison: This property's projected STR income ($${strMonthly.toLocaleString()}/mo) is ${typeof strPremium === 'string' && strPremium === 'N/A' ? 'N/A' : `${Number(strPremium) >= 0 ? '+' : ''}${strPremium}%`} compared to the median long-term rent ($${ltrMonthly.toLocaleString()}/mo)`;
+    if (rentometerData.nearbyComps && rentometerData.nearbyComps.length > 0) {
+      rentometerSection += `\n\nNEARBY LONG-TERM RENTAL COMPS (top 5):\n${rentometerData.nearbyComps.slice(0, 5).map((c, i) => `  ${i + 1}. ${c.address} — ${c.bedrooms}BR/${c.baths}BA — $${c.price.toLocaleString()}/mo — ${c.property_type} — ${c.distance.toFixed(1)} mi away`).join('\n')}`;
+    }
+  }
+
   // System prompt with persona (Claude best practice: separate system from user content)
   const summarySystemPrompt = reportMode === 'pro' 
     ? `You are David Wei Chen, a senior real estate investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You write institutional-grade executive summaries with precise financial metrics, benchmarks, and quantitative analysis. Your communication style: data-first with exact figures, industry-standard terminology (Cap Rate, DSCR, RevPAR, NOI), and benchmark comparisons. Your tone is authoritative and direct — like a managing director presenting to an investment committee. You never give prescriptive investment advice but present data with analytical rigor.`
@@ -2172,6 +2255,7 @@ COMPARABLE SALES:
 - ${comparableSales.length} recently sold properties analyzed
 - Price Range: $${Math.min(...comparableSales.map(s => s.price)).toLocaleString()} – $${Math.max(...comparableSales.map(s => s.price)).toLocaleString()}
 - Average Sale Price: $${Math.round(comparableSales.reduce((s, c) => s + c.price, 0) / comparableSales.length).toLocaleString()}` : ''}
+${rentometerSection}
 </context>
 
 <format>
@@ -2208,6 +2292,9 @@ Discuss the purchase scenario — cap rate, cash-on-cash return, DSCR, monthly c
 
 ${comparableSales && comparableSales.length > 0 ? `### Comparable Sales
 Discuss the comparable sales data — how the asking/purchase price compares to recently sold properties in the area, and what this suggests about market value.` : ''}
+
+${rentometerData?.summary ? `### Long-Term Rental Market
+Compare the short-term rental income to the long-term rental market data from Rentometer. Discuss the STR premium (how much more/less the property earns as a short-term rental vs traditional long-term lease). Reference nearby long-term rental comps if available. This comparison helps investors understand the opportunity cost and fallback value of the property — if STR regulations change or occupancy drops, what would the property earn as a traditional rental?` : ''}
 
 ### Key Takeaways
 End with 3-4 bullet points summarizing the most important findings. These should be factual observations, NOT recommendations.

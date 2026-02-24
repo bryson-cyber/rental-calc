@@ -141,6 +141,7 @@ export const sharedReportsRouter = router({
               itemizedExpenses: reportData.itemized_expenses,
               regulation: reportData.regulation,
               comparableSales: reportData.comparable_sales,
+              rentometerData: reportData.rentometer_data,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {
@@ -824,6 +825,7 @@ export const sharedReportsRouter = router({
               itemizedExpenses: newReportData.itemized_expenses,
               regulation: newReportData.regulation,
               comparableSales: newReportData.comparable_sales,
+              rentometerData: newReportData.rentometer_data,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {
@@ -1326,6 +1328,7 @@ export const sharedReportsRouter = router({
                 occupancy: s.metrics?.occupancy || 0,
                 adr: s.metrics?.adr || 0,
               })) : undefined,
+              rentometerData: reportData.rentometer_data,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {
