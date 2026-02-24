@@ -1,0 +1,190 @@
+{
+  "query": "SELECT id, eventType, toolName, city, state, address, createdAt FROM tool_usage_events ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, eventType, toolName, city, state, address, createdAt FROM tool_usage_events ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "1650283",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:25:34"
+    },
+    {
+      "id": "1650282",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:25:29"
+    },
+    {
+      "id": "1650281",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:24:42"
+    },
+    {
+      "id": "1650280",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:24:12"
+    },
+    {
+      "id": "1650279",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:23:41"
+    },
+    {
+      "id": "1650278",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:23:33"
+    },
+    {
+      "id": "1650277",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:23:24"
+    },
+    {
+      "id": "1650276",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:23:06"
+    },
+    {
+      "id": "1650275",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:18:05"
+    },
+    {
+      "id": "1650274",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:13:43"
+    },
+    {
+      "id": "1650273",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-24 00:09:52"
+    },
+    {
+      "id": "1650272",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:52:41"
+    },
+    {
+      "id": "1650271",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:51:51"
+    },
+    {
+      "id": "1650270",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:37:37"
+    },
+    {
+      "id": "1650269",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:37:21"
+    },
+    {
+      "id": "1650268",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:36:13"
+    },
+    {
+      "id": "1650267",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:34:33"
+    },
+    {
+      "id": "1650266",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:34:33"
+    },
+    {
+      "id": "1650265",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:33:30"
+    },
+    {
+      "id": "1650264",
+      "eventType": "tool_view",
+      "toolName": "revenue_calculator",
+      "city": "NULL",
+      "state": "NULL",
+      "address": "NULL",
+      "createdAt": "2026-02-23 23:33:19"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\teventType\ttoolName\tcity\tstate\taddress\tcreatedAt\n1650283\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:25:34\n1650282\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:25:29\n1650281\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:24:42\n1650280\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:24:12\n1650279\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:23:41\n1650278\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:23:33\n1650277\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:23:24\n1650276\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:23:06\n1650275\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:18:05\n1650274\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:13:43\n1650273\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-24 00:09:52\n1650272\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:52:41\n1650271\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:51:51\n1650270\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:37:37\n1650269\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:37:21\n1650268\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:36:13\n1650267\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:34:33\n1650266\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:34:33\n1650265\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:33:30\n1650264\ttool_view\trevenue_calculator\tNULL\tNULL\tNULL\t2026-02-23 23:33:19\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

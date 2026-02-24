@@ -1,0 +1,25 @@
+{
+  "query": "SELECT COUNT(*) as total_all FROM tool_usage_events; SELECT COUNT(*) as total_today FROM tool_usage_events WHERE createdAt >= CURDATE(); SELECT COUNT(*) as total_yesterday FROM tool_usage_events WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND createdAt < CURDATE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COUNT(*) as total_all FROM tool_usage_events; SELECT COUNT(*) as total_today FROM tool_usage_events WHERE createdAt >= CURDATE(); SELECT COUNT(*) as total_yesterday FROM tool_usage_events WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND createdAt < CURDATE();",
+  "rows": [
+    {
+      "total_all": "4518"
+    },
+    {
+      "total_all": "total_today"
+    },
+    {
+      "total_all": "11"
+    },
+    {
+      "total_all": "total_yesterday"
+    },
+    {
+      "total_all": "685"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_all\n4518\ntotal_today\n11\ntotal_yesterday\n685\n",
+  "stderr": "",
+  "execution_time_ms": 76
+}

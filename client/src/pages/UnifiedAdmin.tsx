@@ -82,6 +82,12 @@ export default function UnifiedAdmin() {
     { enabled: isAuthenticated && user?.role === 'admin' }
   );
   
+  // Today's tool usage from the tracking system
+  const { data: trackingSummary, refetch: refetchTracking } = trpc.adminTracking.getDashboardSummary.useQuery(
+    undefined,
+    { enabled: isAuthenticated && user?.role === 'admin' }
+  );
+  
   // ============================================
   // USERS TAB STATE & QUERIES
   // ============================================
@@ -142,10 +148,8 @@ export default function UnifiedAdmin() {
   // ============================================
   // HUBSPOT TAB QUERIES
   // ============================================
-  const { data: hubspotSummary } = trpc.adminTracking.getDashboardSummary.useQuery(
-    undefined,
-    { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'hubspot' }
-  );
+  // hubspotSummary now uses the same trackingSummary from overview (loaded eagerly)
+  const hubspotSummary = trackingSummary;
   
   const { data: hubspotLinks, isLoading: linksLoading } = trpc.adminTracking.getLinks.useQuery(
     { limit: 10 },
@@ -516,6 +520,134 @@ export default function UnifiedAdmin() {
                     </Card>
                   </Link>
                 </div>
+
+                {/* Today's Tool Activity - from toolUsageEvents tracking */}
+                {trackingSummary?.today && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-primary" />
+                            Today's Tool Activity
+                          </CardTitle>
+                          <CardDescription>
+                            Live tracking of tool usage today
+                            {trackingSummary.yesterday?.totalEvents !== undefined && (
+                              <span className="ml-2">
+                                (Yesterday: {trackingSummary.yesterday.totalEvents} events)
+                              </span>
+                            )}
+                          </CardDescription>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { refetchTracking(); refetchStats(); }}
+                          className="gap-1"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Summary metrics row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-background rounded-lg p-4 text-center border border-border">
+                          <div className="text-3xl font-bold text-primary">{trackingSummary.today.totalEvents}</div>
+                          <div className="text-sm text-muted-foreground">Total Events</div>
+                        </div>
+                        <div className="bg-background rounded-lg p-4 text-center border border-border">
+                          <div className="text-3xl font-bold text-emerald-600">{trackingSummary.today.uniqueUsers}</div>
+                          <div className="text-sm text-muted-foreground">Unique Users</div>
+                        </div>
+                        <div className="bg-background rounded-lg p-4 text-center border border-border">
+                          <div className="text-3xl font-bold text-blue-600">{trackingSummary.today.uniqueCities}</div>
+                          <div className="text-sm text-muted-foreground">Cities Searched</div>
+                        </div>
+                        <div className="bg-background rounded-lg p-4 text-center border border-border">
+                          <div className="text-3xl font-bold text-violet-600">
+                            {trackingSummary.yesterday?.totalEvents
+                              ? Math.round(((trackingSummary.today.totalEvents - trackingSummary.yesterday.totalEvents) / trackingSummary.yesterday.totalEvents) * 100)
+                              : 0}%
+                          </div>
+                          <div className="text-sm text-muted-foreground">vs Yesterday</div>
+                        </div>
+                      </div>
+
+                      {/* Tool breakdown */}
+                      {Object.keys(trackingSummary.today.byTool || {}).length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-sm font-semibold text-foreground mb-3">By Tool</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {Object.entries(trackingSummary.today.byTool)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
+                              .map(([tool, count]) => (
+                                <div key={tool} className="bg-background rounded-lg p-3 border border-border flex items-center justify-between">
+                                  <span className="text-sm text-foreground capitalize">{tool.replace(/_/g, ' ')}</span>
+                                  <Badge variant="secondary" className="font-mono">{count as number}</Badge>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Event type breakdown */}
+                      {Object.keys(trackingSummary.today.byEvent || {}).length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-sm font-semibold text-foreground mb-3">By Event Type</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {Object.entries(trackingSummary.today.byEvent)
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
+                              .map(([event, count]) => (
+                                <div key={event} className="bg-background rounded-lg p-3 border border-border flex items-center justify-between">
+                                  <span className="text-sm text-foreground capitalize">{event.replace(/_/g, ' ')}</span>
+                                  <Badge variant="outline" className="font-mono">{count as number}</Badge>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent events feed */}
+                      {trackingSummary.today.recentEvents && trackingSummary.today.recentEvents.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-3">Recent Events</h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {trackingSummary.today.recentEvents.map((event: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between py-2 px-3 bg-background rounded-lg border border-border text-sm">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant={event.toolName === 'validate_deal' ? 'default' : 'secondary'} className="text-xs">
+                                    {event.toolName?.replace(/_/g, ' ')}
+                                  </Badge>
+                                  <span className="text-muted-foreground">{event.eventType?.replace(/_/g, ' ')}</span>
+                                  {event.city && (
+                                    <span className="text-foreground flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {event.city}, {event.state}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-muted-foreground text-xs">
+                                  {event.createdAt ? new Date(event.createdAt).toLocaleTimeString() : ''}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {trackingSummary.today.totalEvents === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>No tool activity recorded today yet.</p>
+                          <p className="text-sm">Events will appear here as users interact with the tools.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Activity by Category */}
                 <Card>

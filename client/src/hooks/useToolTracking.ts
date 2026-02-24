@@ -11,6 +11,7 @@ export type ToolEventType =
   | 'report_generated' // Full report was generated
   | 'report_viewed'    // User viewed an existing report
   | 'estimate_viewed'  // Revenue estimate was displayed
+  | 'deal_validated'   // User validated a specific deal (Step 5)
   | 'regulation_check' // Regulation tracker was used
   | 'market_explored'  // Market explorer was used
   | 'deal_alert_set'   // User set up a deal alert
@@ -21,6 +22,7 @@ export type ToolEventType =
 
 export type ToolName =
   | 'revenue_calculator'
+  | 'validate_deal'
   | 'full_report'
   | 'regulation_tracker'
   | 'market_explorer'

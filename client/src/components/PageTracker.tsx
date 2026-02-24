@@ -23,6 +23,21 @@ const PATH_TO_TOOL: Record<string, ToolName> = {
 };
 
 /**
+ * Maps tab query params to tool names for tab-based navigation tracking.
+ * When a path matches AND has a tab param, the tab mapping takes priority.
+ */
+const TAB_TO_TOOL: Record<string, Record<string, ToolName>> = {
+  '/': {
+    'validate': 'validate_deal',
+    'compare': 'comp_analysis',
+    'map': 'map_view',
+    'market': 'market_explorer',
+    'advisor': 'ai_advisor',
+    'find': 'opportunity_finder',
+  },
+};
+
+/**
  * Extracts city/state from URL search params if present.
  * Many tool pages receive location context via query params.
  */
@@ -36,25 +51,47 @@ function getLocationFromUrl(): { city?: string; state?: string; address?: string
 }
 
 /**
+ * Resolves the tool name from the current URL path and query params.
+ * Tab-based navigation takes priority over path-only mapping.
+ */
+function resolveToolName(location: string): ToolName | undefined {
+  const [rawPath, queryString] = location.split('?');
+  const path = rawPath.replace(/\/$/, '') || '/';
+
+  // Check for tab-based mapping first
+  if (queryString) {
+    const params = new URLSearchParams(queryString);
+    const tab = params.get('tab');
+    if (tab && TAB_TO_TOOL[path]?.[tab]) {
+      return TAB_TO_TOOL[path][tab];
+    }
+  }
+
+  return PATH_TO_TOOL[path];
+}
+
+/**
  * Invisible component that tracks page views for tool pages.
  * Place once in App.tsx — it watches route changes and fires events.
+ * Now also tracks tab-based navigation within the same page.
  */
 export function PageTracker() {
   const [location] = useLocation();
   const { trackEvent } = useToolTracking();
-  const lastTrackedPath = useRef<string>('');
+  const lastTrackedKey = useRef<string>('');
 
   useEffect(() => {
-    // Normalize path (remove trailing slash, query params)
-    const path = location.split('?')[0].replace(/\/$/, '') || '/';
-
-    // Skip if same path (prevents double-tracking on re-renders)
-    if (path === lastTrackedPath.current) return;
-    lastTrackedPath.current = path;
-
-    // Find matching tool
-    const toolName = PATH_TO_TOOL[path];
+    // Include full location (path + query) for tab-aware tracking
+    const fullLocation = window.location.pathname + window.location.search;
+    const toolName = resolveToolName(fullLocation);
     if (!toolName) return;
+
+    // Build a unique key that includes the tool name to detect tab changes
+    const trackKey = `${toolName}`;
+
+    // Skip if same tool (prevents double-tracking on re-renders)
+    if (trackKey === lastTrackedKey.current) return;
+    lastTrackedKey.current = trackKey;
 
     const locationData = getLocationFromUrl();
 
@@ -64,6 +101,29 @@ export function PageTracker() {
       ...locationData,
     });
   }, [location, trackEvent]);
+
+  // Also watch for hash/search changes (tab switches don't always change wouter location)
+  useEffect(() => {
+    const handlePopState = () => {
+      const fullLocation = window.location.pathname + window.location.search;
+      const toolName = resolveToolName(fullLocation);
+      if (!toolName) return;
+
+      const trackKey = `${toolName}`;
+      if (trackKey === lastTrackedKey.current) return;
+      lastTrackedKey.current = trackKey;
+
+      const locationData = getLocationFromUrl();
+      trackEvent({
+        eventType: 'tool_view',
+        toolName,
+        ...locationData,
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [trackEvent]);
 
   return null;
 }

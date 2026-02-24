@@ -414,8 +414,9 @@ export default function LeadMagnet() {
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter, setMyProperty, clearProperty, globalMode } = useProperty();
   
-  // Tool usage tracking
+  // Tool usage tracking - separate trackers for different tools
   const { trackAction } = useActionTracking('revenue_calculator');
+  const { trackAction: trackValidateAction } = useActionTracking('validate_deal');
   
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
@@ -1252,8 +1253,8 @@ export default function LeadMagnet() {
     setAnalysisTimer(0); // Reset timer
     setRentometerData(null); // Clear previous rentometer data
     
-    // Track search event
-    trackAction('search_started', { address });
+    // Track search event for validate deal
+    trackValidateAction('search_started', { address });
     
     // Start timer interval - defined outside try block for cleanup in finally
     let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -1551,8 +1552,8 @@ export default function LeadMagnet() {
         });
       }
       
-      // Track successful estimate
-      trackAction('estimate_viewed', {
+      // Track successful estimate for validate deal
+      trackValidateAction('estimate_viewed', {
         address,
         revenueEstimate: data.property?.estimates?.annual_revenue,
       });

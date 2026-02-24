@@ -274,12 +274,28 @@ export const adminTrackingRouter = router({
         
         const db = await getDb();
         if (!db) throw new Error('Database not available');
-        const results = await db.select().from(toolUsageEvents).orderBy(desc(toolUsageEvents.createdAt)).limit(500);
         
-        // Aggregate stats
+        // Apply proper date filter using the days parameter
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - input.days);
+        
+        const results = await db
+          .select()
+          .from(toolUsageEvents)
+          .where(gte(toolUsageEvents.createdAt, cutoffDate))
+          .orderBy(desc(toolUsageEvents.createdAt));
+        
+        // Also get today's events separately for the "Today" view
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        
+        // Aggregate stats for the full period
         const byTool: Record<string, number> = {};
         const byCity: Record<string, number> = {};
         const byEvent: Record<string, number> = {};
+        const todayByTool: Record<string, number> = {};
+        const todayByEvent: Record<string, number> = {};
+        let todayTotal = 0;
         
         for (const event of results) {
           byTool[event.toolName] = (byTool[event.toolName] || 0) + 1;
@@ -287,6 +303,22 @@ export const adminTrackingRouter = router({
             byCity[event.city] = (byCity[event.city] || 0) + 1;
           }
           byEvent[event.eventType] = (byEvent[event.eventType] || 0) + 1;
+          
+          // Count today's events
+          if (event.createdAt && new Date(event.createdAt) >= todayStart) {
+            todayTotal++;
+            todayByTool[event.toolName] = (todayByTool[event.toolName] || 0) + 1;
+            todayByEvent[event.eventType] = (todayByEvent[event.eventType] || 0) + 1;
+          }
+        }
+        
+        // Daily breakdown for the period
+        const byDay: Record<string, number> = {};
+        for (const event of results) {
+          if (event.createdAt) {
+            const day = new Date(event.createdAt).toISOString().split('T')[0];
+            byDay[day] = (byDay[day] || 0) + 1;
+          }
         }
         
         return {
@@ -294,6 +326,12 @@ export const adminTrackingRouter = router({
           byTool,
           byCity,
           byEvent,
+          byDay,
+          today: {
+            totalEvents: todayTotal,
+            byTool: todayByTool,
+            byEvent: todayByEvent,
+          },
           recentEvents: results.slice(0, 20),
         };
       }),
@@ -517,7 +555,52 @@ export const adminTrackingRouter = router({
         const optinsResult = await db.select().from(emailOptins).where(eq(emailOptins.isActive, 1));
         const linksResult = await db.select().from(personalizedLinks);
         const promotionsResult = await db.select().from(promotions);
-        const eventsResult = await db.select().from(toolUsageEvents).limit(1000);
+        
+        // Get total tool usage count efficiently
+        const totalEventsResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(toolUsageEvents);
+        const totalToolUsageEvents = Number(totalEventsResult[0]?.count || 0);
+        
+        // Get TODAY's events for the "Today's Activity" section
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        
+        const todayEvents = await db
+          .select()
+          .from(toolUsageEvents)
+          .where(gte(toolUsageEvents.createdAt, todayStart))
+          .orderBy(desc(toolUsageEvents.createdAt));
+        
+        // Aggregate today's stats
+        const todayByTool: Record<string, number> = {};
+        const todayByEvent: Record<string, number> = {};
+        const todayCities = new Set<string>();
+        const todayUsers = new Set<string>();
+        
+        for (const event of todayEvents) {
+          todayByTool[event.toolName] = (todayByTool[event.toolName] || 0) + 1;
+          todayByEvent[event.eventType] = (todayByEvent[event.eventType] || 0) + 1;
+          if (event.city) todayCities.add(event.city);
+          const userKey = event.userId ? `user_${event.userId}` : event.sessionId || event.email || 'unknown';
+          todayUsers.add(userKey);
+        }
+        
+        // Get yesterday's total for comparison
+        const yesterdayStart = new Date();
+        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+        yesterdayStart.setHours(0, 0, 0, 0);
+        const yesterdayEnd = new Date();
+        yesterdayEnd.setHours(0, 0, 0, 0);
+        
+        const yesterdayCountResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(toolUsageEvents)
+          .where(and(
+            gte(toolUsageEvents.createdAt, yesterdayStart),
+            sql`${toolUsageEvents.createdAt} < ${yesterdayEnd}`
+          ));
+        const yesterdayTotal = Number(yesterdayCountResult[0]?.count || 0);
         
         // Calculate total clicks
         const totalClicks = linksResult.reduce((sum, link) => sum + (link.clickCount || 0), 0);
@@ -527,9 +610,28 @@ export const adminTrackingRouter = router({
           totalLinks: linksResult.length,
           totalClicks,
           totalPromotions: promotionsResult.length,
-          totalToolUsageEvents: eventsResult.length,
+          totalToolUsageEvents,
           recentOptins: optinsResult.slice(0, 5),
           recentLinks: linksResult.slice(0, 5),
+          today: {
+            totalEvents: todayEvents.length,
+            byTool: todayByTool,
+            byEvent: todayByEvent,
+            uniqueCities: todayCities.size,
+            uniqueUsers: todayUsers.size,
+            recentEvents: todayEvents.slice(0, 10).map(e => ({
+              eventType: e.eventType,
+              toolName: e.toolName,
+              city: e.city,
+              state: e.state,
+              address: e.address,
+              email: e.email,
+              createdAt: e.createdAt,
+            })),
+          },
+          yesterday: {
+            totalEvents: yesterdayTotal,
+          },
         };
       }),
 });

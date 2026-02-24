@@ -12380,3 +12380,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Pass rentometerData through shared-reports.ts summaryInput construction (all 3 locations)
 - [x] Write tests for Rentometer data in Gemini prompts (13 tests passing)
 - [ ] Market AI Advisor — skipped (no specific property address available at market level)
+
+## Bug Fix: Daily Activity Tracking Not Saving (Feb 23, 2026)
+- [x] Investigate how tool usage events are tracked and stored
+- [x] Fix Validate the Deal activity not being saved (frontend: LeadMagnet.tsx uses trackValidateAction with 'validate_deal' tool name; PageTracker.tsx TAB_TO_TOOL maps /?tab=validate to validate_deal)
+- [x] Fix today's production usage not showing in admin dashboard
+  - [x] Fixed getToolUsageStats: now properly filters by 'days' parameter with date cutoff instead of just fetching last 500 events
+  - [x] Fixed getDashboardSummary: now includes today's activity breakdown (byTool, byEvent, uniqueCities, uniqueUsers) and yesterday comparison
+  - [x] Added "Today's Tool Activity" section to admin Overview tab with live metrics, tool breakdown, event type breakdown, and recent events feed
+  - [x] Added daily breakdown (byDay) to getToolUsageStats for trend analysis
+- [x] Write tests for activity tracking (25 tests passing: date filtering, today's aggregation, PageTracker tool resolution, input schema, daily breakdown)

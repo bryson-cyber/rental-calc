@@ -1,0 +1,22 @@
+{
+  "query": "SELECT 'total' as label, COUNT(*) as cnt FROM tool_usage_events UNION ALL SELECT 'today' as label, COUNT(*) as cnt FROM tool_usage_events WHERE createdAt >= CURDATE() UNION ALL SELECT 'yesterday' as label, COUNT(*) as cnt FROM tool_usage_events WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND createdAt < CURDATE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT 'total' as label, COUNT(*) as cnt FROM tool_usage_events UNION ALL SELECT 'today' as label, COUNT(*) as cnt FROM tool_usage_events WHERE createdAt >= CURDATE() UNION ALL SELECT 'yesterday' as label, COUNT(*) as cnt FROM tool_usage_events WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND createdAt < CURDATE();",
+  "rows": [
+    {
+      "label": "today",
+      "cnt": "11"
+    },
+    {
+      "label": "yesterday",
+      "cnt": "685"
+    },
+    {
+      "label": "total",
+      "cnt": "4518"
+    }
+  ],
+  "messages": [],
+  "stdout": "label\tcnt\ntoday\t11\nyesterday\t685\ntotal\t4518\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}
