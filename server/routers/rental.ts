@@ -26,7 +26,7 @@ import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "..
 import { getLocationQuality } from "../location-quality";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { upsertContact, generateDeepLink } from "../hubspot";
-import { canPerformAnalysis, recordAnalysisUsage, canPerformMarketResearch, recordMarketResearchUsage } from "../usage-limits";
+import { canPerformAnalysis, canPerformValidation, recordAnalysisUsage, recordValidateUsage, canPerformMarketResearch, recordMarketResearchUsage } from "../usage-limits";
 
 // Input validation schemas
 export const rentalizerInputSchema = z.object({
@@ -57,6 +57,7 @@ export const propertyReportInputSchema = z.object({
   leadEmail: z.string().email().optional(),
   leadPhone: z.string().optional(),
   reportMode: z.enum(['pro', 'guided']).default('guided'),
+  source: z.enum(['calculator', 'validate', 'compare']).default('calculator'),
 });
 
 export const aiPropertyReportInputSchema = z.object({
@@ -1039,14 +1040,17 @@ export const rentalRouter = router({
           // Enforce daily usage limits (admins bypass)
           const userId = ctx.user?.id;
           const ipAddress = ctx.req?.ip || ctx.req?.socket?.remoteAddress;
-          const limitCheck = await canPerformAnalysis(userId, undefined, ipAddress);
+          const isValidateSource = input.source === 'validate';
+          const limitCheck = isValidateSource 
+            ? await canPerformValidation(userId, undefined, ipAddress)
+            : await canPerformAnalysis(userId, undefined, ipAddress);
           if (!limitCheck.allowed) {
             return {
               success: false,
               error: limitCheck.reason || 'Daily analysis limit reached. Please try again tomorrow.',
               data: null,
               limitReached: true,
-              remaining: 0,
+              remaining: limitCheck.remaining ?? 0,
             };
           }
 
@@ -1113,10 +1117,16 @@ export const rentalRouter = router({
             }
           }
 
-          // Record usage after successful analysis
-          await recordAnalysisUsage(userId, undefined, ipAddress, 15).catch(err => 
-            console.error('[Rental] Error recording usage:', err)
-          );
+          // Record usage after successful analysis (use separate counter for validate)
+          if (isValidateSource) {
+            await recordValidateUsage(userId, undefined, ipAddress, 15).catch(err => 
+              console.error('[Rental] Error recording validate usage:', err)
+            );
+          } else {
+            await recordAnalysisUsage(userId, undefined, ipAddress, 15).catch(err => 
+              console.error('[Rental] Error recording usage:', err)
+            );
+          }
 
           // Track activity for admin visibility
           const property = report.property as any;

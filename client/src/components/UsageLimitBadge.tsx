@@ -79,23 +79,12 @@ export function UsageLimitBadge({ type = "property", className = "" }: UsageLimi
             <p className="text-sm text-muted-foreground">
               You've used {used} of {limit} free {label} today.
               {remaining === 0 
-                ? " Upgrade for unlimited access." 
+                ? " Limits reset at midnight — come back tomorrow!" 
                 : ` You have ${remaining} remaining.`}
             </p>
-            {remaining === 0 ? (
-              <a 
-                href="https://masterclass.coachinayah.com/the-turnkey-program" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs text-amber-600 hover:text-amber-800 underline underline-offset-2 mt-2 block"
-              >
-                Unlock unlimited access →
-              </a>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-2">
-                Resets daily at midnight
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Resets daily at midnight
+            </p>
           </div>
         </TooltipContent>
       </Tooltip>

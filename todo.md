@@ -12390,3 +12390,15 @@ Files fixed (operating costs now based on revenue, not rent):
   - [x] Added "Today's Tool Activity" section to admin Overview tab with live metrics, tool breakdown, event type breakdown, and recent events feed
   - [x] Added daily breakdown (byDay) to getToolUsageStats for trend analysis
 - [x] Write tests for activity tracking (25 tests passing: date filtering, today's aggregation, PageTracker tool resolution, input schema, daily breakdown)
+
+## Fix Rate Limiting Logic & Messaging (Feb 24, 2026)
+- [x] Investigate current rate limiting code (server/rate-limiter.ts, usage-limits.ts, routers/rental.ts, opportunity-finder.ts)
+- [x] Fix rate limits: free users and Turnkey users have SAME limits (no Turnkey upgrade benefit for rate limits)
+- [x] Only admins get truly unlimited access
+- [x] Validate the Deal (Step 5): allow up to 20/day for all non-admin users, separate from Step 2 limit
+- [x] Revenue Calculator (Step 2): keep rate-limited at 5/day for all non-admin users equally
+- [x] Remove all "upgrade to Turnkey for unlimited" messaging — replaced with "limits reset at midnight"
+- [x] Update UpgradeBanner.tsx and UsageLimitBadge.tsx to remove Turnkey links and upgrade messaging
+- [x] Write vitest tests for updated rate limiting logic (10 tests passing)
+- [x] Fix batch analyze glitch: handleBulkAnalyze now checks remaining limit before starting, caps batch size, and shows clear message when limit exceeded
+- [x] Add separate validateAnalyses column to user_usage table for Step 5's own 20/day limit

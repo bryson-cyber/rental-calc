@@ -1,0 +1,1 @@
+ALTER TABLE `user_usage` ADD `validateAnalyses` int DEFAULT 0 NOT NULL;

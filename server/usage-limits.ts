@@ -5,9 +5,10 @@
  * Admins bypass all limits.
  * 
  * Default limits:
- * - Property analyses: 5/day
+ * - Property analyses (Step 2): 5/day
+ * - Validate analyses (Step 5): 20/day (displayed as "unlimited" to users)
  * - Market researches: 3/day
- * - API calls: 50/day (hard cap)
+ * - API calls: 75/day (hard cap, raised to accommodate Step 5's higher limit)
  */
 
 import { getDb } from './db';
@@ -17,16 +18,19 @@ import { eq, and, sql } from 'drizzle-orm';
 // Default limits (can be overridden via config)
 const DEFAULT_LIMITS = {
   propertyAnalyses: 5,
+  validateAnalyses: 20,
   marketResearches: 3,
-  apiCalls: 50,
+  apiCalls: 75,
 };
 
 interface UsageStatus {
   propertyAnalyses: { used: number; limit: number; remaining: number };
+  validateAnalyses: { used: number; limit: number; remaining: number };
   marketResearches: { used: number; limit: number; remaining: number };
   apiCalls: { used: number; limit: number; remaining: number };
   isAdmin: boolean;
   canAnalyze: boolean;
+  canValidate: boolean;
   canResearchMarket: boolean;
 }
 
@@ -64,7 +68,7 @@ async function getOrCreateUsageRecord(
   userId?: number,
   sessionId?: string,
   ipAddress?: string
-): Promise<{ id: number; propertyAnalyses: number; marketResearches: number; apiCallsCount: number }> {
+): Promise<{ id: number; propertyAnalyses: number; validateAnalyses: number; marketResearches: number; apiCallsCount: number }> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const today = getTodayString();
@@ -98,6 +102,7 @@ async function getOrCreateUsageRecord(
     ipAddress: ipAddress || null,
     date: today,
     propertyAnalyses: 0,
+    validateAnalyses: 0,
     marketResearches: 0,
     apiCallsCount: 0,
   });
@@ -105,6 +110,7 @@ async function getOrCreateUsageRecord(
   return {
     id: result.insertId,
     propertyAnalyses: 0,
+    validateAnalyses: 0,
     marketResearches: 0,
     apiCallsCount: 0,
   };
@@ -125,10 +131,12 @@ export async function getUsageStatus(
     // Admins have unlimited access
     return {
       propertyAnalyses: { used: 0, limit: Infinity, remaining: Infinity },
+      validateAnalyses: { used: 0, limit: Infinity, remaining: Infinity },
       marketResearches: { used: 0, limit: Infinity, remaining: Infinity },
       apiCalls: { used: 0, limit: Infinity, remaining: Infinity },
       isAdmin: true,
       canAnalyze: true,
+      canValidate: true,
       canResearchMarket: true,
     };
   }
@@ -136,6 +144,7 @@ export async function getUsageStatus(
   const record = await getOrCreateUsageRecord(userId, sessionId, ipAddress);
   
   const propertyRemaining = Math.max(0, DEFAULT_LIMITS.propertyAnalyses - record.propertyAnalyses);
+  const validateRemaining = Math.max(0, DEFAULT_LIMITS.validateAnalyses - record.validateAnalyses);
   const marketRemaining = Math.max(0, DEFAULT_LIMITS.marketResearches - record.marketResearches);
   const apiRemaining = Math.max(0, DEFAULT_LIMITS.apiCalls - record.apiCallsCount);
   
@@ -144,6 +153,11 @@ export async function getUsageStatus(
       used: record.propertyAnalyses,
       limit: DEFAULT_LIMITS.propertyAnalyses,
       remaining: propertyRemaining,
+    },
+    validateAnalyses: {
+      used: record.validateAnalyses,
+      limit: DEFAULT_LIMITS.validateAnalyses,
+      remaining: validateRemaining,
     },
     marketResearches: {
       used: record.marketResearches,
@@ -157,12 +171,13 @@ export async function getUsageStatus(
     },
     isAdmin: false,
     canAnalyze: propertyRemaining > 0 && apiRemaining > 0,
+    canValidate: validateRemaining > 0 && apiRemaining > 0,
     canResearchMarket: marketRemaining > 0 && apiRemaining > 0,
   };
 }
 
 /**
- * Check if user can perform a property analysis
+ * Check if user can perform a property analysis (Step 2 — Revenue Calculator)
  */
 export async function canPerformAnalysis(
   userId?: number,
@@ -178,7 +193,7 @@ export async function canPerformAnalysis(
   if (status.apiCalls.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: 'Daily API limit reached. Upgrade to the Turnkey Program for unlimited access.',
+      reason: 'Daily API limit reached. Your limit resets at midnight \u2014 come back tomorrow!',
       remaining: 0
     };
   }
@@ -186,7 +201,7 @@ export async function canPerformAnalysis(
   if (status.propertyAnalyses.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: `Daily analysis limit reached (${DEFAULT_LIMITS.propertyAnalyses}/day). Upgrade to the Turnkey Program for unlimited access.`,
+      reason: `Daily analysis limit reached (${DEFAULT_LIMITS.propertyAnalyses}/day). Your limit resets at midnight \u2014 come back tomorrow!`,
       remaining: 0
     };
   }
@@ -194,6 +209,43 @@ export async function canPerformAnalysis(
   return { 
     allowed: true, 
     remaining: status.propertyAnalyses.remaining 
+  };
+}
+
+/**
+ * Check if user can perform a validate analysis (Step 5 — Validate the Deal)
+ * Separate 20/day limit from property analyses
+ */
+export async function canPerformValidation(
+  userId?: number,
+  sessionId?: string,
+  ipAddress?: string
+): Promise<{ allowed: boolean; reason?: string; remaining?: number }> {
+  const status = await getUsageStatus(userId, sessionId, ipAddress);
+  
+  if (status.isAdmin) {
+    return { allowed: true };
+  }
+  
+  if (status.apiCalls.remaining <= 0) {
+    return { 
+      allowed: false, 
+      reason: 'Daily API limit reached. Your limit resets at midnight \u2014 come back tomorrow!',
+      remaining: 0
+    };
+  }
+  
+  if (status.validateAnalyses.remaining <= 0) {
+    return { 
+      allowed: false, 
+      reason: `Daily validation limit reached (${DEFAULT_LIMITS.validateAnalyses}/day). Your limit resets at midnight \u2014 come back tomorrow!`,
+      remaining: 0
+    };
+  }
+  
+  return { 
+    allowed: true, 
+    remaining: status.validateAnalyses.remaining 
   };
 }
 
@@ -214,7 +266,7 @@ export async function canPerformMarketResearch(
   if (status.apiCalls.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: 'Daily API limit reached. Upgrade to the Turnkey Program for unlimited access.',
+      reason: 'Daily API limit reached. Your limit resets at midnight \u2014 come back tomorrow!',
       remaining: 0
     };
   }
@@ -222,7 +274,7 @@ export async function canPerformMarketResearch(
   if (status.marketResearches.remaining <= 0) {
     return { 
       allowed: false, 
-      reason: `Daily market research limit reached (${DEFAULT_LIMITS.marketResearches}/day). Upgrade to the Turnkey Program for unlimited access.`,
+      reason: `Daily market research limit reached (${DEFAULT_LIMITS.marketResearches}/day). Your limit resets at midnight \u2014 come back tomorrow!`,
       remaining: 0
     };
   }
@@ -234,7 +286,7 @@ export async function canPerformMarketResearch(
 }
 
 /**
- * Record a property analysis usage
+ * Record a property analysis usage (Step 2)
  */
 export async function recordAnalysisUsage(
   userId?: number,
@@ -242,18 +294,38 @@ export async function recordAnalysisUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Track admin usage for visibility (limits are bypassed in canPerformAnalysis)
   const db = await getDb();
   if (!db) return;
   
-  // Get or create record
   const record = await getOrCreateUsageRecord(userId, sessionId, ipAddress);
   
-  // Update counts
   await db
     .update(userUsage)
     .set({
       propertyAnalyses: sql`${userUsage.propertyAnalyses} + 1`,
+      apiCallsCount: sql`${userUsage.apiCallsCount} + ${apiCallsUsed}`,
+    })
+    .where(eq(userUsage.id, record.id));
+}
+
+/**
+ * Record a validate analysis usage (Step 5)
+ */
+export async function recordValidateUsage(
+  userId?: number,
+  sessionId?: string,
+  ipAddress?: string,
+  apiCallsUsed: number = 1
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  const record = await getOrCreateUsageRecord(userId, sessionId, ipAddress);
+  
+  await db
+    .update(userUsage)
+    .set({
+      validateAnalyses: sql`${userUsage.validateAnalyses} + 1`,
       apiCallsCount: sql`${userUsage.apiCallsCount} + ${apiCallsUsed}`,
     })
     .where(eq(userUsage.id, record.id));
@@ -268,14 +340,11 @@ export async function recordMarketResearchUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Track admin usage for visibility (limits are bypassed in canPerformMarketResearch)
   const db = await getDb();
   if (!db) return;
   
-  // Get or create record
   const record = await getOrCreateUsageRecord(userId, sessionId, ipAddress);
   
-  // Update counts
   await db
     .update(userUsage)
     .set({
@@ -294,14 +363,11 @@ export async function recordApiCallsUsage(
   ipAddress?: string,
   apiCallsUsed: number = 1
 ): Promise<void> {
-  // Track admin usage for visibility (limits are bypassed in canPerform* checks)
   const db = await getDb();
   if (!db) return;
   
-  // Get or create record
   const record = await getOrCreateUsageRecord(userId, sessionId, ipAddress);
   
-  // Update API calls count only
   await db
     .update(userUsage)
     .set({
@@ -314,13 +380,13 @@ export async function recordApiCallsUsage(
  * Get usage summary for admin dashboard
  */
 export async function getUsageSummary(): Promise<{
-  today: { totalUsers: number; totalAnalyses: number; totalMarketResearches: number; totalApiCalls: number };
-  topUsers: Array<{ userId: number | null; sessionId: string | null; analyses: number; apiCalls: number }>;
+  today: { totalUsers: number; totalAnalyses: number; totalValidations: number; totalMarketResearches: number; totalApiCalls: number };
+  topUsers: Array<{ userId: number | null; sessionId: string | null; analyses: number; validations: number; apiCalls: number }>;
 }> {
   const db = await getDb();
   if (!db) {
     return {
-      today: { totalUsers: 0, totalAnalyses: 0, totalMarketResearches: 0, totalApiCalls: 0 },
+      today: { totalUsers: 0, totalAnalyses: 0, totalValidations: 0, totalMarketResearches: 0, totalApiCalls: 0 },
       topUsers: [],
     };
   }
@@ -331,6 +397,7 @@ export async function getUsageSummary(): Promise<{
     .select({
       totalUsers: sql<number>`COUNT(DISTINCT COALESCE(userId, sessionId, ipAddress))`,
       totalAnalyses: sql<number>`SUM(propertyAnalyses)`,
+      totalValidations: sql<number>`SUM(validateAnalyses)`,
       totalMarketResearches: sql<number>`SUM(marketResearches)`,
       totalApiCalls: sql<number>`SUM(apiCallsCount)`,
     })
@@ -343,6 +410,7 @@ export async function getUsageSummary(): Promise<{
       userId: userUsage.userId,
       sessionId: userUsage.sessionId,
       analyses: userUsage.propertyAnalyses,
+      validations: userUsage.validateAnalyses,
       apiCalls: userUsage.apiCallsCount,
     })
     .from(userUsage)
@@ -354,6 +422,7 @@ export async function getUsageSummary(): Promise<{
     today: {
       totalUsers: todayStats?.totalUsers || 0,
       totalAnalyses: todayStats?.totalAnalyses || 0,
+      totalValidations: todayStats?.totalValidations || 0,
       totalMarketResearches: todayStats?.totalMarketResearches || 0,
       totalApiCalls: todayStats?.totalApiCalls || 0,
     },

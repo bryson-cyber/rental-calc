@@ -76,7 +76,7 @@ export function checkReportRateLimit(userId: number, userRole: string): { allowe
     const hoursUntilReset = Math.ceil((entry.resetAt - Date.now()) / (1000 * 60 * 60));
     throw new TRPCError({
       code: 'TOO_MANY_REQUESTS',
-      message: `Daily report limit reached (${DAILY_REPORT_LIMIT}/day). Upgrade to the Turnkey Program for unlimited access.`,
+      message: `Daily report limit reached (${DAILY_REPORT_LIMIT}/day). Your limit resets at midnight — come back tomorrow!`,
     });
   }
   

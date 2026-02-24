@@ -1866,6 +1866,7 @@ export const userUsage = mysqlTable("user_usage", {
   
   // Usage counts
   propertyAnalyses: int("propertyAnalyses").default(0).notNull(),
+  validateAnalyses: int("validateAnalyses").default(0).notNull(),
   marketResearches: int("marketResearches").default(0).notNull(),
   apiCallsCount: int("apiCallsCount").default(0).notNull(),
   

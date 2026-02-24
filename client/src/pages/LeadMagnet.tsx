@@ -1328,6 +1328,7 @@ export default function LeadMagnet() {
           leadEmail: leadEmail || undefined,
           leadPhone: leadPhone || undefined,
           reportMode: reportMode,
+          source: 'validate' as const,
         }),
         timeoutPromise
       ]);
@@ -1607,6 +1608,9 @@ export default function LeadMagnet() {
     }
   };
   
+  // tRPC utils for imperative queries
+  const trpcUtils = trpc.useUtils();
+  
   // Find the Best Deal (Bulk Compare)
   const addBulkProperty = () => {
     if (bulkProperties.length >= 25) {
@@ -1644,6 +1648,25 @@ export default function LeadMagnet() {
       return;
     }
     
+    // Check remaining analyses before starting the batch
+    // The compare tab uses the same limit as Step 2 (propertyAnalyses: 5/day)
+    try {
+      const usageStatus = await trpcUtils.usage.getStatus.fetch();
+      if (!usageStatus.isAdmin) {
+        const remaining = usageStatus.propertyAnalyses.remaining;
+        if (remaining <= 0) {
+          toast.error('Daily analysis limit reached. Your limit resets at midnight \u2014 come back tomorrow!');
+          return;
+        }
+        if (remaining < validProperties.length) {
+          toast.error(`You have ${remaining} analysis${remaining === 1 ? '' : 'es'} remaining today. Please reduce to ${remaining} properties or fewer, then try again. Limits reset at midnight.`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[BulkAnalyze] Could not check usage status, proceeding:', err);
+    }
+    
     setIsBulkAnalyzing(true);
     const results: BulkPropertyResult[] = [];
     
@@ -1654,6 +1677,7 @@ export default function LeadMagnet() {
           bedrooms: prop.bedrooms,
           bathrooms: prop.bathrooms,
           reportMode: reportMode,
+          source: 'compare' as const,
         });
         
         if (!response.success || !response.data) {
@@ -1769,8 +1793,6 @@ export default function LeadMagnet() {
   };
   
   // NEW: Market-based Step 2 search handler
-  // Using trpc.useUtils() to call queries imperatively
-  const trpcUtils = trpc.useUtils();
   
   const handleMarketSearch = async (market: {
     id: string;
