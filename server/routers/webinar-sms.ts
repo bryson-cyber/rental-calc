@@ -1273,6 +1273,19 @@ export const webinarSmsRouter = router({
       webinarDate: z.string(), // ISO date string of the webinar
       webinarLink: z.string().optional(),
       replayLink: z.string().optional(),
+      // Customizable timing offsets (in minutes before/after webinar)
+      // Negative = before webinar, Positive = after webinar
+      timing: z.object({
+        registrationConfirm: z.number().default(-10080), // -7 days
+        twoDaysBefore: z.number().default(-2880),        // -2 days
+        dayBefore: z.number().default(-1440),             // -1 day
+        morningOf: z.number().default(-240),              // -4 hours
+        oneHourWarning: z.number().default(-60),          // -1 hour
+        goingLiveNow: z.number().default(-5),             // -5 min ("starting now")
+        thankYouAttended: z.number().default(60),         // +1 hour
+        missedYouNoShow: z.number().default(120),         // +2 hours
+        followUpCta: z.number().default(1440),            // +1 day
+      }).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -1282,69 +1295,85 @@ export const webinarSmsRouter = router({
       const link = input.webinarLink || "[WEBINAR_LINK]";
       const replay = input.replayLink || "[REPLAY_LINK]";
 
-      // Pre-built 9-message sequence
+      // Use custom timing or defaults
+      const t = {
+        registrationConfirm: input.timing?.registrationConfirm ?? -10080,
+        twoDaysBefore: input.timing?.twoDaysBefore ?? -2880,
+        dayBefore: input.timing?.dayBefore ?? -1440,
+        morningOf: input.timing?.morningOf ?? -240,
+        oneHourWarning: input.timing?.oneHourWarning ?? -60,
+        goingLiveNow: input.timing?.goingLiveNow ?? -5,
+        thankYouAttended: input.timing?.thankYouAttended ?? 60,
+        missedYouNoShow: input.timing?.missedYouNoShow ?? 120,
+        followUpCta: input.timing?.followUpCta ?? 1440,
+      };
+
+      // Helper: offset in minutes from webinar date
+      const offset = (minutes: number) => new Date(webinarDate.getTime() + minutes * 60 * 1000);
+
+      // Pre-built 9-message sequence with customizable timing
       const sequence = [
         {
           sequenceName: "Registration Confirmation",
           sequenceOrder: 1,
           messageBody: `Hey %FIRST_NAME%! Thanks for registering for our live workshop. Save this number so you don't miss any updates! 🎯`,
-          scheduledAt: new Date(webinarDate.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days before
+          scheduledAt: offset(t.registrationConfirm),
           audience: "all" as const,
         },
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 2,
           messageBody: `Hey %FIRST_NAME%! Quick reminder — our live call is in 2 days. You won't want to miss this one. Mark your calendar! 📅`,
-          scheduledAt: new Date(webinarDate.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days before
+          scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 3,
           messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat — we have a lot of people registered. See you there! 🔥`,
-          scheduledAt: new Date(webinarDate.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day before
+          scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 4,
           messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early — seats fill up fast! 💪`,
-          scheduledAt: new Date(webinarDate.getTime() - 4 * 60 * 60 * 1000), // 4 hours before
+          scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
           messageBody: `%FIRST_NAME% — we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
-          scheduledAt: new Date(webinarDate.getTime() - 1 * 60 * 60 * 1000), // 1 hour before
+          scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
         {
-          sequenceName: "Going Live NOW",
+          sequenceName: "Starting NOW",
           sequenceOrder: 6,
           messageBody: `🔴 WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
-          scheduledAt: new Date(webinarDate.getTime() - 5 * 60 * 1000), // 5 min before
+          scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 7,
           messageBody: `Thanks for showing up today %FIRST_NAME%! 🙏 Here's the replay if you want to rewatch: ${replay}`,
-          scheduledAt: new Date(webinarDate.getTime() + 1 * 60 * 60 * 1000), // 1 hour after
+          scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
           sequenceOrder: 8,
           messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
-          scheduledAt: new Date(webinarDate.getTime() + 2 * 60 * 60 * 1000), // 2 hours after
+          scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 9,
           messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details. 🚀`,
-          scheduledAt: new Date(webinarDate.getTime() + 24 * 60 * 60 * 1000), // 1 day after
+          scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
         },
       ];
@@ -1748,6 +1777,163 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         } catch (err: any) {
           failed++;
           console.error(`[HubSpot] Error sending to ${registrant.email}:`, err.message);
+        }
+      }
+
+      return { sent, failed, total: noShows.length };
+    }),
+
+  // ─── SMS Replies Inbox ─────────────────────────────────────────────────────
+
+  /** Fetch incoming SMS replies from SimpleTexting API */
+  getIncomingReplies: adminProcedure
+    .input(z.object({
+      page: z.number().min(0).default(0),
+      pageSize: z.number().min(1).max(100).default(20),
+    }))
+    .query(async ({ input }) => {
+      const apiKey = ENV.simpletextingApiKey;
+      if (!apiKey) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SimpleTexting API key not configured" });
+      }
+
+      try {
+        const res = await fetch(
+          `https://api-app2.simpletexting.com/v2/api/messages?page=${input.page}&size=${input.pageSize}`,
+          { headers: { "Authorization": `Bearer ${apiKey}` } }
+        );
+
+        if (!res.ok) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `SimpleTexting API error: ${res.status}` });
+        }
+
+        const data = await res.json() as {
+          content: Array<{
+            id: string;
+            text: string;
+            contactPhone: string;
+            accountPhone: string;
+            directionType: string; // "MO" = incoming, "MT" = outgoing
+            timestamp: string;
+            category: string;
+            referenceType?: string;
+          }>;
+          totalPages: number;
+          totalElements: number;
+        };
+
+        // Filter to only incoming (MO = Mobile Originated) messages
+        const incoming = data.content.filter(m => m.directionType === "MO");
+
+        // Try to match phone numbers to registrants
+        const db = await getDb();
+        const matchedReplies = [];
+
+        for (const msg of incoming) {
+          let registrantName: string | null = null;
+          let registrantEmail: string | null = null;
+          let webinarName: string | null = null;
+
+          if (db) {
+            // Normalize phone for matching (last 10 digits)
+            const cleanPhone = msg.contactPhone.replace(/[^\d]/g, "");
+            const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+
+            const [match] = await db.select({
+              name: webinarRegistrants.name,
+              email: webinarRegistrants.email,
+              webinarName: webinarRegistrants.webinarName,
+            })
+              .from(webinarRegistrants)
+              .where(sql`RIGHT(REPLACE(${webinarRegistrants.phone}, '-', ''), 10) = ${last10}`)
+              .limit(1);
+
+            if (match) {
+              registrantName = match.name;
+              registrantEmail = match.email;
+              webinarName = match.webinarName;
+            }
+          }
+
+          matchedReplies.push({
+            id: msg.id,
+            text: msg.text,
+            phone: msg.contactPhone,
+            timestamp: msg.timestamp,
+            category: msg.category,
+            registrantName,
+            registrantEmail,
+            webinarName,
+          });
+        }
+
+        return {
+          replies: matchedReplies,
+          totalPages: data.totalPages,
+          totalElements: data.totalElements,
+          page: input.page,
+        };
+      } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Failed to fetch replies: ${err.message}` });
+      }
+    }),
+
+  // ─── Live No-Show Nudge ────────────────────────────────────────────────────
+
+  /** Send a nudge SMS to registrants who haven't attended (for live webinars) */
+  sendNoShowNudge: adminProcedure
+    .input(z.object({
+      webinarId: z.string().min(1),
+      message: z.string().min(1).max(1600),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get all registrants who haven't attended and haven't opted out
+      const noShows = await db.select()
+        .from(webinarRegistrants)
+        .where(
+          and(
+            eq(webinarRegistrants.webinarId, input.webinarId),
+            eq(webinarRegistrants.attended, 0),
+            eq(webinarRegistrants.optedOut, 0)
+          )
+        );
+
+      if (noShows.length === 0) {
+        return { sent: 0, failed: 0, total: 0, message: "No registrants to nudge" };
+      }
+
+      let sent = 0;
+      let failed = 0;
+
+      for (const registrant of noShows) {
+        if (!registrant.phone) {
+          failed++;
+          continue;
+        }
+
+        const firstName = registrant.name?.split(" ")[0] || "there";
+        const personalizedMessage = input.message.replace(/%FIRST_NAME%/gi, firstName);
+
+        try {
+          const result = await sendSms(registrant.phone, personalizedMessage);
+          if (result.success) {
+            sent++;
+          } else {
+            failed++;
+            console.error(`[NoShowNudge] Failed to send to ${registrant.phone}: ${result.error}`);
+          }
+        } catch (err: any) {
+          failed++;
+          console.error(`[NoShowNudge] Error sending to ${registrant.phone}: ${err.message}`);
+        }
+
+        // Rate limit: ~3 per second
+        if ((sent + failed) % 3 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 

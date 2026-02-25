@@ -53,6 +53,11 @@ import {
   Pause,
   Ban,
   Sparkles,
+  MessageCircle,
+  Inbox,
+  Bell,
+  Timer,
+  Edit3,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -949,6 +954,18 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
   const [webinarDate, setWebinarDate] = useState("");
   const [webinarLink, setWebinarLink] = useState("");
   const [replayLink, setReplayLink] = useState("");
+  const [showAdvancedTiming, setShowAdvancedTiming] = useState(false);
+  const [timing, setTiming] = useState({
+    registrationConfirm: -10080, // -7 days
+    twoDaysBefore: -2880,        // -2 days
+    dayBefore: -1440,             // -1 day
+    morningOf: -240,              // -4 hours
+    oneHourWarning: -60,          // -1 hour
+    goingLiveNow: -5,             // -5 min
+    thankYouAttended: 60,         // +1 hour
+    missedYouNoShow: 120,         // +2 hours
+    followUpCta: 1440,            // +1 day
+  });
 
   const messages = scheduled.data?.messages ?? [];
   const pendingCount = messages.filter((m: any) => m.status === "pending").length;
@@ -1075,6 +1092,59 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                   onChange={(e) => setReplayLink(e.target.value)}
                 />
               </div>
+
+              {/* Customizable Timing */}
+              <div className="border-t pt-4">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowAdvancedTiming(!showAdvancedTiming)}
+                >
+                  <Timer className="w-4 h-4" />
+                  Customize Timing
+                  <ChevronRight className={`w-4 h-4 transition-transform ${showAdvancedTiming ? "rotate-90" : ""}`} />
+                </button>
+
+                {showAdvancedTiming && (
+                  <div className="mt-3 space-y-2 bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-2">Set when each message goes out relative to the webinar start time.</p>
+                    {[
+                      { key: "registrationConfirm" as const, label: "Registration Confirm", default: -10080 },
+                      { key: "twoDaysBefore" as const, label: "2 Days Before", default: -2880 },
+                      { key: "dayBefore" as const, label: "Day Before", default: -1440 },
+                      { key: "morningOf" as const, label: "Morning Of", default: -240 },
+                      { key: "oneHourWarning" as const, label: "1 Hour Warning", default: -60 },
+                      { key: "goingLiveNow" as const, label: "Starting NOW", default: -5 },
+                      { key: "thankYouAttended" as const, label: "Thank You (Attended)", default: 60 },
+                      { key: "missedYouNoShow" as const, label: "Missed You (No-Show)", default: 120 },
+                      { key: "followUpCta" as const, label: "Follow-Up CTA", default: 1440 },
+                    ].map((item) => {
+                      const val = timing[item.key];
+                      const absMinutes = Math.abs(val);
+                      let displayText = "";
+                      if (absMinutes >= 1440) displayText = `${Math.round(absMinutes / 1440)}d ${val < 0 ? "before" : "after"}`;
+                      else if (absMinutes >= 60) displayText = `${Math.round(absMinutes / 60)}h ${val < 0 ? "before" : "after"}`;
+                      else displayText = `${absMinutes}min ${val < 0 ? "before" : "after"}`;
+
+                      return (
+                        <div key={item.key} className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium w-40 flex-shrink-0">{item.label}</span>
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              type="number"
+                              className="h-8 text-xs w-24"
+                              value={val}
+                              onChange={(e) => setTiming(prev => ({ ...prev, [item.key]: parseInt(e.target.value) || 0 }))}
+                            />
+                            <span className="text-xs text-muted-foreground w-24">{displayText}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[10px] text-muted-foreground mt-2">Values in minutes. Negative = before webinar, positive = after.</p>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowGenerate(false)}>Cancel</Button>
@@ -1086,6 +1156,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                     webinarDate: new Date(webinarDate).toISOString(),
                     webinarLink: webinarLink || undefined,
                     replayLink: replayLink || undefined,
+                    timing: showAdvancedTiming ? timing : undefined,
                   });
                   setShowGenerate(false);
                 }}
@@ -1628,6 +1699,246 @@ function EmailNoShows({ webinarId }: { webinarId: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SECTION: SMS Replies Inbox
+// ═══════════════════════════════════════════════════════════════════════════
+
+function RepliesInbox() {
+  const [page, setPage] = useState(0);
+  const replies = trpc.webinarSms.getIncomingReplies.useQuery(
+    { page, pageSize: 20 },
+    { refetchInterval: 15000 } // Poll every 15s for new replies
+  );
+
+  const replyList = replies.data?.replies ?? [];
+  const totalPages = replies.data?.totalPages ?? 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Inbox className="w-5 h-5 text-blue-600" />
+              SMS Replies
+            </CardTitle>
+            <CardDescription>
+              Incoming messages from your contacts
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => replies.refetch()}
+            disabled={replies.isFetching}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${replies.isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {replies.isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : replyList.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No incoming replies yet.</p>
+            <p className="text-xs mt-1">Replies will appear here when contacts respond to your SMS campaigns.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {replyList.map((reply) => (
+              <div
+                key={reply.id}
+                className="flex items-start gap-3 p-3 rounded-lg border bg-background hover:bg-muted/30 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-sm font-medium">
+                      {reply.registrantName || formatPhoneDisplay(reply.phone)}
+                    </p>
+                    {reply.registrantName && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatPhoneDisplay(reply.phone)}
+                      </span>
+                    )}
+                    {reply.webinarName && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {reply.webinarName}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground">{reply.text}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    {new Date(reply.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-3 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {page + 1}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatPhoneDisplay(phone: string): string {
+  const clean = phone.replace(/[^\d]/g, "");
+  if (clean.length === 10) {
+    return `(${clean.slice(0, 3)}) ${clean.slice(3, 6)}-${clean.slice(6)}`;
+  }
+  if (clean.length === 11 && clean.startsWith("1")) {
+    return `(${clean.slice(1, 4)}) ${clean.slice(4, 7)}-${clean.slice(7)}`;
+  }
+  return phone;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: Live No-Show Nudge
+// ═══════════════════════════════════════════════════════════════════════════
+
+function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
+  const [showDialog, setShowDialog] = useState(false);
+  const [nudgeMessage, setNudgeMessage] = useState(
+    `Hey %FIRST_NAME%! We started without you \u2014 jump in now before you miss the good stuff! \ud83d\udd25 Join here: [WEBINAR_LINK]`
+  );
+  const sendNudge = trpc.webinarSms.sendNoShowNudge.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Nudge sent to ${data.sent} registrants${data.failed > 0 ? ` (${data.failed} failed)` : ""}`);
+      setShowDialog(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
+
+  // Determine if webinar is currently live (started within last 3 hours)
+  const now = new Date();
+  const webinarStart = scheduleDate ? new Date(scheduleDate) : null;
+  const webinarIsLive = webinarStart
+    ? now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000 && // At least 10 min in
+      now.getTime() <= webinarStart.getTime() + 3 * 60 * 60 * 1000 // Within 3 hours
+    : false;
+
+  const minutesIn = webinarStart
+    ? Math.floor((now.getTime() - webinarStart.getTime()) / (60 * 1000))
+    : 0;
+
+  const noShowCount = (summary.data?.total ?? 0) - (summary.data?.attended ?? 0) - (summary.data?.optedOut ?? 0);
+
+  return (
+    <>
+      <Card className={`border-2 ${webinarIsLive ? "border-red-200 bg-red-50/30" : "border-dashed border-muted"}`}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${webinarIsLive ? "bg-red-100" : "bg-muted"}`}>
+                <Bell className={`w-5 h-5 ${webinarIsLive ? "text-red-600" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  No-Show Nudge
+                  {webinarIsLive && (
+                    <Badge className="bg-red-600 text-white text-[10px] animate-pulse">
+                      LIVE \u2022 {minutesIn}min in
+                    </Badge>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {webinarIsLive
+                    ? `${noShowCount} registrants haven't joined yet`
+                    : scheduleDate
+                      ? `Available once webinar is 10+ minutes in`
+                      : "Set a webinar schedule date first"}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant={webinarIsLive ? "destructive" : "outline"}
+              size="sm"
+              disabled={!webinarIsLive || noShowCount === 0}
+              onClick={() => setShowDialog(true)}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Nudge No-Shows ({noShowCount})
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-red-600" />
+              Send No-Show Nudge
+            </DialogTitle>
+            <DialogDescription>
+              This will text {noShowCount} registrants who haven't attended yet. The webinar is {minutesIn} minutes in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Nudge Message</label>
+              <Textarea
+                value={nudgeMessage}
+                onChange={(e) => setNudgeMessage(e.target.value)}
+                rows={4}
+                placeholder="Hey %FIRST_NAME%! We started without you..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use %FIRST_NAME% for personalization. Replace [WEBINAR_LINK] with your actual link.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!nudgeMessage.trim() || sendNudge.isPending}
+              onClick={() => sendNudge.mutate({ webinarId, message: nudgeMessage })}
+            >
+              {sendNudge.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Send to {noShowCount} No-Shows
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN PAGE COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1716,7 +2027,7 @@ export default function WebinarCampaignManager() {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-7 w-full max-w-3xl">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Audience</span>
@@ -1729,9 +2040,17 @@ export default function WebinarCampaignManager() {
                 <CalendarClock className="w-4 h-4" />
                 <span className="hidden sm:inline">Sequence</span>
               </TabsTrigger>
+              <TabsTrigger value="replies" className="flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Replies</span>
+              </TabsTrigger>
               <TabsTrigger value="email" className="flex items-center gap-1.5">
                 <Mail className="w-4 h-4" />
                 <span className="hidden sm:inline">Email</span>
+              </TabsTrigger>
+              <TabsTrigger value="live" className="flex items-center gap-1.5">
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Live</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-1.5">
                 <Settings className="w-4 h-4" />
@@ -1754,8 +2073,16 @@ export default function WebinarCampaignManager() {
               <SequenceBuilder webinarId={selectedWebinarId} />
             </TabsContent>
 
+            <TabsContent value="replies" className="mt-6">
+              <RepliesInbox />
+            </TabsContent>
+
             <TabsContent value="email" className="mt-6">
               <EmailNoShows webinarId={selectedWebinarId} />
+            </TabsContent>
+
+            <TabsContent value="live" className="mt-6">
+              <NoShowNudge webinarId={selectedWebinarId} scheduleDate={settings.data?.selectedScheduleDate || null} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-6">

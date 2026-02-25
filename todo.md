@@ -12442,3 +12442,23 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Bug Fix: Webinar Registrant Sync Insert Query (Feb 25, 2026)
 - [x] Fix insert query using `default` for required fields (name, email, webinarId) — was using INSERT...ON DUPLICATE KEY UPDATE with incomplete row data, changed to simple UPDATE
+
+## SMS Replies Inbox (Feb 25, 2026)
+- [x] Research SimplTexting API for incoming messages/replies
+- [x] Build backend endpoint to fetch/poll replies from SimplTexting (getIncomingReplies)
+- [x] Build frontend Replies Inbox tab in WebinarCampaignManager
+- [x] Show sender phone, matched registrant name, message text, timestamp
+- [x] Auto-refresh replies every 15 seconds
+
+## Live No-Show Nudge (Feb 25, 2026)
+- [x] Build backend endpoint to identify registrants who haven't attended 10 min into webinar (sendNoShowNudge)
+- [x] Create "Send No-Show Nudge" button that texts non-attendees during live webinar
+- [x] Add default nudge message template with %FIRST_NAME% personalization
+- [x] Guard: only allow nudge when webinar is currently live (10min in, within 3hr window)
+- [x] Frontend: Live tab with real-time status, elapsed time, and nudge controls
+
+## Customizable Sequence Timing (Feb 25, 2026)
+- [x] Allow admin to set custom timing for reminder sequence (default: 1hr, 15min, starting now)
+- [x] UI: expandable "Customize Timing" section in Generate Sequence dialog
+- [x] Pass custom timing to backend generateSequence mutation
+- [x] Human-readable offset display (e.g., "1h before", "15min before")
