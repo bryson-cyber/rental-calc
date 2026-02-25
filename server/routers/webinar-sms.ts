@@ -1121,9 +1121,9 @@ export const webinarSmsRouter = router({
         const normalizedPhone = normalizePhone(row.phone);
         const attended = attendanceMap.get(normalizedPhone);
         if (attended !== undefined) {
-          await db.insert(webinarRegistrants)
-            .values({ ...row, attended } as any)
-            .onDuplicateKeyUpdate({ set: { attended } });
+          await db.update(webinarRegistrants)
+            .set({ attended })
+            .where(eq(webinarRegistrants.id, row.id));
           updated++;
         }
       }

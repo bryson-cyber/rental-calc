@@ -12439,3 +12439,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Load persisted override in ShareableReportViewer so clients see adjusted number
 - [x] Wire TeslaDashboard +/- buttons to auto-save override to DB when shareCode exists
 - [x] Pass shareCode from UniversalShareButton → LeadMagnet → TeslaDashboard
+
+## Bug Fix: Webinar Registrant Sync Insert Query (Feb 25, 2026)
+- [x] Fix insert query using `default` for required fields (name, email, webinarId) — was using INSERT...ON DUPLICATE KEY UPDATE with incomplete row data, changed to simple UPDATE
