@@ -1669,7 +1669,8 @@ function ArbitrageCalculator({
   occupancy,
   adr,
   furnitureCost = 0,
-  expensePercent = 20
+  expensePercent = 20,
+  revenueScenarios
 }: { 
   monthlyRevenue: number;
   monthlyRent: number;
@@ -1677,6 +1678,7 @@ function ArbitrageCalculator({
   adr: number;
   furnitureCost?: number;
   expensePercent?: number;
+  revenueScenarios?: { conservative: number; target: number; optimistic: number; source: string; compCount: number };
 }) {
   // Calculate expenses as percentage of revenue
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
@@ -1863,6 +1865,59 @@ function ArbitrageCalculator({
             </span> cushion.
           </p>
         </div>
+
+        {/* Tiered Breakeven Times — Conservative / Target / Optimistic */}
+        {revenueScenarios && furnitureCost > 0 && (() => {
+          const calcTierBreakeven = (annualRevenue: number) => {
+            const monthlyRev = annualRevenue / 12;
+            const monthlyExp = monthlyRev * (expensePercent / 100);
+            const monthlyProfit = monthlyRev - monthlyRent - monthlyExp;
+            const months = monthlyProfit > 0 ? Math.ceil(furnitureCost / monthlyProfit) : Infinity;
+            return { monthlyProfit, months };
+          };
+          const conservative = calcTierBreakeven(revenueScenarios.conservative);
+          const target = calcTierBreakeven(revenueScenarios.target);
+          const optimistic = calcTierBreakeven(revenueScenarios.optimistic);
+          const tiers = [
+            { label: 'Conservative', sublabel: 'Average host', ...conservative, bgClass: 'bg-amber-50 border-amber-200', textClass: 'text-amber-700', labelClass: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-700' },
+            { label: 'Target', sublabel: 'Good host', ...target, bgClass: 'bg-blue-50 border-blue-200', textClass: 'text-blue-700', labelClass: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-700' },
+            { label: 'Optimistic', sublabel: 'Top 10%', ...optimistic, bgClass: 'bg-emerald-50 border-emerald-200', textClass: 'text-emerald-700', labelClass: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-700' },
+          ];
+          return (
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Time to Recoup — By Scenario</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Based on {revenueScenarios.compCount} comparable {revenueScenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {tiers.map((tier) => (
+                  <div key={tier.label} className={`rounded-xl p-4 border ${tier.bgClass} transition-shadow hover:shadow-md`}>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <span className={`text-xs font-bold uppercase tracking-wider ${tier.labelClass}`}>{tier.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tier.badgeClass} font-medium`}>{tier.sublabel}</span>
+                    </div>
+                    <div className="mb-2">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Breakeven Time</p>
+                      <p className={`text-2xl font-bold ${tier.textClass}`}>
+                        {tier.months === Infinity ? '—' : `${tier.months} mo`}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-dashed border-slate-200">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
+                      <p className={`text-base font-bold ${tier.monthlyProfit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {tier.monthlyProfit > 0 ? '+' : ''}{formatCurrency(tier.monthlyProfit)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         
         {/* Risk Scenario */}
         <div className={`p-4 rounded-xl ${
@@ -2896,8 +2951,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         </div>
       </div>
       
-      {/* SECTION 1: Rent Validation - "Is my rent assumption valid?" (hidden in purchase mode - no landlord rent to validate) */}
-      {mode !== 'purchase' && rentometerData && (
+      {/* SECTION 1: Rent Validation - Market rent data from Rentometer */}
+      {rentometerData && (
         <RentValidationSection rentometerData={rentometerData} monthlyRent={result.cashFlow.monthlyRent} />
       )}
       
@@ -3166,6 +3221,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           adr={result.metrics.adr}
           furnitureCost={furnitureCost}
           expensePercent={expensePercent}
+          revenueScenarios={revenueScenarios || result.revenueScenarios}
         />
       )}
       

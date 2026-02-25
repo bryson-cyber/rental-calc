@@ -1263,32 +1263,35 @@ export default function LeadMagnet() {
     }, 1000);
     
     try {
-      // Fetch Rentometer data in parallel if rent is provided
+      // Fetch Rentometer data in parallel — always fetch market data, even without user rent
       const rentValue = parseFloat(monthlyRent) || 0;
-      if (rentValue > 0 && address) {
+      if (address) {
         setIsLoadingRentometer(true);
         try {
           const rentometerResponse = await analyzeRent.mutateAsync({
             address,
             bedrooms: parseInt(bedrooms),
-            userRent: rentValue,
+            userRent: rentValue, // 0 if user didn't enter rent — still gets market data
           });
           if (rentometerResponse.success && rentometerResponse.data) {
             const data = rentometerResponse.data;
-            const userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
-              : data.userRentComparison.rentAdvantage < 0 ? 'above' 
-              : 'at';
-            // Calculate percentile rank based on where user's rent falls
-            const userRent = rentValue;
-            let percentileRank = 50; // default to median
-            if (userRent <= data.marketData.percentile25) {
-              percentileRank = 25;
-            } else if (userRent <= data.marketData.median) {
-              percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
-            } else if (userRent <= data.marketData.percentile75) {
-              percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
-            } else {
-              percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
+            // If user provided rent, calculate comparison; otherwise just show market data
+            let userRentVsMarket: 'below' | 'above' | 'at' = 'at';
+            let percentileRank = 50;
+            if (rentValue > 0) {
+              userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
+                : data.userRentComparison.rentAdvantage < 0 ? 'above' 
+                : 'at';
+              const userRent = rentValue;
+              if (userRent <= data.marketData.percentile25) {
+                percentileRank = 25;
+              } else if (userRent <= data.marketData.median) {
+                percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
+              } else if (userRent <= data.marketData.percentile75) {
+                percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
+              } else {
+                percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
+              }
             }
             
             setRentometerData({
@@ -1299,7 +1302,7 @@ export default function LeadMagnet() {
               max: data.marketData.max,
               sampleCount: data.marketData.samples,
               userRentVsMarket,
-              rentAdvantage: data.userRentComparison.rentAdvantage,
+              rentAdvantage: rentValue > 0 ? data.userRentComparison.rentAdvantage : 0,
               percentileRank: Math.round(percentileRank),
             });
           }

@@ -12402,3 +12402,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Write vitest tests for updated rate limiting logic (10 tests passing)
 - [x] Fix batch analyze glitch: handleBulkAnalyze now checks remaining limit before starting, caps batch size, and shows clear message when limit exceeded
 - [x] Add separate validateAnalyses column to user_usage table for Step 5's own 20/day limit
+
+## Bug: Google Address Autocomplete Broken (Feb 24, 2026)
+- [ ] Reproduce: Google autofill no longer works on property address inputs
+- [ ] Diagnose: check what changed that could break Google Places autocomplete
+- [ ] Fix root cause
+- [ ] Verify fix works on all address input fields
+
+## Bug: Step 5 Missing Features + Autocomplete (Feb 24, 2026)
+- [x] Fix Google address autocomplete: VITE_GOOGLE_PLACES_API_KEY was missing, re-added via webdev_request_secrets
+- [x] Fix Rentometer data not showing on Step 5: now fetches market rent data even without user-entered rent (address-only lookup), and shows Rentometer section in both rent and purchase modes
+- [x] Fix tiered breakeven times missing from investment analysis: ArbitrageCalculator now receives revenueScenarios and displays Conservative/Target/Optimistic breakeven times with monthly profit for each tier
