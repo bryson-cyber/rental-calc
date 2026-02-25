@@ -957,6 +957,7 @@ export const webinarSmsRouter = router({
       selectedWebinarId,
       selectedWebinarName: settings["selected_webinar_name"] || null,
       selectedScheduleId: settings["selected_schedule_id"] || null,
+      selectedScheduleDate: settings["selected_schedule_date"] || null,
       cronEnabled: settings["cron_enabled"] === "true",
       cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "30", 10),
       lastAutoImportAt: settings["last_auto_import_at"] || null,
@@ -979,13 +980,13 @@ export const webinarSmsRouter = router({
       scheduleId: z.string().optional(),
       webinarApiKey: z.string().optional(),
       webinarHash: z.string().optional(),
-      webinarMemberId: z.string().optional(),
+       webinarMemberId: z.string().optional(),
       webinarIntegrationId: z.string().optional(),
+      scheduleDate: z.string().optional(), // ISO date string of the selected schedule
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-
       // Save global selection settings
       const upserts = [
         { key: "selected_webinar_id", value: input.webinarId, desc: "Currently selected WebinarJam webinar ID" },
@@ -993,6 +994,9 @@ export const webinarSmsRouter = router({
       ];
       if (input.scheduleId) {
         upserts.push({ key: "selected_schedule_id", value: input.scheduleId, desc: "Currently selected schedule ID" });
+      }
+      if (input.scheduleDate) {
+        upserts.push({ key: "selected_schedule_date", value: input.scheduleDate, desc: "Date of the selected webinar schedule" });
       }
 
       for (const u of upserts) {

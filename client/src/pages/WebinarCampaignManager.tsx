@@ -352,6 +352,10 @@ function WebinarHeader({
               onClick={() => {
                 const webinar = webinars.data?.webinars?.find((w: any) => w.id === selectedId);
                 if (!webinar) return;
+                // Find the selected schedule's date
+                const selectedSched = selectedSchedule && selectedSchedule !== "none"
+                  ? webinar.schedules?.find((s: any) => String(s.id) === selectedSchedule)
+                  : webinar.schedules?.[0]; // default to first schedule
                 saveSelection.mutate({
                   webinarId: selectedId,
                   webinarName: webinar.name,
@@ -360,6 +364,7 @@ function WebinarHeader({
                   webinarHash: webinarHash || undefined,
                   webinarMemberId: webinarMemberId || undefined,
                   webinarIntegrationId: webinarIntegrationId || undefined,
+                  scheduleDate: selectedSched?.date || undefined,
                 });
                 setShowSelector(false);
               }}
@@ -378,7 +383,22 @@ function WebinarHeader({
 // SECTION 2: Attendance Dashboard — Split View
 // ═══════════════════════════════════════════════════════════════════════════
 
-function AttendanceDashboard({ webinarId }: { webinarId: string }) {
+function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
+  // Determine if the webinar has already happened
+  // WebinarJam schedule dates are typically in format like "February 25, 2026 8:00 PM" or ISO
+  const webinarHasEnded = useMemo(() => {
+    if (!scheduleDate) return false; // If no date, we can't tell — assume not ended
+    try {
+      const scheduledTime = new Date(scheduleDate);
+      if (isNaN(scheduledTime.getTime())) return false;
+      // Add 2 hours buffer for webinar duration
+      const endTime = new Date(scheduledTime.getTime() + 2 * 60 * 60 * 1000);
+      return new Date() > endTime;
+    } catch {
+      return false;
+    }
+  }, [scheduleDate]);
+
   const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
   const attended = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 1, pageSize: 100 });
   const noShows = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 0, pageSize: 100 });
@@ -434,12 +454,25 @@ function AttendanceDashboard({ webinarId }: { webinarId: string }) {
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-                <UserX className="w-5 h-5 text-amber-600" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${webinarHasEnded ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                {webinarHasEnded ? (
+                  <UserX className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <Clock className="w-5 h-5 text-slate-400" />
+                )}
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-700">{summary.data?.noShow ?? "—"}</p>
-                <p className="text-xs text-muted-foreground">No-Shows</p>
+                {webinarHasEnded ? (
+                  <>
+                    <p className="text-2xl font-bold text-amber-700">{summary.data?.noShow ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">No-Shows</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-slate-400">—</p>
+                    <p className="text-xs text-muted-foreground">No-Shows (pending)</p>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -467,8 +500,8 @@ function AttendanceDashboard({ webinarId }: { webinarId: string }) {
           onClick={() => triggerImport.mutate()}
           disabled={triggerImport.isPending}
         >
-          {triggerImport.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-          Import Registrants
+          {triggerImport.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+          Sync Registrants
         </Button>
         <Button
           variant="outline"
@@ -525,35 +558,54 @@ function AttendanceDashboard({ webinarId }: { webinarId: string }) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <UserX className="w-5 h-5 text-amber-600" />
+                {webinarHasEnded ? (
+                  <UserX className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <Clock className="w-5 h-5 text-slate-400" />
+                )}
                 <CardTitle className="text-base">No-Shows</CardTitle>
-                <Badge variant="secondary" className="ml-1">{noShows.data?.total ?? 0}</Badge>
+                {webinarHasEnded && <Badge variant="secondary" className="ml-1">{noShows.data?.total ?? 0}</Badge>}
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="max-h-[400px] overflow-y-auto space-y-2">
-              {noShows.isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : noShows.data?.registrants?.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No no-shows recorded yet.</p>
-              ) : (
-                noShows.data?.registrants?.map((r: any) => (
-                  <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-100 bg-amber-50/30">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
-                      {r.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{r.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{formatPhone(r.phone)}</p>
-                    </div>
-                    {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+            {!webinarHasEnded ? (
+              <div className="text-center py-12">
+                <Clock className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm font-medium text-slate-500">Webinar hasn't happened yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  No-shows will be available after the webinar ends and you click "Refresh Attendance".
+                </p>
+                {scheduleDate && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Scheduled: {scheduleDate}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
+                {noShows.isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ))
-              )}
-            </div>
+                ) : noShows.data?.registrants?.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No no-shows recorded yet. Click "Refresh Attendance" to pull data.</p>
+                ) : (
+                  noShows.data?.registrants?.map((r: any) => (
+                    <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-100 bg-amber-50/30">
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
+                        {r.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{formatPhone(r.phone)}</p>
+                      </div>
+                      {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -1688,7 +1740,7 @@ export default function WebinarCampaignManager() {
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-6">
-              <AttendanceDashboard webinarId={selectedWebinarId} />
+              <AttendanceDashboard webinarId={selectedWebinarId} scheduleDate={settings.data?.selectedScheduleDate || null} />
             </TabsContent>
 
             <TabsContent value="send" className="mt-6">

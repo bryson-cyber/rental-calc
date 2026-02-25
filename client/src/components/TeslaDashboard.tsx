@@ -31,6 +31,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Plus,
+  RotateCcw,
   Camera,
   Briefcase,
   Award,
@@ -157,6 +159,7 @@ interface TeslaDashboardProps {
     source: string;
     compCount: number;
   };
+  isAdmin?: boolean;  // Admin can override revenue numbers
 }
 
 // ============================================
@@ -211,7 +214,10 @@ function HeroRevenueCard({
   expensePercent = 20,
   mode = 'rent',
   monthlyMortgage = 0,
-  revenueScenarios
+  revenueScenarios,
+  isAdmin = false,
+  onRevenueOverride,
+  revenueOverrideActive = false
 }: { 
   annualRevenue: number;
   monthlyProfit: number;
@@ -227,6 +233,9 @@ function HeroRevenueCard({
     source: string;
     compCount: number;
   };
+  isAdmin?: boolean;
+  onRevenueOverride?: (newRevenue: number | null) => void;
+  revenueOverrideActive?: boolean;
 }) {
   // Calculate monthly values
   const monthlyRevenue = annualRevenue / 12;
@@ -281,10 +290,42 @@ function HeroRevenueCard({
               <p className="text-sm leading-relaxed">{METRIC_TOOLTIPS.revenue}</p>
             </TooltipContent>
           </Tooltip>
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
+          <div className="flex items-baseline gap-3 flex-wrap">
+            {/* Admin override controls: decrement */}
+            {isAdmin && onRevenueOverride && (
+              <button
+                onClick={() => onRevenueOverride(annualRevenue - 5000)}
+                className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition-colors border border-red-300 shadow-sm"
+                title="Decrease revenue by $5,000"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+            )}
+            <span className={`text-4xl md:text-5xl font-bold tracking-tight ${
+              revenueOverrideActive ? 'text-amber-700' : 'text-[oklch(0.25_0_0)]'
+            }`}>
               {formatCurrency(annualRevenue)}
             </span>
+            {/* Admin override controls: increment */}
+            {isAdmin && onRevenueOverride && (
+              <button
+                onClick={() => onRevenueOverride(annualRevenue + 5000)}
+                className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
+                title="Increase revenue by $5,000"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
+            {/* Admin reset button when override is active */}
+            {isAdmin && onRevenueOverride && revenueOverrideActive && (
+              <button
+                onClick={() => onRevenueOverride(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors border border-slate-300 shadow-sm"
+                title="Reset to original estimate"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
             <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
             {yearlyChange !== undefined && (
               <span className={`flex items-center gap-1 text-sm font-medium ${
@@ -299,6 +340,13 @@ function HeroRevenueCard({
               </span>
             )}
           </div>
+          {/* Admin override indicator */}
+          {isAdmin && revenueOverrideActive && (
+            <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+              Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
+            </p>
+          )}
         </div>
         
         {/* Monthly Breakdown - 4 columns with tooltips */}
@@ -2878,7 +2926,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isAdmin = false }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -2886,11 +2934,24 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   }
   const yearlyChange = result.historicalData?.summary?.yearly_pct_change;
   
+  // Use Target (P75) revenue as the headline when available, fallback to Rentalizer estimate
+  const effectiveScenarios = revenueScenarios || result.revenueScenarios;
+  const baseHeadlineRevenue = effectiveScenarios?.target || result.revenue.projected;
+  
+  // Admin revenue override — allows admin to adjust the headline revenue up/down
+  const [revenueOverride, setRevenueOverride] = useState<number | null>(null);
+  const headlineRevenue = revenueOverride ?? baseHeadlineRevenue;
+  
+  // Reset override when base revenue changes (new analysis)
+  useEffect(() => {
+    setRevenueOverride(null);
+  }, [baseHeadlineRevenue]);
+  
   // Purchase mode calculations
   const purchaseCalcs = useMemo(() => {
     if (mode !== 'purchase' || !purchasePrice) return null;
     
-    const annualRevenue = result.revenue.projected;
+    const annualRevenue = headlineRevenue;
     const operatingExpenses = annualRevenue * (expensePercent / 100);
     const noi = annualRevenue - operatingExpenses;
     
@@ -2931,7 +2992,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       dscr,
       breakEvenOccupancy
     };
-  }, [mode, purchasePrice, result.revenue.projected, expensePercent, downPaymentPercent, interestRate, loanType, result.metrics.occupancy]);
+  }, [mode, purchasePrice, headlineRevenue, expensePercent, downPaymentPercent, interestRate, loanType, result.metrics.occupancy]);
   
   return (
     <div className="space-y-6">
@@ -2958,14 +3019,17 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 2: Revenue Projection - "What can I make?" */}
       <HeroRevenueCard
-        annualRevenue={result.revenue.projected}
+        annualRevenue={headlineRevenue}
         monthlyProfit={result.cashFlow.monthlyProfit}
         monthlyRent={result.cashFlow.monthlyRent}
         yearlyChange={yearlyChange}
         expensePercent={expensePercent}
         mode={mode}
         monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
-        revenueScenarios={revenueScenarios || result.revenueScenarios}
+        revenueScenarios={effectiveScenarios}
+        isAdmin={isAdmin}
+        onRevenueOverride={(val) => setRevenueOverride(val)}
+        revenueOverrideActive={revenueOverride !== null}
       />
       
       {/* SECTION 3: Key Metrics - ADR, Occupancy, Revenue Range */}

@@ -12417,3 +12417,11 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Bug: Distance Feature Not Working on Step 5 Comps (Feb 25, 2026)
 - [x] Investigate: radius comps had lat/lng but no distance_meters calculated; rentalizer comps had distance_meters but no lat/lng
 - [x] Fix: added Haversine distance calculation in getComprehensivePropertyReport (airdna.ts) to compute distance_meters for all comps with lat/lng before returning results
+
+## Feature: Headline Revenue & Admin Override (Feb 25, 2026)
+- [ ] Use Target/P75 revenue as the headline number in the top bar instead of Rentalizer estimate
+- [ ] Add admin override controls to manually adjust revenue numbers on a report (scroll up/down)
+
+## Bug: Webinar No-Shows & Import (Feb 25, 2026)
+- [x] Fix no-shows count: should not show no-shows before webinar has happened (currently shows 359 no-shows for a future webinar)
+- [x] Add manual "Sync Registrants" button that pulls from WebinarJam API on demand (not CSV import)

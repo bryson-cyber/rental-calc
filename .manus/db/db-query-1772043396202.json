@@ -1,0 +1,34 @@
+{
+  "query": "SELECT webinarId, webinarName, webinarDate, COUNT(*) as cnt, SUM(attended) as attended_count, SUM(CASE WHEN attended = 0 THEN 1 ELSE 0 END) as no_show_count FROM webinar_registrants GROUP BY webinarId, webinarName, webinarDate;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT webinarId, webinarName, webinarDate, COUNT(*) as cnt, SUM(attended) as attended_count, SUM(CASE WHEN attended = 0 THEN 1 ELSE 0 END) as no_show_count FROM webinar_registrants GROUP BY webinarId, webinarName, webinarDate;",
+  "rows": [
+    {
+      "webinarId": "NULL",
+      "webinarName": "Test Webinar",
+      "webinarDate": "NULL",
+      "cnt": "14",
+      "attended_count": "0",
+      "no_show_count": "14"
+    },
+    {
+      "webinarId": "370",
+      "webinarName": "Webby 2.22.26",
+      "webinarDate": "NULL",
+      "cnt": "829",
+      "attended_count": "202",
+      "no_show_count": "627"
+    },
+    {
+      "webinarId": "371",
+      "webinarName": "Webby 2.25.26",
+      "webinarDate": "NULL",
+      "cnt": "359",
+      "attended_count": "0",
+      "no_show_count": "359"
+    }
+  ],
+  "messages": [],
+  "stdout": "webinarId\twebinarName\twebinarDate\tcnt\tattended_count\tno_show_count\nNULL\tTest Webinar\tNULL\t14\t0\t14\n370\tWebby 2.22.26\tNULL\t829\t202\t627\n371\tWebby 2.25.26\tNULL\t359\t0\t359\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

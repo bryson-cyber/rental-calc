@@ -5846,6 +5846,7 @@ export default function LeadMagnet() {
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
                 revenueScenarios={result.revenueScenarios}
+                isAdmin={isAdmin}
               />
               </Suspense>
             </StepErrorBoundary>
