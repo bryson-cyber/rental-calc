@@ -3971,6 +3971,37 @@ export async function getComprehensivePropertyReport(
     console.log(`[Revenue Scenarios] Not enough comps (${scenarioComps.length}) for three-tier projections`);
   }
   
+  // ============================================
+  // DISTANCE CALCULATION (Haversine)
+  // Calculate distance from subject property to each comp
+  // ============================================
+  const subjectLat = propertyEstimate.property?.latitude;
+  const subjectLng = propertyEstimate.property?.longitude;
+  
+  if (subjectLat && subjectLng) {
+    const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number | null | undefined, lng2: number | null | undefined): number | undefined => {
+      if (!lat2 || !lng2) return undefined;
+      const R = 6371000; // Earth's radius in meters
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return Math.round(R * c);
+    };
+    
+    sameBedroomComps = sameBedroomComps.map(c => ({
+      ...c,
+      distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
+    }));
+    
+    const compsWithDistance = sameBedroomComps.filter(c => c.distance_meters !== undefined).length;
+    console.log(`[Distance] Calculated distance for ${compsWithDistance}/${sameBedroomComps.length} comps from subject (${subjectLat}, ${subjectLng})`);
+  } else {
+    console.log(`[Distance] No subject coordinates available — skipping distance calculation`);
+  }
+  
   const result = {
     property: propertyEstimate,
     market: marketData,
