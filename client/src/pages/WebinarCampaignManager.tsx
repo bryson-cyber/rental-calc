@@ -126,6 +126,30 @@ function formatDate(dateStr: string | Date | null) {
   });
 }
 
+function getRelativeTime(dateStr: string | Date | null): string | null {
+  if (!dateStr) return null;
+  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  const now = new Date();
+  const diffMs = d.getTime() - now.getTime();
+  const absDiffMs = Math.abs(diffMs);
+  const isFuture = diffMs > 0;
+
+  if (absDiffMs < 60_000) return isFuture ? "in < 1 min" : "just now";
+  if (absDiffMs < 3_600_000) {
+    const mins = Math.round(absDiffMs / 60_000);
+    return isFuture ? `in ${mins} min` : `${mins} min ago`;
+  }
+  if (absDiffMs < 86_400_000) {
+    const hrs = Math.floor(absDiffMs / 3_600_000);
+    const mins = Math.round((absDiffMs % 3_600_000) / 60_000);
+    const hPart = `${hrs}h`;
+    const mPart = mins > 0 ? ` ${mins}m` : "";
+    return isFuture ? `in ${hPart}${mPart}` : `${hPart}${mPart} ago`;
+  }
+  const days = Math.round(absDiffMs / 86_400_000);
+  return isFuture ? `in ${days}d` : `${days}d ago`;
+}
+
 function formatPhone(phone: string) {
   const cleaned = phone.replace(/\D/g, "");
   if (cleaned.length === 10) {
@@ -1024,6 +1048,24 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                   <p className="text-xs text-muted-foreground">
                     <Clock className="w-3 h-3 inline mr-1" />
                     {formatDate(msg.scheduledAt)}
+                    {msg.status === "pending" && getRelativeTime(msg.scheduledAt) && (
+                      <span className={`ml-2 font-semibold ${
+                        (() => {
+                          const d = new Date(msg.scheduledAt);
+                          const diffMs = d.getTime() - Date.now();
+                          if (diffMs < 0) return "text-red-500";
+                          if (diffMs < 3_600_000) return "text-amber-500";
+                          return "text-emerald-600";
+                        })()
+                      }`}>
+                        ({getRelativeTime(msg.scheduledAt)})
+                      </span>
+                    )}
+                    {msg.status === "sent" && (
+                      <span className="ml-2 text-emerald-600 font-medium">
+                        ✓ Sent {getRelativeTime(msg.scheduledAt) || ""}
+                      </span>
+                    )}
                     {msg.sentCount > 0 && (
                       <span className="ml-2">
                         • {msg.sentCount} sent {msg.failedCount > 0 && `• ${msg.failedCount} failed`}

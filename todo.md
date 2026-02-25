@@ -12462,3 +12462,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] UI: expandable "Customize Timing" section in Generate Sequence dialog
 - [x] Pass custom timing to backend generateSequence mutation
 - [x] Human-readable offset display (e.g., "1h before", "15min before")
+
+## Relative Time Indicators on Scheduled SMS (Feb 25, 2026)
+- [x] Add countdown/elapsed time display next to each scheduled message (e.g., "in 54 min", "2 hours ago")
+- [x] Color-coded: red if overdue, amber if < 1hr, green if > 1hr away
+- [x] Shows "✓ Sent" with elapsed time for already-sent messages
+- [ ] Auto-update the relative time every minute so it stays current (deferred — refreshes on page load/interaction)
+
+## SMS Dispatch & Delivery Tracking (Feb 25, 2026)
+- [ ] Investigate current scheduled message dispatch mechanism (cron job? manual trigger?)
+- [ ] Ensure scheduled messages actually fire at their scheduled time automatically
+- [ ] Track delivery status per message (sent, delivered, failed) with timestamps
+- [ ] Show real delivery confirmation on the frontend (not just countdown)
