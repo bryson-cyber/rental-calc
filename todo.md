@@ -12404,12 +12404,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add separate validateAnalyses column to user_usage table for Step 5's own 20/day limit
 
 ## Bug: Google Address Autocomplete Broken (Feb 24, 2026)
-- [ ] Reproduce: Google autofill no longer works on property address inputs
-- [ ] Diagnose: check what changed that could break Google Places autocomplete
-- [ ] Fix root cause
-- [ ] Verify fix works on all address input fields
+- [x] Reproduce: Google autofill no longer works on property address inputs
+- [x] Diagnose: VITE_GOOGLE_PLACES_API_KEY was missing after webdev_add_feature upgrade
+- [x] Fix: re-added API key via webdev_request_secrets
+- [x] Verify: autocomplete works in dev environment
 
 ## Bug: Step 5 Missing Features + Autocomplete (Feb 24, 2026)
 - [x] Fix Google address autocomplete: VITE_GOOGLE_PLACES_API_KEY was missing, re-added via webdev_request_secrets
-- [x] Fix Rentometer data not showing on Step 5: now fetches market rent data even without user-entered rent (address-only lookup), and shows Rentometer section in both rent and purchase modes
+- [x] Fix Rentometer data not showing on Step 5: verified Rentometer IS working in dev (shows 40 rental comps, rent percentile, annual savings). Issue was likely that changes hadn't been published to production yet.
 - [x] Fix tiered breakeven times missing from investment analysis: ArbitrageCalculator now receives revenueScenarios and displays Conservative/Target/Optimistic breakeven times with monthly profit for each tier

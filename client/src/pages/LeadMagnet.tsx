@@ -1263,35 +1263,33 @@ export default function LeadMagnet() {
     }, 1000);
     
     try {
-      // Fetch Rentometer data in parallel — always fetch market data, even without user rent
+      // Fetch Rentometer data in parallel (rent is always provided for validate)
       const rentValue = parseFloat(monthlyRent) || 0;
-      if (address) {
+      if (rentValue > 0 && address) {
         setIsLoadingRentometer(true);
         try {
           const rentometerResponse = await analyzeRent.mutateAsync({
             address,
             bedrooms: parseInt(bedrooms),
-            userRent: rentValue, // 0 if user didn't enter rent — still gets market data
+            userRent: rentValue,
           });
+          console.log('[Rentometer] Response:', JSON.stringify(rentometerResponse));
           if (rentometerResponse.success && rentometerResponse.data) {
             const data = rentometerResponse.data;
-            // If user provided rent, calculate comparison; otherwise just show market data
-            let userRentVsMarket: 'below' | 'above' | 'at' = 'at';
-            let percentileRank = 50;
-            if (rentValue > 0) {
-              userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
-                : data.userRentComparison.rentAdvantage < 0 ? 'above' 
-                : 'at';
-              const userRent = rentValue;
-              if (userRent <= data.marketData.percentile25) {
-                percentileRank = 25;
-              } else if (userRent <= data.marketData.median) {
-                percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
-              } else if (userRent <= data.marketData.percentile75) {
-                percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
-              } else {
-                percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
-              }
+            const userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
+              : data.userRentComparison.rentAdvantage < 0 ? 'above' 
+              : 'at';
+            // Calculate percentile rank based on where user's rent falls
+            const userRent = rentValue;
+            let percentileRank = 50; // default to median
+            if (userRent <= data.marketData.percentile25) {
+              percentileRank = 25;
+            } else if (userRent <= data.marketData.median) {
+              percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
+            } else if (userRent <= data.marketData.percentile75) {
+              percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
+            } else {
+              percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
             }
             
             setRentometerData({
@@ -1302,16 +1300,21 @@ export default function LeadMagnet() {
               max: data.marketData.max,
               sampleCount: data.marketData.samples,
               userRentVsMarket,
-              rentAdvantage: rentValue > 0 ? data.userRentComparison.rentAdvantage : 0,
+              rentAdvantage: data.userRentComparison.rentAdvantage,
               percentileRank: Math.round(percentileRank),
             });
+            console.log('[Rentometer] Data set successfully');
+          } else {
+            console.log('[Rentometer] Response was not successful or missing data:', rentometerResponse);
           }
         } catch (rentError) {
-          console.log('[Rentometer] Could not fetch rent data:', rentError);
+          console.error('[Rentometer] Failed to fetch rent data:', rentError);
           // Don't fail the main analysis if Rentometer fails
         } finally {
           setIsLoadingRentometer(false);
         }
+      } else {
+        console.log('[Rentometer] Skipped: rentValue=', rentValue, 'address=', address);
       }
       const loadingInterval = setInterval(() => {
         setLoadingStep(prev => prev < 4 ? prev + 1 : prev);
