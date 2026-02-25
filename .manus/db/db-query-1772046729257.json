@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "3758224",
+      "hash": "2ba6c67d7aca0ade239e9bb6f29ef44db547398bc68760e683f474d9ba678c53",
+      "created_at": "1771813967465"
+    },
+    {
+      "id": "3758223",
+      "hash": "803511aea53597fad47c33407de9ffb5c2e3b2269e1c3fd5b536793cc5306174",
+      "created_at": "1771811779465"
+    },
+    {
+      "id": "3758222",
+      "hash": "534897f804939cead1c4c76c590334c05054bd4c99868dc956a8e5a1239bd71e",
+      "created_at": "1771805710415"
+    },
+    {
+      "id": "3758221",
+      "hash": "937b68782a30266ff163af40e0170107a523ac996ac9b9a7c6c8d26993f5af7e",
+      "created_at": "1771799204289"
+    },
+    {
+      "id": "3758220",
+      "hash": "ed1da96fd73dc698d00a9adb9cabb397892614417f0aa4ddf6e75a4344d96b99",
+      "created_at": "1771796134164"
+    },
+    {
+      "id": "3758219",
+      "hash": "17951db8984c9868827b9e41f9c1db6ee92a3196a4099ce78f7cd34abb4fd503",
+      "created_at": "1771794158198"
+    },
+    {
+      "id": "3728222",
+      "hash": "0218ce53e062b908a4399b5062e7d4645c7c78925b61c85484b4fc49d01781bf",
+      "created_at": "1771732376543"
+    },
+    {
+      "id": "3728221",
+      "hash": "616d567da659626c1e4d28a5e1463d7749b886451bde7c285ffed47f7f0e023f",
+      "created_at": "1771731216079"
+    },
+    {
+      "id": "3728220",
+      "hash": "e83085d6ff39bdf8d7ecbb700d2419d3b39d1684d1d8ed9af93cf96e5b864e28",
+      "created_at": "1771725952466"
+    },
+    {
+      "id": "3728219",
+      "hash": "cafb44dc6eb910b04a15e366e9cfc618116b35f4d1c707320fce6fe00dcacd1c",
+      "created_at": "1771723536699"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\thash\tcreated_at\n3758224\t2ba6c67d7aca0ade239e9bb6f29ef44db547398bc68760e683f474d9ba678c53\t1771813967465\n3758223\t803511aea53597fad47c33407de9ffb5c2e3b2269e1c3fd5b536793cc5306174\t1771811779465\n3758222\t534897f804939cead1c4c76c590334c05054bd4c99868dc956a8e5a1239bd71e\t1771805710415\n3758221\t937b68782a30266ff163af40e0170107a523ac996ac9b9a7c6c8d26993f5af7e\t1771799204289\n3758220\ted1da96fd73dc698d00a9adb9cabb397892614417f0aa4ddf6e75a4344d96b99\t1771796134164\n3758219\t17951db8984c9868827b9e41f9c1db6ee92a3196a4099ce78f7cd34abb4fd503\t1771794158198\n3728222\t0218ce53e062b908a4399b5062e7d4645c7c78925b61c85484b4fc49d01781bf\t1771732376543\n3728221\t616d567da659626c1e4d28a5e1463d7749b886451bde7c285ffed47f7f0e023f\t1771731216079\n3728220\te83085d6ff39bdf8d7ecbb700d2419d3b39d1684d1d8ed9af93cf96e5b864e28\t1771725952466\n3728219\tcafb44dc6eb910b04a15e366e9cfc618116b35f4d1c707320fce6fe00dcacd1c\t1771723536699\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

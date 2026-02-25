@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
-import { notifications } from "../../drizzle/schema";
+import { notifications, universalShareableReports } from "../../drizzle/schema";
 import { createAndNotifyShareableReport, createShareableReport, getNotificationAnalytics, getShareableReport, sendShareableReportNotifications, type ShareableReportType } from "../shareable-reports";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db";
 
 export const shareableReportsRouter = router({
     // Create a shareable report for any tool type
@@ -149,6 +151,26 @@ export const shareableReportsRouter = router({
           }
         );
         return result;
+      }),
+
+    // Admin: Update revenue override for a shared report
+    updateRevenueOverride: protectedProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+        revenueOverride: z.number().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new Error('Admin access required');
+        }
+        const db = await getDb();
+        if (!db) throw new Error('Database unavailable');
+        
+        await db.update(universalShareableReports)
+          .set({ revenueOverride: input.revenueOverride })
+          .where(eq(universalShareableReports.shareCode, input.shareCode));
+        
+        return { success: true, revenueOverride: input.revenueOverride };
       }),
 
     // Get notification analytics (admin only)

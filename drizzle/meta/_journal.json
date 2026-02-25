@@ -29,6 +29,13 @@
       "when": 1771964182957,
       "tag": "0003_gigantic_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772046614539,
+      "tag": "0004_exotic_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

@@ -1,1 +1,0 @@
-ALTER TABLE `shared_reports` MODIFY COLUMN `reportType` enum('property','market','full') NOT NULL;

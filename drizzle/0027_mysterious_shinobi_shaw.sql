@@ -1,1 +1,0 @@
-ALTER TABLE `users` ADD `reportMode` enum('pro','guided');

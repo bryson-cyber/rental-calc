@@ -1,1 +1,0 @@
-ALTER TABLE `favorite_properties` ADD `imageUrl` text;

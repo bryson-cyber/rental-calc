@@ -160,6 +160,8 @@ interface TeslaDashboardProps {
     compCount: number;
   };
   isAdmin?: boolean;  // Admin can override revenue numbers
+  shareCode?: string;  // Share code for persisting admin overrides
+  persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
 }
 
 // ============================================
@@ -2926,7 +2928,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isAdmin = false }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isAdmin = false, shareCode, persistedRevenueOverride }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -2939,12 +2941,29 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   const baseHeadlineRevenue = effectiveScenarios?.target || result.revenue.projected;
   
   // Admin revenue override — allows admin to adjust the headline revenue up/down
-  const [revenueOverride, setRevenueOverride] = useState<number | null>(null);
+  // Initialize from persisted value if available (loaded from DB for shared reports)
+  const [revenueOverride, setRevenueOverride] = useState<number | null>(persistedRevenueOverride ?? null);
   const headlineRevenue = revenueOverride ?? baseHeadlineRevenue;
+  
+  // Persist revenue override to DB when admin changes it (debounced)
+  const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
+  
+  const handleRevenueOverride = (newValue: number | null) => {
+    setRevenueOverride(newValue);
+    // Auto-save to DB if we have a shareCode
+    if (shareCode) {
+      updateOverrideMutation.mutate({
+        shareCode,
+        revenueOverride: newValue,
+      });
+    }
+  };
   
   // Reset override when base revenue changes (new analysis)
   useEffect(() => {
-    setRevenueOverride(null);
+    if (!persistedRevenueOverride) {
+      setRevenueOverride(null);
+    }
   }, [baseHeadlineRevenue]);
   
   // Purchase mode calculations
@@ -3028,7 +3047,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
         revenueScenarios={effectiveScenarios}
         isAdmin={isAdmin}
-        onRevenueOverride={(val) => setRevenueOverride(val)}
+        onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
       />
       

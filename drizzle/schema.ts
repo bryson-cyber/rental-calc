@@ -1390,6 +1390,9 @@ export const universalShareableReports = mysqlTable("universal_shareable_reports
   viewCount: int("viewCount").default(0).notNull(),
   lastViewedAt: timestamp("lastViewedAt"),
   
+  // Admin revenue override (persisted so shared reports show adjusted number)
+  revenueOverride: int("revenueOverride"),
+  
   // Notification tracking
   smsSentTo: varchar("smsSentTo", { length: 50 }),
   smsSentAt: timestamp("smsSentAt"),

@@ -421,6 +421,9 @@ export default function LeadMagnet() {
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
   
+  // Share code for the current validator report (used for admin revenue override persistence)
+  const [validatorShareCode, setValidatorShareCode] = useState<string | null>(null);
+  
   // Swipe gesture state for mobile navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
@@ -5826,6 +5829,7 @@ export default function LeadMagnet() {
                 verdict={(result as any)?.verdict}
                 title={`Property Validation - ${address}`}
                 summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}
+                onShareCreated={(code) => setValidatorShareCode(code)}
               />
             </div>
             <StepErrorBoundary stepName="Revenue Dashboard">
@@ -5847,6 +5851,7 @@ export default function LeadMagnet() {
                 interestRate={myProperty?.interestRate}
                 revenueScenarios={result.revenueScenarios}
                 isAdmin={isAdmin}
+                shareCode={validatorShareCode || undefined}
               />
               </Suspense>
             </StepErrorBoundary>

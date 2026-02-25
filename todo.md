@@ -12425,3 +12425,17 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Bug: Webinar No-Shows & Import (Feb 25, 2026)
 - [x] Fix no-shows count: should not show no-shows before webinar has happened (currently shows 359 no-shows for a future webinar)
 - [x] Add manual "Sync Registrants" button that pulls from WebinarJam API on demand (not CSV import)
+
+## Admin Inline Edit Controls on Step 5 Report (Feb 25, 2026)
+- [x] Add admin inline edit for Projected Annual Revenue ($30,025) — +/- buttons with $5k increments
+- [x] Monthly Revenue, Expenses, Net Profit auto-recalculate from headline revenue
+- [ ] Add admin inline edit for the three scenario cards (Conservative, Target, Optimistic) — deferred, headline override cascades
+- [x] Edits now persist to DB and show on shared reports
+- [x] Change Net Profit card to use Target (P75/Good host) profit number instead of Conservative (already done — all cards derive from headlineRevenue which uses Target)
+
+## Persistent Admin Revenue Override (Feb 25, 2026)
+- [x] Add revenueOverride column to universal_shareable_reports table
+- [x] Create updateRevenueOverride tRPC endpoint (admin only)
+- [x] Load persisted override in ShareableReportViewer so clients see adjusted number
+- [x] Wire TeslaDashboard +/- buttons to auto-save override to DB when shareCode exists
+- [x] Pass shareCode from UniversalShareButton → LeadMagnet → TeslaDashboard

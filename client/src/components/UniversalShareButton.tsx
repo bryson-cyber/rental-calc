@@ -76,6 +76,8 @@ interface UniversalShareButtonProps {
   showLabel?: boolean;
   /** Pre-existing share code (if already created) */
   existingShareCode?: string;
+  /** Callback when a share code is created */
+  onShareCreated?: (shareCode: string) => void;
 }
 
 /**
@@ -110,6 +112,7 @@ export function UniversalShareButton({
   className = '',
   showLabel = true,
   existingShareCode,
+  onShareCreated,
 }: UniversalShareButtonProps) {
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(
@@ -160,6 +163,7 @@ export function UniversalShareButton({
         const url = `${window.location.origin}/share/${result.shareCode}`;
         setShareUrl(url);
         setShareCode(result.shareCode);
+        onShareCreated?.(result.shareCode);
         toast.success('Share link created!');
       }
     } catch (error) {

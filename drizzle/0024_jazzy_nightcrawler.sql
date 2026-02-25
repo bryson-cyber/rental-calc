@@ -1,1 +1,0 @@
-DROP TABLE `opportunity_searches`;

@@ -1,1 +1,0 @@
-ALTER TABLE `webinar_schedules` MODIFY COLUMN `webinarTranscript` longtext;
