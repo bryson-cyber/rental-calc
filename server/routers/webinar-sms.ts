@@ -2100,3 +2100,141 @@ export async function startWebinarImportCron() {
 export async function restartWebinarImportCron() {
   await startWebinarImportCron();
 }
+
+// ─── Scheduled Message Dispatcher ──────────────────────────────────────────
+// Runs every 30 seconds, picks up pending messages whose scheduledAt <= now,
+// sends them via SimpleTexting, and updates status/counts.
+
+let smsDispatcherInterval: ReturnType<typeof setInterval> | null = null;
+
+export async function startSmsDispatcher() {
+  if (smsDispatcherInterval) {
+    clearInterval(smsDispatcherInterval);
+    smsDispatcherInterval = null;
+  }
+
+  console.log("[SMS Dispatcher] Starting scheduled message dispatcher (every 30s)");
+
+  const processScheduledMessages = async () => {
+    const db = await getDb();
+    if (!db) return;
+
+    try {
+      // Find pending messages whose scheduled time has passed
+      const now = new Date();
+      const dueMessages = await db.select().from(scheduledSmsMessages)
+        .where(
+          and(
+            eq(scheduledSmsMessages.status, "pending"),
+            lte(scheduledSmsMessages.scheduledAt, now)
+          )
+        )
+        .orderBy(scheduledSmsMessages.scheduledAt);
+
+      if (dueMessages.length === 0) return;
+
+      console.log(`[SMS Dispatcher] Found ${dueMessages.length} due message(s) to send`);
+
+      for (const msg of dueMessages) {
+        // Skip messages that are more than 30 minutes past their scheduled time
+        // These are stale (e.g., from a previous webinar or server was down)
+        const staleThresholdMs = 30 * 60 * 1000; // 30 minutes
+        const scheduledTime = new Date(msg.scheduledAt).getTime();
+        if (now.getTime() - scheduledTime > staleThresholdMs) {
+          console.log(`[SMS Dispatcher] Skipping stale message #${msg.id} "${msg.sequenceName}" (scheduled ${Math.round((now.getTime() - scheduledTime) / 60000)}min ago, > 30min threshold)`);
+          await db.update(scheduledSmsMessages)
+            .set({ status: "cancelled", sentAt: new Date() })
+            .where(eq(scheduledSmsMessages.id, msg.id));
+          continue;
+        }
+
+        // Mark as sending immediately to prevent double-processing
+        await db.update(scheduledSmsMessages)
+          .set({ status: "sending" })
+          .where(eq(scheduledSmsMessages.id, msg.id));
+
+        console.log(`[SMS Dispatcher] Processing message #${msg.id} "${msg.sequenceName}" (audience: ${msg.audience})`);
+
+        try {
+          // Get recipients based on audience
+          const conditions: any[] = [eq(webinarRegistrants.webinarId, msg.webinarId)];
+          // Exclude opted-out registrants
+          conditions.push(sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`);
+
+          if (msg.audience === "attended") {
+            conditions.push(eq(webinarRegistrants.attended, 1));
+          } else if (msg.audience === "not_attended") {
+            conditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+          }
+          // audience === "all" → no extra filter
+
+          const recipients = await db.select({
+            id: webinarRegistrants.id,
+            name: webinarRegistrants.name,
+            email: webinarRegistrants.email,
+            phone: webinarRegistrants.phone,
+          }).from(webinarRegistrants).where(and(...conditions));
+
+          if (recipients.length === 0) {
+            console.log(`[SMS Dispatcher] Message #${msg.id}: No recipients found for audience "${msg.audience}", marking as sent with 0 count`);
+            await db.update(scheduledSmsMessages).set({
+              status: "sent",
+              sentCount: 0,
+              failedCount: 0,
+              sentAt: new Date(),
+            }).where(eq(scheduledSmsMessages.id, msg.id));
+            continue;
+          }
+
+          console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${recipients.length} recipients`);
+
+          let sentCount = 0;
+          let failedCount = 0;
+
+          for (const recipient of recipients) {
+            const personalizedMessage = renderMessage(msg.messageBody, {
+              name: recipient.name.split(" ")[0],
+              fullname: recipient.name,
+              email: recipient.email || "",
+            });
+
+            const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+
+            if (result.success) {
+              sentCount++;
+            } else {
+              failedCount++;
+              console.warn(`[SMS Dispatcher] Failed to send to ${recipient.phone}: ${result.error}`);
+            }
+
+            // Small delay between sends to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+
+          // Update message with final counts
+          await db.update(scheduledSmsMessages).set({
+            status: failedCount === recipients.length ? "failed" : "sent",
+            sentCount,
+            failedCount,
+            sentAt: new Date(),
+          }).where(eq(scheduledSmsMessages.id, msg.id));
+
+          console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed`);
+
+        } catch (err: any) {
+          console.error(`[SMS Dispatcher] Error processing message #${msg.id}:`, err.message);
+          await db.update(scheduledSmsMessages).set({
+            status: "failed",
+            sentAt: new Date(),
+          }).where(eq(scheduledSmsMessages.id, msg.id));
+        }
+      }
+    } catch (err: any) {
+      console.error("[SMS Dispatcher] Error in dispatch loop:", err.message);
+    }
+  };
+
+  // Run immediately on startup, then every 30 seconds
+  processScheduledMessages();
+  smsDispatcherInterval = setInterval(processScheduledMessages, 30_000);
+}

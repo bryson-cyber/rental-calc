@@ -1030,6 +1030,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                 key={msg.id}
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                   msg.status === "sent" ? "bg-emerald-50/30 border-emerald-100" :
+                  msg.status === "sending" ? "bg-blue-50/30 border-blue-100" :
                   msg.status === "cancelled" ? "bg-muted/30 border-muted opacity-60" :
                   msg.status === "failed" ? "bg-red-50/30 border-red-100" :
                   "bg-background border-border"
@@ -1061,14 +1062,22 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                         ({getRelativeTime(msg.scheduledAt)})
                       </span>
                     )}
-                    {msg.status === "sent" && (
-                      <span className="ml-2 text-emerald-600 font-medium">
-                        ✓ Sent {getRelativeTime(msg.scheduledAt) || ""}
+                    {msg.status === "sending" && (
+                      <span className="ml-2 text-blue-600 font-medium animate-pulse">
+                        ⟳ Sending now...
                       </span>
                     )}
-                    {msg.sentCount > 0 && (
-                      <span className="ml-2">
-                        • {msg.sentCount} sent {msg.failedCount > 0 && `• ${msg.failedCount} failed`}
+                    {msg.status === "sent" && (
+                      <span className="ml-2 text-emerald-600 font-medium">
+                        ✓ Fired{msg.sentAt ? ` at ${new Date(msg.sentAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
+                        {msg.sentCount != null && ` — ${msg.sentCount} delivered`}
+                        {(msg.failedCount ?? 0) > 0 && <span className="text-red-500 ml-1">({msg.failedCount} failed)</span>}
+                      </span>
+                    )}
+                    {msg.status === "failed" && (
+                      <span className="ml-2 text-red-500 font-medium">
+                        ✗ Failed{msg.sentAt ? ` at ${new Date(msg.sentAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
+                        {msg.sentCount != null && msg.sentCount > 0 && ` — ${msg.sentCount} partial`}
                       </span>
                     )}
                   </p>

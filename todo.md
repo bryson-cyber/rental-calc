@@ -12470,7 +12470,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Auto-update the relative time every minute so it stays current (deferred — refreshes on page load/interaction)
 
 ## SMS Dispatch & Delivery Tracking (Feb 25, 2026)
-- [ ] Investigate current scheduled message dispatch mechanism (cron job? manual trigger?)
-- [ ] Ensure scheduled messages actually fire at their scheduled time automatically
-- [ ] Track delivery status per message (sent, delivered, failed) with timestamps
-- [ ] Show real delivery confirmation on the frontend (not just countdown)
+- [x] Investigate current scheduled message dispatch mechanism — no dispatcher existed, built one
+- [x] Built SMS dispatcher that runs every 30s, picks up due pending messages, sends via SimpleTexting
+- [x] Track delivery status per message (sent/failed) with sentAt timestamp and sentCount/failedCount
+- [x] Show real delivery confirmation on frontend ("Fired at 3:05 PM — 350 delivered")
+- [x] Added staleness guard: auto-cancels messages >30 min past scheduled time
+- [x] Added "Sending now..." animation while dispatcher is processing
+- [x] Added "sending" status with blue background styling

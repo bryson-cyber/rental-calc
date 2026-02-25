@@ -1077,6 +1077,13 @@ async function startServer() {
         console.error('[WebinarSMS Cron] Failed to start auto-import cron:', err),
       );
     }).catch(() => { /* webinar-sms module not critical */ });
+
+    // Start scheduled SMS message dispatcher (checks every 30s for due messages)
+    import('../routers/webinar-sms').then(({ startSmsDispatcher }) => {
+      startSmsDispatcher().catch((err) =>
+        console.error('[SMS Dispatcher] Failed to start:', err),
+      );
+    }).catch(() => { /* sms dispatcher not critical */ });
   });
 }
 
