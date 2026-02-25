@@ -5,12 +5,15 @@ import type { TrpcContext } from "./_core/context";
 // Mock usage limits to bypass DB checks
 vi.mock('./usage-limits', () => ({
   canPerformAnalysis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10 }),
+  canPerformValidation: vi.fn().mockResolvedValue({ allowed: true, remaining: 20 }),
   canPerformMarketResearch: vi.fn().mockResolvedValue({ allowed: true, remaining: 10 }),
   recordAnalysisUsage: vi.fn().mockResolvedValue(undefined),
+  recordValidateUsage: vi.fn().mockResolvedValue(undefined),
   recordMarketResearchUsage: vi.fn().mockResolvedValue(undefined),
   recordApiCallsUsage: vi.fn().mockResolvedValue(undefined),
-  getUsageStatus: vi.fn().mockResolvedValue({ propertyAnalyses: { used: 0, limit: 5, remaining: 5 }, marketResearches: { used: 0, limit: 3, remaining: 3 }, apiCalls: { used: 0, limit: 50, remaining: 50 }, isAdmin: false, canAnalyze: true, canResearchMarket: true }),
+  getUsageStatus: vi.fn().mockResolvedValue({ propertyAnalyses: { used: 0, limit: 5, remaining: 5 }, validateAnalyses: { used: 0, limit: 20, remaining: 20 }, marketResearches: { used: 0, limit: 3, remaining: 3 }, apiCalls: { used: 0, limit: 50, remaining: 50 }, isAdmin: false, canAnalyze: true, canValidate: true, canResearchMarket: true }),
   isUserAdmin: vi.fn().mockResolvedValue(false),
+  getUsageSummary: vi.fn().mockResolvedValue({ today: { totalUsers: 0, totalAnalyses: 0, totalValidations: 0, totalMarketResearches: 0, totalApiCalls: 0 }, topUsers: [] }),
 }));
 
 // Mock the rate limiter to bypass DB checks and use our mock fetch directly

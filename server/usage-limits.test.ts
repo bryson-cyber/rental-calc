@@ -64,6 +64,7 @@ vi.mock('../drizzle/schema', () => ({
     ipAddress: 'ipAddress',
     date: 'date',
     propertyAnalyses: 'propertyAnalyses',
+    validateAnalyses: 'validateAnalyses',
     marketResearches: 'marketResearches',
     apiCallsCount: 'apiCallsCount',
   },
@@ -124,6 +125,7 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 5,
+        validateAnalyses: 0,
         marketResearches: 0,
         apiCallsCount: 10,
       }];
@@ -137,8 +139,9 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 1,
+        validateAnalyses: 0,
         marketResearches: 0,
-        apiCallsCount: 50,
+        apiCallsCount: 75,
       }];
       const result = await canPerformAnalysis(undefined, undefined, '192.168.1.1');
       expect(result.allowed).toBe(false);
@@ -164,6 +167,7 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 0,
+        validateAnalyses: 0,
         marketResearches: 3,
         apiCallsCount: 30,
       }];
@@ -196,6 +200,7 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 2,
+        validateAnalyses: 3,
         marketResearches: 1,
         apiCallsCount: 30,
       }];
@@ -203,9 +208,12 @@ describe('usage-limits', () => {
       expect(status.isAdmin).toBe(false);
       expect(status.propertyAnalyses.used).toBe(2);
       expect(status.propertyAnalyses.remaining).toBe(3);
+      expect(status.validateAnalyses.used).toBe(3);
+      expect(status.validateAnalyses.remaining).toBe(17);
       expect(status.marketResearches.used).toBe(1);
       expect(status.marketResearches.remaining).toBe(2);
       expect(status.canAnalyze).toBe(true);
+      expect(status.canValidate).toBe(true);
       expect(status.canResearchMarket).toBe(true);
     });
 
@@ -213,11 +221,13 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 5,
+        validateAnalyses: 0,
         marketResearches: 0,
         apiCallsCount: 10,
       }];
       const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
       expect(status.canAnalyze).toBe(false);
+      expect(status.canValidate).toBe(true);
       expect(status.canResearchMarket).toBe(true);
     });
 
@@ -225,11 +235,13 @@ describe('usage-limits', () => {
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 0,
+        validateAnalyses: 0,
         marketResearches: 3,
         apiCallsCount: 30,
       }];
       const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
       expect(status.canAnalyze).toBe(true);
+      expect(status.canValidate).toBe(true);
       expect(status.canResearchMarket).toBe(false);
     });
   });
