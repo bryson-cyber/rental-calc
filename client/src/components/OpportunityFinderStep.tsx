@@ -16,7 +16,7 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1089,18 +1089,29 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   // Get sorted properties
   const sortedProperties = sortProperties(properties);
   
+  // After batch analysis, filter out properties below the profit threshold
+  const filteredProperties = useMemo(() => {
+    if (!showBatchResults || !batchResults) return sortedProperties;
+    return sortedProperties.filter(p => {
+      const validation = validationResults[p.id];
+      // Keep properties that haven't been analyzed yet (shouldn't happen after batch, but safe)
+      if (!validation?.success || !validation?.projection) return false;
+      return validation.projection.monthlyProfit >= profitThreshold;
+    });
+  }, [sortedProperties, showBatchResults, batchResults, validationResults, profitThreshold]);
+  
   // Client-side pagination state for viewing loaded results
   const [displayPage, setDisplayPage] = useState(1);
   
   // Calculate pagination values
   // Use totalResults to show actual total pages available (not just loaded properties)
-  const loadedPages = Math.ceil(sortedProperties.length / pageSize);
+  const loadedPages = Math.ceil(filteredProperties.length / pageSize);
   const estimatedTotalPages = totalResults > 0 ? Math.ceil(totalResults / pageSize) : loadedPages;
   // Show loaded pages for navigation, but indicate more are available
   const totalPages = loadedPages;
   const startIndex = (displayPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const displayedProperties = sortedProperties.slice(startIndex, endIndex);
+  const displayedProperties = filteredProperties.slice(startIndex, endIndex);
   
   // Reset display page when properties change significantly
   useEffect(() => {
@@ -1391,7 +1402,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                   'Searching...'
                 ) : (
                   <>
-                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> properties{totalResults > sortedProperties.length && <span style={{ color: 'oklch(0.55 0 0)' }}> ({totalResults.toLocaleString()} in market)</span>}
+                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{filteredProperties.length > 0 ? `${startIndex + 1}-${Math.min(endIndex, filteredProperties.length)}` : '0'}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{filteredProperties.length}</span> properties{showBatchResults && filteredProperties.length < sortedProperties.length && <span style={{ color: 'oklch(0.55 0.12 85)' }}> ({sortedProperties.length - filteredProperties.length} hidden below ${profitThreshold.toLocaleString()}/mo)</span>}{totalResults > sortedProperties.length && <span style={{ color: 'oklch(0.55 0 0)' }}> ({totalResults.toLocaleString()} in market)</span>}
                   </>
                 )}
               </p>
@@ -1824,6 +1835,37 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
               <p style={{ color: 'oklch(0.45 0 0)' }}>
                 Try adjusting your filters or searching a different location.
               </p>
+            </Card>
+          ) : filteredProperties.length === 0 && showBatchResults ? (
+            <Card className="p-8 text-center" style={{ borderRadius: '1.25rem', border: '1px solid oklch(0.85 0.08 85)' }}>
+              <Search className="w-12 h-12 mx-auto mb-4" style={{ color: 'oklch(0.55 0.12 85)' }} />
+              <h3 className="text-lg font-semibold mb-2" style={{ color: 'oklch(0.15 0 0)' }}>
+                No Deals Above ${profitThreshold.toLocaleString()}/mo
+              </h3>
+              <p className="mb-4" style={{ color: 'oklch(0.45 0 0)' }}>
+                All {sortedProperties.length} properties were analyzed but none met your ${profitThreshold.toLocaleString()}/mo minimum profit threshold.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setProfitThreshold(500);
+                  }}
+                  className="text-sm"
+                >
+                  Lower to $500/mo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowBatchResults(false);
+                    setBatchResults(null);
+                  }}
+                  className="text-sm"
+                >
+                  Show All Properties
+                </Button>
+              </div>
             </Card>
           ) : (
             <>

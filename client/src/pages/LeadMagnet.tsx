@@ -1023,10 +1023,31 @@ export default function LeadMagnet() {
     percentile75: number;
     min: number;
     max: number;
+    mean: number;
+    stdDev: number;
     sampleCount: number;
+    radiusMiles: number;
     userRentVsMarket: 'below' | 'at' | 'above';
     rentAdvantage: number;
     percentileRank: number;
+    quickviewUrl?: string;
+    nearbyComps?: Array<{
+      address: string;
+      price: number;
+      bedrooms: number;
+      baths: string;
+      property_type: string;
+      distance: number;
+      sqft: number;
+      last_seen: string;
+    }>;
+    propertyRents?: Array<{
+      bedrooms: number;
+      baths: string;
+      price: number;
+      sqft: number;
+      last_seen: string;
+    }>;
   } | null>(null);
   const [isLoadingRentometer, setIsLoadingRentometer] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -1141,6 +1162,7 @@ export default function LeadMagnet() {
   const getSubmarketReport = trpc.marketResearchSimple.getSubmarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
   const analyzeRent = trpc.rentometer.analyzeRent.useMutation();
+  const getComprehensiveRentometer = trpc.rentometer.getComprehensiveData.useMutation();
   
   // Auto-notification for shareable reports
   const createAndNotifyReport = trpc.shareableReports.createAndNotify.useMutation({
@@ -1272,44 +1294,78 @@ export default function LeadMagnet() {
       if (rentValue > 0 && address) {
         setIsLoadingRentometer(true);
         try {
-          const rentometerResponse = await analyzeRent.mutateAsync({
+          // Use comprehensive endpoint to get all Rentometer data in one call
+          const compResponse = await getComprehensiveRentometer.mutateAsync({
             address,
             bedrooms: parseInt(bedrooms),
             userRent: rentValue,
           });
-          console.log('[Rentometer] Response:', JSON.stringify(rentometerResponse));
-          if (rentometerResponse.success && rentometerResponse.data) {
-            const data = rentometerResponse.data;
-            const userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
-              : data.userRentComparison.rentAdvantage < 0 ? 'above' 
-              : 'at';
-            // Calculate percentile rank based on where user's rent falls
-            const userRent = rentValue;
-            let percentileRank = 50; // default to median
-            if (userRent <= data.marketData.percentile25) {
-              percentileRank = 25;
-            } else if (userRent <= data.marketData.median) {
-              percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
-            } else if (userRent <= data.marketData.percentile75) {
-              percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
-            } else {
-              percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
-            }
+          console.log('[Rentometer] Comprehensive response received');
+          if (compResponse.success && compResponse.data) {
+            const { summary, nearbyComps, propertyRents, analysis } = compResponse.data;
             
-            setRentometerData({
-              median: data.marketData.median,
-              percentile25: data.marketData.percentile25,
-              percentile75: data.marketData.percentile75,
-              min: data.marketData.min,
-              max: data.marketData.max,
-              sampleCount: data.marketData.samples,
-              userRentVsMarket,
-              rentAdvantage: data.userRentComparison.rentAdvantage,
-              percentileRank: Math.round(percentileRank),
-            });
-            console.log('[Rentometer] Data set successfully');
+            if (summary) {
+              // Calculate user rent vs market
+              const rentAdvantage = analysis?.userRentComparison?.rentAdvantage ?? (summary.median - rentValue);
+              const userRentVsMarket = rentAdvantage > 0 ? 'below' 
+                : rentAdvantage < 0 ? 'above' 
+                : 'at';
+              
+              // Calculate percentile rank
+              const userRent = rentValue;
+              let percentileRank = 50;
+              if (userRent <= summary.percentile_25) {
+                percentileRank = 25;
+              } else if (userRent <= summary.median) {
+                percentileRank = 50 - ((summary.median - userRent) / (summary.median - summary.percentile_25)) * 25;
+              } else if (userRent <= summary.percentile_75) {
+                percentileRank = 50 + ((userRent - summary.median) / (summary.percentile_75 - summary.median)) * 25;
+              } else {
+                percentileRank = 75 + ((userRent - summary.percentile_75) / (summary.max - summary.percentile_75)) * 25;
+              }
+              
+              setRentometerData({
+                median: summary.median,
+                percentile25: summary.percentile_25,
+                percentile75: summary.percentile_75,
+                min: summary.min,
+                max: summary.max,
+                mean: summary.mean,
+                stdDev: summary.std_dev,
+                sampleCount: summary.samples,
+                radiusMiles: summary.radius_miles,
+                userRentVsMarket,
+                rentAdvantage: Math.abs(rentAdvantage),
+                percentileRank: Math.round(percentileRank),
+                quickviewUrl: summary.quickview_url,
+                nearbyComps: nearbyComps?.nearby_properties?.map(p => ({
+                  address: p.address,
+                  price: p.price,
+                  bedrooms: p.bedrooms,
+                  baths: p.baths,
+                  property_type: p.property_type,
+                  distance: p.distance,
+                  sqft: p.sqft,
+                  last_seen: p.last_seen,
+                })),
+                propertyRents: propertyRents?.property_listings?.map(p => ({
+                  bedrooms: p.bedrooms,
+                  baths: p.baths,
+                  price: p.price,
+                  sqft: p.sqft,
+                  last_seen: p.last_seen,
+                })),
+              });
+              console.log('[Rentometer] Comprehensive data set successfully:', {
+                summary: !!summary,
+                nearbyComps: nearbyComps?.count || 0,
+                propertyRents: propertyRents?.count || 0,
+              });
+            } else {
+              console.log('[Rentometer] No summary data in comprehensive response');
+            }
           } else {
-            console.log('[Rentometer] Response was not successful or missing data:', rentometerResponse);
+            console.log('[Rentometer] Comprehensive response was not successful:', compResponse);
           }
         } catch (rentError) {
           console.error('[Rentometer] Failed to fetch rent data:', rentError);

@@ -12489,3 +12489,12 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## International Phone Filtering (Feb 25, 2026)
 - [x] Filter out international phone numbers before SMS sends (SimpleTexting US/Canada only)
+
+## Step 2 Profit Range Filter Bug (Feb 25, 2026)
+- [x] Fix Step 2 profit range filter to exclude deals outside the selected desired profit range
+- [x] Test with San Diego + $2000/mo profit filter to verify fix
+
+## Step 5 Rentometer Dropdown Bug (Feb 25, 2026)
+- [x] Add expandable Rentometer data dropdown to Step 5 Rent Validation section
+- [x] Include full rent distribution, nearby comps, property listings, and arbitrage analysis
+- [x] Maximize all Rentometer API endpoints in the dropdown display

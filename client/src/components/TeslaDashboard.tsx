@@ -147,10 +147,31 @@ interface TeslaDashboardProps {
     percentile75: number;
     min: number;
     max: number;
+    mean: number;
+    stdDev: number;
     sampleCount: number;
+    radiusMiles: number;
     userRentVsMarket: 'below' | 'above' | 'at';
     rentAdvantage: number;
     percentileRank: number;
+    quickviewUrl?: string;
+    nearbyComps?: Array<{
+      address: string;
+      price: number;
+      bedrooms: number;
+      baths: string;
+      property_type: string;
+      distance: number;
+      sqft: number;
+      last_seen: string;
+    }>;
+    propertyRents?: Array<{
+      bedrooms: number;
+      baths: string;
+      price: number;
+      sqft: number;
+      last_seen: string;
+    }>;
   } | null;  // Rentometer rent validation data
   revenueScenarios?: {
     conservative: number;
@@ -1328,6 +1349,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
 
 /**
  * Rent Validation Section - First thing investors want to know: "Is my rent assumption valid?"
+ * Now includes expandable dropdown with full Rentometer data (nearby comps, property rents, stats)
  */
 function RentValidationSection({
   rentometerData,
@@ -1339,13 +1361,37 @@ function RentValidationSection({
     percentile75: number;
     min: number;
     max: number;
+    mean: number;
+    stdDev: number;
     sampleCount: number;
+    radiusMiles: number;
     userRentVsMarket: 'below' | 'at' | 'above';
     rentAdvantage: number;
     percentileRank: number;
+    quickviewUrl?: string;
+    nearbyComps?: Array<{
+      address: string;
+      price: number;
+      bedrooms: number;
+      baths: string;
+      property_type: string;
+      distance: number;
+      sqft: number;
+      last_seen: string;
+    }>;
+    propertyRents?: Array<{
+      bedrooms: number;
+      baths: string;
+      price: number;
+      sqft: number;
+      last_seen: string;
+    }>;
   };
   monthlyRent: number;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [detailTab, setDetailTab] = useState<'stats' | 'comps' | 'history'>('stats');
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -1354,6 +1400,9 @@ function RentValidationSection({
       maximumFractionDigits: 0
     }).format(amount);
   };
+
+  const hasNearbyComps = rentometerData.nearbyComps && rentometerData.nearbyComps.length > 0;
+  const hasPropertyRents = rentometerData.propertyRents && rentometerData.propertyRents.length > 0;
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -1428,9 +1477,212 @@ function RentValidationSection({
         </div>
       </div>
       
-      <p className="text-xs text-slate-500 text-center mt-3">
-        Based on {rentometerData.sampleCount} similar rentals in this area
+      <p className="text-xs text-slate-500 text-center mt-2">
+        Based on {rentometerData.sampleCount} similar rentals within {rentometerData.radiusMiles || '?'} miles
       </p>
+
+      {/* Expandable Detailed Data Dropdown */}
+      <button
+        onClick={() => setShowDetails(!showDetails)}
+        className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all duration-200 text-sm font-medium text-slate-600 hover:text-slate-800"
+      >
+        {showDetails ? (
+          <>
+            <ChevronUp className="w-4 h-4" />
+            Hide Detailed Market Data
+          </>
+        ) : (
+          <>
+            <ChevronDown className="w-4 h-4" />
+            View Detailed Market Data
+            {hasNearbyComps && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{rentometerData.nearbyComps!.length} comps</span>}
+          </>
+        )}
+      </button>
+
+      {showDetails && (
+        <div className="mt-4 border-t border-slate-200 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Tab Navigation */}
+          <div className="flex gap-1 mb-4 bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setDetailTab('stats')}
+              className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                detailTab === 'stats'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Full Statistics
+            </button>
+            {hasNearbyComps && (
+              <button
+                onClick={() => setDetailTab('comps')}
+                className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  detailTab === 'comps'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Nearby Comps ({rentometerData.nearbyComps!.length})
+              </button>
+            )}
+            {hasPropertyRents && (
+              <button
+                onClick={() => setDetailTab('history')}
+                className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                  detailTab === 'history'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Rent History ({rentometerData.propertyRents!.length})
+              </button>
+            )}
+          </div>
+
+          {/* Tab Content: Full Statistics */}
+          {detailTab === 'stats' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Mean Rent</p>
+                  <p className="text-lg font-semibold text-slate-800">{formatCurrency(rentometerData.mean || rentometerData.median)}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Std Deviation</p>
+                  <p className="text-lg font-semibold text-slate-800">{rentometerData.stdDev ? `\u00B1${formatCurrency(rentometerData.stdDev)}` : 'N/A'}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Lowest Rent</p>
+                  <p className="text-lg font-semibold text-emerald-700">{formatCurrency(rentometerData.min)}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Highest Rent</p>
+                  <p className="text-lg font-semibold text-amber-700">{formatCurrency(rentometerData.max)}</p>
+                </div>
+              </div>
+
+              {/* Rent Distribution Bar */}
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Rent Distribution</p>
+                <div className="relative h-8 bg-gradient-to-r from-emerald-200 via-blue-200 to-amber-200 rounded-full overflow-hidden">
+                  {/* User rent marker */}
+                  {(() => {
+                    const range = rentometerData.max - rentometerData.min;
+                    const position = range > 0 ? ((monthlyRent - rentometerData.min) / range) * 100 : 50;
+                    const clampedPos = Math.max(2, Math.min(98, position));
+                    return (
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-slate-900"
+                        style={{ left: `${clampedPos}%` }}
+                      >
+                        <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                          You: {formatCurrency(monthlyRent)}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-slate-500">{formatCurrency(rentometerData.min)}</span>
+                  <span className="text-[10px] text-slate-500">{formatCurrency(rentometerData.max)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Analysis Radius</p>
+                <p className="text-sm text-slate-700">{rentometerData.radiusMiles || '?'} miles &middot; {rentometerData.sampleCount} comparable rentals analyzed</p>
+              </div>
+
+              {rentometerData.quickviewUrl && (
+                <a
+                  href={rentometerData.quickviewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all text-sm font-medium text-blue-700"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View Full Report on Rentometer
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Tab Content: Nearby Comps */}
+          {detailTab === 'comps' && hasNearbyComps && (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {rentometerData.nearbyComps!.map((comp, i) => (
+                <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-800 truncate">{comp.address}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs text-slate-500">{comp.bedrooms}BR/{comp.baths}BA</span>
+                        <span className="text-xs text-slate-400">&middot;</span>
+                        <span className="text-xs text-slate-500">{comp.property_type || 'N/A'}</span>
+                        {comp.sqft > 0 && (
+                          <>
+                            <span className="text-xs text-slate-400">&middot;</span>
+                            <span className="text-xs text-slate-500">{comp.sqft.toLocaleString()} sqft</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs text-slate-500">{comp.distance.toFixed(1)} mi away</span>
+                        <span className="text-xs text-slate-400">&middot;</span>
+                        <span className="text-xs text-slate-500">Last seen: {comp.last_seen}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-slate-900">{formatCurrency(comp.price)}</p>
+                      <p className="text-[10px] text-slate-500">/mo</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {rentometerData.nearbyComps!.length > 0 && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-700 font-medium">
+                    Average nearby rent: {formatCurrency(Math.round(rentometerData.nearbyComps!.reduce((s, c) => s + c.price, 0) / rentometerData.nearbyComps!.length))}/mo
+                    &nbsp;&middot;&nbsp;
+                    Closest comp: {formatCurrency(rentometerData.nearbyComps![0].price)}/mo ({rentometerData.nearbyComps![0].distance.toFixed(2)} mi)
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab Content: Property Rent History */}
+          {detailTab === 'history' && hasPropertyRents && (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              <p className="text-xs text-slate-500 mb-2">Recent rent listings at this specific property address:</p>
+              {rentometerData.propertyRents!.map((rent, i) => (
+                <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{rent.bedrooms}BR / {rent.baths}BA</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {rent.sqft > 0 && <span className="text-xs text-slate-500">{rent.sqft.toLocaleString()} sqft</span>}
+                      <span className="text-xs text-slate-400">Last seen: {rent.last_seen}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{formatCurrency(rent.price)}</p>
+                    <p className="text-[10px] text-slate-500">/mo</p>
+                  </div>
+                </div>
+              ))}
+              {rentometerData.propertyRents!.length > 0 && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-700 font-medium">
+                    Average listed rent at property: {formatCurrency(Math.round(rentometerData.propertyRents!.reduce((s, r) => s + r.price, 0) / rentometerData.propertyRents!.length))}/mo
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
