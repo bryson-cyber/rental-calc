@@ -39,8 +39,13 @@ export const shareableReportsRouter = router({
         creatorPhone: z.string().optional(),
         creatorName: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        const result = await createShareableReport(input);
+      .mutation(async ({ ctx, input }) => {
+        const result = await createShareableReport({
+          ...input,
+          creatorUserId: ctx.user?.id,
+          creatorName: input.creatorName || ctx.user?.name || undefined,
+          creatorEmail: input.creatorEmail || ctx.user?.email || undefined,
+        });
         return result;
       }),
 
@@ -114,7 +119,7 @@ export const shareableReportsRouter = router({
         // Options
         triggeredBy: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const result = await createAndNotifyShareableReport(
           {
             reportType: input.reportType as ShareableReportType,
@@ -137,9 +142,10 @@ export const shareableReportsRouter = router({
             averageDailyRate: input.averageDailyRate,
             profitMargin: input.profitMargin,
             verdict: input.verdict,
-            creatorEmail: input.userEmail,
+            creatorEmail: input.userEmail || ctx.user?.email || undefined,
             creatorPhone: input.userPhone,
-            creatorName: input.userName,
+            creatorName: input.userName || ctx.user?.name || undefined,
+            creatorUserId: ctx.user?.id,
           },
           {
             phone: input.userPhone,
