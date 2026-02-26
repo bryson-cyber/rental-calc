@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { ENV } from "../_core/env";
 import { notifications, universalShareableReports } from "../../drizzle/schema";
 import { createAndNotifyShareableReport, createShareableReport, getNotificationAnalytics, getShareableReport, sendShareableReportNotifications, type ShareableReportType } from "../shareable-reports";
 import { eq } from "drizzle-orm";
@@ -153,15 +154,15 @@ export const shareableReportsRouter = router({
         return result;
       }),
 
-    // Admin: Update revenue override for a shared report
+    // Owner-only: Update revenue override for a shared report
     updateRevenueOverride: protectedProcedure
       .input(z.object({
         shareCode: z.string().min(1),
         revenueOverride: z.number().nullable(),
       }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user?.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (ctx.user?.openId !== ENV.ownerOpenId) {
+          throw new Error('Owner access required');
         }
         const db = await getDb();
         if (!db) throw new Error('Database unavailable');

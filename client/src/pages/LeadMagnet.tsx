@@ -399,6 +399,7 @@ export default function LeadMagnet() {
   // Auth state for login requirement
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
+  const isOwner = isAuthenticated && !!(user as any)?.isOwner;
   
   // Interactive tour state
   const { showTour, isFirstVisit, startTour, closeTour, completeTour, resetTour } = useInteractiveTour();
@@ -5850,7 +5851,7 @@ export default function LeadMagnet() {
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
                 revenueScenarios={result.revenueScenarios}
-                isAdmin={isAdmin}
+                isOwner={isOwner}
                 shareCode={validatorShareCode || undefined}
               />
               </Suspense>

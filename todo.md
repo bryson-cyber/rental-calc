@@ -12477,3 +12477,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added staleness guard: auto-cancels messages >30 min past scheduled time
 - [x] Added "Sending now..." animation while dispatcher is processing
 - [x] Added "sending" status with blue background styling
+
+## Unified Campaign History (Feb 25, 2026)
+- [x] When sequence messages fire via dispatcher, create a campaign history entry
+- [x] Campaign History on Send tab becomes single source of truth for all sent messages
+- [x] Show sequence-fired messages, quick sends, resends, and no-show nudges all in one list
+- [x] Sequence tab stays as builder/scheduler only — not for tracking sent status
+
+## Owner-Only Revenue Override (Feb 25, 2026)
+- [x] Restrict revenue override (+/- buttons on Step 5) to owner account only, not all admins
+
+## International Phone Filtering (Feb 25, 2026)
+- [x] Filter out international phone numbers before SMS sends (SimpleTexting US/Canada only)

@@ -46,6 +46,13 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
 
   // Strip phone to digits only (remove +, spaces, dashes, parens)
   const cleanPhone = phone.replace(/[^\d]/g, "");
+
+  // Reject international numbers early — SimpleTexting only supports US/Canada
+  if (!isUsCanadaPhone(cleanPhone)) {
+    console.log(`[WebinarSMS] Skipping international number: ${phone} (${cleanPhone.length} digits)`);
+    return { success: false, error: `International number skipped (not US/Canada): ${phone}` };
+  }
+
   // For US numbers: ensure 10 digits (strip leading 1 if 11 digits)
   const normalizedPhone = cleanPhone.length === 11 && cleanPhone.startsWith("1")
     ? cleanPhone.slice(1)
@@ -185,6 +192,20 @@ function normalizePhone(phone: string): string {
   if (digits.length === 10) return digits;
   // Return whatever we have (may be international)
   return digits;
+}
+
+/**
+ * Check if a phone number is a valid US/Canada number.
+ * SimpleTexting only supports US/Canada (NANP) numbers.
+ * Valid formats: 10 digits, or 11 digits starting with 1.
+ */
+function isUsCanadaPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+  // 10-digit US/Canada number
+  if (digits.length === 10) return true;
+  // 11-digit with leading 1 (US/Canada country code)
+  if (digits.length === 11 && digits.startsWith("1")) return true;
+  return false;
 }
 
 // ─── Helper: Template variable replacement ───────────────────────────────────
@@ -1887,7 +1908,7 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       webinarId: z.string().min(1),
       message: z.string().min(1).max(1600),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -1903,8 +1924,21 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         );
 
       if (noShows.length === 0) {
-        return { sent: 0, failed: 0, total: 0, message: "No registrants to nudge" };
+        return { sent: 0, failed: 0, total: 0, campaignId: null, message: "No registrants to nudge" };
       }
+
+      // Create campaign record so this shows up in Campaign History
+      const [campaignResult] = await db.insert(webinarSmsCampaigns).values({
+        name: `[No-Show Nudge] ${input.webinarId}`,
+        messageBody: input.message,
+        filterCriteria: { audience: "not_attended", webinarId: input.webinarId, source: "no_show_nudge" } as Record<string, unknown>,
+        totalRecipients: noShows.length,
+        sentCount: 0,
+        failedCount: 0,
+        status: "sending",
+        createdBy: ctx.user.id,
+      });
+      const campaignId = campaignResult.insertId;
 
       let sent = 0;
       let failed = 0;
@@ -1912,6 +1946,13 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       for (const registrant of noShows) {
         if (!registrant.phone) {
           failed++;
+          await db.insert(webinarSmsDeliveries).values({
+            campaignId,
+            registrantId: registrant.id,
+            phone: "no_phone",
+            deliveryStatus: "failed",
+            error: "No phone number",
+          });
           continue;
         }
 
@@ -1922,13 +1963,34 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
           const result = await sendSms(registrant.phone, personalizedMessage);
           if (result.success) {
             sent++;
+            await db.insert(webinarSmsDeliveries).values({
+              campaignId,
+              registrantId: registrant.id,
+              phone: registrant.phone,
+              deliveryStatus: "sent",
+              externalMessageId: result.smsId || null,
+            });
           } else {
             failed++;
             console.error(`[NoShowNudge] Failed to send to ${registrant.phone}: ${result.error}`);
+            await db.insert(webinarSmsDeliveries).values({
+              campaignId,
+              registrantId: registrant.id,
+              phone: registrant.phone,
+              deliveryStatus: "failed",
+              error: result.error || "Unknown error",
+            });
           }
         } catch (err: any) {
           failed++;
           console.error(`[NoShowNudge] Error sending to ${registrant.phone}: ${err.message}`);
+          await db.insert(webinarSmsDeliveries).values({
+            campaignId,
+            registrantId: registrant.id,
+            phone: registrant.phone || "unknown",
+            deliveryStatus: "failed",
+            error: err.message,
+          });
         }
 
         // Rate limit: ~3 per second
@@ -1937,7 +1999,15 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         }
       }
 
-      return { sent, failed, total: noShows.length };
+      // Update campaign record with final counts
+      await db.update(webinarSmsCampaigns).set({
+        sentCount: sent,
+        failedCount: failed,
+        status: failed === noShows.length ? "failed" : "completed",
+        completedAt: new Date(),
+      }).where(eq(webinarSmsCampaigns.id, campaignId));
+
+      return { sent, failed, total: noShows.length, campaignId };
     }),
 });
 
@@ -2183,10 +2253,34 @@ export async function startSmsDispatcher() {
               failedCount: 0,
               sentAt: new Date(),
             }).where(eq(scheduledSmsMessages.id, msg.id));
+            // Still create a campaign record for visibility
+            await db.insert(webinarSmsCampaigns).values({
+              name: `[Sequence] ${msg.sequenceName}`,
+              messageBody: msg.messageBody,
+              filterCriteria: { audience: msg.audience, webinarId: msg.webinarId, source: "sequence", scheduledMessageId: msg.id } as Record<string, unknown>,
+              totalRecipients: 0,
+              sentCount: 0,
+              failedCount: 0,
+              status: "completed",
+              completedAt: new Date(),
+            });
             continue;
           }
 
-          console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${recipients.length} recipients`);
+          // Create campaign record BEFORE sending so it shows up in history immediately
+          const audienceLabel = msg.audience === "attended" ? "Attended" : msg.audience === "not_attended" ? "No-Shows" : "Everyone";
+          const [campaignResult] = await db.insert(webinarSmsCampaigns).values({
+            name: `[Sequence] ${msg.sequenceName}`,
+            messageBody: msg.messageBody,
+            filterCriteria: { audience: msg.audience, webinarId: msg.webinarId, source: "sequence", scheduledMessageId: msg.id, audienceLabel } as Record<string, unknown>,
+            totalRecipients: recipients.length,
+            sentCount: 0,
+            failedCount: 0,
+            status: "sending",
+          });
+          const campaignId = campaignResult.insertId;
+
+          console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${recipients.length} recipients (campaign #${campaignId})`);
 
           let sentCount = 0;
           let failedCount = 0;
@@ -2202,16 +2296,40 @@ export async function startSmsDispatcher() {
 
             if (result.success) {
               sentCount++;
+              // Track individual delivery
+              await db.insert(webinarSmsDeliveries).values({
+                campaignId,
+                registrantId: recipient.id,
+                phone: recipient.phone,
+                deliveryStatus: "sent",
+                externalMessageId: result.smsId || null,
+              });
             } else {
               failedCount++;
               console.warn(`[SMS Dispatcher] Failed to send to ${recipient.phone}: ${result.error}`);
+              // Track failed delivery
+              await db.insert(webinarSmsDeliveries).values({
+                campaignId,
+                registrantId: recipient.id,
+                phone: recipient.phone,
+                deliveryStatus: "failed",
+                error: result.error || "Unknown error",
+              });
             }
 
             // Small delay between sends to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 150));
           }
 
-          // Update message with final counts
+          // Update campaign record with final counts
+          await db.update(webinarSmsCampaigns).set({
+            sentCount,
+            failedCount,
+            status: failedCount === recipients.length ? "failed" : "completed",
+            completedAt: new Date(),
+          }).where(eq(webinarSmsCampaigns.id, campaignId));
+
+          // Update scheduled message with final counts
           await db.update(scheduledSmsMessages).set({
             status: failedCount === recipients.length ? "failed" : "sent",
             sentCount,
@@ -2219,7 +2337,8 @@ export async function startSmsDispatcher() {
             sentAt: new Date(),
           }).where(eq(scheduledSmsMessages.id, msg.id));
 
-          console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed`);
+          console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed (campaign #${campaignId})`);
+          console.log(`[SMS Dispatcher] Campaign #${campaignId} created in Campaign History`);
 
         } catch (err: any) {
           console.error(`[SMS Dispatcher] Error processing message #${msg.id}:`, err.message);

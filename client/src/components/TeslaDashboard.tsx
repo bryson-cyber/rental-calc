@@ -159,7 +159,7 @@ interface TeslaDashboardProps {
     source: string;
     compCount: number;
   };
-  isAdmin?: boolean;  // Admin can override revenue numbers
+  isOwner?: boolean;  // Only the owner can override revenue numbers
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
 }
@@ -217,7 +217,7 @@ function HeroRevenueCard({
   mode = 'rent',
   monthlyMortgage = 0,
   revenueScenarios,
-  isAdmin = false,
+  isOwner = false,
   onRevenueOverride,
   revenueOverrideActive = false
 }: { 
@@ -235,7 +235,7 @@ function HeroRevenueCard({
     source: string;
     compCount: number;
   };
-  isAdmin?: boolean;
+  isOwner?: boolean;
   onRevenueOverride?: (newRevenue: number | null) => void;
   revenueOverrideActive?: boolean;
 }) {
@@ -293,8 +293,8 @@ function HeroRevenueCard({
             </TooltipContent>
           </Tooltip>
           <div className="flex items-baseline gap-3 flex-wrap">
-            {/* Admin override controls: decrement */}
-            {isAdmin && onRevenueOverride && (
+            {/* Owner override controls: decrement */}
+            {isOwner && onRevenueOverride && (
               <button
                 onClick={() => onRevenueOverride(annualRevenue - 5000)}
                 className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition-colors border border-red-300 shadow-sm"
@@ -308,8 +308,8 @@ function HeroRevenueCard({
             }`}>
               {formatCurrency(annualRevenue)}
             </span>
-            {/* Admin override controls: increment */}
-            {isAdmin && onRevenueOverride && (
+            {/* Owner override controls: increment */}
+            {isOwner && onRevenueOverride && (
               <button
                 onClick={() => onRevenueOverride(annualRevenue + 5000)}
                 className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
@@ -318,8 +318,8 @@ function HeroRevenueCard({
                 <Plus className="w-4 h-4" />
               </button>
             )}
-            {/* Admin reset button when override is active */}
-            {isAdmin && onRevenueOverride && revenueOverrideActive && (
+            {/* Owner reset button when override is active */}
+            {isOwner && onRevenueOverride && revenueOverrideActive && (
               <button
                 onClick={() => onRevenueOverride(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors border border-slate-300 shadow-sm"
@@ -342,8 +342,8 @@ function HeroRevenueCard({
               </span>
             )}
           </div>
-          {/* Admin override indicator */}
-          {isAdmin && revenueOverrideActive && (
+          {/* Owner override indicator */}
+          {isOwner && revenueOverrideActive && (
             <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
               Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
@@ -2928,7 +2928,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isAdmin = false, shareCode, persistedRevenueOverride }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3046,7 +3046,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         mode={mode}
         monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
         revenueScenarios={effectiveScenarios}
-        isAdmin={isAdmin}
+        isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
       />

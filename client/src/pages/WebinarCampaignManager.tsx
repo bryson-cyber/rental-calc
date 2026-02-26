@@ -1280,7 +1280,23 @@ function CampaignHistory() {
                   onClick={() => setSelectedCampaignId(c.id === selectedCampaignId ? null : c.id)}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium">{c.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{c.name}</p>
+                      {/* Source badge to distinguish campaign origin */}
+                      {c.name?.startsWith('[Sequence]') ? (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600 bg-purple-50">
+                          <CalendarClock className="w-2.5 h-2.5 mr-0.5" /> Sequence
+                        </Badge>
+                      ) : c.name?.startsWith('[No-Show') ? (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-300 text-orange-600 bg-orange-50">
+                          <Bell className="w-2.5 h-2.5 mr-0.5" /> Nudge
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600 bg-blue-50">
+                          <Send className="w-2.5 h-2.5 mr-0.5" /> Quick Send
+                        </Badge>
+                      )}
+                    </div>
                     <StatusBadge status={c.status} />
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
