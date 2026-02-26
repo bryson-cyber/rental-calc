@@ -12503,13 +12503,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix My Reports page showing nothing — diagnose and fix data association (creatorUserId was never being saved; fixed + backfilled 28 records)
 
 ## Step 8: Lease Reader & Addendum Maker (Feb 25, 2026)
-- [ ] Backend: Lease upload endpoint (PDF/image to S3)
-- [ ] Backend: Claude API lease analysis (subletting clauses, red flags, key terms, arbitrage friendliness grade)
-- [ ] Backend: Addendum PDF generation
-- [ ] Backend: Email/text format addendum generation
-- [ ] Frontend: Step 8 upload UI with drag-and-drop
-- [ ] Frontend: Analysis results display (grade, clauses, red flags)
-- [ ] Frontend: Addendum preview with PDF download button
-- [ ] Frontend: Copy-paste email/text version for landlord
-- [ ] Wire Step 8 into the journey navigation (Home page + sidebar)
-- [ ] Vitest tests for lease analysis and addendum generation
+- [x] Backend: Lease upload endpoint (PDF/image to S3)
+- [x] Backend: Claude API lease analysis (subletting clauses, red flags, key terms, arbitrage friendliness grade)
+- [x] Backend: Addendum PDF generation
+- [x] Backend: Email/text format addendum generation
+- [x] Frontend: Step 8 upload UI with drag-and-drop
+- [x] Frontend: Analysis results display (grade, clauses, red flags)
+- [x] Frontend: Addendum preview with PDF download button
+- [x] Frontend: Copy-paste email/text version for landlord
+- [x] Wire Step 8 into the journey navigation (Home page + sidebar)
+- [x] Vitest tests for lease analysis and addendum generation (9 tests passing)

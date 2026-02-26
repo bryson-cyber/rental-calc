@@ -106,6 +106,7 @@ import { useProperty } from '@/contexts/PropertyContext';
 const TeslaDashboard = lazy(() => import('@/components/TeslaDashboard').then(m => ({ default: m.TeslaDashboard })));
 const StandaloneMarketAdvisor = lazy(() => import('@/components/StandaloneMarketAdvisor').then(m => ({ default: m.StandaloneMarketAdvisor })));
 const OpportunityFinderStep = lazy(() => import('@/components/OpportunityFinderStep'));
+const LeaseReaderStep = lazy(() => import('@/components/LeaseReaderStep'));
 import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
@@ -391,7 +392,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore';
+type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease';
 
 export default function LeadMagnet() {
   // Report mode
@@ -428,7 +429,7 @@ export default function LeadMagnet() {
   // Swipe gesture state for mobile navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
-  const TAB_ORDER: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'];
+  const TAB_ORDER: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'];
   
   // Swipe handlers for mobile navigation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -2226,6 +2227,13 @@ export default function LeadMagnet() {
       job: "Answer: What are similar properties earning?",
       icon: Users,
       color: "from-indigo-500 to-purple-500"
+    },
+    lease: {
+      title: "Read Your Lease",
+      subtitle: "AI-powered lease analysis & addendum generator",
+      job: "Answer: Can I use this property for Airbnb arbitrage?",
+      icon: FileText,
+      color: "from-amber-500 to-orange-500"
     }
   };
 
@@ -2533,7 +2541,7 @@ export default function LeadMagnet() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-sm font-medium text-[oklch(0.45_0_0)]">
                   {(() => {
-                    const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                    const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
                     const currentIndex = tabs.indexOf(activeTab);
                     return `Tool ${currentIndex + 1} of ${tabs.length}`;
                   })()}
@@ -2541,7 +2549,7 @@ export default function LeadMagnet() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => {
-                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
                       const currentIndex = tabs.indexOf(activeTab);
                       if (currentIndex > 0) {
                         setActiveTab(tabs[currentIndex - 1]);
@@ -2555,13 +2563,13 @@ export default function LeadMagnet() {
                   </button>
                   <button
                     onClick={() => {
-                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
                       const currentIndex = tabs.indexOf(activeTab);
                       if (currentIndex < tabs.length - 1) {
                         setActiveTab(tabs[currentIndex + 1]);
                       }
                     }}
-                    disabled={activeTab === 'advisor'}
+                    disabled={activeTab === 'lease'}
                     className="w-11 h-11 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
                     aria-label="Next tool"
                   >
@@ -2574,7 +2582,7 @@ export default function LeadMagnet() {
               {(() => {
                 const job = jobDescriptions[activeTab];
                 const Icon = job.icon;
-                const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
                 const currentIndex = tabs.indexOf(activeTab);
                 
                 return (
@@ -2603,7 +2611,7 @@ export default function LeadMagnet() {
               
               {/* Quick Jump Pills */}
               <div className="flex gap-2 mt-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[]).map((tab, index) => {
                   const isActive = activeTab === tab;
                   return (
                     <button
@@ -2624,7 +2632,7 @@ export default function LeadMagnet() {
             
             {/* Desktop: Grid Layout */}
             <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+              {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[]).map((tab, index) => {
                 const job = jobDescriptions[tab];
                 const Icon = job.icon;
                 const isActive = activeTab === tab;
@@ -2718,7 +2726,7 @@ export default function LeadMagnet() {
                     />
                   ) : (
                     <ShareToolButton
-                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : 1}
+                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : activeTab === 'lease' ? 10 : 1}
                       city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
                       state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
                       zipCode={myProperty?.zipCode}
@@ -3812,6 +3820,32 @@ export default function LeadMagnet() {
                     // setActiveTab('validate');
                   }}
                 />
+                </Suspense>
+              </div>
+            )}
+
+            {/* ============================================ */}
+            {/* LEASE READER TAB (Step 8) */}
+            {/* ============================================ */}
+            {activeTab === 'lease' && (
+              <div className="space-y-8" data-tool-panel="lease">
+                <HelpSection
+                  title="How This Tool Helps You"
+                  description="Upload your rental lease and our AI will analyze it for Airbnb arbitrage compatibility. Get a professional addendum ready to send to your landlord."
+                  example="You found a great rental but aren't sure if the lease allows short-term rentals. Upload it here to find out instantly and get a ready-to-send addendum."
+                  steps={[
+                    'Upload your lease (PDF or photo)',
+                    'AI analyzes every clause for arbitrage compatibility',
+                    'Get a letter grade (A-F) for arbitrage friendliness',
+                    'See red flags, green flags, and recommendations',
+                    'Generate a professional addendum to send to your landlord',
+                    'Download as PDF or copy the email/text version'
+                  ]}
+                  isOpen={showHelp === 'lease'}
+                  onToggle={() => setShowHelp(showHelp === 'lease' ? null : 'lease')}
+                />
+                <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <LeaseReaderStep />
                 </Suspense>
               </div>
             )}

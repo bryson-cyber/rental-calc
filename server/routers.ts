@@ -55,6 +55,7 @@ import {
   translationRouter,
   contentStudioRouter,
   webinarSmsRouter,
+  leaseReaderRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -172,6 +173,9 @@ export const appRouter = router({
 
   // Webinar SMS (isolated module)
   webinarSms: webinarSmsRouter,
+
+  // Step 8: Lease Reader & Addendum Maker
+  leaseReader: leaseReaderRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -147,10 +147,10 @@ interface TeslaDashboardProps {
     percentile75: number;
     min: number;
     max: number;
-    mean: number;
-    stdDev: number;
+    mean?: number;
+    stdDev?: number;
     sampleCount: number;
-    radiusMiles: number;
+    radiusMiles?: number;
     userRentVsMarket: 'below' | 'above' | 'at';
     rentAdvantage: number;
     percentileRank: number;
@@ -1361,10 +1361,10 @@ function RentValidationSection({
     percentile75: number;
     min: number;
     max: number;
-    mean: number;
-    stdDev: number;
+    mean?: number;
+    stdDev?: number;
     sampleCount: number;
-    radiusMiles: number;
+    radiusMiles?: number;
     userRentVsMarket: 'below' | 'at' | 'above';
     rentAdvantage: number;
     percentileRank: number;

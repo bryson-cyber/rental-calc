@@ -37,3 +37,4 @@ export { voiceBugReportRouter } from "./voice-bug-report";
 export { translationRouter } from "./translation";
 export { contentStudioRouter } from "./content-studio";
 export { webinarSmsRouter } from "./webinar-sms";
+export { leaseReaderRouter } from "./lease-reader";
