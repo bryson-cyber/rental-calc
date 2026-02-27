@@ -12550,3 +12550,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Unlimited messages per property (no cap)
 - [x] Answers grounded exclusively in the specific property's data (system prompt enforces data-only responses)
 - [x] Write tests for chat endpoint (11 tests passing in property-chat.test.ts)
+
+## QA: Property Chatbot (Feb 27, 2026)
+- [x] Run baseline vitest tests (125 passed, 4 pre-existing failures unrelated to chatbot)
+- [x] Code review: PropertyChatBot.tsx frontend — found 4 bugs
+- [x] Code review: property-chat.ts backend — confirmed role mapping, identified edge cases
+- [x] Code review: SSE endpoint in index.ts — confirmed error handling, added message limit
+- [x] FIX: "Powered by Gemini" → "Powered by Coach Inayah" (white-label branding violation)
+- [x] FIX: Textarea height not resetting after sending multi-line message
+- [x] FIX: AbortController not cleaned up on component unmount
+- [x] FIX: Added 50-message conversation limit to prevent abuse
+- [x] Added 7 edge case tests (empty arrays, zero values, long address, negative trends, many comps)
+- [x] 18 tests passing in property-chat.test.ts
+- [ ] Browser visual testing (browser extension unavailable — needs manual testing by user)

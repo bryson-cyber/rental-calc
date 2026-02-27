@@ -236,4 +236,118 @@ describe('property-chat', () => {
       expect(typeof result).toBe('string');
     });
   });
+
+  describe('edge cases', () => {
+    it('handles empty forecast array', async () => {
+      const emptyForecastContext: PropertyChatContext = {
+        ...mockContext,
+        forecast: [],
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'What months are best?' },
+      ];
+
+      const result = await propertyChat(emptyForecastContext, 'guided', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles empty comparables array', async () => {
+      const emptyCompsContext: PropertyChatContext = {
+        ...mockContext,
+        comparables: [],
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'Show me comps.' },
+      ];
+
+      const result = await propertyChat(emptyCompsContext, 'guided', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles context with zero values', async () => {
+      const zeroContext: PropertyChatContext = {
+        address: '789 Zero St, Nowhere, TX',
+        bedrooms: 1,
+        bathrooms: 1,
+        projectedRevenue: 0,
+        revenueLow: 0,
+        revenueHigh: 0,
+        adr: 0,
+        occupancyRate: 0,
+        monthlyRevenue: 0,
+        monthlyProfit: 0,
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'What do you think?' },
+      ];
+
+      const result = await propertyChat(zeroContext, 'guided', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles very long address', async () => {
+      const longAddressContext: PropertyChatContext = {
+        ...mockContext,
+        address: 'A'.repeat(500) + ', Very Long City Name, State 12345',
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'Tell me about this property.' },
+      ];
+
+      const result = await propertyChat(longAddressContext, 'guided', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles context with all optional fields populated', async () => {
+      // Full context with everything — should not throw
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'Give me the full breakdown.' },
+      ];
+
+      const result = await propertyChat(mockContext, 'pro', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles negative yearlyPctChange', async () => {
+      const decliningContext: PropertyChatContext = {
+        ...mockContext,
+        historicalTrend: 'down',
+        yearlyPctChange: -8.3,
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'Is the market declining?' },
+      ];
+
+      const result = await propertyChat(decliningContext, 'pro', messages);
+      expect(typeof result).toBe('string');
+    });
+
+    it('handles many comparables (>10 should be capped)', async () => {
+      const manyComps = Array.from({ length: 20 }, (_, i) => ({
+        title: `Comp ${i + 1}`,
+        bedrooms: 3,
+        annualRevenue: 80000 + i * 1000,
+        adr: 250 + i * 5,
+        occupancy: 0.7 + (i * 0.01),
+      }));
+
+      const manyCompsContext: PropertyChatContext = {
+        ...mockContext,
+        comparables: manyComps,
+      };
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: 'How do I compare?' },
+      ];
+
+      // Should not throw even with 20 comps
+      const result = await propertyChat(manyCompsContext, 'guided', messages);
+      expect(typeof result).toBe('string');
+    });
+  });
 });

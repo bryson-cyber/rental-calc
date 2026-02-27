@@ -437,6 +437,11 @@ async function startServer() {
       return res.status(400).json({ error: 'propertyContext.address is required' });
     }
     
+    // Limit conversation length to prevent abuse (50 messages = ~25 exchanges)
+    if (messages.length > 50) {
+      return res.status(400).json({ error: 'Conversation too long. Please start a new conversation.' });
+    }
+    
     console.log(`[PropertyChat] Starting stream for ${propertyContext.address} (${messages.length} messages, mode: ${reportMode || 'guided'})`);
     
     // Set SSE headers

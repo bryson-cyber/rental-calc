@@ -158,6 +158,16 @@ export function PropertyChatBot({ propertyContext }: PropertyChatBotProps) {
     }
   }, [isOpen]);
 
+  // Cleanup AbortController on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
+
   // Track scroll position to show/hide scroll button
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -194,6 +204,10 @@ export function PropertyChatBot({ propertyContext }: PropertyChatBotProps) {
     setMessages(prev => [...prev, userMessage, assistantMessage]);
     setStreamingMessageId(assistantMessageId);
     setInput('');
+    // Reset textarea height after clearing input
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
     setIsStreaming(true);
 
     // Abort any existing stream
@@ -515,7 +529,7 @@ export function PropertyChatBot({ propertyContext }: PropertyChatBotProps) {
                 </Button>
               </div>
               <p className="text-[10px] text-slate-400 mt-1.5 text-center">
-                Powered by Gemini · Answers based on your property data
+                Powered by Coach Inayah · Answers based on your property data
               </p>
             </div>
           </motion.div>
