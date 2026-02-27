@@ -195,14 +195,13 @@ describe('usage-limits', () => {
     });
 
     it('returns correct remaining counts for non-admin users', async () => {
-      // First call: isUserAdmin returns non-admin
-      // Second call: getOrCreateUsageRecord returns existing record
+      // apiCallsCount should equal sum of actions (1 per action, not 15)
       mockSelectResult = [{
         id: 1,
         propertyAnalyses: 2,
         validateAnalyses: 3,
         marketResearches: 1,
-        apiCallsCount: 30,
+        apiCallsCount: 6, // 2 + 3 + 1 = 6 (1 per action)
       }];
       const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
       expect(status.isAdmin).toBe(false);
@@ -212,9 +211,29 @@ describe('usage-limits', () => {
       expect(status.validateAnalyses.remaining).toBe(17);
       expect(status.marketResearches.used).toBe(1);
       expect(status.marketResearches.remaining).toBe(2);
+      expect(status.apiCalls.used).toBe(6);
+      expect(status.apiCalls.remaining).toBe(69); // 75 - 6 = 69
       expect(status.canAnalyze).toBe(true);
       expect(status.canValidate).toBe(true);
       expect(status.canResearchMarket).toBe(true);
+    });
+
+    it('user with 20 validations is still under apiCalls limit (1 per action, not 15)', async () => {
+      // Previously: 20 validations × 15 = 300 apiCallsCount → blocked at 75
+      // Now: 20 validations × 1 = 20 apiCallsCount → well under 75
+      mockSelectResult = [{
+        id: 1,
+        propertyAnalyses: 0,
+        validateAnalyses: 20,
+        marketResearches: 0,
+        apiCallsCount: 20, // 20 validations × 1 = 20
+      }];
+      const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
+      expect(status.apiCalls.used).toBe(20);
+      expect(status.apiCalls.remaining).toBe(55); // 75 - 20 = 55
+      expect(status.validateAnalyses.remaining).toBe(0); // hit validate limit
+      expect(status.canValidate).toBe(false); // blocked by validate limit, NOT apiCalls
+      expect(status.canAnalyze).toBe(true); // can still do property analyses
     });
 
     it('returns canAnalyze=false when property limit reached', async () => {
@@ -237,7 +256,7 @@ describe('usage-limits', () => {
         propertyAnalyses: 0,
         validateAnalyses: 0,
         marketResearches: 3,
-        apiCallsCount: 30,
+        apiCallsCount: 3, // 3 market researches × 1 = 3
       }];
       const status = await getUsageStatus(undefined, undefined, '192.168.1.1');
       expect(status.canAnalyze).toBe(true);

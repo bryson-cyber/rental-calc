@@ -12534,3 +12534,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix in-memory daily counter not resetting at midnight — ROOT CAUSE: syncCounterFromDb() had "never go backwards" rule that prevented counter from resetting when DB count was lower than stale memory count. Also dailyLimitNotified was declared after resetIfNewDay() causing ReferenceError on startup.
 - [x] Fix: 1) Moved dailyLimitNotified/warnNotified declarations before resetIfNewDay(). 2) syncCounterFromDb() now calls resetIfNewDay() FIRST. 3) Added drift detection: if memory counter > DB count + 50, trust DB. 4) On sync failure, still calls resetIfNewDay() as fallback.
 - [x] Added 9 unit tests covering day reset, drift detection, and the exact production bug scenario
+
+## CRITICAL: Per-User API Call Counting Inflated (Feb 27, 2026)
+- [x] Fix per-user apiCallsUsed counting 15 internal AirDNA sub-calls per validation instead of 1 user action — ROOT CAUSE: recordValidateUsage() and recordAnalysisUsage() were called with apiCallsUsed=15 (and 20 for AI reports), inflating the user_usage.apiCallsCount. With a per-user apiCalls limit of 75, users were blocked after just 5 validations (5×15=75). Changed all three call sites in rental.ts to pass apiCallsUsed=1.
+- [x] Reset all inflated apiCallsCount values in database for today's records (SET apiCallsCount = propertyAnalyses + validateAnalyses + marketResearches)
+- [x] Updated usage-limits.test.ts with correct apiCallsCount values and new test verifying 20 validations stays under 75 apiCalls limit
+- [x] 15 tests passing

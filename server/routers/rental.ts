@@ -1120,11 +1120,11 @@ export const rentalRouter = router({
 
           // Record usage after successful analysis (use separate counter for validate)
           if (isValidateSource) {
-            await recordValidateUsage(userId, undefined, ipAddress, 15).catch(err => 
+            await recordValidateUsage(userId, undefined, ipAddress, 1).catch(err => 
               console.error('[Rental] Error recording validate usage:', err)
             );
           } else {
-            await recordAnalysisUsage(userId, undefined, ipAddress, 15).catch(err => 
+            await recordAnalysisUsage(userId, undefined, ipAddress, 1).catch(err => 
               console.error('[Rental] Error recording usage:', err)
             );
           }
@@ -1490,7 +1490,7 @@ export const rentalRouter = router({
           };
 
           // Record usage after successful analysis
-          await recordAnalysisUsage(userId, undefined, ipAddress, 20).catch(err => 
+          await recordAnalysisUsage(userId, undefined, ipAddress, 1).catch(err => 
             console.error('[Rental] Error recording AI report usage:', err)
           );
 

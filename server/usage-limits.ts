@@ -8,7 +8,7 @@
  * - Property analyses (Step 2): 5/day
  * - Validate analyses (Step 5): 20/day (displayed as "unlimited" to users)
  * - Market researches: 3/day
- * - API calls: 75/day (hard cap, raised to accommodate Step 5's higher limit)
+ * - API calls: 75/day (counts user actions, not internal sub-calls)
  */
 
 import { getDb } from './db';

@@ -1,0 +1,120 @@
+{
+  "query": "SELECT uu.id, uu.userId, uu.date, uu.propertyAnalyses, uu.validateAnalyses, uu.marketResearches, uu.apiCallsCount, u.name, u.email FROM user_usage uu LEFT JOIN users u ON uu.userId = u.id WHERE uu.date = CURDATE() ORDER BY uu.apiCallsCount DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT uu.id, uu.userId, uu.date, uu.propertyAnalyses, uu.validateAnalyses, uu.marketResearches, uu.apiCallsCount, u.name, u.email FROM user_usage uu LEFT JOIN users u ON uu.userId = u.id WHERE uu.date = CURDATE() ORDER BY uu.apiCallsCount DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "870015",
+      "userId": "14492076",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "5",
+      "marketResearches": "0",
+      "apiCallsCount": "75",
+      "name": "Rochelle Zaldivar",
+      "email": "rzaldivarhealth@gmail.com"
+    },
+    {
+      "id": "900010",
+      "userId": "14433291",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "3",
+      "marketResearches": "0",
+      "apiCallsCount": "45",
+      "name": "Cassidy Spencer",
+      "email": "cassidyspencer@sandiego.edu"
+    },
+    {
+      "id": "870014",
+      "userId": "14432089",
+      "date": "2026-02-27",
+      "propertyAnalyses": "2",
+      "validateAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "32",
+      "name": "Nicole",
+      "email": "nicoledhgooden8@gmail.com"
+    },
+    {
+      "id": "870021",
+      "userId": "14310001",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "2",
+      "marketResearches": "0",
+      "apiCallsCount": "30",
+      "name": "Aaliyah Galindo",
+      "email": "aaliyah@coachinayah.com"
+    },
+    {
+      "id": "870018",
+      "userId": "1",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "1",
+      "marketResearches": "0",
+      "apiCallsCount": "15",
+      "name": "Bryson blocker",
+      "email": "bryson@stayly.com"
+    },
+    {
+      "id": "900007",
+      "userId": "NULL",
+      "date": "2026-02-27",
+      "propertyAnalyses": "1",
+      "validateAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "15",
+      "name": "NULL",
+      "email": "NULL"
+    },
+    {
+      "id": "870017",
+      "userId": "14790910",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "1",
+      "marketResearches": "0",
+      "apiCallsCount": "15",
+      "name": "Mariana Aguilar",
+      "email": "marianamccarthy@gmail.com"
+    },
+    {
+      "id": "900002",
+      "userId": "14432771",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "name": "Amie Njie",
+      "email": "anjie5322@gmail.com"
+    },
+    {
+      "id": "900001",
+      "userId": "14732820",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "name": "Aesha Kirkman",
+      "email": "aesha.kirkman85@gmail.com"
+    },
+    {
+      "id": "870020",
+      "userId": "NULL",
+      "date": "2026-02-27",
+      "propertyAnalyses": "0",
+      "validateAnalyses": "0",
+      "marketResearches": "0",
+      "apiCallsCount": "0",
+      "name": "NULL",
+      "email": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdate\tpropertyAnalyses\tvalidateAnalyses\tmarketResearches\tapiCallsCount\tname\temail\n870015\t14492076\t2026-02-27\t0\t5\t0\t75\tRochelle Zaldivar\trzaldivarhealth@gmail.com\n900010\t14433291\t2026-02-27\t0\t3\t0\t45\tCassidy Spencer\tcassidyspencer@sandiego.edu\n870014\t14432089\t2026-02-27\t2\t0\t0\t32\tNicole\tnicoledhgooden8@gmail.com\n870021\t14310001\t2026-02-27\t0\t2\t0\t30\tAaliyah Galindo\taaliyah@coachinayah.com\n870018\t1\t2026-02-27\t0\t1\t0\t15\tBryson blocker\tbryson@stayly.com\n900007\tNULL\t2026-02-27\t1\t0\t0\t15\tNULL\tNULL\n870017\t14790910\t2026-02-27\t0\t1\t0\t15\tMariana Aguilar\tmarianamccarthy@gmail.com\n900002\t14432771\t2026-02-27\t0\t0\t0\t0\tAmie Njie\tanjie5322@gmail.com\n900001\t14732820\t2026-02-27\t0\t0\t0\t0\tAesha Kirkman\taesha.kirkman85@gmail.com\n870020\tNULL\t2026-02-27\t0\t0\t0\t0\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}
