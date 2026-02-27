@@ -737,8 +737,6 @@ const METRIC_CONFIG: Record<MetricKey, { label: string; format: (val: number) =>
 
 function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForecast[]; historicalData?: { months: Array<{ date: string; revenue: number; occupancy: number; adr: number }> } }) {
   const [viewMode, setViewMode] = useState<'chart' | 'table' | 'yoy'>('chart');
-  const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(['revenue', 'adr', 'occupancy']);
-  const [showYoY, setShowYoY] = useState(true);
   
   if (!forecast || forecast.length === 0) return null;
   
@@ -754,7 +752,6 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
   const avgRevenue = forecastWithRevpar.reduce((sum, m) => sum + m.revenue, 0) / forecastWithRevpar.length;
   const avgOccupancy = forecastWithRevpar.reduce((sum, m) => sum + m.occupancy, 0) / forecastWithRevpar.length;
   const avgAdr = forecastWithRevpar.reduce((sum, m) => sum + m.adr, 0) / forecastWithRevpar.length;
-  const avgRevpar = forecastWithRevpar.reduce((sum, m) => sum + (m.revpar || 0), 0) / forecastWithRevpar.length;
   
   // Calculate YoY changes if historical data is available
   const getYoYChange = (month: MonthlyForecast & { revpar?: number }): { revenue: number | null; adr: number | null; occupancy: number | null; revpar: number | null } => {
@@ -762,7 +759,6 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       return { revenue: null, adr: null, occupancy: null, revpar: null };
     }
     
-    // Find matching month from last year
     const currentMonthNum = month.month.split('-')[1];
     const lastYearMonth = historicalData.months.find(h => {
       const hMonthNum = h.date.split('-')[1];
@@ -781,7 +777,6 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       ? ((month.occupancy - lastYearMonth.occupancy) / lastYearMonth.occupancy) * 100 
       : null;
     
-    // Calculate RevPAR YoY change
     const lastYearRevpar = lastYearMonth.adr * (lastYearMonth.occupancy / 100);
     const currentRevpar = month.revpar || (month.adr * (month.occupancy / 100));
     const revparChange = lastYearRevpar > 0 
@@ -791,34 +786,31 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
     return { revenue: revenueChange, adr: adrChange, occupancy: occupancyChange, revpar: revparChange };
   };
   
-  // Categorize months by performance
-  const getMonthCategory = (revenue: number) => {
-    const threshold33 = minRevenue + (maxRevenue - minRevenue) * 0.33;
-    const threshold66 = minRevenue + (maxRevenue - minRevenue) * 0.66;
-    if (revenue >= threshold66) return 'peak';
-    if (revenue >= threshold33) return 'shoulder';
-    return 'slow';
-  };
-  
   // Sort months by revenue for ranking
   const sortedByRevenue = [...forecastWithRevpar].sort((a, b) => b.revenue - a.revenue);
   const peakMonths = sortedByRevenue.slice(0, 3);
-  const slowMonths = sortedByRevenue.slice(-3);
+  const slowMonths = sortedByRevenue.slice(-3).reverse();
   
-  // Toggle metric selection
-  const toggleMetric = (metric: MetricKey) => {
-    if (selectedMetrics.includes(metric)) {
-      // Don't allow deselecting all metrics
-      if (selectedMetrics.length > 1) {
-        setSelectedMetrics(selectedMetrics.filter(m => m !== metric));
-      }
-    } else {
-      setSelectedMetrics([...selectedMetrics, metric]);
-    }
+  // Get bar color based on revenue intensity (green gradient)
+  const getBarColor = (revenue: number) => {
+    const ratio = maxRevenue > minRevenue ? (revenue - minRevenue) / (maxRevenue - minRevenue) : 0.5;
+    // From light sage to rich emerald
+    if (ratio >= 0.66) return 'bg-emerald-600';
+    if (ratio >= 0.33) return 'bg-emerald-400';
+    return 'bg-emerald-200';
   };
   
+  // Format compact currency for bar labels
+  const formatCompactCurrency = (value: number) => {
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+    return `$${value}`;
+  };
+  
+  // Seasonality spread
+  const seasonalitySpread = avgRevenue > 0 ? Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100) : 0;
+  
   // Format YoY change display
-  const formatYoYChange = (change: number | null, showLabel: boolean = false) => {
+  const formatYoYChange = (change: number | null) => {
     if (change === null) return null;
     const isPositive = change >= 0;
     return (
@@ -827,40 +819,40 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       }`} title="Compared to same month last year">
         {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {Math.abs(change).toFixed(1)}%
-        {showLabel && <span className="ml-1 text-slate-400 font-normal">vs LY</span>}
       </span>
     );
   };
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Monthly Earnings Forecast</h3>
-          <p className="text-slate-500 text-sm">12-month revenue projection</p>
+          <p className="text-slate-500 text-sm">How much you can expect to earn each month</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('chart')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                viewMode === 'chart' 
-                  ? 'bg-white text-slate-900 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Chart
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                viewMode === 'table' 
-                  ? 'bg-white text-slate-900 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Table
-            </button>
+        <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('chart')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+              viewMode === 'chart' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Chart
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+              viewMode === 'table' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Details
+          </button>
+          {historicalData?.months && historicalData.months.length > 0 && (
             <button
               onClick={() => setViewMode('yoy')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
@@ -871,186 +863,142 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
             >
               vs Last Year
             </button>
-          </div>
+          )}
         </div>
       </div>
       
-      {/* Metric Selector with Tooltips */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
-        <span className="text-xs font-medium text-slate-500 mr-2">Show Metrics:</span>
-        {(Object.keys(METRIC_CONFIG) as MetricKey[]).map(metric => (
-          <Tooltip key={metric}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => toggleMetric(metric)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
-                  selectedMetrics.includes(metric)
-                    ? metric === 'revenue' 
-                      ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                      : metric === 'adr'
-                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                      : metric === 'revpar'
-                      ? 'bg-amber-100 text-amber-700 border-amber-300'
-                      : 'bg-purple-100 text-purple-700 border-purple-300'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {METRIC_CONFIG[metric].label}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
-              <p className="text-sm leading-relaxed">
-                {metric === 'revenue' && METRIC_TOOLTIPS.revenue}
-                {metric === 'adr' && METRIC_TOOLTIPS.adr}
-                {metric === 'occupancy' && METRIC_TOOLTIPS.occupancy}
-                {metric === 'revpar' && METRIC_TOOLTIPS.revpar}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-        <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showYoY}
-              onChange={(e) => setShowYoY(e.target.checked)}
-              className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-            />
-            Show vs Last Year
-          </label>
+      {/* Key Stats Row - Simple, 3 numbers */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="text-center p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+          <p className="text-emerald-600 text-xs font-medium mb-1">Avg Monthly Revenue</p>
+          <p className="text-xl font-bold text-emerald-700">{formatCurrency(avgRevenue)}</p>
         </div>
-      </div>
-      
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
-        {selectedMetrics.includes('revenue') && (
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Monthly Revenue</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevenue)}</p>
-          </div>
-        )}
-        {selectedMetrics.includes('occupancy') && (
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Booking Rate</p>
-            <p className="text-lg font-bold text-slate-900">{Math.round(avgOccupancy)}%</p>
-          </div>
-        )}
-        {selectedMetrics.includes('adr') && (
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Nightly Rate</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgAdr)}</p>
-          </div>
-        )}
-        {selectedMetrics.includes('revpar') && (
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Daily Earnings</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevpar)}</p>
-          </div>
-        )}
-        {selectedMetrics.length < 4 && (
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Busy vs Slow Months</p>
-            <p className="text-lg font-bold text-slate-900">
-              {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
-            </p>
-          </div>
-        )}
-      </div>
-      
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 mb-4">
-        <div className="flex items-center gap-2">
-           <div className="w-3 h-3 rounded-full bg-[oklch(0.55_0.14_75)]" />
-           <span className="text-xs text-slate-600">Peak (Top 33%)</span>
-         </div>
-         <div className="flex items-center gap-2">
-           <div className="w-3 h-3 rounded-full bg-slate-400" />
-           <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
-         </div>
-         <div className="flex items-center gap-2">
-           <div className="w-3 h-3 rounded-full bg-rose-400" />
-           <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
+        <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p className="text-slate-500 text-xs font-medium mb-1">Avg Nightly Rate</p>
+          <p className="text-xl font-bold text-slate-800">{formatCurrency(avgAdr)}</p>
+        </div>
+        <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p className="text-slate-500 text-xs font-medium mb-1">Avg Booking Rate</p>
+          <p className="text-xl font-bold text-slate-800">{Math.round(avgOccupancy)}%</p>
         </div>
       </div>
       
       {viewMode === 'chart' ? (
-        /* Bar Chart View */
+        /* ===== CHART VIEW - Clean revenue bars with dollar labels ===== */
         <>
-          <div className="grid grid-cols-12 gap-1 h-40 items-end mb-2">
+          {/* Simple legend */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm bg-emerald-600" />
+                <span className="text-xs text-slate-500">Higher revenue</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm bg-emerald-200" />
+                <span className="text-xs text-slate-500">Lower revenue</span>
+              </div>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs text-slate-400 cursor-help border-b border-dashed border-slate-300">
+                  {seasonalitySpread}% seasonal swing
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-slate-700 shadow-lg border border-slate-200">
+                <p className="text-sm leading-relaxed">
+                  The difference between your best and slowest months is {seasonalitySpread}% of the average. 
+                  {seasonalitySpread > 50 ? ' This market has strong seasonality — plan your budget around slow months.' : 
+                   seasonalitySpread > 25 ? ' Moderate seasonality — some months will be noticeably slower.' : 
+                   ' Low seasonality — revenue stays relatively steady year-round.'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          
+          {/* Bar Chart with dollar labels */}
+          <div className="grid grid-cols-12 gap-1.5 items-end mb-1" style={{ height: '200px' }}>
             {forecastWithRevpar.slice(0, 12).map((month, idx) => {
               const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-              const category = getMonthCategory(month.revenue);
+              const isPeak = peakMonths.some(p => p.month === month.month);
+              const isSlow = slowMonths.some(s => s.month === month.month);
               const yoyChange = getYoYChange(month);
               
               return (
                 <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
-                  {/* Tooltip */}
+                  {/* Hover tooltip with full details */}
                   <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                    <div className="bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg border border-[oklch(0.90_0_0)]">
-                      <p className="font-medium mb-1">{formatMonth(month.month)}</p>
-                      {selectedMetrics.includes('revenue') && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-emerald-300">{formatCurrency(month.revenue)}</span>
-                          {showYoY && yoyChange.revenue !== null && (
-                            <span className={yoyChange.revenue >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                              ({yoyChange.revenue >= 0 ? '+' : ''}{yoyChange.revenue.toFixed(1)}% YoY)
-                            </span>
-                          )}
+                    <div className="bg-white text-slate-800 text-xs rounded-lg px-3 py-2.5 whitespace-nowrap shadow-xl border border-slate-200">
+                      <p className="font-semibold text-sm mb-1.5">{formatMonth(month.month)}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-500">Revenue</span>
+                          <span className="font-bold text-emerald-600">{formatCurrency(month.revenue)}</span>
                         </div>
-                      )}
-                      {selectedMetrics.includes('occupancy') && (
-                        <div className="flex items-center gap-2">
-                          <span>{Math.round(month.occupancy)}% occupancy</span>
-                          {showYoY && yoyChange.occupancy !== null && (
-                            <span className={yoyChange.occupancy >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                              ({yoyChange.occupancy >= 0 ? '+' : ''}{yoyChange.occupancy.toFixed(1)}%)
-                            </span>
-                          )}
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-500">Nightly Rate</span>
+                          <span className="font-medium">{formatCurrency(month.adr)}</span>
                         </div>
-                      )}
-                      {selectedMetrics.includes('adr') && (
-                        <div className="flex items-center gap-2">
-                          <span>{formatCurrency(month.adr)}/night</span>
-                          {showYoY && yoyChange.adr !== null && (
-                            <span className={yoyChange.adr >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                              ({yoyChange.adr >= 0 ? '+' : ''}{yoyChange.adr.toFixed(1)}%)
-                            </span>
-                          )}
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-500">Booking Rate</span>
+                          <span className="font-medium">{Math.round(month.occupancy)}%</span>
                         </div>
-                      )}
-                      {selectedMetrics.includes('revpar') && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-amber-300">{formatCurrency(month.revpar || 0)} RevPAR</span>
-                          {showYoY && yoyChange.revpar !== null && (
-                            <span className={yoyChange.revpar >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                              ({yoyChange.revpar >= 0 ? '+' : ''}{yoyChange.revpar.toFixed(1)}%)
+                        {yoyChange.revenue !== null && (
+                          <div className="flex justify-between gap-4 pt-1 mt-1 border-t border-slate-100">
+                            <span className="text-slate-500">vs Last Year</span>
+                            <span className={yoyChange.revenue >= 0 ? 'text-emerald-600 font-medium' : 'text-red-500 font-medium'}>
+                              {yoyChange.revenue >= 0 ? '+' : ''}{yoyChange.revenue.toFixed(1)}%
                             </span>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-slate-400 capitalize mt-1">{category} season</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  </div>
+                  
+                  {/* Dollar amount above bar */}
+                  <div className={`text-[10px] font-semibold mb-1 ${
+                    isPeak ? 'text-emerald-700' : isSlow ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
+                    {formatCompactCurrency(month.revenue)}
                   </div>
                   
                   {/* Bar */}
                   <div 
-                    className={`w-full rounded-t transition-all cursor-pointer ${
-                      category === 'peak'
-                        ? 'bg-gradient-to-t from-[oklch(0.50_0.14_75)] to-[oklch(0.60_0.12_75)]' 
-                        : category === 'slow'
-                        ? 'bg-gradient-to-t from-rose-400 to-rose-300'
-                        : 'bg-gradient-to-t from-slate-400 to-slate-300'
-                    }`}
-                    style={{ height: `${Math.max(heightPct, 8)}%` }}
+                    className={`w-full rounded-t-md transition-all cursor-pointer hover:opacity-80 ${getBarColor(month.revenue)}`}
+                    style={{ height: `${Math.max(heightPct, 10)}%` }}
                   />
                   
+                  {/* Occupancy dot indicator */}
+                  <div className="mt-1 flex items-center justify-center" title={`${Math.round(month.occupancy)}% booked`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      month.occupancy >= 70 ? 'bg-emerald-500' : month.occupancy >= 50 ? 'bg-amber-400' : 'bg-red-300'
+                    }`} />
+                  </div>
+                  
                   {/* Month label */}
-                  <div className="text-[10px] text-slate-500 mt-1 font-medium">
+                  <div className={`text-[10px] mt-0.5 font-medium ${
+                    isPeak ? 'text-emerald-700' : isSlow ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
                     {formatMonth(month.month).substring(0, 3)}
                   </div>
                 </div>
               );
             })}
+          </div>
+          
+          {/* Occupancy legend */}
+          <div className="flex items-center justify-center gap-4 mt-2 mb-0">
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] text-slate-400">70%+ booked</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-[10px] text-slate-400">50-70% booked</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-300" />
+              <span className="text-[10px] text-slate-400">&lt;50% booked</span>
+            </div>
           </div>
         </>
       ) : viewMode === 'yoy' ? (
@@ -1216,92 +1164,53 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
           )}
         </>
       ) : (
-        /* Table View */
+        /* ===== TABLE VIEW - Clean details with all metrics ===== */
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-2 px-2 font-medium text-slate-600">Month</th>
-                {selectedMetrics.includes('revenue') && (
-                  <th className="text-right py-2 px-2 font-medium text-slate-600">
-                    Revenue {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
-                  </th>
+              <tr className="border-b-2 border-slate-200">
+                <th className="text-left py-3 px-3 font-semibold text-slate-700">Month</th>
+                <th className="text-right py-3 px-3 font-semibold text-slate-700">Revenue</th>
+                <th className="text-right py-3 px-3 font-semibold text-slate-700">Nightly Rate</th>
+                <th className="text-right py-3 px-3 font-semibold text-slate-700">Booking Rate</th>
+                {historicalData?.months && historicalData.months.length > 0 && (
+                  <th className="text-right py-3 px-3 font-semibold text-slate-700">vs Last Year</th>
                 )}
-                {selectedMetrics.includes('adr') && (
-                  <th className="text-right py-2 px-2 font-medium text-slate-600">
-                    ADR {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
-                  </th>
-                )}
-                {selectedMetrics.includes('occupancy') && (
-                  <th className="text-right py-2 px-2 font-medium text-slate-600">
-                    Occupancy {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
-                  </th>
-                )}
-                {selectedMetrics.includes('revpar') && (
-                  <th className="text-right py-2 px-2 font-medium text-slate-600">
-                    RevPAR {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
-                  </th>
-                )}
-                <th className="text-center py-2 px-2 font-medium text-slate-600">Season</th>
               </tr>
             </thead>
             <tbody>
               {forecastWithRevpar.slice(0, 12).map((month, idx) => {
-                const category = getMonthCategory(month.revenue);
                 const isPeak = peakMonths.some(p => p.month === month.month);
                 const isSlow = slowMonths.some(s => s.month === month.month);
                 const yoyChange = getYoYChange(month);
                 
                 return (
                   <tr key={idx} className={`border-b border-slate-100 ${
-                    isPeak ? 'bg-slate-100' : isSlow ? 'bg-slate-50' : ''
+                    isPeak ? 'bg-emerald-50' : isSlow ? 'bg-slate-50' : ''
                   }`}>
-                    <td className="py-2.5 px-2 font-medium text-slate-900">
-                      {formatMonth(month.month)}
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900">{formatMonth(month.month)}</span>
+                        {isPeak && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">BEST</span>}
+                        {isSlow && <span className="text-[10px] font-semibold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">SLOW</span>}
+                      </div>
                     </td>
-                    {selectedMetrics.includes('revenue') && (
-                      <td className="py-2.5 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="font-semibold text-slate-900">{formatCurrency(month.revenue)}</span>
-                          {showYoY && formatYoYChange(yoyChange.revenue)}
-                        </div>
-                      </td>
-                    )}
-                    {selectedMetrics.includes('adr') && (
-                      <td className="py-2.5 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-slate-700">{formatCurrency(month.adr)}</span>
-                          {showYoY && formatYoYChange(yoyChange.adr)}
-                        </div>
-                      </td>
-                    )}
-                    {selectedMetrics.includes('occupancy') && (
-                      <td className="py-2.5 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-slate-600">{Math.round(month.occupancy)}%</span>
-                          {showYoY && formatYoYChange(yoyChange.occupancy)}
-                        </div>
-                      </td>
-                    )}
-                    {selectedMetrics.includes('revpar') && (
-                      <td className="py-2.5 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-amber-700 font-medium">{formatCurrency(month.revpar || 0)}</span>
-                          {showYoY && formatYoYChange(yoyChange.revpar)}
-                        </div>
-                      </td>
-                    )}
-                    <td className="py-2.5 px-2 text-center">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        category === 'peak' 
-                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
-                          : category === 'slow'
-                          ? 'bg-rose-400 text-white'
-                          : 'bg-slate-400 text-white'
+                    <td className="py-3 px-3 text-right">
+                      <span className={`font-bold ${isPeak ? 'text-emerald-700' : 'text-slate-900'}`}>{formatCurrency(month.revenue)}</span>
+                    </td>
+                    <td className="py-3 px-3 text-right text-slate-700">{formatCurrency(month.adr)}</td>
+                    <td className="py-3 px-3 text-right">
+                      <span className={`font-medium ${
+                        month.occupancy >= 70 ? 'text-emerald-600' : month.occupancy >= 50 ? 'text-amber-600' : 'text-red-500'
                       }`}>
-                        {category === 'peak' ? 'Peak' : category === 'slow' ? 'Slow' : 'Shoulder'}
+                        {Math.round(month.occupancy)}%
                       </span>
                     </td>
+                    {historicalData?.months && historicalData.months.length > 0 && (
+                      <td className="py-3 px-3 text-right">
+                        {formatYoYChange(yoyChange.revenue)}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -1310,37 +1219,44 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         </div>
       )}
       
-      {/* Best/Worst Months Summary */}
-      <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
-        <div className="p-3 bg-slate-100 rounded-lg">
-          <p className="text-xs font-medium text-slate-700 mb-2">Best Months (Avg)</p>
-          <div className="space-y-1">
-            {peakMonths.map((m, i) => {
-              return (
-                <div key={i} className="flex justify-between items-center text-sm">
-                  <span className="text-slate-700">{formatMonth(m.month)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900">Avg {formatCurrency(m.revenue)}</span>
-                  </div>
+      {/* Best & Slowest Months - Clear, visual summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-5 border-t border-slate-200">
+        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <p className="text-sm font-semibold text-emerald-700">Best Earning Months</p>
+          </div>
+          <div className="space-y-2">
+            {peakMonths.map((m, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-100 w-5 h-5 rounded-full flex items-center justify-center">{i + 1}</span>
+                  <span className="text-sm font-medium text-slate-800">{formatMonth(m.month)}</span>
                 </div>
-              );
-            })}
+                <span className="text-sm font-bold text-emerald-700">{formatCurrency(m.revenue)}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <p className="text-xs font-medium text-slate-700 mb-2">Slowest Months (Avg)</p>
-          <div className="space-y-1">
-            {slowMonths.map((m, i) => {
-              return (
-                <div key={i} className="flex justify-between items-center text-sm">
-                  <span className="text-slate-700">{formatMonth(m.month)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-700">Avg {formatCurrency(m.revenue)}</span>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingDown className="w-4 h-4 text-slate-500" />
+            <p className="text-sm font-semibold text-slate-600">Slowest Months</p>
           </div>
+          <div className="space-y-2">
+            {slowMonths.map((m, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 bg-slate-200 w-5 h-5 rounded-full flex items-center justify-center">{i + 1}</span>
+                  <span className="text-sm font-medium text-slate-700">{formatMonth(m.month)}</span>
+                </div>
+                <span className="text-sm font-bold text-slate-600">{formatCurrency(m.revenue)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-200">
+            Plan your budget around these months — save from peak months to cover slow periods.
+          </p>
         </div>
       </div>
     </div>

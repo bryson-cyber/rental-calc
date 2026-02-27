@@ -12518,3 +12518,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix radius showing "? miles" instead of actual value (was using || which treats 0 as falsy, changed to != null)
 - [x] Fix STD DEVIATION showing "N/A" (same falsy check bug, fixed to != null)
 - [ ] Fix missing Nearby Comps and Property Listings in expanded dropdown
+
+## Revenue Override & Seasonality Chart Bugs (Feb 26, 2026)
+- [ ] Fix revenue override +/- buttons not showing on Step 5 projected annual revenue (isOwner returns false on prod — needs republish to sync OWNER_OPEN_ID env var)
+- [x] Redesign Monthly Earnings Forecast chart for clearer seasonality — replaced confusing gold/grey/pink Peak/Shoulder/Slow with green gradient bars, dollar labels on each bar, occupancy dot indicators, simplified table view, and clear Best/Slowest months summary
