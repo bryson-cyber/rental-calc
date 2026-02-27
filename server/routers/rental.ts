@@ -21,6 +21,7 @@ import {
   calculateForwardLookingDemand,
 } from "../airdna";
 import { batchScrapeAirbnbImages } from "../airbnb-scraper";
+import { AirDNARateLimitError } from "../airdna-rate-limiter";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../report-generator";
 import { getLocationQuality } from "../location-quality";
@@ -1153,6 +1154,18 @@ export const rentalRouter = router({
             remaining: limitCheck.remaining ? limitCheck.remaining - 1 : undefined,
           };
         } catch (error) {
+          // Handle rate limit errors with a user-friendly message
+          if (error instanceof AirDNARateLimitError) {
+            console.warn(`[Rental] Rate limit hit for ${input.address}: ${error.message}`);
+            return {
+              success: false,
+              error: 'Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists.',
+              data: null,
+              limitReached: true,
+              remaining: 0,
+            };
+          }
+
           console.error("[Rental] Error getting property report:", error);
           if (error instanceof Error && error.stack) {
             const stackLines = error.stack.split('\n');
@@ -1483,6 +1496,16 @@ export const rentalRouter = router({
 
           return result;
         } catch (error) {
+          if (error instanceof AirDNARateLimitError) {
+            console.warn(`[Rental] Rate limit hit for AI report: ${error.message}`);
+            return {
+              success: false,
+              error: 'Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists.',
+              data: null,
+              limitReached: true,
+              remaining: 0,
+            };
+          }
           console.error("[Rental] Error getting AI property report:", error);
           const message = error instanceof Error ? error.message : "Failed to generate AI property report";
           return {
@@ -1581,6 +1604,14 @@ export const rentalRouter = router({
             },
           };
         } catch (error) {
+          if (error instanceof AirDNARateLimitError) {
+            console.warn(`[Rental] Rate limit hit for market report: ${error.message}`);
+            return {
+              success: false,
+              error: 'Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists.',
+              data: null,
+            };
+          }
           console.error("[Rental] Error getting market report:", error);
           const message = error instanceof Error ? error.message : "Failed to generate market report";
           return {
@@ -1679,6 +1710,14 @@ export const rentalRouter = router({
             },
           };
         } catch (error) {
+          if (error instanceof AirDNARateLimitError) {
+            console.warn(`[Rental] Rate limit hit for submarket report: ${error.message}`);
+            return {
+              success: false,
+              error: 'Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists.',
+              data: null,
+            };
+          }
           console.error("[Rental] Error getting submarket report:", error);
           const message = error instanceof Error ? error.message : "Failed to generate submarket report";
           return {

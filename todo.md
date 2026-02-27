@@ -12522,3 +12522,10 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Revenue Override & Seasonality Chart Bugs (Feb 26, 2026)
 - [ ] Fix revenue override +/- buttons not showing on Step 5 projected annual revenue (isOwner returns false on prod — needs republish to sync OWNER_OPEN_ID env var)
 - [x] Redesign Monthly Earnings Forecast chart for clearer seasonality — replaced confusing gold/grey/pink Peak/Shoulder/Slow with green gradient bars, dollar labels on each bar, occupancy dot indicators, simplified table view, and clear Best/Slowest months summary
+
+## CRITICAL: Production Bug - Property Report Generation Failing (Feb 27, 2026)
+- [x] Fix "Could not generate property report for this address" error on production — ROOT CAUSE: AirDNA rate limit errors (AirDNARateLimitError) were being silently swallowed in the bathroom fallback loop in getRentalizerEstimate(), returning null instead of propagating the rate limit. Client was hitting non-admin soft limit (550/day) and getting a generic "Could not generate" error instead of a rate limit message.
+- [x] Fix: Rate limit errors now re-thrown immediately from getRentalizerEstimate() instead of being caught in the bathroom fallback loop
+- [x] Fix: All router catch blocks (getPropertyReport, getAIPropertyReport, getMarketReport, getSubmarketReport) now catch AirDNARateLimitError specifically and return user-friendly message: "Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists."
+- [x] Added 6 unit tests for rate limit error propagation
+- [x] Test address: 13968 Molina Dr, Jacksonville, FL 32256 — works on dev (returns $36,073 annual revenue)

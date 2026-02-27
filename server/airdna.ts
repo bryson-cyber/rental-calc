@@ -2470,7 +2470,12 @@ export async function getRentalizerEstimate(
         return result;
       }
     } catch (error) {
-      // Continue to next bathroom option
+      // Re-throw rate limit errors immediately — don't try other bathroom options
+      if (error instanceof AirDNARateLimitError) {
+        console.warn(`[Rentalizer] Rate limit hit — not retrying with different bathrooms`);
+        throw error;
+      }
+      // Continue to next bathroom option for other errors
       console.log(`Rentalizer failed for ${request.bedrooms} bed / ${bathrooms} bath, trying next option...`);
     }
   }
