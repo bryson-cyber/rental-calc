@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total FROM api_call_logs WHERE DATE(createdAt) = CURDATE()",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COUNT(*) as total FROM api_call_logs WHERE DATE(createdAt) = CURDATE()",
+  "rows": [
+    {
+      "total": "361"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n361\n",
+  "stderr": "",
+  "execution_time_ms": 76
+}

@@ -12529,3 +12529,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: All router catch blocks (getPropertyReport, getAIPropertyReport, getMarketReport, getSubmarketReport) now catch AirDNARateLimitError specifically and return user-friendly message: "Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists."
 - [x] Added 6 unit tests for rate limit error propagation
 - [x] Test address: 13968 Molina Dr, Jacksonville, FL 32256 — works on dev (returns $36,073 annual revenue)
+
+## CRITICAL: Rate Limiter In-Memory Counter Not Resetting (Feb 27, 2026)
+- [x] Fix in-memory daily counter not resetting at midnight — ROOT CAUSE: syncCounterFromDb() had "never go backwards" rule that prevented counter from resetting when DB count was lower than stale memory count. Also dailyLimitNotified was declared after resetIfNewDay() causing ReferenceError on startup.
+- [x] Fix: 1) Moved dailyLimitNotified/warnNotified declarations before resetIfNewDay(). 2) syncCounterFromDb() now calls resetIfNewDay() FIRST. 3) Added drift detection: if memory counter > DB count + 50, trust DB. 4) On sync failure, still calls resetIfNewDay() as fallback.
+- [x] Added 9 unit tests covering day reset, drift detection, and the exact production bug scenario

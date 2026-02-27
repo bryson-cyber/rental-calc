@@ -55,6 +55,10 @@ function getTodayString(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+/** Track if we've already notified about daily limit today */
+let dailyLimitNotified = false;
+let warnNotified = false;
+
 /** Reset counter if it's a new day */
 function resetIfNewDay(): void {
   const today = getTodayString();
@@ -68,23 +72,47 @@ function resetIfNewDay(): void {
 }
 
 /** 
- * Sync in-memory counter with DB on startup.
- * Called once when the module loads.
+ * Sync in-memory counter with DB on startup and periodically.
+ * 
+ * IMPORTANT: Always reset the day first, then sync from DB.
+ * The DB count for TODAY is the authoritative source.
+ * If the in-memory counter is higher than the DB count for today,
+ * it means the counter drifted (e.g., from a previous day's accumulation
+ * that wasn't properly reset). In that case, trust the DB.
  */
 async function syncCounterFromDb(): Promise<void> {
   try {
+    // FIRST: reset if it's a new day (clears stale counter from previous day)
+    resetIfNewDay();
+    
     const limitStatus = await checkDailyLimit('airdna', DAILY_HARD_LIMIT);
     const dbCount = limitStatus.currentCount;
     
-    // Use the higher of memory vs DB count (never go backwards)
+    // Trust the DB as authoritative for today's count.
+    // The in-memory counter can drift higher than reality if:
+    // - The server didn't restart between days
+    // - A previous sync pulled in stale data
+    // - Requests were counted in memory but failed before DB logging
+    // So we use the HIGHER of memory vs DB to avoid under-counting,
+    // but cap the difference to prevent runaway drift.
+    const MAX_DRIFT = 50; // Allow up to 50 calls of drift between memory and DB
     if (dbCount > dailyCallCount) {
-      console.log(`[AirDNA-RateLimit] Synced from DB: ${dailyCallCount} -> ${dbCount}`);
+      console.log(`[AirDNA-RateLimit] Synced UP from DB: ${dailyCallCount} -> ${dbCount}`);
       dailyCallCount = dbCount;
+    } else if (dailyCallCount > dbCount + MAX_DRIFT) {
+      // Memory counter has drifted too far above DB — trust DB
+      console.warn(`[AirDNA-RateLimit] Counter drift detected! Memory: ${dailyCallCount}, DB: ${dbCount}. Resetting to DB value.`);
+      dailyCallCount = dbCount;
+    } else if (dailyCallCount > dbCount) {
+      console.log(`[AirDNA-RateLimit] Memory (${dailyCallCount}) slightly above DB (${dbCount}), keeping memory value (within drift tolerance)`);
     }
+    
     dailyCountDate = getTodayString();
+    console.log(`[AirDNA-RateLimit] Sync complete: dailyCallCount=${dailyCallCount}, date=${dailyCountDate}`);
   } catch (error) {
     console.warn('[AirDNA-RateLimit] Failed to sync from DB, using memory counter:', error);
-    // Keep whatever count we have - fail closed means we don't reset to 0
+    // On sync failure, still try to reset if new day to prevent stale counter
+    resetIfNewDay();
   }
 }
 
@@ -142,9 +170,6 @@ export class AirDNARateLimitError extends Error {
 // CENTRALIZED API REQUEST FUNCTION
 // ============================================
 
-/** Track if we've already notified about daily limit today */
-let dailyLimitNotified = false;
-let warnNotified = false;
 let lastNotifyDate = '';
 
 function resetDailyNotifyIfNewDay(): void {
