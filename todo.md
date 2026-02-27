@@ -12513,3 +12513,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Frontend: Copy-paste email/text version for landlord
 - [x] Wire Step 8 into the journey navigation (Home page + sidebar)
 - [x] Vitest tests for lease analysis and addendum generation (9 tests passing)
+
+## Rent Validation Dropdown Bugs (Feb 26, 2026)
+- [x] Fix radius showing "? miles" instead of actual value (was using || which treats 0 as falsy, changed to != null)
+- [x] Fix STD DEVIATION showing "N/A" (same falsy check bug, fixed to != null)
+- [ ] Fix missing Nearby Comps and Property Listings in expanded dropdown

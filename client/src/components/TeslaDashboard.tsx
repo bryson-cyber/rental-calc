@@ -1478,7 +1478,7 @@ function RentValidationSection({
       </div>
       
       <p className="text-xs text-slate-500 text-center mt-2">
-        Based on {rentometerData.sampleCount} similar rentals within {rentometerData.radiusMiles || '?'} miles
+        Based on {rentometerData.sampleCount} similar rentals within {rentometerData.radiusMiles != null ? rentometerData.radiusMiles : '?'} miles
       </p>
 
       {/* Expandable Detailed Data Dropdown */}
@@ -1550,7 +1550,7 @@ function RentValidationSection({
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Std Deviation</p>
-                  <p className="text-lg font-semibold text-slate-800">{rentometerData.stdDev ? `\u00B1${formatCurrency(rentometerData.stdDev)}` : 'N/A'}</p>
+                  <p className="text-lg font-semibold text-slate-800">{rentometerData.stdDev != null ? `±${formatCurrency(rentometerData.stdDev)}` : 'N/A'}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Lowest Rent</p>
@@ -1591,7 +1591,7 @@ function RentValidationSection({
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Analysis Radius</p>
-                <p className="text-sm text-slate-700">{rentometerData.radiusMiles || '?'} miles &middot; {rentometerData.sampleCount} comparable rentals analyzed</p>
+                <p className="text-sm text-slate-700">{rentometerData.radiusMiles != null ? rentometerData.radiusMiles : '?'} miles &middot; {rentometerData.sampleCount} comparable rentals analyzed</p>
               </div>
 
               {rentometerData.quickviewUrl && (
