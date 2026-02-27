@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import MaxPurchasePriceCalculator from './MaxPurchasePriceCalculator';
+import { PropertyChatBot } from './PropertyChatBot';
 import OfferPriceSuggester from './OfferPriceSuggester';
 import AmortizationSchedule from './AmortizationSchedule';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -3518,6 +3519,70 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 7: Proof - "Show me the comps" */}
       <ComparableProperties comparables={result.comparables} />
+
+      {/* Property-Specific AI Chatbot */}
+      <PropertyChatBot
+        propertyContext={{
+          address,
+          bedrooms,
+          bathrooms,
+          accommodates,
+          monthlyRent,
+          projectedRevenue: result.revenue.projected,
+          revenueLow: result.revenue.low,
+          revenueHigh: result.revenue.high,
+          adr: result.metrics.adr,
+          occupancyRate: result.metrics.occupancy,
+          monthlyRevenue: result.cashFlow.monthlyRevenue,
+          monthlyProfit: result.cashFlow.monthlyProfit,
+          revenueScenarios: effectiveScenarios ? {
+            conservative: effectiveScenarios.conservative,
+            target: effectiveScenarios.target,
+            optimistic: effectiveScenarios.optimistic,
+            compCount: effectiveScenarios.compCount,
+          } : undefined,
+          forecast: result.forecast?.map(f => ({
+            month: f.month,
+            revenue: f.revenue,
+            adr: f.adr,
+            occupancy: f.occupancy,
+          })),
+          comparables: result.comparables?.map(c => ({
+            title: c.title,
+            bedrooms: c.bedrooms,
+            bathrooms: c.bathrooms,
+            rating: c.rating,
+            reviews: c.reviews,
+            annualRevenue: c.revenue,
+            adr: c.adr,
+            occupancy: c.occupancy,
+            distance: c.distanceMeters,
+          })),
+          historicalTrend: result.historicalData?.summary?.trend,
+          yearlyPctChange: yearlyChange,
+          marketInsights: result.marketInsights ? {
+            professionallyManagedPct: result.marketInsights.professionallyManagedPct,
+            superhostPct: result.marketInsights.superhostPct,
+            avgRating: result.marketInsights.avgRating,
+            totalListings: result.marketInsights.totalListings,
+            marketScore: result.marketInsights.marketScore,
+          } : undefined,
+          rentometer: rentometerData ? {
+            median: rentometerData.median,
+            mean: rentometerData.mean,
+            min: rentometerData.min,
+            max: rentometerData.max,
+            sampleCount: rentometerData.sampleCount,
+            radiusMiles: rentometerData.radiusMiles,
+            stdDev: rentometerData.stdDev,
+            userRentVsMarket: rentometerData.userRentVsMarket,
+            rentAdvantage: rentometerData.rentAdvantage,
+            percentileRank: rentometerData.percentileRank,
+          } : undefined,
+          mode,
+          purchasePrice,
+        }}
+      />
     </div>
   );
 }

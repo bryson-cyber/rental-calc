@@ -12540,3 +12540,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Reset all inflated apiCallsCount values in database for today's records (SET apiCallsCount = propertyAnalyses + validateAnalyses + marketResearches)
 - [x] Updated usage-limits.test.ts with correct apiCallsCount values and new test verifying 20 validations stays under 75 apiCalls limit
 - [x] 15 tests passing
+
+## Property-Specific AI Chatbot on Step 5 (Feb 27, 2026)
+- [x] Create Gemini chat backend endpoint (/api/ai/property-chat/stream SSE) that accepts property data context + user messages + conversation history
+- [x] Build system prompt that injects all property analysis data (revenue, comps, occupancy, Rentometer, monthly forecasts, market metrics, break-even)
+- [x] Support tone matching: Guided Mode = beginner-friendly Coach Inayah style, Pro Mode = investor-grade language
+- [x] Build chat UI component (floating button + slide-out panel) on Step 5 TeslaDashboard
+- [x] Chat button visible to all users on Step 5 (bottom-left floating button with pulse indicator)
+- [x] Unlimited messages per property (no cap)
+- [x] Answers grounded exclusively in the specific property's data (system prompt enforces data-only responses)
+- [x] Write tests for chat endpoint (11 tests passing in property-chat.test.ts)

@@ -425,6 +425,68 @@ async function startServer() {
     }
   });
   
+  // SSE endpoint for property-specific AI chatbot (Gemini Flash)
+  app.post('/api/ai/property-chat/stream', async (req, res) => {
+    const { propertyContext, reportMode, messages } = req.body;
+    
+    if (!propertyContext || !messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'propertyContext and messages array are required' });
+    }
+    
+    if (!propertyContext.address) {
+      return res.status(400).json({ error: 'propertyContext.address is required' });
+    }
+    
+    console.log(`[PropertyChat] Starting stream for ${propertyContext.address} (${messages.length} messages, mode: ${reportMode || 'guided'})`);
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    
+    let isClientConnected = true;
+    req.on('close', () => { isClientConnected = false; });
+    
+    try {
+      const { streamPropertyChat } = await import('../property-chat');
+      
+      // Map messages to Gemini format (role: 'user' | 'model')
+      const chatMessages = messages.map((m: any) => ({
+        role: m.role === 'assistant' ? 'model' : m.role,
+        content: m.content,
+      }));
+      
+      let fullResponse = '';
+      const stream = streamPropertyChat(
+        propertyContext,
+        reportMode || 'guided',
+        chatMessages,
+      );
+      
+      for await (const chunk of stream) {
+        if (!isClientConnected) break;
+        fullResponse += chunk;
+        res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+      }
+      
+      if (isClientConnected) {
+        res.write(`data: ${JSON.stringify({ type: 'complete', content: fullResponse })}\n\n`);
+        res.end();
+      }
+    } catch (error) {
+      console.error('[PropertyChat] Stream error:', error);
+      if (isClientConnected) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Failed to stream property chat response'
+        })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
   // SSE endpoint for streaming AI chat responses
   app.post('/api/ai/stream', async (req, res) => {
     const { messages, systemPrompt, conversationId } = req.body;
