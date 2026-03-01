@@ -12563,3 +12563,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added 7 edge case tests (empty arrays, zero values, long address, negative trends, many comps)
 - [x] 18 tests passing in property-chat.test.ts
 - [ ] Browser visual testing (browser extension unavailable — needs manual testing by user)
+
+## SMS Sequence Editing (Mar 1, 2026)
+- [x] Make SMS sequence messages editable inline (click to edit message text, or click edit pencil icon)
+- [x] Add save/cancel controls for edited messages (Save/Cancel buttons + Ctrl+Enter/Esc shortcuts)
+- [x] Ensure webinar join link is included in all relevant message templates (messages 2-6 now include link)
+- [x] Backend endpoint to update individual SMS message content (upsertScheduledMessage already existed, wired to frontend)
+- [x] Write tests for edit functionality (14 tests in sms-sequence-edit.test.ts)

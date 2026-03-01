@@ -58,6 +58,9 @@ import {
   Bell,
   Timer,
   Edit3,
+  Check,
+  X,
+  Save,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -973,6 +976,45 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
       scheduled.refetch();
     },
   });
+  const updateMsg = trpc.webinarSms.upsertScheduledMessage.useMutation({
+    onSuccess: () => {
+      toast.success("Message updated");
+      scheduled.refetch();
+      setEditingId(null);
+      setEditText("");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Inline editing state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const startEditing = (msg: any) => {
+    setEditingId(msg.id);
+    setEditText(msg.messageBody);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const saveEdit = (msg: any) => {
+    if (!editText.trim()) {
+      toast.error("Message cannot be empty");
+      return;
+    }
+    updateMsg.mutate({
+      id: msg.id,
+      webinarId: msg.webinarId,
+      sequenceName: msg.sequenceName,
+      sequenceOrder: msg.sequenceOrder,
+      messageBody: editText.trim(),
+      scheduledAt: new Date(msg.scheduledAt).toISOString(),
+      audience: msg.audience,
+    });
+  };
 
   const [showGenerate, setShowGenerate] = useState(false);
   const [webinarDate, setWebinarDate] = useState("");
@@ -1045,7 +1087,49 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                     <StatusBadge status={msg.status} />
                     <AudienceBadge audience={msg.audience} />
                   </div>
-                  <p className="text-xs text-muted-foreground mb-1 line-clamp-2">{msg.messageBody}</p>
+                  {editingId === msg.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="text-xs min-h-[60px] resize-y"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") cancelEditing();
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveEdit(msg);
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => saveEdit(msg)}
+                          disabled={updateMsg.isPending}
+                        >
+                          {updateMsg.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Check className="w-3 h-3 mr-1" />}
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={cancelEditing}
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Cancel
+                        </Button>
+                        <span className="text-[10px] text-muted-foreground ml-auto">Ctrl+Enter to save • Esc to cancel</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p
+                      className={`text-xs text-muted-foreground mb-1 ${msg.status === "pending" ? "cursor-pointer hover:text-foreground transition-colors" : ""}`}
+                      onClick={() => msg.status === "pending" && startEditing(msg)}
+                      title={msg.status === "pending" ? "Click to edit" : undefined}
+                    >
+                      {msg.messageBody}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     <Clock className="w-3 h-3 inline mr-1" />
                     {formatDate(msg.scheduledAt)}
@@ -1083,6 +1167,17 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  {msg.status === "pending" && editingId !== msg.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => startEditing(msg)}
+                      title="Edit message"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   {msg.status === "pending" && (
                     <Button
                       variant="ghost"
