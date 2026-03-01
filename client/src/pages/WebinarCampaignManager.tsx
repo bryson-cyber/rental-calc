@@ -1028,6 +1028,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
     morningOf: -240,              // -4 hours
     oneHourWarning: -60,          // -1 hour
     goingLiveNow: -5,             // -5 min
+    noShowNudge: 10,              // +10 min
     thankYouAttended: 60,         // +1 hour
     missedYouNoShow: 120,         // +2 hours
     followUpCta: 1440,            // +1 day
@@ -1049,7 +1050,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
             <CardDescription>
               {messages.length > 0
                 ? `${messages.length} messages • ${pendingCount} pending • ${sentCount} sent`
-                : "Set up a pre-built 9-message sequence for your webinar"}
+                : "Set up a pre-built 10-message sequence for your webinar"}
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowGenerate(true)}>
@@ -1260,8 +1261,9 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                       { key: "dayBefore" as const, label: "Day Before", default: -1440 },
                       { key: "morningOf" as const, label: "Morning Of", default: -240 },
                       { key: "oneHourWarning" as const, label: "1 Hour Warning", default: -60 },
-                      { key: "goingLiveNow" as const, label: "Starting NOW", default: -5 },
-                      { key: "thankYouAttended" as const, label: "Thank You (Attended)", default: 60 },
+{ key: "goingLiveNow" as const, label: "Starting NOW", default: -5 },
+                       { key: "noShowNudge" as const, label: "No-Show Nudge", default: 10 },
+                       { key: "thankYouAttended" as const, label: "Thank You (Attended)", default: 60 },
                       { key: "missedYouNoShow" as const, label: "Missed You (No-Show)", default: 120 },
                       { key: "followUpCta" as const, label: "Follow-Up CTA", default: 1440 },
                     ].map((item) => {

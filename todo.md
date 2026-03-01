@@ -12570,3 +12570,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Ensure webinar join link is included in all relevant message templates (messages 2-6 now include link)
 - [x] Backend endpoint to update individual SMS message content (upsertScheduledMessage already existed, wired to frontend)
 - [x] Write tests for edit functionality (14 tests in sms-sequence-edit.test.ts)
+
+## No-Show Nudge SMS (Mar 1, 2026)
+- [x] Add a "No-Show Nudge" message to the SMS sequence template (message #7, +10 min after webinar start)
+- [x] Target only registrants who haven't shown up (not_attended audience)
+- [x] Include webinar join link in the nudge message
+- [x] Add customizable timing offset for the nudge (noShowNudge in advanced timing)
+- [x] Update tests (16 tests passing in sms-sequence-edit.test.ts)

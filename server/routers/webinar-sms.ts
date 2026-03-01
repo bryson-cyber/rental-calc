@@ -1303,6 +1303,7 @@ export const webinarSmsRouter = router({
         morningOf: z.number().default(-240),              // -4 hours
         oneHourWarning: z.number().default(-60),          // -1 hour
         goingLiveNow: z.number().default(-5),             // -5 min ("starting now")
+        noShowNudge: z.number().default(10),              // +10 min (nudge no-shows)
         thankYouAttended: z.number().default(60),         // +1 hour
         missedYouNoShow: z.number().default(120),         // +2 hours
         followUpCta: z.number().default(1440),            // +1 day
@@ -1324,6 +1325,7 @@ export const webinarSmsRouter = router({
         morningOf: input.timing?.morningOf ?? -240,
         oneHourWarning: input.timing?.oneHourWarning ?? -60,
         goingLiveNow: input.timing?.goingLiveNow ?? -5,
+        noShowNudge: input.timing?.noShowNudge ?? 10,
         thankYouAttended: input.timing?.thankYouAttended ?? 60,
         missedYouNoShow: input.timing?.missedYouNoShow ?? 120,
         followUpCta: input.timing?.followUpCta ?? 1440,
@@ -1377,22 +1379,29 @@ export const webinarSmsRouter = router({
           audience: "all" as const,
         },
         {
-          sequenceName: "Thank You (Attended)",
+          sequenceName: "No-Show Nudge",
           sequenceOrder: 7,
+          messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in — join now: ${link}`,
+          scheduledAt: offset(t.noShowNudge),
+          audience: "not_attended" as const,
+        },
+        {
+          sequenceName: "Thank You (Attended)",
+          sequenceOrder: 8,
           messageBody: `Thanks for showing up today %FIRST_NAME%! 🙏 Here's the replay if you want to rewatch: ${replay}`,
           scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
-          sequenceOrder: 8,
+          sequenceOrder: 9,
           messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
-          sequenceOrder: 9,
+          sequenceOrder: 10,
           messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details. 🚀`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,

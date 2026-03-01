@@ -50,44 +50,51 @@ describe("SMS Sequence Message Templates", () => {
         audience: "all",
       },
       {
-        sequenceName: "Thank You (Attended)",
+        sequenceName: "No-Show Nudge",
         sequenceOrder: 7,
+        messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in — join now: ${link}`,
+        audience: "not_attended",
+      },
+      {
+        sequenceName: "Thank You (Attended)",
+        sequenceOrder: 8,
         messageBody: `Thanks for showing up today %FIRST_NAME%! 🙏 Here's the replay if you want to rewatch: ${replay}`,
         audience: "attended",
       },
       {
         sequenceName: "Missed You (No-Show)",
-        sequenceOrder: 8,
+        sequenceOrder: 9,
         messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
         audience: "not_attended",
       },
       {
         sequenceName: "Follow-Up CTA",
-        sequenceOrder: 9,
+        sequenceOrder: 10,
         messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details. 🚀`,
         audience: "all",
       },
     ];
   }
 
-  it("should include webinar join link in messages 2-6 when link is provided", () => {
+  it("should include webinar join link in messages 2-7 when link is provided", () => {
     const link = "https://event.webinarjam.com/go/live/abc123";
     const templates = generateSequenceTemplates(link);
 
-    // Messages 2-6 should contain the link
+    // Messages 2-7 should contain the link (including No-Show Nudge)
     expect(templates[1].messageBody).toContain(link); // 2 Days Before
     expect(templates[2].messageBody).toContain(link); // Day Before
     expect(templates[3].messageBody).toContain(link); // Morning Of
     expect(templates[4].messageBody).toContain(link); // 1 Hour Warning
     expect(templates[5].messageBody).toContain(link); // Starting NOW
+    expect(templates[6].messageBody).toContain(link); // No-Show Nudge
   });
 
-  it("should include replay link in messages 7-8 when provided", () => {
+  it("should include replay link in messages 8-9 when provided", () => {
     const replay = "https://event.webinarjam.com/replay/abc123";
     const templates = generateSequenceTemplates(undefined, replay);
 
-    expect(templates[6].messageBody).toContain(replay); // Thank You
-    expect(templates[7].messageBody).toContain(replay); // Missed You
+    expect(templates[7].messageBody).toContain(replay); // Thank You
+    expect(templates[8].messageBody).toContain(replay); // Missed You
   });
 
   it("should use placeholder when no webinar link is provided", () => {
@@ -100,8 +107,8 @@ describe("SMS Sequence Message Templates", () => {
   it("should use placeholder when no replay link is provided", () => {
     const templates = generateSequenceTemplates();
 
-    expect(templates[6].messageBody).toContain("[REPLAY_LINK]");
     expect(templates[7].messageBody).toContain("[REPLAY_LINK]");
+    expect(templates[8].messageBody).toContain("[REPLAY_LINK]");
   });
 
   it("should NOT include join link in Registration Confirmation (message 1)", () => {
@@ -112,39 +119,58 @@ describe("SMS Sequence Message Templates", () => {
     expect(templates[0].messageBody).not.toContain(link);
   });
 
-  it("should NOT include join link in Follow-Up CTA (message 9)", () => {
+  it("should NOT include join link in Follow-Up CTA (message 10)", () => {
     const link = "https://event.webinarjam.com/go/live/abc123";
     const templates = generateSequenceTemplates(link);
 
-    // Message 9 is a CTA — no link, just asks for reply
-    expect(templates[8].messageBody).not.toContain(link);
+    // Message 10 is a CTA — no link, just asks for reply
+    expect(templates[9].messageBody).not.toContain(link);
   });
 
-  it("should generate exactly 9 messages", () => {
+  it("should generate exactly 10 messages", () => {
     const templates = generateSequenceTemplates();
-    expect(templates).toHaveLength(9);
+    expect(templates).toHaveLength(10);
   });
 
-  it("should have correct sequence ordering (1-9)", () => {
+  it("should have correct sequence ordering (1-10)", () => {
     const templates = generateSequenceTemplates();
     templates.forEach((t, i) => {
       expect(t.sequenceOrder).toBe(i + 1);
     });
   });
 
+  it("should target No-Show Nudge to not_attended audience only", () => {
+    const templates = generateSequenceTemplates();
+    const nudge = templates.find(t => t.sequenceName === "No-Show Nudge");
+    expect(nudge).toBeDefined();
+    expect(nudge!.audience).toBe("not_attended");
+  });
+
+  it("should place No-Show Nudge between Starting NOW and Thank You", () => {
+    const templates = generateSequenceTemplates();
+    const startingNow = templates.find(t => t.sequenceName === "Starting NOW");
+    const nudge = templates.find(t => t.sequenceName === "No-Show Nudge");
+    const thankYou = templates.find(t => t.sequenceName === "Thank You (Attended)");
+    expect(startingNow!.sequenceOrder).toBeLessThan(nudge!.sequenceOrder);
+    expect(nudge!.sequenceOrder).toBeLessThan(thankYou!.sequenceOrder);
+  });
+
   it("should have correct audience targeting", () => {
     const templates = generateSequenceTemplates();
 
-    // Messages 1-6 and 9 target everyone
-    [0, 1, 2, 3, 4, 5, 8].forEach((i) => {
+    // Messages 1-6 and 10 target everyone
+    [0, 1, 2, 3, 4, 5, 9].forEach((i) => {
       expect(templates[i].audience).toBe("all");
     });
 
-    // Message 7 targets attended only
-    expect(templates[6].audience).toBe("attended");
+    // Message 7 (No-Show Nudge) targets no-shows
+    expect(templates[6].audience).toBe("not_attended");
 
-    // Message 8 targets no-shows only
-    expect(templates[7].audience).toBe("not_attended");
+    // Message 8 (Thank You) targets attended only
+    expect(templates[7].audience).toBe("attended");
+
+    // Message 9 (Missed You) targets no-shows
+    expect(templates[8].audience).toBe("not_attended");
   });
 
   it("should include %FIRST_NAME% placeholder in all messages", () => {
