@@ -12577,3 +12577,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Include webinar join link in the nudge message
 - [x] Add customizable timing offset for the nudge (noShowNudge in advanced timing)
 - [x] Update tests (16 tests passing in sms-sequence-edit.test.ts)
+
+## Hard Rules: No-Show Nudge Audience Filtering (Mar 1, 2026)
+- [x] Audit SMS cron job — found that attended=0 default means everyone looks like a no-show before sync
+- [x] RULE 1: Force fresh WebinarJam attendance sync before any attended/not_attended message
+- [x] RULE 2: If sync fails, BLOCK the message (mark as failed, don't guess)
+- [x] RULE 3: For not_attended, require at least 1 confirmed attendee (prevents treating everyone as no-shows when data hasn't propagated)
+- [x] Detailed HARD RULE BLOCK/PASS logging for every decision
+- [x] Write tests for the hardened filtering logic (13 tests in sms-hard-rules.test.ts)

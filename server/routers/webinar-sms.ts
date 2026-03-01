@@ -2235,6 +2235,107 @@ export async function startSmsDispatcher() {
         console.log(`[SMS Dispatcher] Processing message #${msg.id} "${msg.sequenceName}" (audience: ${msg.audience})`);
 
         try {
+          // ═══════════════════════════════════════════════════════════════════
+          // HARD RULES for attendance-targeted messages (attended / not_attended)
+          // These rules prevent sending to the wrong audience.
+          // ═══════════════════════════════════════════════════════════════════
+          if (msg.audience === "attended" || msg.audience === "not_attended") {
+            console.log(`[SMS Dispatcher] HARD RULE: Message #${msg.id} targets "${msg.audience}" — forcing attendance sync from WebinarJam before sending`);
+
+            // RULE 1: Force a fresh attendance sync from WebinarJam
+            let syncSuccess = false;
+            let syncError = "";
+            try {
+              const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+              const perWebinarApiKey = credRow?.apiKey || undefined;
+
+              let allRegistrants: any[] = [];
+              let page = 1;
+              let hasMore = true;
+              while (hasMore && page <= 100) {
+                const result = await fetchWebinarJamRegistrants(msg.webinarId, undefined, page, perWebinarApiKey);
+                allRegistrants = allRegistrants.concat(result.registrants);
+                hasMore = result.hasMore;
+                page++;
+              }
+
+              // Build phone -> attendance map and update DB
+              const attendanceMap = new Map<string, number>();
+              for (const r of allRegistrants) {
+                const rawPhone = r.phone_number || r.phone || "";
+                const fullPhone = (r.phone_country_code || "") + rawPhone;
+                const phone = normalizePhone(fullPhone);
+                if (phone.length >= 7) {
+                  const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+                  attendanceMap.set(phone, attendedLive ? 1 : 0);
+                }
+              }
+
+              const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
+                .from(webinarRegistrants)
+                .where(eq(webinarRegistrants.webinarId, msg.webinarId));
+
+              let updated = 0;
+              for (const row of existing) {
+                const normalizedPhone = normalizePhone(row.phone);
+                const attended = attendanceMap.get(normalizedPhone);
+                if (attended !== undefined) {
+                  await db.update(webinarRegistrants)
+                    .set({ attended })
+                    .where(eq(webinarRegistrants.id, row.id));
+                  updated++;
+                }
+              }
+
+              console.log(`[SMS Dispatcher] HARD RULE: Attendance sync complete — updated ${updated}/${existing.length} registrants from WebinarJam (${allRegistrants.length} found in API)`);
+              syncSuccess = true;
+            } catch (err: any) {
+              syncError = err.message || "Unknown sync error";
+              console.error(`[SMS Dispatcher] HARD RULE: Attendance sync FAILED for webinar ${msg.webinarId}: ${syncError}`);
+            }
+
+            // RULE 2: If sync failed, DO NOT send — mark as failed
+            if (!syncSuccess) {
+              console.error(`[SMS Dispatcher] HARD RULE BLOCK: Message #${msg.id} "${msg.sequenceName}" BLOCKED — attendance sync failed. Cannot verify who attended. Error: ${syncError}`);
+              await db.update(scheduledSmsMessages).set({
+                status: "failed",
+                error: `HARD RULE: Attendance sync failed — cannot verify audience. Error: ${syncError}`,
+                sentAt: new Date(),
+              }).where(eq(scheduledSmsMessages.id, msg.id));
+              continue;
+            }
+
+            // RULE 3: For not_attended messages, require at least 1 confirmed attendee
+            // If nobody is marked as attended, WebinarJam likely hasn't reported attendance yet.
+            // Sending a "no-show nudge" when we can't confirm anyone attended = spamming attendees.
+            if (msg.audience === "not_attended") {
+              const [attendedCount] = await db.select({ count: count() })
+                .from(webinarRegistrants)
+                .where(
+                  and(
+                    eq(webinarRegistrants.webinarId, msg.webinarId),
+                    eq(webinarRegistrants.attended, 1)
+                  )
+                );
+              const confirmedAttendees = Number(attendedCount?.count ?? 0);
+
+              if (confirmedAttendees === 0) {
+                console.error(`[SMS Dispatcher] HARD RULE BLOCK: Message #${msg.id} "${msg.sequenceName}" BLOCKED — 0 confirmed attendees found. WebinarJam may not have reported attendance yet. Refusing to treat everyone as no-shows.`);
+                await db.update(scheduledSmsMessages).set({
+                  status: "failed",
+                  error: `HARD RULE: 0 confirmed attendees — attendance data not yet available from WebinarJam. Message blocked to prevent sending to actual attendees.`,
+                  sentAt: new Date(),
+                }).where(eq(scheduledSmsMessages.id, msg.id));
+                continue;
+              }
+
+              console.log(`[SMS Dispatcher] HARD RULE PASS: ${confirmedAttendees} confirmed attendee(s) found — attendance data is valid. Proceeding with not_attended filter.`);
+            }
+          }
+          // ═══════════════════════════════════════════════════════════════════
+          // END HARD RULES
+          // ═══════════════════════════════════════════════════════════════════
+
           // Get recipients based on audience
           const conditions: any[] = [eq(webinarRegistrants.webinarId, msg.webinarId)];
           // Exclude opted-out registrants
