@@ -12585,3 +12585,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] RULE 3: For not_attended, require at least 1 confirmed attendee (prevents treating everyone as no-shows when data hasn't propagated)
 - [x] Detailed HARD RULE BLOCK/PASS logging for every decision
 - [x] Write tests for the hardened filtering logic (13 tests in sms-hard-rules.test.ts)
+
+## SMS Dispatcher Reliability Fix (Mar 1, 2026)
+- [x] Recovery on startup: reset stale "sending" messages back to "pending" (within 30-min window), mark >30min as failed
+- [x] Wrap individual delivery tracking in try/catch so one failed DB insert doesn't kill the batch
+- [x] Update sentCount/failedCount incrementally every 25 sends (not just at the end)
+- [x] Fix today's stuck records (message #30005 marked as sent, campaign #90002 marked as completed)
+- [x] Write tests for recovery logic (20 tests in sms-dispatcher-reliability.test.ts)

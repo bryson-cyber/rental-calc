@@ -2194,6 +2194,47 @@ export async function startSmsDispatcher() {
 
   console.log("[SMS Dispatcher] Starting scheduled message dispatcher (every 30s)");
 
+  // ─── STARTUP RECOVERY ───────────────────────────────────────────────────────
+  // Recover messages stuck in "sending" state from previous server runs.
+  // These messages were marked "sending" but the process was interrupted before
+  // the final status update. Reset them to "pending" so they get retried.
+  (async () => {
+    const db = await getDb();
+    if (!db) return;
+    try {
+      const staleThresholdMs = 30 * 60 * 1000; // 30 minutes
+      const now = new Date();
+      const stuckMessages = await db.select().from(scheduledSmsMessages)
+        .where(eq(scheduledSmsMessages.status, "sending"));
+
+      for (const msg of stuckMessages) {
+        const scheduledTime = new Date(msg.scheduledAt).getTime();
+        const age = now.getTime() - scheduledTime;
+
+        if (age <= staleThresholdMs) {
+          // Within window — reset to pending for retry
+          console.log(`[SMS Dispatcher] RECOVERY: Resetting stuck message #${msg.id} "${msg.sequenceName}" from "sending" back to "pending" (was stuck for ${Math.round(age / 60000)}min)`);
+          await db.update(scheduledSmsMessages)
+            .set({ status: "pending" })
+            .where(eq(scheduledSmsMessages.id, msg.id));
+        } else {
+          // Too old — mark as failed
+          console.log(`[SMS Dispatcher] RECOVERY: Marking stale stuck message #${msg.id} "${msg.sequenceName}" as failed (stuck for ${Math.round(age / 60000)}min, > 30min threshold)`);
+          await db.update(scheduledSmsMessages)
+            .set({ status: "failed", error: `Message was stuck in 'sending' state for ${Math.round(age / 60000)} minutes. Server likely restarted during send.`, sentAt: new Date() })
+            .where(eq(scheduledSmsMessages.id, msg.id));
+        }
+      }
+
+      if (stuckMessages.length > 0) {
+        console.log(`[SMS Dispatcher] RECOVERY: Processed ${stuckMessages.length} stuck message(s)`);
+      }
+    } catch (err: any) {
+      console.error("[SMS Dispatcher] RECOVERY error:", err.message);
+    }
+  })();
+  // ─── END STARTUP RECOVERY ──────────────────────────────────────────────────
+
   const processScheduledMessages = async () => {
     const db = await getDb();
     if (!db) return;
@@ -2394,8 +2435,10 @@ export async function startSmsDispatcher() {
 
           let sentCount = 0;
           let failedCount = 0;
+          const BATCH_UPDATE_INTERVAL = 25; // Update DB counts every 25 sends
 
-          for (const recipient of recipients) {
+          for (let i = 0; i < recipients.length; i++) {
+            const recipient = recipients[i];
             const personalizedMessage = renderMessage(msg.messageBody, {
               name: recipient.name.split(" ")[0],
               fullname: recipient.name,
@@ -2406,32 +2449,48 @@ export async function startSmsDispatcher() {
 
             if (result.success) {
               sentCount++;
-              // Track individual delivery
-              await db.insert(webinarSmsDeliveries).values({
-                campaignId,
-                registrantId: recipient.id,
-                phone: recipient.phone,
-                deliveryStatus: "sent",
-                externalMessageId: result.smsId || null,
-              });
             } else {
               failedCount++;
               console.warn(`[SMS Dispatcher] Failed to send to ${recipient.phone}: ${result.error}`);
-              // Track failed delivery
+            }
+
+            // Track individual delivery — wrapped in try/catch so one failed
+            // DB insert doesn't kill the entire batch
+            try {
               await db.insert(webinarSmsDeliveries).values({
                 campaignId,
                 registrantId: recipient.id,
                 phone: recipient.phone,
-                deliveryStatus: "failed",
-                error: result.error || "Unknown error",
+                deliveryStatus: result.success ? "sent" : "failed",
+                externalMessageId: result.success ? (result.smsId || null) : null,
+                error: result.success ? null : (result.error || "Unknown error"),
               });
+            } catch (deliveryErr: any) {
+              console.warn(`[SMS Dispatcher] Failed to track delivery for ${recipient.phone}: ${deliveryErr.message}`);
+            }
+
+            // Update counts incrementally every BATCH_UPDATE_INTERVAL sends
+            // This ensures counts are persisted even if the process crashes mid-batch
+            if ((i + 1) % BATCH_UPDATE_INTERVAL === 0 || i === recipients.length - 1) {
+              try {
+                await db.update(webinarSmsCampaigns).set({
+                  sentCount,
+                  failedCount,
+                }).where(eq(webinarSmsCampaigns.id, campaignId));
+                await db.update(scheduledSmsMessages).set({
+                  sentCount,
+                  failedCount,
+                }).where(eq(scheduledSmsMessages.id, msg.id));
+              } catch (updateErr: any) {
+                console.warn(`[SMS Dispatcher] Failed to update incremental counts: ${updateErr.message}`);
+              }
             }
 
             // Small delay between sends to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 150));
           }
 
-          // Update campaign record with final counts
+          // Final update: mark campaign and message as completed
           await db.update(webinarSmsCampaigns).set({
             sentCount,
             failedCount,
@@ -2439,7 +2498,6 @@ export async function startSmsDispatcher() {
             completedAt: new Date(),
           }).where(eq(webinarSmsCampaigns.id, campaignId));
 
-          // Update scheduled message with final counts
           await db.update(scheduledSmsMessages).set({
             status: failedCount === recipients.length ? "failed" : "sent",
             sentCount,
