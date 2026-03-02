@@ -12615,3 +12615,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Frontend: Add amenity summary stats (e.g., "72% of top earners have a pool") in ComparableProperties section with revenue premium %
 - [x] Write vitest tests for amenities parsing and filtering logic — 18 tests passing
 - [x] QA: Browser test the full flow with amenities selected — toggle works, counter shows selected count, Clear all link works, selected amenities have gold highlight, unselected are neutral grey
+
+## Enhancement: Amenity-Based Comp Filtering & Prioritization (Mar 2, 2026)
+- [x] Frontend: Sort comps by amenity match count (desc) then revenue (desc) when user has selected amenities
+- [x] Frontend: Show "X/Y match" badge on each matching comp card image overlay
+- [x] Frontend: Visual separation — "Best Matches" section (amber border, full opacity) vs "Other Properties" (75% opacity, grey separator)
+- [x] Frontend: Matching comps get amber ring border highlight
+- [x] Amenity insights summary text updated to say "sorted by best match first, then by revenue"
+- [x] Test end-to-end with real data to verify amenity-matching comps are shown first
+- [x] Added amenity enrichment: cross-references market listings (which have amenities) onto radius comps (which don't) by property_id at zero additional API cost

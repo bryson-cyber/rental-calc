@@ -3904,6 +3904,45 @@ export async function getComprehensivePropertyReport(
   // Uses /listing/batch endpoint (100 per request) instead of individual calls
   sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 5);
   
+  // ── AMENITY ENRICHMENT ──
+  // Radius comps from /listing/comps/area don't include amenities.
+  // Cross-reference from market listings (which DO have amenities) by property_id.
+  // Market listings are cached, so this is typically zero additional API cost.
+  const compsNeedingAmenities = sameBedroomComps.filter(c => !c.amenities || c.amenities.length === 0);
+  if (compsNeedingAmenities.length > 0 && marketId) {
+    try {
+      const { listings: amenitySourceListings } = await getMarketListings(marketId, {
+        limit: 500,
+        orderBy: 'revenue',
+        orderDirection: 'desc',
+      });
+      
+      // Build amenity map: property_id → amenities[]
+      const amenityMap = new Map<string, string[]>();
+      amenitySourceListings.forEach(l => {
+        if (l.id && l.amenities && l.amenities.length > 0) {
+          amenityMap.set(l.id, l.amenities);
+        }
+      });
+      
+      if (amenityMap.size > 0) {
+        let enrichedCount = 0;
+        sameBedroomComps = sameBedroomComps.map(comp => {
+          if ((!comp.amenities || comp.amenities.length === 0) && amenityMap.has(comp.id)) {
+            enrichedCount++;
+            return { ...comp, amenities: amenityMap.get(comp.id)! };
+          }
+          return comp;
+        });
+        console.log(`[Amenity Enrichment] Enriched ${enrichedCount}/${compsNeedingAmenities.length} comps with amenities from ${amenityMap.size} market listings`);
+      } else {
+        console.log('[Amenity Enrichment] No amenities found in market listings');
+      }
+    } catch (e) {
+      console.log('[Amenity Enrichment] Failed to fetch market listings for amenity cross-reference:', (e as Error).message);
+    }
+  }
+  
   // Step 5: Get bedroom performance data
   // OPTIMIZED: Single radius call for ALL bedrooms, then group by BR count
   // This replaces 5-6 separate radius calls (each paginating 2-4 times = 10-24 API calls)

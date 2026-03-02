@@ -2956,7 +2956,28 @@ function ComparableProperties({
   
   if (!comparables || comparables.length === 0) return null;
   
-  const displayComps = showAll ? comparables : comparables.slice(0, 6);
+  // Sort comps by amenity match when user has selected amenities
+  const hasAmenityFilter = selectedAmenities.length > 0;
+  const sortedComparables = hasAmenityFilter
+    ? [...comparables].sort((a, b) => {
+        const aMatchCount = a.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
+        const bMatchCount = b.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
+        // Primary sort: amenity match count (desc)
+        if (bMatchCount !== aMatchCount) return bMatchCount - aMatchCount;
+        // Secondary sort: revenue (desc) — user prefers highest revenue first
+        return b.revenue - a.revenue;
+      })
+    : comparables;
+  
+  const displayComps = showAll ? sortedComparables : sortedComparables.slice(0, 6);
+  
+  // Split into matching and non-matching groups for section headers
+  const matchingComps = hasAmenityFilter
+    ? displayComps.filter(c => (c.amenities?.filter(am => selectedAmenities.includes(am)).length || 0) > 0)
+    : [];
+  const nonMatchingComps = hasAmenityFilter
+    ? displayComps.filter(c => (c.amenities?.filter(am => selectedAmenities.includes(am)).length || 0) === 0)
+    : displayComps;
   
   const openCarousel = (comp: Comparable) => {
     // Only open carousel if there are images
@@ -3074,23 +3095,40 @@ function ComparableProperties({
                 })}
               </div>
               {selectedAmenities.length > 0 && (
-                <p className="text-[10px] text-amber-700 mt-2">
-                  <span className="font-medium">Your amenities highlighted</span> — comps with matching amenities are marked with gold badges below
+                 <p className="text-[10px] text-amber-700 mt-2">
+                  <span className="font-medium">Your amenities highlighted</span> — comps sorted by best match first, then by revenue
                 </p>
               )}
             </div>
           );
         })()}
         
+        {/* Matching Comps Section */}
+        {hasAmenityFilter && matchingComps.length > 0 && (
+          <div className="mb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-sm font-semibold text-slate-800">Best Matches</span>
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                {matchingComps.length} properties share your amenities
+              </span>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayComps.map((comp, idx) => {
+          {(hasAmenityFilter ? matchingComps : displayComps).map((comp, idx) => {
             const hasImages = (comp.images && comp.images.length > 0) || !!comp.imageUrl;
             const imageCount = comp.images?.length || (comp.imageUrl ? 1 : 0);
+            const amenityMatchCount = hasAmenityFilter ? (comp.amenities?.filter(am => selectedAmenities.includes(am)).length || 0) : 0;
             
             return (
               <div 
                 key={comp.id} 
-                className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
+                className={`border rounded-xl overflow-hidden hover:shadow-lg transition-shadow ${
+                  hasAmenityFilter && amenityMatchCount > 0
+                    ? 'border-amber-300 ring-1 ring-amber-200/50'
+                    : 'border-slate-200'
+                }`}
               >
                 {/* Image - Clickable to open carousel */}
                 <div 
@@ -3134,6 +3172,12 @@ function ComparableProperties({
                   <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm">
                     {idx + 1}
                   </div>
+                  {/* Amenity match badge */}
+                  {hasAmenityFilter && amenityMatchCount > 0 && (
+                    <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-amber-500 text-white rounded-full px-2 py-0.5 shadow-sm">
+                      <span className="text-[10px] font-bold">{amenityMatchCount}/{selectedAmenities.length} match</span>
+                    </div>
+                  )}
                   {/* Rating badge */}
                   {comp.rating > 0 && (
                     <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
@@ -3217,6 +3261,119 @@ function ComparableProperties({
         );
       })}
       </div>
+      
+      {/* Non-Matching Comps Section */}
+      {hasAmenityFilter && nonMatchingComps.length > 0 && (
+        <>
+          <div className="mt-6 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-slate-300" />
+              <span className="text-sm font-medium text-slate-500">Other Properties</span>
+              <span className="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                {nonMatchingComps.length} without selected amenities
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
+            {nonMatchingComps.map((comp, idx) => {
+              const hasImages = (comp.images && comp.images.length > 0) || !!comp.imageUrl;
+              const imageCount = comp.images?.length || (comp.imageUrl ? 1 : 0);
+              
+              return (
+                <div 
+                  key={comp.id} 
+                  className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow hover:opacity-100"
+                >
+                  {/* Image */}
+                  <div 
+                    className={`h-32 bg-gradient-to-br from-slate-50 to-slate-100 relative ${hasImages ? 'cursor-pointer group' : ''}`}
+                    onClick={() => hasImages && openCarousel(comp)}
+                  >
+                    {comp.imageUrl ? (
+                      <img 
+                        src={comp.imageUrl} 
+                        alt={comp.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const placeholder = target.nextElementSibling as HTMLElement;
+                          if (placeholder) placeholder.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="w-full h-full flex flex-col items-center justify-center absolute inset-0"
+                      style={{ display: comp.imageUrl ? 'none' : 'flex' }}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-slate-200/50 flex items-center justify-center mb-1">
+                        <Home className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <span className="text-xs font-medium text-slate-500">{comp.bedrooms} BR / {comp.bathrooms} BA</span>
+                    </div>
+                    {hasImages && imageCount > 1 && (
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex items-center gap-1.5 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                          <Camera className="w-4 h-4" />
+                          <span>{imageCount} photos</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-400 shadow-sm">
+                      {matchingComps.length + idx + 1}
+                    </div>
+                    {comp.rating > 0 && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    {comp.distanceMeters !== undefined && comp.distanceMeters > 0 && (
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
+                        <MapPin className="w-3 h-3" />
+                        <span className="text-xs font-medium">{(comp.distanceMeters / 1609.34).toFixed(1)} mi</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-medium text-slate-900 text-sm line-clamp-1 mb-1">{comp.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                      <span className="flex items-center gap-1"><Bed className="w-3 h-3" /> {comp.bedrooms}</span>
+                      <span className="flex items-center gap-1"><Bath className="w-3 h-3" /> {comp.bathrooms}</span>
+                      {comp.accommodates && (
+                        <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {comp.accommodates}</span>
+                      )}
+                    </div>
+                    {comp.amenities && comp.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {comp.amenities.slice(0, 4).map((amenity) => (
+                          <span key={amenity} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
+                            {amenity}
+                          </span>
+                        ))}
+                        {comp.amenities.length > 4 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400">+{comp.amenities.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-emerald-600 font-bold">{formatCompactCurrency(comp.revenue)}/yr</p>
+                        <p className="text-[10px] text-slate-400">{Math.round(comp.occupancy)}% occupancy · ${Math.round(comp.adr)}/night</p>
+                      </div>
+                      {comp.airbnbUrl && (
+                        <a href={comp.airbnbUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                          <ExternalLink className="w-4 h-4 text-slate-600" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
     </>
   );
