@@ -193,6 +193,13 @@ interface TeslaDashboardProps {
   };
   // User-selected amenities for highlighting matching comps
   selectedAmenities?: string[];
+  // Amenity filter metadata from API
+  amenityFilter?: {
+    applied: boolean;
+    relaxed: boolean;
+    selected_amenities: string[];
+    comp_count: number;
+  };
 }
 
 // ============================================
@@ -2944,11 +2951,18 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
 function ComparableProperties({ 
   comparables,
   onViewAll,
-  selectedAmenities = []
+  selectedAmenities = [],
+  amenityFilter
 }: { 
   comparables: Comparable[];
   onViewAll?: () => void;
   selectedAmenities?: string[];
+  amenityFilter?: {
+    applied: boolean;
+    relaxed: boolean;
+    selected_amenities: string[];
+    comp_count: number;
+  };
 }) {
   const [showAll, setShowAll] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -3026,6 +3040,29 @@ function ComparableProperties({
             </button>
           )}
         </div>
+        
+        {/* Amenity Filter Status Banner */}
+        {amenityFilter && (
+          <div className={`rounded-lg p-3 mb-4 text-sm ${
+            amenityFilter.applied 
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : amenityFilter.relaxed 
+                ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                : 'bg-slate-50 border border-slate-200 text-slate-600'
+          }`}>
+            {amenityFilter.applied ? (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <span><strong>Amenity-filtered comps</strong> — showing only properties that match your amenities ({amenityFilter.selected_amenities.join(', ')}). Revenue estimate is based on these {amenityFilter.comp_count} comparable properties.</span>
+              </div>
+            ) : amenityFilter.relaxed ? (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                <span><strong>Not enough amenity-matched comps</strong> — fewer than 3 properties matched your amenities ({amenityFilter.selected_amenities.join(', ')}). Showing all comparable properties instead. Matching comps are highlighted.</span>
+              </div>
+            ) : null}
+          </div>
+        )}
         
         {/* Amenity Insights Summary */}
         {(() => {
@@ -3382,7 +3419,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource, selectedAmenities }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource, selectedAmenities, amenityFilter }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3804,7 +3841,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       />
       
       {/* SECTION 7: Proof - "Show me the comps" */}
-      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} />
+      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} amenityFilter={amenityFilter} />
 
       {/* Property-Specific AI Chatbot */}
       <PropertyChatBot

@@ -12624,3 +12624,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Amenity insights summary text updated to say "sorted by best match first, then by revenue"
 - [x] Test end-to-end with real data to verify amenity-matching comps are shown first
 - [x] Added amenity enrichment: cross-references market listings (which have amenities) onto radius comps (which don't) by property_id at zero additional API cost
+
+## Rebuild: Amenity-Based API Filtering (True Apples-to-Apples) - Mar 2, 2026
+- [x] Backend: Accept selectedAmenities parameter in the property report API input
+- [x] Backend: Convert selectedAmenities to jsonb_boolean filters for /listing/comps/area (using labelToKey map)
+- [x] Backend: Pass amenity filters to exploreListingsInRadius so only matching comps return from AirDNA
+- [x] Backend: Revenue estimate auto-recalculates from amenity-filtered comps (comp-median adjustment uses filtered set)
+- [x] Backend: Graceful fallback — if <3 amenity-matched comps, re-fetch without amenity filter and tag as "relaxed"
+- [x] Backend: Cache key includes amenities so filtered/unfiltered reports are cached separately
+- [x] Frontend: Send selectedAmenities array to the backend API call in analyzeProperty.mutateAsync
+- [x] Frontend: Show amenity filter status banner (green = applied, amber = relaxed) with comp count and amenity list
+- [x] Frontend: Pass amenityFilter metadata through to TeslaDashboard > ComparableProperties
+- [x] 27 vitest tests passing (API key conversion, fallback logic, enrichment, matching, prevalence)

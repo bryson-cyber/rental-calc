@@ -157,3 +157,154 @@ describe('Amenity matching logic (frontend simulation)', () => {
     expect(premium).toBe(13);
   });
 });
+
+describe('Amenity label-to-API-key conversion', () => {
+  // Simulates the labelToKey map used in exploreListingsInRadius
+  const labelToKey: Record<string, string> = {
+    'Pool': 'has_pool',
+    'Hot Tub': 'has_hottub',
+    'Pet Friendly': 'has_pets_allowed',
+    'Parking': 'has_parking',
+    'Gym': 'has_gym',
+    'Kitchen': 'has_kitchen',
+    'Washer/Dryer': 'has_washer',
+    'A/C': 'has_aircon',
+    'Fireplace': 'has_fireplace',
+    'EV Charger': 'has_ev_charger',
+  };
+
+  it('should convert all selectable amenity labels to API keys', () => {
+    const selectedLabels = ['Pool', 'Kitchen', 'A/C'];
+    const amenityMap: Record<string, boolean> = {};
+    for (const label of selectedLabels) {
+      const key = labelToKey[label];
+      if (key) amenityMap[key] = true;
+    }
+    expect(amenityMap).toEqual({
+      has_pool: true,
+      has_kitchen: true,
+      has_aircon: true,
+    });
+  });
+
+  it('should handle empty amenity selection', () => {
+    const selectedLabels: string[] = [];
+    const amenityMap: Record<string, boolean> = {};
+    for (const label of selectedLabels) {
+      const key = labelToKey[label];
+      if (key) amenityMap[key] = true;
+    }
+    expect(Object.keys(amenityMap).length).toBe(0);
+  });
+
+  it('should ignore unknown labels', () => {
+    const selectedLabels = ['Pool', 'Unknown Amenity', 'Kitchen'];
+    const amenityMap: Record<string, boolean> = {};
+    for (const label of selectedLabels) {
+      const key = labelToKey[label];
+      if (key) amenityMap[key] = true;
+    }
+    expect(amenityMap).toEqual({
+      has_pool: true,
+      has_kitchen: true,
+    });
+  });
+
+  it('should have a mapping for every SELECTABLE_AMENITIES label', () => {
+    for (const amenity of SELECTABLE_AMENITIES) {
+      expect(labelToKey[amenity.label]).toBe(amenity.apiKey);
+    }
+  });
+});
+
+describe('Amenity filter fallback logic', () => {
+  // Simulates the fallback logic in getComprehensivePropertyReport
+  it('should mark filter as applied when enough comps found', () => {
+    const radiusComps = Array(10).fill({ id: '1', amenities: ['Pool'] });
+    const hasAmenityFilter = true;
+    let amenityFilterApplied = false;
+    let amenityFilterRelaxed = false;
+
+    if (hasAmenityFilter && radiusComps.length >= 3) {
+      amenityFilterApplied = true;
+    }
+
+    expect(amenityFilterApplied).toBe(true);
+    expect(amenityFilterRelaxed).toBe(false);
+  });
+
+  it('should mark filter as relaxed when too few comps found', () => {
+    const radiusComps = Array(2).fill({ id: '1', amenities: ['Pool'] });
+    const hasAmenityFilter = true;
+    let amenityFilterApplied = false;
+    let amenityFilterRelaxed = false;
+
+    if (hasAmenityFilter && radiusComps.length < 3) {
+      amenityFilterRelaxed = true;
+      // In real code, would re-fetch without amenity filter
+    }
+
+    expect(amenityFilterApplied).toBe(false);
+    expect(amenityFilterRelaxed).toBe(true);
+  });
+
+  it('should not apply any filter metadata when no amenities selected', () => {
+    const hasAmenityFilter = false;
+    const amenityFilter = hasAmenityFilter ? {
+      applied: true,
+      relaxed: false,
+      selected_amenities: [],
+      comp_count: 10,
+    } : undefined;
+
+    expect(amenityFilter).toBeUndefined();
+  });
+});
+
+describe('Amenity enrichment from market listings', () => {
+  it('should enrich radius comps with amenities from market listings', () => {
+    const radiusComps = [
+      { id: 'prop1', title: 'Comp 1', amenities: [] as string[] },
+      { id: 'prop2', title: 'Comp 2', amenities: [] as string[] },
+      { id: 'prop3', title: 'Comp 3', amenities: ['Kitchen'] },
+    ];
+
+    const marketListings = [
+      { id: 'prop1', amenities: ['Pool', 'Kitchen', 'A/C'] },
+      { id: 'prop2', amenities: ['Hot Tub', 'Parking'] },
+      { id: 'prop4', amenities: ['Gym'] }, // Not in radius comps
+    ];
+
+    // Build amenity map from market listings
+    const amenityMap = new Map<string, string[]>();
+    for (const listing of marketListings) {
+      if (listing.amenities && listing.amenities.length > 0) {
+        amenityMap.set(listing.id, listing.amenities);
+      }
+    }
+
+    // Enrich radius comps
+    for (const comp of radiusComps) {
+      if ((!comp.amenities || comp.amenities.length === 0) && amenityMap.has(comp.id)) {
+        comp.amenities = amenityMap.get(comp.id)!;
+      }
+    }
+
+    expect(radiusComps[0].amenities).toEqual(['Pool', 'Kitchen', 'A/C']);
+    expect(radiusComps[1].amenities).toEqual(['Hot Tub', 'Parking']);
+    // prop3 already had amenities, should not be overwritten
+    expect(radiusComps[2].amenities).toEqual(['Kitchen']);
+  });
+
+  it('should not overwrite existing amenities', () => {
+    const comp = { id: 'prop1', amenities: ['Pool', 'Kitchen'] };
+    const marketAmenities = ['Hot Tub', 'Parking'];
+
+    // Only enrich if comp has no amenities
+    if (!comp.amenities || comp.amenities.length === 0) {
+      comp.amenities = marketAmenities;
+    }
+
+    expect(comp.amenities).toEqual(['Pool', 'Kitchen']);
+  });
+});

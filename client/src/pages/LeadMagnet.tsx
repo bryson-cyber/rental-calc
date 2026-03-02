@@ -247,6 +247,13 @@ interface AnalysisResult {
   };
   // User-selected amenities for highlighting on comp cards
   selectedAmenities?: string[];
+  // Amenity filter metadata from API
+  amenityFilter?: {
+    applied: boolean;
+    relaxed: boolean;
+    selected_amenities: string[];
+    comp_count: number;
+  };
 }
 
 interface BulkPropertyInput {
@@ -1406,6 +1413,7 @@ export default function LeadMagnet() {
           leadPhone: leadPhone || undefined,
           reportMode: reportMode,
           source: 'validate' as const,
+          selectedAmenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
         }),
         timeoutPromise
       ]);
@@ -1618,6 +1626,8 @@ export default function LeadMagnet() {
         } : undefined,
         // Pass user-selected amenities for highlighting on comp cards
         selectedAmenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
+        // Amenity filter metadata from API (tells us if filter was applied or relaxed)
+        amenityFilter: (data as any).amenity_filter || undefined,
       });
       
       toast.success('Property validated! See your results below.');
@@ -6019,6 +6029,7 @@ export default function LeadMagnet() {
                 shareCode={validatorShareCode || undefined}
                 dataSource={result.dataSource}
                 selectedAmenities={result.selectedAmenities}
+                amenityFilter={result.amenityFilter}
               />
               </Suspense>
             </StepErrorBoundary>

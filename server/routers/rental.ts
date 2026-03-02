@@ -59,6 +59,7 @@ export const propertyReportInputSchema = z.object({
   leadPhone: z.string().optional(),
   reportMode: z.enum(['pro', 'guided']).default('guided'),
   source: z.enum(['calculator', 'validate', 'compare']).default('calculator'),
+  selectedAmenities: z.array(z.string()).optional(),
 });
 
 export const aiPropertyReportInputSchema = z.object({
@@ -1059,7 +1060,8 @@ export const rentalRouter = router({
             input.address,
             input.bedrooms,
             input.bathrooms,
-            input.accommodates
+            input.accommodates,
+            input.selectedAmenities
           );
 
           if (!report) {
