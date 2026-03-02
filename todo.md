@@ -12604,6 +12604,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added area-based estimate notice banner in TeslaDashboard (amber warning showing market name and comp count)
 - [x] Improved error message when fallback also fails (explains new construction / rural / low STR activity)
 
-## Feature: Amenities Selection on Property Analysis
-- [ ] Add amenities selector to the property analysis flow so users can select amenities their property has
-- [ ] Filter/highlight comps that have matching amenities
+## Feature: Amenities for Property Analysis (Step 5) - Mar 2, 2026
+- [x] Backend: Ensure amenities data (string[]) is included in same_bedroom_comps from getComprehensivePropertyReport
+- [x] Backend: Parse raw AirDNA amenities object into human-readable labels (has_pool → Pool, has_hottub → Hot Tub, etc.)
+- [x] Frontend: Add amenities multi-select toggle to Step 5 property input form (below bedrooms/bathrooms)
+- [x] Frontend: Pass selected amenities to the API call so comps can be filtered/highlighted
+- [x] Frontend: Add amenities field to Comparable interface in both LeadMagnet.tsx and TeslaDashboard.tsx
+- [x] Frontend: Display amenity badges on each comp card in ComparableProperties section
+- [x] Frontend: Highlight matching amenities (gold badge) vs non-matching (grey badge) based on user selection
+- [x] Frontend: Add amenity summary stats (e.g., "72% of top earners have a pool") in ComparableProperties section with revenue premium %
+- [x] Write vitest tests for amenities parsing and filtering logic — 18 tests passing
+- [x] QA: Browser test the full flow with amenities selected — toggle works, counter shows selected count, Clear all link works, selected amenities have gold highlight, unselected are neutral grey

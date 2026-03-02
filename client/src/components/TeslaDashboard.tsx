@@ -78,6 +78,7 @@ interface Comparable {
   distanceMeters?: number;
   latitude?: number;
   longitude?: number;
+  amenities?: string[];
 }
 
 interface AnalysisResult {
@@ -190,6 +191,8 @@ interface TeslaDashboardProps {
     market: string;
     compCount: number;
   };
+  // User-selected amenities for highlighting matching comps
+  selectedAmenities?: string[];
 }
 
 // ============================================
@@ -2940,10 +2943,12 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
  */
 function ComparableProperties({ 
   comparables,
-  onViewAll
+  onViewAll,
+  selectedAmenities = []
 }: { 
   comparables: Comparable[];
   onViewAll?: () => void;
+  selectedAmenities?: string[];
 }) {
   const [showAll, setShowAll] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -3000,6 +3005,82 @@ function ComparableProperties({
             </button>
           )}
         </div>
+        
+        {/* Amenity Insights Summary */}
+        {(() => {
+          // Calculate amenity prevalence across all comps
+          const amenityCounts: Record<string, number> = {};
+          const compsWithAmenities = comparables.filter(c => c.amenities && c.amenities.length > 0);
+          compsWithAmenities.forEach(c => {
+            c.amenities?.forEach(a => {
+              amenityCounts[a] = (amenityCounts[a] || 0) + 1;
+            });
+          });
+          
+          if (compsWithAmenities.length === 0) return null;
+          
+          // Sort by prevalence and take top amenities
+          const sortedAmenities = Object.entries(amenityCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+          
+          // Calculate revenue premium for each amenity
+          const overallMedianRevenue = (() => {
+            const revs = comparables.filter(c => c.revenue > 0).map(c => c.revenue).sort((a, b) => a - b);
+            if (revs.length === 0) return 0;
+            return revs[Math.floor(revs.length / 2)];
+          })();
+          
+          return (
+            <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200/60">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-semibold text-amber-900">Amenity Insights</span>
+                <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{compsWithAmenities.length} properties analyzed</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {sortedAmenities.map(([amenity, count]) => {
+                  const pct = Math.round((count / compsWithAmenities.length) * 100);
+                  const isUserSelected = selectedAmenities.includes(amenity);
+                  
+                  // Calculate avg revenue for comps WITH this amenity
+                  const withAmenity = comparables.filter(c => c.amenities?.includes(amenity) && c.revenue > 0);
+                  const avgRevWith = withAmenity.length > 0 
+                    ? withAmenity.reduce((sum, c) => sum + c.revenue, 0) / withAmenity.length 
+                    : 0;
+                  const revenuePremium = overallMedianRevenue > 0 
+                    ? Math.round(((avgRevWith - overallMedianRevenue) / overallMedianRevenue) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div 
+                      key={amenity} 
+                      className={`p-2 rounded-lg border text-center ${
+                        isUserSelected 
+                          ? 'bg-amber-100 border-amber-300' 
+                          : 'bg-white/80 border-amber-100'
+                      }`}
+                    >
+                      <div className="text-lg font-bold text-amber-800">{pct}%</div>
+                      <div className="text-[10px] font-medium text-slate-700 leading-tight">{amenity}</div>
+                      {revenuePremium !== 0 && (
+                        <div className={`text-[10px] font-medium mt-0.5 ${
+                          revenuePremium > 0 ? 'text-emerald-600' : 'text-slate-400'
+                        }`}>
+                          {revenuePremium > 0 ? '+' : ''}{revenuePremium}% rev
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedAmenities.length > 0 && (
+                <p className="text-[10px] text-amber-700 mt-2">
+                  <span className="font-medium">Your amenities highlighted</span> — comps with matching amenities are marked with gold badges below
+                </p>
+              )}
+            </div>
+          );
+        })()}
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayComps.map((comp, idx) => {
@@ -3088,6 +3169,32 @@ function ComparableProperties({
                 )}
               </div>
               
+              {/* Amenity Badges */}
+              {comp.amenities && comp.amenities.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {comp.amenities.slice(0, 6).map((amenity) => {
+                    const isMatch = selectedAmenities.includes(amenity);
+                    return (
+                      <span
+                        key={amenity}
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          isMatch
+                            ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {amenity}
+                      </span>
+                    );
+                  })}
+                  {comp.amenities.length > 6 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400">
+                      +{comp.amenities.length - 6}
+                    </span>
+                  )}
+                </div>
+              )}
+              
               {/* Revenue */}
               <div className="flex items-center justify-between">
                 <div>
@@ -3118,7 +3225,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource, selectedAmenities }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3540,7 +3647,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       />
       
       {/* SECTION 7: Proof - "Show me the comps" */}
-      <ComparableProperties comparables={result.comparables} />
+      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} />
 
       {/* Property-Specific AI Chatbot */}
       <PropertyChatBot

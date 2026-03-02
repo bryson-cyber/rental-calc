@@ -210,6 +210,60 @@ export interface ListingData {
   is_adjacent_br?: boolean; // True if this comp is from an adjacent bedroom count (BR-1 or BR+1)
 }
 
+// ============================================
+// AMENITY LABEL MAPPING
+// Converts raw AirDNA amenity keys (has_pool, has_hottub, etc.) to human-readable labels
+// ============================================
+export const AMENITY_LABEL_MAP: Record<string, string> = {
+  has_pool: 'Pool',
+  has_hottub: 'Hot Tub',
+  has_pets_allowed: 'Pet Friendly',
+  has_parking: 'Parking',
+  has_gym: 'Gym',
+  has_kitchen: 'Kitchen',
+  has_washer: 'Washer/Dryer',
+  has_aircon: 'A/C',
+  has_heating: 'Heating',
+  has_wifi: 'WiFi',
+  has_tv: 'TV',
+  has_fireplace: 'Fireplace',
+  has_ev_charger: 'EV Charger',
+  has_bbq: 'BBQ/Grill',
+  has_outdoor_space: 'Outdoor Space',
+  has_balcony: 'Balcony',
+  has_elevator: 'Elevator',
+  has_wheelchair_accessible: 'Wheelchair Accessible',
+  has_self_checkin: 'Self Check-in',
+  has_smoking_allowed: 'Smoking Allowed',
+};
+
+// The amenities we show in the user-facing selector (most impactful for STR revenue)
+export const SELECTABLE_AMENITIES = [
+  { key: 'pool', apiKey: 'has_pool', label: 'Pool', icon: '🏊' },
+  { key: 'hotTub', apiKey: 'has_hottub', label: 'Hot Tub', icon: '♨️' },
+  { key: 'petFriendly', apiKey: 'has_pets_allowed', label: 'Pet Friendly', icon: '🐾' },
+  { key: 'parking', apiKey: 'has_parking', label: 'Parking', icon: '🅿️' },
+  { key: 'gym', apiKey: 'has_gym', label: 'Gym', icon: '💪' },
+  { key: 'kitchen', apiKey: 'has_kitchen', label: 'Kitchen', icon: '🍳' },
+  { key: 'washerDryer', apiKey: 'has_washer', label: 'Washer/Dryer', icon: '🧺' },
+  { key: 'aircon', apiKey: 'has_aircon', label: 'A/C', icon: '❄️' },
+  { key: 'fireplace', apiKey: 'has_fireplace', label: 'Fireplace', icon: '🔥' },
+  { key: 'evCharger', apiKey: 'has_ev_charger', label: 'EV Charger', icon: '⚡' },
+] as const;
+
+/**
+ * Parse raw AirDNA amenities object into human-readable label array.
+ * Input: { has_pool: true, has_hottub: false, has_kitchen: true }
+ * Output: ['Pool', 'Kitchen']
+ */
+export function parseAmenities(raw: Record<string, boolean> | undefined | null): string[] {
+  if (!raw || typeof raw !== 'object') return [];
+  return Object.entries(raw)
+    .filter(([_, v]) => v === true)
+    .map(([k]) => AMENITY_LABEL_MAP[k] || k.replace(/^has_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+    .sort();
+}
+
 export interface MarketInsights {
   total_listings: number;
   professionally_managed_count: number;
@@ -1675,6 +1729,7 @@ export async function getMarketListings(
           location?: { lat?: number; lng?: number };
           zipcode?: string;
           images?: string[];
+          amenities?: Record<string, boolean>;
         }>;
         page_info: {
           total_count: number;
@@ -1765,6 +1820,7 @@ export async function getMarketListings(
       zipcode: r.zipcode || '',
       days_available: r.days_available_ltm || 0,
       days_reserved: r.days_reserved_ltm || 0,
+      amenities: parseAmenities(r.amenities),
     }));
     
     // Persist images from market listings to property_images cache
@@ -2348,6 +2404,7 @@ export async function exploreListingsInRadius(
       zipcode?: string;
       market_name?: string;
       images?: string[];
+      amenities?: Record<string, boolean>;
     };
     
     // Paginate to fetch up to `limit` listings (API max page_size is 25)
@@ -2405,6 +2462,7 @@ export async function exploreListingsInRadius(
         latitude: r.location?.lat ?? null,
         longitude: r.location?.lng ?? null,
         zipcode: r.zipcode || '',
+        amenities: parseAmenities(r.amenities),
       };
     });
     

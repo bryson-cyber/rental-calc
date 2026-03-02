@@ -166,6 +166,7 @@ interface Comparable {
   latitude?: number;
   longitude?: number;
   monthlyMetrics?: CompMonthlyMetric[];
+  amenities?: string[];
 }
 
 interface HistoricalData {
@@ -244,6 +245,8 @@ interface AnalysisResult {
     market: string;
     compCount: number;
   };
+  // User-selected amenities for highlighting on comp cards
+  selectedAmenities?: string[];
 }
 
 interface BulkPropertyInput {
@@ -1013,6 +1016,7 @@ export default function LeadMagnet() {
   const [bedrooms, setBedrooms] = useState('2');
   const [bathrooms, setBathrooms] = useState('1');
   const [furnitureCost, setFurnitureCost] = useState('15000');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [expensePercent, setExpensePercent] = useState(20);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisTimer, setAnalysisTimer] = useState(0);
@@ -1474,6 +1478,7 @@ export default function LeadMagnet() {
           distanceMeters: c.distance_meters,
           latitude: c.latitude,
           longitude: c.longitude,
+          amenities: c.amenities || [],
         })),
         // Market insights for professional management and superhost stats
         marketInsights: data.insights ? {
@@ -1611,6 +1616,8 @@ export default function LeadMagnet() {
           market: (data.property as any)?._fallback_market || 'nearby market',
           compCount: (data.property as any)?._fallback_comp_count || 0,
         } : undefined,
+        // Pass user-selected amenities for highlighting on comp cards
+        selectedAmenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
       });
       
       toast.success('Property validated! See your results below.');
@@ -3250,6 +3257,61 @@ export default function LeadMagnet() {
                       ))}
                     </select>
                   </div>
+                </div>
+                
+                {/* Property Amenities Selector */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                    Property Amenities
+                  </label>
+                  <p className="text-xs text-slate-500 -mt-1">Select amenities your property has (or will have) — we'll highlight matching comps</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {[
+                      { key: 'Pool', icon: '🏊' },
+                      { key: 'Hot Tub', icon: '♨️' },
+                      { key: 'Pet Friendly', icon: '🐾' },
+                      { key: 'Parking', icon: '🅿️' },
+                      { key: 'Gym', icon: '💪' },
+                      { key: 'Kitchen', icon: '🍳' },
+                      { key: 'Washer/Dryer', icon: '🧺' },
+                      { key: 'A/C', icon: '❄️' },
+                      { key: 'Fireplace', icon: '🔥' },
+                      { key: 'EV Charger', icon: '⚡' },
+                    ].map(({ key, icon }) => {
+                      const isSelected = selectedAmenities.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedAmenities(prev =>
+                              isSelected ? prev.filter(a => a !== key) : [...prev, key]
+                            );
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'bg-amber-50 border-amber-400 text-amber-800 shadow-sm ring-1 ring-amber-200'
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50/50'
+                          }`}
+                        >
+                          <span className="text-sm">{icon}</span>
+                          <span className="truncate">{key}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedAmenities.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-amber-700">
+                      <span className="font-medium">{selectedAmenities.length} selected</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAmenities([])}
+                        className="text-amber-500 hover:text-amber-700 underline"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Furniture/Setup Cost */}
@@ -5956,6 +6018,7 @@ export default function LeadMagnet() {
                 isOwner={isOwner}
                 shareCode={validatorShareCode || undefined}
                 dataSource={result.dataSource}
+                selectedAmenities={result.selectedAmenities}
               />
               </Suspense>
             </StepErrorBoundary>
