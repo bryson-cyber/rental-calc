@@ -12592,3 +12592,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update sentCount/failedCount incrementally every 25 sends (not just at the end)
 - [x] Fix today's stuck records (message #30005 marked as sent, campaign #90002 marked as completed)
 - [x] Write tests for recovery logic (20 tests in sms-dispatcher-reliability.test.ts)
+
+## Bug: No-Show Nudge Button Not Clickable (Mar 1, 2026)
+- [x] Fix the Nudge No-Shows button on the Live tab — was using static `new Date()` that never updated; added 30-second interval timer

@@ -2006,8 +2006,14 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
   });
   const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
 
+  // Live-updating clock so webinarIsLive re-evaluates every 30 seconds
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Determine if webinar is currently live (started within last 3 hours)
-  const now = new Date();
   const webinarStart = scheduleDate ? new Date(scheduleDate) : null;
   const webinarIsLive = webinarStart
     ? now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000 && // At least 10 min in
