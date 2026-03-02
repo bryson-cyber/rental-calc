@@ -238,6 +238,12 @@ interface AnalysisResult {
     source: string;
     compCount: number;
   };
+  // Data source info for fallback estimates
+  dataSource?: {
+    type: 'comp_fallback';
+    market: string;
+    compCount: number;
+  };
 }
 
 interface BulkPropertyInput {
@@ -1598,6 +1604,12 @@ export default function LeadMagnet() {
           optimistic: (data as any).revenue_scenarios.optimistic,
           source: (data as any).revenue_scenarios.source,
           compCount: (data as any).revenue_scenarios.compCount,
+        } : undefined,
+        // Data source info (comp_fallback = area-based estimate for new construction/unknown addresses)
+        dataSource: (data.property as any)?._revenue_source === 'comp_fallback' ? {
+          type: 'comp_fallback' as const,
+          market: (data.property as any)?._fallback_market || 'nearby market',
+          compCount: (data.property as any)?._fallback_comp_count || 0,
         } : undefined,
       });
       
@@ -5943,6 +5955,7 @@ export default function LeadMagnet() {
                 revenueScenarios={result.revenueScenarios}
                 isOwner={isOwner}
                 shareCode={validatorShareCode || undefined}
+                dataSource={result.dataSource}
               />
               </Suspense>
             </StepErrorBoundary>

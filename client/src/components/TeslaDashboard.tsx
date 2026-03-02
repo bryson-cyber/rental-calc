@@ -184,6 +184,12 @@ interface TeslaDashboardProps {
   isOwner?: boolean;  // Only the owner can override revenue numbers
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
+  // Data source info for fallback estimates (new construction / unknown addresses)
+  dataSource?: {
+    type: 'comp_fallback';
+    market: string;
+    compCount: number;
+  };
 }
 
 // ============================================
@@ -241,7 +247,8 @@ function HeroRevenueCard({
   revenueScenarios,
   isOwner = false,
   onRevenueOverride,
-  revenueOverrideActive = false
+  revenueOverrideActive = false,
+  dataSource
 }: { 
   annualRevenue: number;
   monthlyProfit: number;
@@ -260,6 +267,11 @@ function HeroRevenueCard({
   isOwner?: boolean;
   onRevenueOverride?: (newRevenue: number | null) => void;
   revenueOverrideActive?: boolean;
+  dataSource?: {
+    type: 'comp_fallback';
+    market: string;
+    compCount: number;
+  };
 }) {
   // Calculate monthly values
   const monthlyRevenue = annualRevenue / 12;
@@ -370,6 +382,15 @@ function HeroRevenueCard({
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
               Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
             </p>
+          )}
+          {/* Area-based estimate notice for new construction / unknown addresses */}
+          {dataSource?.type === 'comp_fallback' && (
+            <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-amber-800">
+                <span className="font-semibold">Area-based estimate.</span> This address isn't in Airbnb's database yet (common for new construction). Revenue is estimated from {dataSource.compCount} comparable listings in {dataSource.market}.
+              </p>
+            </div>
           )}
         </div>
         
@@ -3097,7 +3118,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3218,6 +3239,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
+        dataSource={dataSource}
       />
       
       {/* SECTION 3: Key Metrics - ADR, Occupancy, Revenue Range */}

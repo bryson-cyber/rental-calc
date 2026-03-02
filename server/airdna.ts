@@ -2873,7 +2873,7 @@ export async function getComprehensivePropertyReport(
   console.log(`[Property Report] CACHE MISS for ${address} — fetching fresh data`);
 
     // Get property estimates from rentalizer
-    const propertyEstimate = await getRentalizerEstimate({
+    let propertyEstimate: RentalizerResponse | null = await getRentalizerEstimate({
     address,
     bedrooms,
     bathrooms,
@@ -2881,7 +2881,199 @@ export async function getComprehensivePropertyReport(
   });
   
   if (!propertyEstimate) {
-    console.error("[Property Report] Failed to get property estimate");
+    console.log("[Property Report] Rentalizer returned no data — attempting comp-based fallback");
+    
+    // ============================================
+    // COMP-BASED FALLBACK: When AirDNA has no direct data for this address
+    // (common for new construction, rural properties, or areas with low STR activity)
+    // We geocode the address, find the market, pull comps, and build a report from those.
+    // ============================================
+    try {
+      // Step 1: Geocode the address to get lat/lng, city, state, zip
+      const { makeRequest: makeGeoRequest } = await import('./_core/map');
+      const geocodeResult = await makeGeoRequest<{
+        status: string;
+        results: Array<{
+          geometry: { location: { lat: number; lng: number } };
+          formatted_address: string;
+          address_components: Array<{
+            long_name: string;
+            short_name: string;
+            types: string[];
+          }>;
+        }>;
+      }>('/maps/api/geocode/json', { address });
+      
+      if (geocodeResult.status !== 'OK' || !geocodeResult.results?.[0]) {
+        console.error('[Fallback] Geocoding failed — cannot proceed');
+        return null;
+      }
+      
+      const geoResult = geocodeResult.results[0];
+      const lat = geoResult.geometry.location.lat;
+      const lng = geoResult.geometry.location.lng;
+      const cityComp = geoResult.address_components.find(c => c.types.includes('locality'));
+      const stateComp = geoResult.address_components.find(c => c.types.includes('administrative_area_level_1'));
+      const zipComp = geoResult.address_components.find(c => c.types.includes('postal_code'));
+      const city = cityComp?.long_name || '';
+      const state = stateComp?.short_name || '';
+      const zip = zipComp?.short_name || '';
+      
+      console.log(`[Fallback] Geocoded: ${city}, ${state} ${zip} (${lat}, ${lng})`);
+      
+      // Step 2: Search for the market by zip code, then city
+      let fallbackMarketId: string | null = null;
+      let fallbackMarketName = '';
+      let fallbackMarketType: 'market' | 'submarket' = 'market';
+      
+      // Try zip code first (most specific)
+      if (zip) {
+        const zipResults = await searchMarketsAPI(zip, 10);
+        const zipMarket = zipResults.find(m => m.type === 'market') || zipResults.find(m => m.type === 'submarket');
+        if (zipMarket) {
+          fallbackMarketId = zipMarket.type === 'submarket' && zipMarket.parent_market?.id 
+            ? zipMarket.parent_market.id 
+            : zipMarket.id;
+          fallbackMarketName = zipMarket.name;
+          fallbackMarketType = zipMarket.type === 'submarket' ? 'submarket' : 'market';
+          console.log(`[Fallback] Found market via zip ${zip}: ${fallbackMarketName} (${fallbackMarketId})`);
+        }
+      }
+      
+      // Fallback to city + state search
+      if (!fallbackMarketId && city) {
+        const citySearch = state ? `${city}, ${state}` : city;
+        const cityResults = await searchMarketsAPI(citySearch, 15);
+        const cityMarket = cityResults.find(m => m.type === 'market') || cityResults.find(m => m.type === 'submarket');
+        if (cityMarket) {
+          fallbackMarketId = cityMarket.type === 'submarket' && cityMarket.parent_market?.id
+            ? cityMarket.parent_market.id
+            : cityMarket.id;
+          fallbackMarketName = cityMarket.name;
+          console.log(`[Fallback] Found market via city ${citySearch}: ${fallbackMarketName} (${fallbackMarketId})`);
+        }
+      }
+      
+      if (!fallbackMarketId) {
+        console.error('[Fallback] Could not find any AirDNA market for this location');
+        return null;
+      }
+      
+      // Step 3: Pull comps from the market filtered by bedroom count
+      const targetBedrooms = bedrooms || 3; // Default to 3BR if not specified
+      const targetBathrooms = bathrooms || 2;
+      const targetAccommodates = accommodates || (targetBedrooms * 2);
+      
+      const { listings: marketComps } = await getMarketListings(fallbackMarketId, {
+        limit: 500,
+        orderBy: 'revenue',
+        orderDirection: 'desc',
+        filters: { bedrooms: targetBedrooms },
+      });
+      
+      // Also get unfiltered listings for bedroom performance
+      const { listings: allMarketListings } = await getMarketListings(fallbackMarketId, {
+        limit: 500,
+        orderBy: 'revenue',
+        orderDirection: 'desc',
+      });
+      
+      const activeComps = marketComps.filter(c => c.annual_revenue > 0);
+      console.log(`[Fallback] Found ${activeComps.length} active ${targetBedrooms}BR comps in ${fallbackMarketName}`);
+      
+      if (activeComps.length < 3) {
+        console.error(`[Fallback] Not enough comps (${activeComps.length}) to build a report`);
+        return null;
+      }
+      
+      // Step 4: Calculate estimates from comps
+      const sortedRevenues = activeComps.map(c => c.annual_revenue).sort((a, b) => a - b);
+      const sortedAdrs = activeComps.map(c => c.adr).sort((a, b) => a - b);
+      const sortedOccupancies = activeComps.map(c => c.occupancy).sort((a, b) => a - b);
+      
+      const getMedian = (arr: number[]) => {
+        const mid = Math.floor(arr.length / 2);
+        return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
+      };
+      const getPercentile = (arr: number[], p: number) => {
+        const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
+        return arr[idx];
+      };
+      
+      const medianRevenue = getMedian(sortedRevenues);
+      const medianAdr = getMedian(sortedAdrs);
+      const medianOccupancy = getMedian(sortedOccupancies);
+      const p25Revenue = getPercentile(sortedRevenues, 25);
+      const p75Revenue = getPercentile(sortedRevenues, 75);
+      
+      console.log(`[Fallback] Comp-based estimates: Revenue=$${medianRevenue}, ADR=$${medianAdr}, Occupancy=${medianOccupancy}%`);
+      
+      // Step 5: Build synthetic monthly forecast from comps
+      // Use seasonal distribution based on occupancy patterns
+      const monthlyBase = Math.round(medianRevenue / 12);
+      const seasonalFactors = [0.7, 0.75, 0.85, 0.95, 1.1, 1.2, 1.25, 1.2, 1.1, 1.0, 0.8, 0.7]; // Jan-Dec
+      const now = new Date();
+      const monthlyForecast = Array.from({ length: 12 }, (_, i) => {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const monthIndex = monthDate.getMonth();
+        const factor = seasonalFactors[monthIndex];
+        const monthRevenue = Math.round(monthlyBase * factor);
+        const monthOcc = Math.min(0.95, (medianOccupancy > 1 ? medianOccupancy / 100 : medianOccupancy) * factor);
+        return {
+          month: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
+          revenue: monthRevenue,
+          adr: medianAdr,
+          occupancy: Math.round(monthOcc * 100) / 100,
+        };
+      });
+      
+      // Step 6: Build synthetic propertyEstimate
+      const syntheticEstimate: any = {
+        property: {
+          address: address,
+          address_lookup: `${city}, ${state}`,
+          bedrooms: targetBedrooms,
+          bathrooms: targetBathrooms,
+          accommodates: targetAccommodates,
+          latitude: lat,
+          longitude: lng,
+          market_id: fallbackMarketId, // Pass market ID so downstream code skips redundant market search
+          _geocoded_city: city,
+          _geocoded_state: state,
+          zipcode: zip,
+        },
+        estimates: {
+          annual_revenue: medianRevenue,
+          annual_revenue_low: p25Revenue,
+          annual_revenue_high: p75Revenue,
+          average_daily_rate: medianAdr,
+          occupancy_rate: medianOccupancy > 1 ? medianOccupancy / 100 : medianOccupancy,
+          currency: 'USD',
+          currency_symbol: '$',
+        },
+        monthly_forecast: monthlyForecast,
+        comps: [], // No rentalizer comps — we'll use market comps
+        _revenue_source: 'comp_fallback',
+        _fallback_market: fallbackMarketName,
+        _fallback_comp_count: activeComps.length,
+        _fallback_comps: activeComps, // Store market comps for downstream use since radius search won't work for new construction
+      };
+      
+      // Now continue with the rest of the function using the synthetic estimate
+      // We reassign propertyEstimate so all downstream code works
+      // @ts-ignore — intentional reassignment for fallback path
+      propertyEstimate = syntheticEstimate;
+      console.log(`[Fallback] Built synthetic estimate from ${activeComps.length} comps in ${fallbackMarketName}`);
+      
+    } catch (fallbackErr) {
+      console.error('[Fallback] Comp-based fallback failed:', (fallbackErr as Error).message);
+      return null;
+    }
+  }
+  
+  // At this point propertyEstimate is guaranteed non-null (either from Rentalizer or fallback)
+  // If both paths failed, we already returned null above
+  if (!propertyEstimate) {
     return null;
   }
   
@@ -3639,6 +3831,17 @@ export async function getComprehensivePropertyReport(
   
   console.log(`[Comps] Final: ${sameBedroomComps.filter(c => matchesBathrooms(c.bathrooms, propertyBathrooms)).length} exact BA match, ${sameBedroomComps.filter(c => !matchesBathrooms(c.bathrooms, propertyBathrooms)).length} different BA out of ${sameBedroomComps.length} total`);
   
+  // ── FALLBACK COMP INJECTION ──
+  // When in comp_fallback mode (new construction / no AirDNA data), the radius search
+  // and rentalizer comps will both be empty. Inject the market comps we fetched during fallback.
+  if (sameBedroomComps.length === 0 && (propertyEstimate as any)._fallback_comps?.length > 0) {
+    const fallbackComps: ListingData[] = (propertyEstimate as any)._fallback_comps;
+    console.log(`[Comps] Injecting ${fallbackComps.length} fallback market comps (comp_fallback mode)`);
+    sameBedroomComps = fallbackComps
+      .sort((a, b) => b.annual_revenue - a.annual_revenue)
+      .slice(0, 30);
+  }
+  
   // Enrich listings that don't have images (radius comps)
   // Uses /listing/batch endpoint (100 per request) instead of individual calls
   sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 5);
@@ -4008,7 +4211,7 @@ export async function getComprehensivePropertyReport(
   }
   
   const result = {
-    property: propertyEstimate,
+    property: propertyEstimate!,
     market: marketData,
     submarkets,
     same_bedroom_comps: sameBedroomComps,

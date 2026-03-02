@@ -1065,7 +1065,7 @@ export const rentalRouter = router({
           if (!report) {
             return {
               success: false,
-              error: "Could not generate property report for this address",
+              error: "We couldn't find rental data for this address. This can happen with new construction, rural properties, or areas with very few short-term rentals. Try a nearby established address or a different property in the same area.",
               data: null,
             };
           }

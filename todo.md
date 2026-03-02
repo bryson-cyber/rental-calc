@@ -12597,3 +12597,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix the Nudge No-Shows button on the Live tab — was using static `new Date()` that never updated; added 30-second interval timer
 - [x] Fix timezone parsing for scheduleDate ("2026-03-01 19:00" without timezone was parsed inconsistently; now treated as UTC)
 - [x] Remove 3-hour upper bound cap that disabled the button after webinar ran 3+ hours
+
+## Bug: Property Report Fails for 26206 Snowpeak Ave (Mar 2, 2026)
+- [x] Diagnose why "Could not generate property report" for 26206 Snowpeak Ave, Park Row, TX 77493 — ROOT CAUSE: New construction address not in AirDNA's database, so Rentalizer returns null. Existing comp-based fallback had issues: (1) synthetic estimate missing market_id causing redundant market search, (2) missing currency field, (3) market comps fetched in fallback block not passed to downstream sameBedroomComps variable
+- [x] Fix: Added market_id and currency to synthetic estimate, stored fallback comps on synthetic estimate via _fallback_comps, added injection point after sameBedroomComps assembly to use fallback comps when radius search returns nothing
+- [x] Added area-based estimate notice banner in TeslaDashboard (amber warning showing market name and comp count)
+- [x] Improved error message when fallback also fails (explains new construction / rural / low STR activity)
+
+## Feature: Amenities Selection on Property Analysis
+- [ ] Add amenities selector to the property analysis flow so users can select amenities their property has
+- [ ] Filter/highlight comps that have matching amenities
