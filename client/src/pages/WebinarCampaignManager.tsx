@@ -2013,11 +2013,13 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
     return () => clearInterval(interval);
   }, []);
 
-  // Determine if webinar is currently live (started within last 3 hours)
-  const webinarStart = scheduleDate ? new Date(scheduleDate) : null;
+  // Determine if webinar has been live for 10+ minutes
+  // scheduleDate may be "2026-03-01 19:00" (no timezone) — treat as UTC to be safe
+  const webinarStart = scheduleDate
+    ? new Date(scheduleDate.includes('T') || scheduleDate.includes('Z') ? scheduleDate : scheduleDate.replace(' ', 'T') + 'Z')
+    : null;
   const webinarIsLive = webinarStart
-    ? now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000 && // At least 10 min in
-      now.getTime() <= webinarStart.getTime() + 3 * 60 * 60 * 1000 // Within 3 hours
+    ? now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000 // At least 10 min in (no upper bound)
     : false;
 
   const minutesIn = webinarStart

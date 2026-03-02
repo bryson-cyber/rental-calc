@@ -12595,3 +12595,5 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Bug: No-Show Nudge Button Not Clickable (Mar 1, 2026)
 - [x] Fix the Nudge No-Shows button on the Live tab — was using static `new Date()` that never updated; added 30-second interval timer
+- [x] Fix timezone parsing for scheduleDate ("2026-03-01 19:00" without timezone was parsed inconsistently; now treated as UTC)
+- [x] Remove 3-hour upper bound cap that disabled the button after webinar ran 3+ hours

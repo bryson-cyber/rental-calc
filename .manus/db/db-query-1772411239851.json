@@ -1,0 +1,90 @@
+{
+  "query": "SELECT * FROM webinar_sms_settings LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM webinar_sms_settings LIMIT 20",
+  "rows": [
+    {
+      "id": "1",
+      "settingKey": "selected_webinar_id",
+      "settingValue": "372",
+      "description": "Currently selected WebinarJam webinar ID",
+      "createdAt": "2026-02-23 03:31:52",
+      "updatedAt": "2026-03-01 18:38:38"
+    },
+    {
+      "id": "2",
+      "settingKey": "selected_webinar_name",
+      "settingValue": "Webby 3.01.26",
+      "description": "Currently selected webinar name",
+      "createdAt": "2026-02-23 03:31:52",
+      "updatedAt": "2026-03-01 18:38:38"
+    },
+    {
+      "id": "5",
+      "settingKey": "last_auto_import_at",
+      "settingValue": "2026-03-02T00:25:03.608Z",
+      "description": "Timestamp of last auto-import",
+      "createdAt": "2026-02-23 06:24:22",
+      "updatedAt": "2026-03-02 00:25:03"
+    },
+    {
+      "id": "6",
+      "settingKey": "last_auto_import_result",
+      "settingValue": "[CRON] Imported 1, skipped 381 (total 382) at 2026-03-02T00:25:03.105Z",
+      "description": "Result of last auto-import",
+      "createdAt": "2026-02-23 06:24:22",
+      "updatedAt": "2026-03-02 00:25:03"
+    },
+    {
+      "id": "30005",
+      "settingKey": "webinar_api_key",
+      "settingValue": "96d3cde3-8579-4464-9365-3904158ed9f3",
+      "description": "Per-webinar API key from WebinarJam Advanced Integration",
+      "createdAt": "2026-02-23 18:25:37",
+      "updatedAt": "2026-02-23 18:25:37"
+    },
+    {
+      "id": "30006",
+      "settingKey": "webinar_hash",
+      "settingValue": "076vwc5z",
+      "description": "Per-webinar hash from WebinarJam Advanced Integration",
+      "createdAt": "2026-02-23 18:25:37",
+      "updatedAt": "2026-02-23 18:25:37"
+    },
+    {
+      "id": "90003",
+      "settingKey": "selected_schedule_id",
+      "settingValue": "656",
+      "description": "Currently selected schedule ID",
+      "createdAt": "2026-02-25 18:06:36",
+      "updatedAt": "2026-03-01 18:38:38"
+    },
+    {
+      "id": "90004",
+      "settingKey": "cron_enabled",
+      "settingValue": "true",
+      "description": "Whether auto-import cron is enabled",
+      "createdAt": "2026-02-25 18:07:10",
+      "updatedAt": "2026-02-25 18:07:10"
+    },
+    {
+      "id": "90005",
+      "settingKey": "cron_interval_minutes",
+      "settingValue": "15",
+      "description": "Auto-import interval in minutes",
+      "createdAt": "2026-02-25 18:07:10",
+      "updatedAt": "2026-02-25 18:07:10"
+    },
+    {
+      "id": "90192",
+      "settingKey": "selected_schedule_date",
+      "settingValue": "2026-03-01 19:00",
+      "description": "Date of the selected webinar schedule",
+      "createdAt": "2026-02-26 01:16:03",
+      "updatedAt": "2026-03-01 18:38:38"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsettingKey\tsettingValue\tdescription\tcreatedAt\tupdatedAt\n1\tselected_webinar_id\t372\tCurrently selected WebinarJam webinar ID\t2026-02-23 03:31:52\t2026-03-01 18:38:38\n2\tselected_webinar_name\tWebby 3.01.26\tCurrently selected webinar name\t2026-02-23 03:31:52\t2026-03-01 18:38:38\n5\tlast_auto_import_at\t2026-03-02T00:25:03.608Z\tTimestamp of last auto-import\t2026-02-23 06:24:22\t2026-03-02 00:25:03\n6\tlast_auto_import_result\t[CRON] Imported 1, skipped 381 (total 382) at 2026-03-02T00:25:03.105Z\tResult of last auto-import\t2026-02-23 06:24:22\t2026-03-02 00:25:03\n30005\twebinar_api_key\t96d3cde3-8579-4464-9365-3904158ed9f3\tPer-webinar API key from WebinarJam Advanced Integration\t2026-02-23 18:25:37\t2026-02-23 18:25:37\n30006\twebinar_hash\t076vwc5z\tPer-webinar hash from WebinarJam Advanced Integration\t2026-02-23 18:25:37\t2026-02-23 18:25:37\n90003\tselected_schedule_id\t656\tCurrently selected schedule ID\t2026-02-25 18:06:36\t2026-03-01 18:38:38\n90004\tcron_enabled\ttrue\tWhether auto-import cron is enabled\t2026-02-25 18:07:10\t2026-02-25 18:07:10\n90005\tcron_interval_minutes\t15\tAuto-import interval in minutes\t2026-02-25 18:07:10\t2026-02-25 18:07:10\n90192\tselected_schedule_date\t2026-03-01 19:00\tDate of the selected webinar schedule\t2026-02-26 01:16:03\t2026-03-01 18:38:38\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}
