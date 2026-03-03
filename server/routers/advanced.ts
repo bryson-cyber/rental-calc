@@ -26,6 +26,7 @@ import { getRentSummary, getComprehensiveRentometerData } from "../rentometer";
 import { logActivity, ActionCategory, ActionType } from "../activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "../notification-service";
 import { canPerformAnalysis, recordAnalysisUsage } from "../usage-limits";
+import { isWebinarMode, getCachedStep5Data } from "../webinar-cache";
 
 export const advancedRouter = router({
     // Market Scorecard - Get all markets in a country with scores
@@ -465,6 +466,70 @@ export const advancedRouter = router({
           return result;
         } catch (error) {
           console.error('[LeadMagnet] Error analyzing property:', error);
+          
+          // WEBINAR MODE: Try to serve from cached analysis_reports
+          if (isWebinarMode()) {
+            console.log(`[LeadMagnet] WEBINAR MODE: Attempting cache fallback for ${input.address}`);
+            const cachedReport = await getCachedStep5Data(input.address) as any;
+            if (cachedReport && cachedReport.fullAnalysisData) {
+              console.log(`[LeadMagnet] WEBINAR MODE: Serving cached Step 5 data for ${input.address}`);
+              const analysis = cachedReport.fullAnalysisData;
+              return {
+                success: true as const,
+                error: null as string | null,
+                limitReached: false,
+                data: {
+                  address: input.address,
+                  bedrooms: input.bedrooms,
+                  bathrooms: input.bathrooms,
+                  monthly_rent: input.monthly_rent,
+                  percentiles: analysis.percentiles,
+                  property_estimate: analysis.property_estimate,
+                  profitability: analysis.profitability,
+                  competitors: analysis.competitors,
+                  seasonality: analysis.seasonality,
+                  booking_metrics: analysis.booking_metrics,
+                  amenity_analysis: analysis.amenity_analysis,
+                  ai_analysis: analysis.ai_analysis,
+                  photo_analysis: analysis.photo_analysis,
+                  booking_patterns: analysis.booking_patterns,
+                  supply_trend: analysis.supply_trend,
+                  professional_host_stats: analysis.professional_host_stats,
+                  cancellation_policies: analysis.cancellation_policies,
+                  property_roi: analysis.property_roi,
+                  regulations: analysis.regulations,
+                  market_seasonality: analysis.market_seasonality,
+                  future_pricing: analysis.future_pricing,
+                  historical_trends: analysis.historical_trends,
+                  five_year_summary: analysis.five_year_summary,
+                  historical_analysis: analysis.historical_analysis,
+                  narrative_report: analysis.narrative_report,
+                  enhanced_narrative_report: analysis.enhanced_narrative_report,
+                  qualifying_competitors: analysis.qualifying_competitors,
+                  radius_listings: analysis.radius_listings,
+                  market_saturation: analysis.market_saturation,
+                  property_type_analysis: analysis.property_type_analysis,
+                  nearby_markets: analysis.nearby_markets,
+                  airdna_feasibility: analysis.airdna_feasibility,
+                  submarket_deep_dive: analysis.submarket_deep_dive,
+                  competitor_imagery: analysis.competitor_imagery,
+                  submarket_details: analysis.submarket_details,
+                  submarket_exploration: analysis.submarket_exploration,
+                  submarket_listings: analysis.submarket_listings,
+                  top_performer_comps: analysis.top_performer_comps,
+                  top_performer_pricing: analysis.top_performer_pricing,
+                  rentalizer_comps: analysis.rentalizer_comps,
+                  superhost_top_performers: analysis.superhost_top_performers,
+                  same_bedroom_radius_listings: analysis.same_bedroom_radius_listings,
+                  market_insights: analysis.market_insights,
+                  full_report: analysis.report,
+                  reportId: cachedReport.id || null,
+                },
+              };
+            }
+            console.warn(`[LeadMagnet] WEBINAR MODE: No cached data found for ${input.address}`);
+          }
+          
           return {
             success: false as const,
             error: error instanceof Error ? error.message : 'Failed to analyze property',

@@ -22,6 +22,7 @@ import {
 } from "../airdna";
 import { batchScrapeAirbnbImages } from "../airbnb-scraper";
 import { AirDNARateLimitError } from "../airdna-rate-limiter";
+import { isWebinarMode, getCachedStep2Data } from "../webinar-cache";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../report-generator";
 import { getLocationQuality } from "../location-quality";
@@ -1156,9 +1157,26 @@ export const rentalRouter = router({
             remaining: limitCheck.remaining ? limitCheck.remaining - 1 : undefined,
           };
         } catch (error) {
-          // Handle rate limit errors with a user-friendly message
+          // Handle rate limit errors - in webinar mode, fall back to cached data
           if (error instanceof AirDNARateLimitError) {
             console.warn(`[Rental] Rate limit hit for ${input.address}: ${error.message}`);
+            
+            // WEBINAR MODE: Try to serve from cache instead of failing
+            if (isWebinarMode()) {
+              console.log(`[Rental] WEBINAR MODE: Attempting cache fallback for ${input.address}`);
+              const cachedData = await getCachedStep2Data(input.address);
+              if (cachedData) {
+                console.log(`[Rental] WEBINAR MODE: Serving cached Step 2 data for ${input.address}`);
+                return {
+                  success: true,
+                  data: cachedData,
+                  remaining: undefined,
+                  fromCache: true,
+                };
+              }
+              console.warn(`[Rental] WEBINAR MODE: No cached data found for ${input.address}`);
+            }
+            
             return {
               success: false,
               error: 'Our data service is temporarily at capacity. Please try again in a few minutes, or try again tomorrow if the issue persists.',

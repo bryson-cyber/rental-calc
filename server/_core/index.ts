@@ -1134,6 +1134,13 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
 
+    // Initialize webinar mode from DB
+    import('../webinar-cache').then(({ initWebinarMode }) => {
+      initWebinarMode().catch((err) =>
+        console.error('[WebinarCache] Failed to initialize:', err),
+      );
+    }).catch(() => { /* webinar-cache module not critical */ });
+
     // Resume any incomplete video generation jobs from before restart
     import('../video-generation').then(({ resumeIncompleteJobs }) => {
       resumeIncompleteJobs().catch((err) =>

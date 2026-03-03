@@ -15,6 +15,7 @@ import { ENV } from "./_core/env";
 import { logApiCall, checkDailyLimit } from './api-logger';
 import { notifyOwner } from './_core/notification';
 import { isAdminRequest } from './request-context';
+import { isWebinarMode } from './webinar-cache';
 
 const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 
@@ -211,8 +212,13 @@ export async function rateLimitedAirDNARequest<T>(
   const url = `${AIRDNA_API_BASE}${endpoint}`;
   const startTime = Date.now();
 
-  // ── Rate limit checks (unless bypassed) ──
-  if (!options?.bypassRateLimit) {
+  // ── Webinar mode: bypass ALL rate limits ──
+  if (isWebinarMode()) {
+    console.log(`[AirDNA-RateLimit] WEBINAR MODE: bypassing all rate limits for ${endpoint}`);
+  }
+
+  // ── Rate limit checks (unless bypassed or webinar mode) ──
+  if (!options?.bypassRateLimit && !isWebinarMode()) {
     // 1. Check per-minute limit (memory-based, instant)
     // Admins are COMPLETELY EXEMPT from per-minute limits
     // Non-admins: wait up to 60s for the per-minute window to clear instead of failing immediately

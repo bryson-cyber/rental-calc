@@ -38,3 +38,4 @@ export { translationRouter } from "./translation";
 export { contentStudioRouter } from "./content-studio";
 export { webinarSmsRouter } from "./webinar-sms";
 export { leaseReaderRouter } from "./lease-reader";
+export { webinarEnvRouter } from "./webinar-env";

@@ -12649,3 +12649,19 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] AirDNA daily API count at 1,307 today — non-admin soft limit (550) was blocking all unauthenticated requests
 - [x] Added admin-context.test.ts with 10 tests verifying AsyncLocalStorage propagation
 - [ ] User needs to re-login after deploy so new cookie (with Secure=true) gets set
+
+## Webinar Environment Mode (Mar 3, 2026) - COMPLETE
+- [x] DB: webinar_settings table (isActive, toggledBy, toggledAt) — already existed from previous session
+- [x] Schema: Added webinar_settings to drizzle/schema.ts with tinyint isActive column
+- [x] Server: Created server/webinar-cache.ts — core service with isWebinarMode(), toggleWebinarMode(), initWebinarMode(), normalizeAddress(), getCachedStep2Data(), getCachedStep5Data(), getAllCachedProperties(), deleteCachedProperty()
+- [x] Server: Modified server/airdna-rate-limiter.ts — bypass all rate limits when webinar mode is ON
+- [x] Server: Modified server/cache.ts — serve expired in-memory cache entries when webinar mode is ON
+- [x] Server: Modified server/api-logger.ts — serve expired DB cache entries when webinar mode is ON
+- [x] Server: Modified server/_core/index.ts — initialize webinar mode from DB on server startup
+- [x] Server: Modified server/routers/rental.ts (Step 2) — fall back to cached data on AirDNA rate limit errors in webinar mode
+- [x] Server: Modified server/routers/advanced.ts (Step 5) — fall back to cached analysis_reports on any error in webinar mode
+- [x] Server: Created server/routers/webinar-env.ts — admin-only tRPC router (getStatus, toggle, listCachedProperties, deleteCachedProperty)
+- [x] Server: Wired webinarEnvRouter into appRouter in server/routers.ts
+- [x] Frontend: Created client/src/pages/WebinarEnvTab.tsx — admin tab with toggle switch, status card, warning banner, cached properties list with delete
+- [x] Frontend: Added Webinar Env tab to UnifiedAdmin.tsx (lazy loaded, between Webinar SMS and Data Policy)
+- [x] Tests: 16 vitest tests passing (normalizeAddress, isWebinarMode, module exports, tRPC router integration for admin/non-admin access control)

@@ -36,6 +36,13 @@
       "when": 1772046614539,
       "tag": "0004_exotic_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772574565067,
+      "tag": "0005_previous_anthem",
+      "breakpoints": true
     }
   ]
 }

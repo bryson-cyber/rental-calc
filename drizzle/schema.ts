@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { int, tinyint, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -2489,3 +2489,18 @@ export const webinarTranscripts = mysqlTable("webinar_transcripts", {
 });
 export type WebinarTranscript = typeof webinarTranscripts.$inferSelect;
 export type InsertWebinarTranscript = typeof webinarTranscripts.$inferInsert;
+
+// ─── Webinar Environment Settings (controls webinar/demo mode for live presentations) ───
+export const webinarSettings = mysqlTable("webinar_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Whether webinar mode is currently active */
+  isActive: tinyint("isActive").default(0).notNull(),
+  /** User ID who last toggled the setting */
+  toggledBy: int("toggledBy"),
+  /** When the setting was last toggled */
+  toggledAt: timestamp("toggledAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WebinarSetting = typeof webinarSettings.$inferSelect;
+export type InsertWebinarSetting = typeof webinarSettings.$inferInsert;

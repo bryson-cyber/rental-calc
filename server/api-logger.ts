@@ -267,12 +267,28 @@ export async function getDbCache<T>(cacheKey: string): Promise<T | null> {
     
     // Check if expired
     if (new Date(entry.expiresAt) < new Date()) {
-      // Delete expired entry
-      const dbForDelete = await getDb();
-      if (dbForDelete) {
-        await dbForDelete.delete(apiCacheTable).where(eq(apiCacheTable.cacheKey, cacheKey));
+      // In webinar mode, serve expired entries instead of deleting them
+      try {
+        const { isWebinarMode } = await import('./webinar-cache');
+        if (isWebinarMode()) {
+          console.log(`[DB Cache] WEBINAR MODE: serving expired entry for ${cacheKey.substring(0, 50)}...`);
+          // Fall through to return the data below
+        } else {
+          // Normal mode: delete expired entry
+          const dbForDelete = await getDb();
+          if (dbForDelete) {
+            await dbForDelete.delete(apiCacheTable).where(eq(apiCacheTable.cacheKey, cacheKey));
+          }
+          return null;
+        }
+      } catch {
+        // If webinar-cache module not available, treat as normal mode
+        const dbForDelete = await getDb();
+        if (dbForDelete) {
+          await dbForDelete.delete(apiCacheTable).where(eq(apiCacheTable.cacheKey, cacheKey));
+        }
+        return null;
       }
-      return null;
     }
     
     // Handle double-stringified JSON: setDbCache calls JSON.stringify() before storing

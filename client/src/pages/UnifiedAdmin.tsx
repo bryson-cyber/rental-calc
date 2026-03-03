@@ -13,6 +13,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 
 const ContentStudioTabLazy = lazy(() => import('./ContentStudioPage').then(m => ({ default: m.ContentStudioTab })));
 const WebinarSmsTabLazy = lazy(() => import('./WebinarSmsTab').then(m => ({ default: m.WebinarSmsTab })));
+const WebinarEnvTabLazy = lazy(() => import('./WebinarEnvTab').then(m => ({ default: m.WebinarEnvTab })));
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +68,8 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  BookOpen
+  BookOpen,
+  Radio
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -429,6 +431,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="webinar-sms" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MessageSquare className="w-4 h-4 mr-1" />
               Webinar SMS
+            </TabsTrigger>
+            <TabsTrigger value="webinar-env" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Radio className="w-4 h-4 mr-1" />
+              Webinar Env
             </TabsTrigger>
             <TabsTrigger value="data-policy" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
@@ -1685,6 +1691,12 @@ export default function UnifiedAdmin() {
           <TabsContent value="webinar-sms" className="space-y-6">
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
               <WebinarSmsTabLazy />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="webinar-env" className="space-y-6">
+            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+              <WebinarEnvTabLazy />
             </Suspense>
           </TabsContent>
 

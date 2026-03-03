@@ -110,9 +110,15 @@ class APICache {
   }
   
   /**
-   * Check if a cache entry is still valid
+   * Check if a cache entry is still valid.
+   * In webinar mode, all entries are considered valid (expired entries are served).
    */
   private isValid(entry: CacheEntry<unknown>): boolean {
+    // Lazy import to avoid circular dependency
+    try {
+      const { isWebinarMode } = require('./webinar-cache');
+      if (isWebinarMode()) return true; // Serve expired entries in webinar mode
+    } catch { /* module not loaded yet */ }
     return Date.now() - entry.timestamp < entry.ttl;
   }
   
