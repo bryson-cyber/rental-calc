@@ -12636,3 +12636,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Frontend: Show amenity filter status banner (green = applied, amber = relaxed) with comp count and amenity list
 - [x] Frontend: Pass amenityFilter metadata through to TeslaDashboard > ComparableProperties
 - [x] 27 vitest tests passing (API key conversion, fallback logic, enrichment, matching, prevalence)
+
+## Bug: Admin requests blocked by AirDNA rate limiter (Mar 2, 2026)
+- [x] Admin requests to getPropertyReport are hitting the non-admin soft limit (550) instead of bypassing it
+- [x] Trace how isAdmin flag flows from tRPC context → getComprehensivePropertyReport → rate limiter
+- [x] Fix so admin users are correctly identified and bypass the soft limit
+
+## Bug: Step 5 reports not generating — Root cause: missing trust proxy (Mar 2, 2026)
+- [x] Root cause: Express app.set('trust proxy') was missing, causing session cookies to be silently dropped by browsers (SameSite=None requires Secure=true, but without trust proxy, secure was false behind the reverse proxy)
+- [x] Fix: Added app.set('trust proxy', 1) to server/_core/index.ts
+- [x] Amenities implementation did NOT break AirDNA v2 endpoints — all endpoints still correct
+- [x] AirDNA daily API count at 1,307 today — non-admin soft limit (550) was blocking all unauthenticated requests
+- [x] Added admin-context.test.ts with 10 tests verifying AsyncLocalStorage propagation
+- [ ] User needs to re-login after deploy so new cookie (with Secure=true) gets set

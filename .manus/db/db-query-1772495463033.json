@@ -1,0 +1,80 @@
+{
+  "query": "SELECT id, name, email, role, openId FROM users ORDER BY id LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, email, role, openId FROM users ORDER BY id LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Bryson blocker",
+      "email": "bryson@stayly.com",
+      "role": "admin",
+      "openId": "nXFdDDobGPtzT2HBp5K8e7"
+    },
+    {
+      "id": "6330915",
+      "name": "Ronald Pedrosa",
+      "email": "ronald@coachinayah.com",
+      "role": "user",
+      "openId": "fKphAvDz7Y2bV7AZDjzHsi"
+    },
+    {
+      "id": "6390023",
+      "name": "Sean Anderson",
+      "email": "sean@prestigeretreats.net",
+      "role": "user",
+      "openId": "Bikkrwk5x2swvgJ32LSWPP"
+    },
+    {
+      "id": "6420001",
+      "name": "Shaquaris Jones Smith",
+      "email": "jonessmithshaquaris@gmail.com",
+      "role": "user",
+      "openId": "ekgC7h64YYwtoaQSAS5Yxs"
+    },
+    {
+      "id": "6570238",
+      "name": "natalie",
+      "email": "nataliezubi@gmail.com",
+      "role": "user",
+      "openId": "4fphdpGo26MWuNPGxGZhav"
+    },
+    {
+      "id": "6570422",
+      "name": "Allen Gito",
+      "email": "allen@coachinayah.com",
+      "role": "user",
+      "openId": "LutL432YVRSuXzUAiF9GTz"
+    },
+    {
+      "id": "6571028",
+      "name": "Victoria Santos",
+      "email": "06victoriasantos@gmail.com",
+      "role": "user",
+      "openId": "JNLSE3ueiSdPDCRNbj3uU5"
+    },
+    {
+      "id": "6572045",
+      "name": "odufuyij",
+      "email": "odufuyij@aol.com",
+      "role": "user",
+      "openId": "YZBLA4CPcwMjX4TLCoyRWT"
+    },
+    {
+      "id": "6720273",
+      "name": "Lasandra Daniels",
+      "email": "lasandradaniels@gmail.com",
+      "role": "user",
+      "openId": "kP2onwDLCoDectFTur8kkv"
+    },
+    {
+      "id": "6720617",
+      "name": "wwrzesinska.v",
+      "email": "wwrzesinska.v@gmail.com",
+      "role": "user",
+      "openId": "76QqJCji73FUZVyEBVg9AK"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\topenId\n1\tBryson blocker\tbryson@stayly.com\tadmin\tnXFdDDobGPtzT2HBp5K8e7\n6330915\tRonald Pedrosa\tronald@coachinayah.com\tuser\tfKphAvDz7Y2bV7AZDjzHsi\n6390023\tSean Anderson\tsean@prestigeretreats.net\tuser\tBikkrwk5x2swvgJ32LSWPP\n6420001\tShaquaris Jones Smith\tjonessmithshaquaris@gmail.com\tuser\tekgC7h64YYwtoaQSAS5Yxs\n6570238\tnatalie\tnataliezubi@gmail.com\tuser\t4fphdpGo26MWuNPGxGZhav\n6570422\tAllen Gito\tallen@coachinayah.com\tuser\tLutL432YVRSuXzUAiF9GTz\n6571028\tVictoria Santos\t06victoriasantos@gmail.com\tuser\tJNLSE3ueiSdPDCRNbj3uU5\n6572045\todufuyij\todufuyij@aol.com\tuser\tYZBLA4CPcwMjX4TLCoyRWT\n6720273\tLasandra Daniels\tlasandradaniels@gmail.com\tuser\tkP2onwDLCoDectFTur8kkv\n6720617\twwrzesinska.v\twwrzesinska.v@gmail.com\tuser\t76QqJCji73FUZVyEBVg9AK\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}
