@@ -1,10 +1,10 @@
 /**
- * Webinar Environment Admin Router
+ * Webinar Environment Admin Router (Per-User Mode)
  * 
  * Provides admin-only endpoints for managing webinar mode:
- * - Toggle webinar mode on/off
- * - Get current webinar mode status
- * - List all cached properties available for webinar demos
+ * - Toggle webinar mode on/off for the CURRENT admin user
+ * - Get current webinar mode status for the CURRENT admin user
+ * - List all cached properties available for webinar demos (global pool)
  * - Delete cached properties
  */
 
@@ -12,10 +12,11 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import {
-  isWebinarMode,
+  isWebinarModeForUser,
   toggleWebinarMode,
   getAllCachedProperties,
   deleteCachedProperty,
+  getWebinarModeUsers,
 } from "../webinar-cache";
 
 // Admin-only guard
@@ -27,27 +28,35 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 export const webinarEnvRouter = router({
-  /** Get current webinar mode status */
-  getStatus: adminProcedure.query(async () => {
+  /** Get current webinar mode status for THIS admin user */
+  getStatus: adminProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+    const isActive = isWebinarModeForUser(userId);
+    const allActiveUsers = getWebinarModeUsers();
     return {
-      isActive: isWebinarMode(),
+      isActive,
+      userId,
+      activeUserCount: allActiveUsers.length,
+      activeUserIds: allActiveUsers,
     };
   }),
 
-  /** Toggle webinar mode on or off */
+  /** Toggle webinar mode on or off for THIS admin user */
   toggle: adminProcedure
     .input(z.object({
       enabled: z.boolean(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const result = await toggleWebinarMode(input.enabled, ctx.user.id);
+      const userId = ctx.user.id;
+      const result = await toggleWebinarMode(input.enabled, userId);
       return {
         isActive: result,
-        toggledBy: ctx.user.name || ctx.user.email || `User #${ctx.user.id}`,
+        toggledBy: ctx.user.name || ctx.user.email || `User #${userId}`,
+        toggledAt: new Date().toISOString(),
       };
     }),
 
-  /** List all cached properties available for webinar demos */
+  /** List all cached properties available for webinar demos (global pool) */
   listCachedProperties: adminProcedure.query(async () => {
     const properties = await getAllCachedProperties();
     return { properties };

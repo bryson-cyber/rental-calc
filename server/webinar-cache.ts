@@ -1,147 +1,155 @@
 /**
- * Webinar Cache Service
+ * Webinar Cache Service (Per-User Mode)
  * 
- * Manages "webinar mode" for live masterclass presentations.
- * When webinar mode is ON:
- * 1. Rate limiter is bypassed entirely
- * 2. In-memory cache serves expired entries
- * 3. DB cache serves expired entries
- * 4. Step 2 (property report) and Step 5 (full analysis) serve from cached data
+ * Manages "webinar mode" on a per-user basis for live masterclass presentations.
+ * When webinar mode is ON for a specific user:
+ * 1. Rate limiter is bypassed for THAT user's requests only
+ * 2. In-memory cache serves expired entries for THAT user only
+ * 3. DB cache serves expired entries for THAT user only
+ * 4. Step 2 and Step 5 serve from cached data for THAT user only
  * 
- * This ensures seamless demo experiences during live presentations
- * without consuming API quota or hitting rate limits.
+ * The cache pool is GLOBAL — any property ever run by ANY user is available.
+ * Other users are not affected when one user enables webinar mode.
  */
 
 import { getDb } from './db';
 import { webinarSettings, analysisReports, apiCache as apiCacheTable } from '../drizzle/schema';
-import { eq, like, desc, sql } from 'drizzle-orm';
+import { eq, like, desc } from 'drizzle-orm';
+import { getRequestContext } from './request-context';
 
 // ============================================
-// IN-MEMORY STATE
+// IN-MEMORY STATE (Per-User)
 // ============================================
 
-/** In-memory flag for fast checking (no DB round-trip on every request) */
-let webinarModeActive = false;
+/** Set of user IDs currently in webinar mode */
+const webinarModeUsers = new Set<number>();
 
 // ============================================
 // PUBLIC API
 // ============================================
 
 /**
- * Check if webinar mode is currently active.
- * Uses in-memory flag for zero-latency checks.
+ * Check if webinar mode is active for the CURRENT user (from request context).
+ * Uses AsyncLocalStorage to determine who is making the request.
+ * Returns false if no request context exists or user hasn't enabled webinar mode.
+ * 
+ * This function signature is unchanged from the global version —
+ * all 6 existing call sites work without modification.
  */
 export function isWebinarMode(): boolean {
-  return webinarModeActive;
+  const ctx = getRequestContext();
+  if (!ctx?.userId) return false;
+  return webinarModeUsers.has(ctx.userId);
 }
 
 /**
- * Toggle webinar mode on or off.
- * Persists to DB and updates in-memory flag.
+ * Check if webinar mode is active for a specific user ID.
+ * Use this when you have the user ID directly (e.g., in the router).
  */
-export async function toggleWebinarMode(enabled: boolean, updatedBy?: number): Promise<boolean> {
+export function isWebinarModeForUser(userId: number): boolean {
+  return webinarModeUsers.has(userId);
+}
+
+/**
+ * Toggle webinar mode on or off for a specific user.
+ * Persists to DB and updates in-memory Set.
+ */
+export async function toggleWebinarMode(enabled: boolean, userId: number): Promise<boolean> {
   try {
+    if (enabled) {
+      webinarModeUsers.add(userId);
+    } else {
+      webinarModeUsers.delete(userId);
+    }
+
     const db = await getDb();
     if (!db) {
       console.warn('[WebinarCache] DB unavailable, only setting in-memory flag');
-      webinarModeActive = enabled;
       return enabled;
     }
 
-    // Check if a row exists
-    const existing = await db.select().from(webinarSettings).limit(1);
+    const existing = await db.select()
+      .from(webinarSettings)
+      .where(eq(webinarSettings.toggledBy, userId))
+      .limit(1);
     
     if (existing.length > 0) {
-      // Update existing row
       await db.update(webinarSettings)
-        .set({
-          isActive: enabled ? 1 : 0,
-          toggledBy: updatedBy || null,
-          toggledAt: new Date(),
-        })
+        .set({ isActive: enabled ? 1 : 0, toggledAt: new Date() })
         .where(eq(webinarSettings.id, existing[0].id));
     } else {
-      // Insert new row
       await db.insert(webinarSettings)
-        .values({
-          isActive: enabled ? 1 : 0,
-          toggledBy: updatedBy || null,
-        });
+        .values({ isActive: enabled ? 1 : 0, toggledBy: userId });
     }
 
-    webinarModeActive = enabled;
-    console.log(`[WebinarCache] Webinar mode ${enabled ? 'ENABLED' : 'DISABLED'} by userId=${updatedBy || 'system'}`);
+    console.log(`[WebinarCache] Webinar mode ${enabled ? 'ENABLED' : 'DISABLED'} for userId=${userId}`);
     return enabled;
   } catch (error) {
     console.error('[WebinarCache] Failed to toggle webinar mode:', error);
-    // Still set in-memory flag as fallback
-    webinarModeActive = enabled;
     return enabled;
   }
 }
 
 /**
  * Initialize webinar mode from DB on server startup.
- * Restores the last known state.
+ * Restores per-user state for all users who had it enabled.
  */
 export async function initWebinarMode(): Promise<void> {
   try {
     const db = await getDb();
     if (!db) return;
 
-    const result = await db.select()
+    const activeRows = await db.select()
       .from(webinarSettings)
-      .limit(1);
+      .where(eq(webinarSettings.isActive, 1));
 
-    if (result.length > 0) {
-      webinarModeActive = result[0].isActive === 1;
-      console.log(`[WebinarCache] Initialized webinar mode: ${webinarModeActive ? 'ON' : 'OFF'}`);
+    webinarModeUsers.clear();
+    for (const row of activeRows) {
+      if (row.toggledBy) {
+        webinarModeUsers.add(row.toggledBy);
+      }
+    }
+
+    const activeCount = webinarModeUsers.size;
+    if (activeCount > 0) {
+      console.log(`[WebinarCache] Initialized: ${activeCount} user(s) in webinar mode (IDs: ${Array.from(webinarModeUsers).join(', ')})`);
     } else {
-      webinarModeActive = false;
-      console.log('[WebinarCache] No webinar mode setting found, defaulting to OFF');
+      console.log('[WebinarCache] Initialized: no users in webinar mode');
     }
   } catch (error) {
     console.error('[WebinarCache] Failed to initialize webinar mode:', error);
-    webinarModeActive = false;
+    webinarModeUsers.clear();
   }
+}
+
+/**
+ * Get the set of user IDs currently in webinar mode.
+ */
+export function getWebinarModeUsers(): number[] {
+  return Array.from(webinarModeUsers);
 }
 
 // ============================================
 // ADDRESS NORMALIZATION
 // ============================================
 
-/**
- * Normalize an address for consistent cache key matching.
- * Lowercases, trims, collapses spaces, strips trailing punctuation.
- */
 export function normalizeAddress(address: string): string {
   return address
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' ')       // collapse multiple spaces
-    .replace(/[.,]+$/, '')       // strip trailing punctuation
+    .replace(/\s+/g, ' ')
+    .replace(/[.,]+$/, '')
     .trim();
 }
 
 // ============================================
-// STEP 2 CACHE (Property Report / Rentalizer)
+// STEP 2 CACHE (Global pool)
 // ============================================
 
-/**
- * Cache Step 2 data (property report) for webinar use.
- * This is called automatically when a normal report is generated.
- * Data is stored in the existing api_cache table.
- */
 export async function cacheStep2Data(address: string, data: unknown): Promise<void> {
-  // Step 2 data is already cached by the normal cache layer.
-  // This function exists for explicit caching if needed.
   console.log(`[WebinarCache] Step 2 data cached for: ${address}`);
 }
 
-/**
- * Get cached Step 2 data for a property address.
- * Searches api_cache for rentalizer/property data, ignoring expiry.
- */
 export async function getCachedStep2Data(address: string): Promise<unknown | null> {
   try {
     const db = await getDb();
@@ -149,18 +157,13 @@ export async function getCachedStep2Data(address: string): Promise<unknown | nul
 
     const normalized = normalizeAddress(address);
     
-    // Search api_cache for entries matching this address
-    // Cache keys contain the address in various formats
     const results = await db.select()
       .from(apiCacheTable)
-      .where(
-        like(apiCacheTable.cacheKey, `%${normalized}%`)
-      )
+      .where(like(apiCacheTable.cacheKey, `%${normalized}%`))
       .orderBy(desc(apiCacheTable.updatedAt))
       .limit(5);
 
     if (results.length === 0) {
-      // Try partial match with just the street number and name
       const parts = normalized.split(',')[0]?.trim();
       if (parts) {
         const partialResults = await db.select()
@@ -194,22 +197,13 @@ export async function getCachedStep2Data(address: string): Promise<unknown | nul
 }
 
 // ============================================
-// STEP 5 CACHE (Full Analysis)
+// STEP 5 CACHE (Global pool)
 // ============================================
 
-/**
- * Cache Step 5 data (full analysis) for webinar use.
- * Data is stored in the analysis_reports table.
- */
 export async function cacheStep5Data(address: string, data: unknown): Promise<void> {
-  // Step 5 data is already stored in analysis_reports by the normal flow.
   console.log(`[WebinarCache] Step 5 data noted for: ${address}`);
 }
 
-/**
- * Get cached Step 5 data from analysis_reports, ignoring age.
- * Returns the most recent full analysis for the given address.
- */
 export async function getCachedStep5Data(address: string): Promise<unknown | null> {
   try {
     const db = await getDb();
@@ -217,7 +211,6 @@ export async function getCachedStep5Data(address: string): Promise<unknown | nul
 
     const normalized = normalizeAddress(address);
     
-    // Search analysis_reports for this address
     const results = await db.select()
       .from(analysisReports)
       .where(like(analysisReports.address, `%${normalized}%`))
@@ -225,7 +218,6 @@ export async function getCachedStep5Data(address: string): Promise<unknown | nul
       .limit(1);
 
     if (results.length === 0) {
-      // Try partial match
       const streetPart = normalized.split(',')[0]?.trim();
       if (streetPart) {
         const partialResults = await db.select()
@@ -250,22 +242,14 @@ export async function getCachedStep5Data(address: string): Promise<unknown | nul
   }
 }
 
-/**
- * Get Step 5 data from analysis_reports history.
- * Alias for getCachedStep5Data for backward compatibility.
- */
 export async function getStep5FromHistory(address: string): Promise<unknown | null> {
   return getCachedStep5Data(address);
 }
 
 // ============================================
-// ADMIN: LIST ALL CACHED PROPERTIES
+// ADMIN: LIST ALL CACHED PROPERTIES (Global pool)
 // ============================================
 
-/**
- * Get all properties that have cached data available for webinar mode.
- * Returns addresses from analysis_reports with their last analysis date.
- */
 export async function getAllCachedProperties(): Promise<Array<{
   id: number;
   address: string;
@@ -303,9 +287,6 @@ export async function getAllCachedProperties(): Promise<Array<{
   }
 }
 
-/**
- * Delete a cached property from analysis_reports.
- */
 export async function deleteCachedProperty(id: number): Promise<boolean> {
   try {
     const db = await getDb();

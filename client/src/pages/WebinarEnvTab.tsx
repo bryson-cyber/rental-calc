@@ -91,7 +91,7 @@ export function WebinarEnvTab() {
                 <CardTitle className="text-lg">Webinar Mode</CardTitle>
                 <CardDescription>
                   {isActive
-                    ? 'LIVE — Serving cached data, rate limits bypassed'
+                    ? 'LIVE — Serving cached data for YOUR session only. Other users are unaffected.'
                     : 'OFF — Normal operation, live API calls'}
                 </CardDescription>
               </div>
@@ -117,7 +117,8 @@ export function WebinarEnvTab() {
             <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-amber-200/80">
-                Webinar mode is active. All API rate limits are bypassed and expired cache entries will be served.
+                Webinar mode is active for YOUR account only. Other users still get live data.
+                Rate limits are bypassed and expired cache entries will be served for your session.
                 Remember to turn this off after your presentation.
               </p>
             </div>
@@ -131,16 +132,18 @@ export function WebinarEnvTab() {
           <CardTitle className="text-base">How Webinar Mode Works</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>When webinar mode is <strong className="text-foreground">ON</strong>:</p>
+          <p>When webinar mode is <strong className="text-foreground">ON</strong> (per-user):</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Only affects YOUR session — other users are not impacted</li>
             <li>Rate limiter is completely bypassed (no daily/per-minute limits)</li>
             <li>Expired cache entries are served instead of being deleted</li>
             <li>Step 2 (Property Report) falls back to cached data if API fails</li>
             <li>Step 5 (Full Analysis) falls back to previously saved reports</li>
+            <li>Cache pool is global — any property ANY user has ever run is available</li>
           </ul>
           <p className="pt-2">
             This ensures smooth demo experiences during live presentations without consuming API quota.
-            Properties listed below are available for instant demo use.
+            Properties listed below are available for instant demo use — from all users, not just yours.
           </p>
         </CardContent>
       </Card>
