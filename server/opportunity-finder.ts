@@ -23,7 +23,7 @@ const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 // rateLimitedAirDNARequest no longer used directly - getAirDNAEstimate now delegates to getRentalizerEstimate
 import { canPerformAnalysis, recordAnalysisUsage } from './usage-limits';
-import { getRentalizerComps, getRentalizerEstimate } from './airdna';
+import { exploreListingsInRadius, getRentalizerEstimate } from './airdna';
 import { logActivity, ActionCategory, ActionType } from './activity';
 
 // ============================================
@@ -337,11 +337,25 @@ async function getCompMedianRevenue(
   rentalizerRevenue: number
 ): Promise<{ adjustedRevenue: number; adjustedAdr: number; adjustedOccupancy: number; source: string; compCount: number; revenueScenarios?: { conservative: number; target: number; optimistic: number; source: string; compCount: number } }> {
   try {
-    const compsData = await getRentalizerComps(address, bedrooms, bathrooms, 25);
-    if (!compsData || !compsData.comps || compsData.comps.length === 0) {
+    // Use exploreListingsInRadius (which calls /listing/comps/area — a working endpoint)
+    // instead of getRentalizerComps (which calls /rentalizer/comps — a non-existent endpoint)
+    const radiusListings = await exploreListingsInRadius(address, 3000, { bedrooms, bathrooms }, 25);
+    if (!radiusListings || radiusListings.length === 0) {
       console.log(`[Comp-Median] No comps found for ${address}, using Rentalizer as-is`);
       return { adjustedRevenue: rentalizerRevenue, adjustedAdr: 0, adjustedOccupancy: 0, source: 'rentalizer', compCount: 0, revenueScenarios: undefined };
     }
+
+    // Map radius listings to comp-like objects
+    const compsData = { comps: radiusListings.map(l => ({
+      bedrooms: l.bedrooms,
+      bathrooms: l.bathrooms,
+      annual_revenue: l.annual_revenue || 0,
+      adr: l.adr || 0,
+      occupancy: l.occupancy || 0,
+      distance_meters: l.distance_meters || 0,
+      superhost: l.superhost || false,
+      professionally_managed: l.professionally_managed || false,
+    })) };
 
     // Match same bed/bath (within 0.5 for bathrooms)
     const matchesBathrooms = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;

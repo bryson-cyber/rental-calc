@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock the dependencies before importing the module
 vi.mock('./api-logger', () => ({
   logApiCall: vi.fn(),
-  checkDailyLimit: vi.fn().mockResolvedValue({ currentCount: 0, limit: 600, isLimited: false }),
+  checkDailyLimit: vi.fn().mockResolvedValue({ currentCount: 0, limit: 700, isLimited: false }),
 }));
 
 vi.mock('./_core/notification', () => ({
@@ -21,14 +21,14 @@ describe('Rate Limiter - Fail-Closed Design', () => {
     vi.clearAllMocks();
   });
 
-  it('should export DAILY_HARD_LIMIT as 600', async () => {
+  it('should export DAILY_HARD_LIMIT as 700 (24K monthly / 30 days with buffer)', async () => {
     const { DAILY_HARD_LIMIT } = await import('./airdna-rate-limiter');
-    expect(DAILY_HARD_LIMIT).toBe(600);
+    expect(DAILY_HARD_LIMIT).toBe(700);
   });
 
-  it('should export PER_MINUTE_LIMIT as 15', async () => {
+  it('should export PER_MINUTE_LIMIT as 12', async () => {
     const { PER_MINUTE_LIMIT } = await import('./airdna-rate-limiter');
-    expect(PER_MINUTE_LIMIT).toBe(15);
+    expect(PER_MINUTE_LIMIT).toBe(12);
   });
 
   it('should expose getRateLimiterStats with dailyCallCount', async () => {
@@ -38,18 +38,18 @@ describe('Rate Limiter - Fail-Closed Design', () => {
     expect(stats).toHaveProperty('dailyHardLimit');
     expect(stats).toHaveProperty('perMinuteLimit');
     expect(stats).toHaveProperty('callsInLastMinute');
-    expect(stats.dailyHardLimit).toBe(600);
-    expect(stats.perMinuteLimit).toBe(15);
+    expect(stats.dailyHardLimit).toBe(700);
+    expect(stats.perMinuteLimit).toBe(12);
   });
 
   it('should have AirDNARateLimitError class', async () => {
     const { AirDNARateLimitError } = await import('./airdna-rate-limiter');
-    const error = new AirDNARateLimitError('daily', 600, 600);
+    const error = new AirDNARateLimitError('daily', 700, 700);
     expect(error).toBeInstanceOf(Error);
     expect(error.isRateLimit).toBe(true);
     expect(error.type).toBe('daily');
-    expect(error.currentCount).toBe(600);
-    expect(error.limit).toBe(600);
+    expect(error.currentCount).toBe(700);
+    expect(error.limit).toBe(700);
     expect(error.message).toContain('daily API limit reached');
   });
 
@@ -60,9 +60,16 @@ describe('Rate Limiter - Fail-Closed Design', () => {
     expect(error.message).toContain('too many requests per minute');
   });
 
-  it('should export NON_ADMIN_SOFT_LIMIT as 550', async () => {
+  it('should export NON_ADMIN_SOFT_LIMIT as 400', async () => {
     const { NON_ADMIN_SOFT_LIMIT } = await import('./airdna-rate-limiter');
-    expect(NON_ADMIN_SOFT_LIMIT).toBe(550);
+    expect(NON_ADMIN_SOFT_LIMIT).toBe(400);
+  });
+
+  it('should export ADMIN_DAILY_LIMIT (admins are no longer unlimited)', async () => {
+    const { ADMIN_DAILY_LIMIT } = await import('./airdna-rate-limiter');
+    expect(ADMIN_DAILY_LIMIT).toBe(700);
+    // Admin limit * 30 days should stay under 24K monthly budget
+    expect(ADMIN_DAILY_LIMIT * 30).toBeLessThanOrEqual(24000);
   });
 });
 

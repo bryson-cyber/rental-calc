@@ -23,17 +23,30 @@ const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 // RATE LIMIT CONFIGURATION
 // ============================================
 
-/** Hard daily limit - non-admin requests are BLOCKED beyond this */
-const DAILY_HARD_LIMIT = 600;
+/** 
+ * MONTHLY BUDGET: 24,000 calls/month on current AirDNA plan.
+ * Daily budget = 24,000 / 30 = 800 calls/day.
+ * We set limits conservatively below this to leave headroom.
+ */
+
+/** Hard daily limit - ALL requests (including admin) are BLOCKED beyond this */
+const DAILY_HARD_LIMIT = 700;
+
+/** Admin daily limit - admins are blocked beyond this (was unlimited before) */
+const ADMIN_DAILY_LIMIT = 700;
 
 /** Soft limit for non-admins - non-admin requests are paused beyond this to conserve quota */
-const NON_ADMIN_SOFT_LIMIT = 550;
+const NON_ADMIN_SOFT_LIMIT = 400;
 
 /** Warning threshold - notifications sent beyond this */
-const DAILY_WARN_THRESHOLD = 500;
+const DAILY_WARN_THRESHOLD = 350;
 
 /** Per-minute limit - prevents burst usage */
-const PER_MINUTE_LIMIT = 15;
+const PER_MINUTE_LIMIT = 12;
+
+/** Monthly budget tracking */
+const MONTHLY_BUDGET = 24_000;
+const MONTHLY_WARN_THRESHOLD = 20_000;
 
 /** Track per-minute calls in memory */
 const minuteCallLog: number[] = [];
@@ -168,6 +181,22 @@ export class AirDNARateLimitError extends Error {
 }
 
 // ============================================
+// IN-FLIGHT REQUEST DEDUPLICATION
+// ============================================
+
+/**
+ * Prevents duplicate concurrent requests to the same endpoint+body.
+ * If request A is in-flight for endpoint X with body Y, and request B
+ * comes in for the same endpoint X with body Y, request B will await
+ * request A's result instead of making a second API call.
+ */
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+function getDedupeKey(endpoint: string, body?: Record<string, unknown>): string {
+  return `${endpoint}::${body ? JSON.stringify(body) : ''}`;
+}
+
+// ============================================
 // CENTRALIZED API REQUEST FUNCTION
 // ============================================
 
@@ -203,6 +232,45 @@ export async function rateLimitedAirDNARequest<T>(
     bypassRateLimit?: boolean;
     /** If true, this request is from an admin user — never block, only warn */
     isAdmin?: boolean;
+    /** If true, skip in-flight deduplication (use when each call must be unique) */
+    skipDedupe?: boolean;
+  }
+): Promise<T> {
+  // ── In-flight deduplication: reuse pending request for same endpoint+body ──
+  if (!options?.skipDedupe) {
+    const dedupeKey = getDedupeKey(endpoint, body);
+    const existing = inFlightRequests.get(dedupeKey);
+    if (existing) {
+      console.log(`[AirDNA-RateLimit] DEDUPE: reusing in-flight request for ${endpoint}`);
+      return existing as Promise<T>;
+    }
+    
+    // Wrap the actual request and store it
+    const requestPromise = _rateLimitedAirDNARequestImpl<T>(endpoint, method, body, options);
+    inFlightRequests.set(dedupeKey, requestPromise);
+    
+    // Clean up when done (success or failure)
+    requestPromise.finally(() => {
+      inFlightRequests.delete(dedupeKey);
+    });
+    
+    return requestPromise;
+  }
+  
+  return _rateLimitedAirDNARequestImpl<T>(endpoint, method, body, options);
+}
+
+/** Internal implementation — callers should use rateLimitedAirDNARequest */
+async function _rateLimitedAirDNARequestImpl<T>(
+  endpoint: string,
+  method: "GET" | "POST" = "POST",
+  body?: Record<string, unknown>,
+  options?: {
+    retries?: number;
+    source?: string;
+    bypassRateLimit?: boolean;
+    isAdmin?: boolean;
+    skipDedupe?: boolean;
   }
 ): Promise<T> {
   const retries = options?.retries ?? 3;
@@ -220,13 +288,11 @@ export async function rateLimitedAirDNARequest<T>(
   // ── Rate limit checks (unless bypassed or webinar mode) ──
   if (!options?.bypassRateLimit && !isWebinarMode()) {
     // 1. Check per-minute limit (memory-based, instant)
-    // Admins are COMPLETELY EXEMPT from per-minute limits
-    // Non-admins: wait up to 60s for the per-minute window to clear instead of failing immediately
+    // ALL users (including admin) wait up to 60s for the per-minute window to clear
     let callsThisMinute = getCallsInLastMinute();
     if (callsThisMinute >= PER_MINUTE_LIMIT) {
-      if (isAdmin) {
-        console.log(`[AirDNA-RateLimit] Admin bypassing per-minute limit: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
-      } else {
+      // ALL users (including admin) must respect per-minute limits to avoid AirDNA throttling
+      {
         // Wait for the per-minute window to clear (check every 5s, up to 60s)
         console.log(`[AirDNA-RateLimit] Per-minute limit hit (${callsThisMinute}/${PER_MINUTE_LIMIT}), waiting for window to clear...`);
         let waited = 0;
@@ -283,11 +349,39 @@ export async function rateLimitedAirDNARequest<T>(
       throw new AirDNARateLimitError('daily', dailyCallCount, NON_ADMIN_SOFT_LIMIT);
     }
     
-    // ADMIN users: only blocked at the absolute hard limit (never blocked in practice — just warned)
+    // ADMIN users: now ALSO blocked at ADMIN_DAILY_LIMIT (was unlimited before — that caused overages)
+    if (isAdmin && dailyCallCount >= ADMIN_DAILY_LIMIT) {
+      console.error(`[AirDNA-RateLimit] ADMIN DAILY LIMIT EXCEEDED: ${dailyCallCount}/${ADMIN_DAILY_LIMIT} - BLOCKING ADMIN REQUEST`);
+      
+      resetDailyNotifyIfNewDay();
+      if (!dailyLimitNotified) {
+        dailyLimitNotified = true;
+        notifyOwner({
+          title: 'ALERT: Admin Daily API Limit REACHED',
+          content: `AirDNA API has hit the admin limit of ${ADMIN_DAILY_LIMIT} calls today (actual: ${dailyCallCount}). ALL requests are now blocked including admin. Use webinar mode for cached data. The limit resets at midnight.`,
+        }).catch(() => {});
+      }
+
+      logApiCall({
+        provider: 'airdna',
+        endpoint,
+        params: body,
+        statusCode: 429,
+        success: false,
+        errorMessage: `Admin daily limit: ${dailyCallCount}/${ADMIN_DAILY_LIMIT}`,
+        responseTimeMs: 0,
+        cacheHit: false,
+        source: source || 'rate_limited_admin',
+      });
+
+      throw new AirDNARateLimitError('daily', dailyCallCount, ADMIN_DAILY_LIMIT);
+    }
+    
+    // ALL users: blocked at the absolute hard limit
     if (dailyCallCount >= DAILY_HARD_LIMIT) {
       if (isAdmin) {
-        // Admin is NEVER blocked — just log a warning
-        console.warn(`[AirDNA-RateLimit] Admin request ALLOWED past hard limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`);
+        // Should not reach here since ADMIN_DAILY_LIMIT <= DAILY_HARD_LIMIT, but safety net
+        console.error(`[AirDNA-RateLimit] Admin request BLOCKED at hard limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`);
       } else {
         console.error(`[AirDNA-RateLimit] DAILY LIMIT EXCEEDED (memory): ${dailyCallCount}/${DAILY_HARD_LIMIT} - BLOCKING REQUEST`);
         
@@ -444,11 +538,15 @@ export function getRateLimiterStats() {
     callsInLastMinute: getCallsInLastMinute(),
     perMinuteLimit: PER_MINUTE_LIMIT,
     dailyHardLimit: DAILY_HARD_LIMIT,
+    adminDailyLimit: ADMIN_DAILY_LIMIT,
+    nonAdminSoftLimit: NON_ADMIN_SOFT_LIMIT,
     dailyWarnThreshold: DAILY_WARN_THRESHOLD,
     dailyLimitNotified,
     dailyCallCount,
     dailyCountDate,
+    monthlyBudget: MONTHLY_BUDGET,
+    monthlyWarnThreshold: MONTHLY_WARN_THRESHOLD,
   };
 }
 
-export { AIRDNA_API_BASE, DAILY_HARD_LIMIT, PER_MINUTE_LIMIT, NON_ADMIN_SOFT_LIMIT };
+export { AIRDNA_API_BASE, DAILY_HARD_LIMIT, PER_MINUTE_LIMIT, NON_ADMIN_SOFT_LIMIT, ADMIN_DAILY_LIMIT, MONTHLY_BUDGET };

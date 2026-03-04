@@ -12665,3 +12665,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Frontend: Created client/src/pages/WebinarEnvTab.tsx — admin tab with toggle switch, status card, warning banner, cached properties list with delete
 - [x] Frontend: Added Webinar Env tab to UnifiedAdmin.tsx (lazy loaded, between Webinar SMS and Data Policy)
 - [x] Tests: 16 vitest tests passing (normalizeAddress, isWebinarMode, module exports, tRPC router integration for admin/non-admin access control)
+
+## API Call Optimization Fixes — Critical (Mar 3, 2026)
+- [x] Remove dead /rentalizer/comps endpoint (100% failure rate, 1335 wasted calls)
+- [x] Add in-flight request deduplication to prevent duplicate concurrent API calls
+- [x] Deduplicate getSubmarketsInMarket/exploreSubmarketsWithMetrics calls in Step 5 (called 2-3x per analysis)
+- [x] Fix getAllUSMarkets persistent DB cache to survive server restarts properly (verified: already working since Feb 4)
+- [x] Tighten rate limiter daily limits to stay under 24K/month budget
+- [x] Write tests to verify API call reduction (16 new tests in api-optimization.test.ts, all passing)
+- [x] Update existing rate-limiter tests for new limit values (rate-limiter.test.ts + __tests__/rate-limiter.test.ts)

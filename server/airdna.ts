@@ -1430,6 +1430,15 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
 // ============================================
 
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketData[]> {
+  // Check cache first — this function is called 3-4 times per analysis for the same market
+  const cacheKey = apiCache.generateKey('submarkets_in_market', { marketId });
+  const cached = await apiCache.getAsync<SubmarketData[]>(cacheKey);
+  if (cached) {
+    logCacheHit('submarkets_in_market');
+    console.log(`[getSubmarketsInMarket] CACHE HIT for ${marketId} (${cached.length} submarkets)`);
+    return cached;
+  }
+
   try {
     // First, get the market/submarket details
     // Check if this is a submarket ID (starts with 'submarket-') or a market ID
@@ -1649,6 +1658,9 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
       .slice(0, 10);
     
     console.log(`[getSubmarketsInMarket] Returning ${validSubmarkets.length} submarkets with metrics`);
+    
+    // Cache the result to prevent duplicate calls within the same analysis
+    apiCache.set(cacheKey, validSubmarkets, 'market_details');
     
     return validSubmarkets;
   } catch (error) {
@@ -5223,6 +5235,19 @@ export async function exploreSubmarketsWithMetrics(
   const sortBy = options?.sortBy || 'overall';
   const limit = options?.limit || 15;
 
+  // Check cache first — this function is called 2+ times per analysis for the same market
+  const cacheKey = apiCache.generateKey('explore_submarkets', { marketId, sortBy, limit });
+  const cached = await apiCache.getAsync<{
+    market: { id: string; name: string; metrics: MarketMetrics };
+    submarkets: SubmarketExplorationResult[];
+    topRecommendation?: SubmarketExplorationResult;
+  }>(cacheKey);
+  if (cached) {
+    logCacheHit('explore_submarkets');
+    console.log(`[exploreSubmarketsWithMetrics] CACHE HIT for ${marketId} (${cached.submarkets.length} submarkets)`);
+    return cached;
+  }
+
   console.log(`[exploreSubmarketsWithMetrics] Exploring submarkets for market ${marketId}`);
 
   // Get market details first
@@ -5351,7 +5376,7 @@ export async function exploreSubmarketsWithMetrics(
 
   const topRecommendation = sortedResults[0];
 
-  return {
+  const result = {
     market: {
       id: marketId,
       name: marketDetails.name,
@@ -5366,6 +5391,11 @@ export async function exploreSubmarketsWithMetrics(
     submarkets: sortedResults.slice(0, limit),
     topRecommendation,
   };
+
+  // Cache the result to prevent duplicate calls within the same analysis
+  apiCache.set(cacheKey, result, 'market_details');
+
+  return result;
 }
 
 // Helper to get market metrics
@@ -6635,70 +6665,19 @@ export interface RentalizerCompData {
   };
 }
 
+/**
+ * @deprecated This endpoint (/rentalizer/comps) does not exist in AirDNA's API.
+ * Use exploreListingsInRadius() instead, which calls /listing/comps/area (a working endpoint).
+ * Kept as a stub that always returns null to avoid breaking any remaining callers.
+ */
 export async function getRentalizerComps(
   address: string,
   bedrooms?: number,
   bathrooms?: number,
   limit: number = 25
 ): Promise<RentalizerCompData | null> {
-  const cacheKey = apiCache.generateKey('rentalizer_comps', { address: address.toLowerCase().trim(), bedrooms, bathrooms, limit });
-  const cached = await apiCache.getAsync<RentalizerCompData>(cacheKey);
-  if (cached) { logCacheHit('rentalizer_comps'); return cached; }
-
-  try {
-    const response = await makeApiRequest("/rentalizer/comps", "POST", {
-      address,
-      bedrooms,
-      bathrooms,
-      pagination: { page_size: Math.min(limit, 25), offset: 0 },
-    });
-    const responsePayload = (response as any)?.payload;
-    if (!responsePayload) {
-      return null;
-    }
-
-    const comps = responsePayload.comps || responsePayload.listings || [];
-    const details = responsePayload.details || {};
-
-    const result: RentalizerCompData = {
-      comps: comps.map((c: any) => ({
-        listing_id: c.id || c.listing_id,
-        title: c.title || c.name || "Untitled",
-        bedrooms: c.bedrooms ?? 0,
-        bathrooms: c.bathrooms ?? 0,
-        annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
-        adr: c.adr_ltm || c.adr || 0,
-        occupancy: c.occupancy_rate_ltm || c.occupancy || 0,
-        rating: c.rating || null,
-        reviews: c.review_count || c.reviews || 0,
-        distance_meters: c.distance_meters || 0,
-        airbnb_url: c.airbnb_property_id 
-          ? `https://www.airbnb.com/rooms/${c.airbnb_property_id}`
-          : undefined,
-        vrbo_url: c.vrbo_property_id
-          ? `https://www.vrbo.com/${c.vrbo_property_id}`
-          : undefined,
-        image_url: c.image_url || c.thumbnail_url,
-        property_type: c.property_type || "unknown",
-        amenities: c.amenities ? Object.keys(c.amenities).filter(k => c.amenities[k]) : [],
-        last_review_date: c.last_review_date,
-        superhost: c.superhost === true,
-        professionally_managed: c.professionally_managed === true,
-      })),
-      market_context: {
-        market_id: details.location?.market_id || "",
-        market_name: details.location?.market_name || "",
-        submarket_id: details.location?.submarket_id,
-        submarket_name: details.location?.submarket_name,
-      },
-    };
-    apiCache.set(cacheKey, result);
-    setDbCache(`rentalizer_comps:${address.toLowerCase().trim()}`, 'rentalizer_comps', result, 24 * 60 * 60 * 1000).catch(() => {});
-    return result;
-  } catch (error) {
-    console.error("Error fetching rentalizer comps:", error);
-    return null;
-  }
+  console.warn('[DEPRECATED] getRentalizerComps called — this endpoint does not exist. Use exploreListingsInRadius instead.');
+  return null;
 }
 
 // ============================================

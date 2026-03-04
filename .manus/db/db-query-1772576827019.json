@@ -1,0 +1,230 @@
+{
+  "query": "SELECT id, address, city, state, bedrooms, bathrooms, annualRevenueRealistic, verdict, createdAt FROM analysis_reports ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, city, state, bedrooms, bathrooms, annualRevenueRealistic, verdict, createdAt FROM analysis_reports ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "780001",
+      "address": "1234 Main St, Denver, CO 80202",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-03-02 23:49:34"
+    },
+    {
+      "id": "750001",
+      "address": "1414 Fountain View Dr #101, Houston, TX 77057",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "24069",
+      "verdict": "NULL",
+      "createdAt": "2026-01-28 05:23:44"
+    },
+    {
+      "id": "720002",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-05 01:24:21"
+    },
+    {
+      "id": "720001",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-05 01:08:41"
+    },
+    {
+      "id": "690001",
+      "address": "456 Congress Ave., Austin, TX, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-04 23:15:39"
+    },
+    {
+      "id": "660004",
+      "address": "123 Main St, Austin, TX, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-04 21:17:00"
+    },
+    {
+      "id": "660003",
+      "address": "4218 Delmar Boulevard, St. Louis, MO, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-04 20:42:20"
+    },
+    {
+      "id": "660002",
+      "address": "789 Music Square West, Nashville, TN, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-01-04 20:35:20"
+    },
+    {
+      "id": "660001",
+      "address": "456 Broadway, Nashville, TN, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 20:29:23"
+    },
+    {
+      "id": "630002",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 20:16:08"
+    },
+    {
+      "id": "630001",
+      "address": "123 Main St, Denver, Colorado, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "CAUTION",
+      "createdAt": "2026-01-04 20:06:52"
+    },
+    {
+      "id": "600001",
+      "address": "456 Broadway, Nashville, TN, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 19:39:39"
+    },
+    {
+      "id": "570003",
+      "address": "123 Main St, Nashville, TN, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 19:17:15"
+    },
+    {
+      "id": "570002",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 19:17:01"
+    },
+    {
+      "id": "570001",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "PASS",
+      "createdAt": "2026-01-04 19:10:02"
+    },
+    {
+      "id": "540001",
+      "address": "1500 S Congress Ave, Austin, TX, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 18:56:48"
+    },
+    {
+      "id": "510001",
+      "address": "555 Market St, San Francisco, California, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "CAUTION",
+      "createdAt": "2026-01-04 18:28:42"
+    },
+    {
+      "id": "480004",
+      "address": "456 Oak St, Los Angeles, California, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "PASS",
+      "createdAt": "2026-01-04 18:15:20"
+    },
+    {
+      "id": "480003",
+      "address": "123 Main Avenue, Chicago, Illinois, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "2",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "GO",
+      "createdAt": "2026-01-04 18:08:17"
+    },
+    {
+      "id": "480002",
+      "address": "500 Broadway, New York, NY, USA",
+      "city": "NULL",
+      "state": "NULL",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "annualRevenueRealistic": "NULL",
+      "verdict": "CAUTION",
+      "createdAt": "2026-01-04 17:58:57"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\tcity\tstate\tbedrooms\tbathrooms\tannualRevenueRealistic\tverdict\tcreatedAt\n780001\t1234 Main St, Denver, CO 80202\tNULL\tNULL\t3\t2.0\tNULL\tNULL\t2026-03-02 23:49:34\n750001\t1414 Fountain View Dr #101, Houston, TX 77057\tNULL\tNULL\t1\t1.0\t24069\tNULL\t2026-01-28 05:23:44\n720002\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\tNULL\t3\t2.0\tNULL\tNULL\t2026-01-05 01:24:21\n720001\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\tNULL\t2\t2.0\tNULL\tNULL\t2026-01-05 01:08:41\n690001\t456 Congress Ave., Austin, TX, USA\tNULL\tNULL\t2\t1.0\tNULL\tNULL\t2026-01-04 23:15:39\n660004\t123 Main St, Austin, TX, USA\tNULL\tNULL\t2\t1.0\tNULL\tNULL\t2026-01-04 21:17:00\n660003\t4218 Delmar Boulevard, St. Louis, MO, USA\tNULL\tNULL\t3\t2.0\tNULL\tNULL\t2026-01-04 20:42:20\n660002\t789 Music Square West, Nashville, TN, USA\tNULL\tNULL\t2\t1.0\tNULL\tNULL\t2026-01-04 20:35:20\n660001\t456 Broadway, Nashville, TN, USA\tNULL\tNULL\t2\t1.0\tNULL\tGO\t2026-01-04 20:29:23\n630002\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\tNULL\t3\t2.0\tNULL\tGO\t2026-01-04 20:16:08\n630001\t123 Main St, Denver, Colorado, USA\tNULL\tNULL\t2\t1.0\tNULL\tCAUTION\t2026-01-04 20:06:52\n600001\t456 Broadway, Nashville, TN, USA\tNULL\tNULL\t2\t1.0\tNULL\tGO\t2026-01-04 19:39:39\n570003\t123 Main St, Nashville, TN, USA\tNULL\tNULL\t3\t2.0\tNULL\tGO\t2026-01-04 19:17:15\n570002\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\tNULL\t2\t1.0\tNULL\tGO\t2026-01-04 19:17:01\n570001\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\tNULL\t3\t2.0\tNULL\tPASS\t2026-01-04 19:10:02\n540001\t1500 S Congress Ave, Austin, TX, USA\tNULL\tNULL\t3\t2.0\tNULL\tGO\t2026-01-04 18:56:48\n510001\t555 Market St, San Francisco, California, USA\tNULL\tNULL\t2\t1.0\tNULL\tCAUTION\t2026-01-04 18:28:42\n480004\t456 Oak St, Los Angeles, California, USA\tNULL\tNULL\t2\t1.0\tNULL\tPASS\t2026-01-04 18:15:20\n480003\t123 Main Avenue, Chicago, Illinois, USA\tNULL\tNULL\t2\t1.0\tNULL\tGO\t2026-01-04 18:08:17\n480002\t500 Broadway, New York, NY, USA\tNULL\tNULL\t1\t1.0\tNULL\tCAUTION\t2026-01-04 17:58:57\n",
+  "stderr": "",
+  "execution_time_ms": 346
+}

@@ -24,7 +24,7 @@ import {
   exploreSubmarketsWithMetrics,
   getListingComps,
   getListingFuturePricing,
-  getRentalizerComps,
+  // getRentalizerComps removed — endpoint /rentalizer/comps does not exist (100% failure rate)
   getSinglePropertyDetails,
   getSubmarketListings,
   getQualifyingCompetitors,
@@ -1686,22 +1686,47 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // Step 6.10: Fetch Rentalizer comps for enhanced competitor data
+  // Step 6.10: Fetch comps via /listing/comps/area (replaces dead /rentalizer/comps endpoint)
   let rentalizer_comps: RentalizerCompData | null = null;
   
   try {
-    console.log(`[ArbitrageAnalysis] Fetching Rentalizer comps for ${address}...`);
-    const comps = await getRentalizerComps(address, actualBedrooms, actualBathrooms, 25);
+    console.log(`[ArbitrageAnalysis] Fetching radius comps for ${address}...`);
+    const radiusListings = await exploreListingsInRadius(address, 3000, { bedrooms: actualBedrooms, bathrooms: actualBathrooms }, 25);
     
-    if (comps && comps.comps.length > 0) {
-      rentalizer_comps = comps;
-      const superhostCount = comps.comps.filter(c => c.superhost).length;
-      const professionalCount = comps.comps.filter(c => c.professionally_managed).length;
-      const avgDistance = comps.comps.reduce((sum, c) => sum + c.distance_meters, 0) / comps.comps.length;
-      console.log(`[ArbitrageAnalysis] Got ${comps.comps.length} Rentalizer comps. Superhosts: ${superhostCount}/${comps.comps.length}, Professional: ${professionalCount}/${comps.comps.length}, Avg Distance: ${Math.round(avgDistance)}m`);
+    if (radiusListings && radiusListings.length > 0) {
+      // Map ListingData[] to RentalizerCompData shape for downstream compatibility
+      rentalizer_comps = {
+        comps: radiusListings.map(l => ({
+          listing_id: l.id,
+          title: l.title,
+          bedrooms: l.bedrooms,
+          bathrooms: l.bathrooms,
+          annual_revenue: l.annual_revenue || 0,
+          adr: l.adr || 0,
+          occupancy: l.occupancy || 0,
+          rating: l.rating,
+          reviews: l.reviews || 0,
+          distance_meters: l.distance_meters || 0,
+          airbnb_url: l.airbnb_url,
+          image_url: l.image_url,
+          property_type: l.property_type || 'Unknown',
+          amenities: l.amenities || [],
+          last_review_date: l.last_review_date,
+          superhost: l.superhost || false,
+          professionally_managed: l.professionally_managed || false,
+        })),
+        market_context: {
+          market_id: '',
+          market_name: '',
+        }
+      };
+      const superhostCount = rentalizer_comps.comps.filter(c => c.superhost).length;
+      const professionalCount = rentalizer_comps.comps.filter(c => c.professionally_managed).length;
+      const avgDistance = rentalizer_comps.comps.reduce((sum, c) => sum + c.distance_meters, 0) / rentalizer_comps.comps.length;
+      console.log(`[ArbitrageAnalysis] Got ${rentalizer_comps.comps.length} radius comps. Superhosts: ${superhostCount}/${rentalizer_comps.comps.length}, Professional: ${professionalCount}/${rentalizer_comps.comps.length}, Avg Distance: ${Math.round(avgDistance)}m`);
     }
   } catch (error) {
-    console.error('[ArbitrageAnalysis] Error fetching Rentalizer comps:', error);
+    console.error('[ArbitrageAnalysis] Error fetching radius comps:', error);
   }
   
   // Step 6.11: Check if property already exists in AirDNA database (was previously listed)
