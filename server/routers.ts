@@ -91,7 +91,7 @@ export const appRouter = router({
       const envOwnerOpenId = ENV.ownerOpenId;
       const isOwner = userOpenId === envOwnerOpenId;
       if (!isOwner && opts.ctx.user.role === 'admin') {
-        console.log(`[auth.me] isOwner=false for admin user. userOpenId="${userOpenId}" envOwnerOpenId="${envOwnerOpenId}" match=${userOpenId === envOwnerOpenId}`);
+        console.log(`[auth.me] isOwner=false for admin user. userOpenId="${userOpenId}" envOwnerOpenId="${envOwnerOpenId}"`);
       }
       return { ...opts.ctx.user, isOwner };
     }),

@@ -12777,3 +12777,6 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Revenue Edit Access Fix (3/5/2026)
 - [x] Revert revenue edit from isAdmin back to isOwner (bryson@stayly.com only)
 - [x] Investigate why isOwner wasn't working — confirmed OWNER_OPEN_ID matches bryson@stayly.com correctly. User may have been logged in with bryson@coachinayah.com at the time.
+
+## Revenue Edit Bug - Confirmed (3/5/2026)
+- [ ] Fix: Revenue edit not showing for bryson@stayly.com despite being logged in as owner (confirmed via screenshot)

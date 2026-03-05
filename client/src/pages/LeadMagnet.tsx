@@ -418,6 +418,7 @@ export default function LeadMagnet() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
   const isOwner = isAuthenticated && !!(user as any)?.isOwner;
+
   
   // Terms of Service acceptance state
   const [tosAccepted, setTosAccepted] = useState(() => hasTosBeenAccepted());
