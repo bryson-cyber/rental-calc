@@ -1033,7 +1033,7 @@ export const webinarSmsRouter = router({
       webinarApiKeyConfigured: !!creds.apiKey,
       webinarHashConfigured: !!creds.webinarHash,
       // Calendar settings
-      calendarAutoSend: settings["calendar_auto_send"] !== "false", // Default ON
+      calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
       calendarEventDescription: settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION,
     };
@@ -2291,19 +2291,16 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       };
     }),
   // ═══ CALENDAR SETTINGS ═════════════════════════════════════════════════════
-  /** Save calendar invite settings (auto-send, custom event name/description) */
+  /** Save calendar invite settings (custom event name/description). Auto-send is always on. */
   saveCalendarSettings: adminProcedure
     .input(z.object({
-      calendarAutoSend: z.boolean(),
       calendarEventName: z.string().max(200).optional(),
       calendarEventDescription: z.string().max(2000).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const upserts = [
-        { key: "calendar_auto_send", value: input.calendarAutoSend ? "true" : "false", desc: "Auto-send calendar invites on registration" },
-      ];
+      const upserts: Array<{ key: string; value: string; desc: string }> = [];
       // If event name/description are provided and non-empty, save them.
       // If empty string, delete the custom value so the default kicks in.
       if (input.calendarEventName !== undefined) {
@@ -2740,11 +2737,48 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
           subject: l.subject,
           sentAt: l.sentAt?.toISOString() || null,
         })),
-        stats,
+        stats,      };
+    }),
+
+  /** Send calendar invites to all registrants who haven't received one yet */
+  sendMissingCalendarInvites: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Find all registrants with email who haven't received an invite
+      const missing = await db.select({
+        id: webinarRegistrants.id,
+        email: webinarRegistrants.email,
+        name: webinarRegistrants.name,
+      }).from(webinarRegistrants)
+        .where(and(
+          eq(webinarRegistrants.webinarId, input.webinarId),
+          eq(webinarRegistrants.calendarInviteSent, 0),
+        ));
+
+      const withEmail = missing.filter(r => r.email);
+      if (withEmail.length === 0) {
+        return { sent: 0, failed: 0, total: 0, message: "All registrants already have calendar invites" };
+      }
+
+      // Fire the auto-send for all missing
+      const result = await autoSendCalendarInvites(
+        db,
+        input.webinarId,
+        withEmail.map(r => ({ id: r.id, email: r.email!, name: r.name })),
+      );
+
+      return {
+        ...result,
+        total: withEmail.length,
+        message: `Sent ${result.sent} invites, ${result.failed} failed out of ${withEmail.length} missing`,
       };
     }),
 });
-
 // ─── Auto-send calendar invite helper ───────────────────────────────────────
 
 /**
@@ -2760,16 +2794,11 @@ async function autoSendCalendarInvites(
 ): Promise<{ sent: number; failed: number }> {
   if (newRegistrantEmails.length === 0) return { sent: 0, failed: 0 };
 
-  // Check if auto-send is enabled
+  // Calendar auto-send is always on — every registrant gets an invite
   const settingRows = await db.select().from(webinarSmsSettings);
   const settings: Record<string, string> = {};
   for (const row of settingRows) {
     settings[row.settingKey] = row.settingValue;
-  }
-  // Default ON: only skip if explicitly set to "false"
-  if (settings["calendar_auto_send"] === "false") {
-    console.log(`[Calendar Auto] Auto-send disabled, skipping ${newRegistrantEmails.length} invites`);
-    return { sent: 0, failed: 0 };
   }
 
   // Check calendar health first

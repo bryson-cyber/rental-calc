@@ -124,7 +124,12 @@ export async function sendCalendarInvite(
     const event: calendar_v3.Schema$Event = {
       summary: params.title,
       description: description.trim(),
-      location: params.location || (params.joinUrl ? params.joinUrl : undefined),
+      location: params.joinUrl || params.location || undefined,
+      // Set organizer display name
+      organizer: {
+        email: ENV.googleCalendarImpersonateEmail || "support@coachinayah.com",
+        displayName: "Inayah McMillan",
+      },
       start: {
         dateTime: startDate.toISOString(),
         timeZone: timezone,
@@ -166,29 +171,10 @@ export async function sendCalendarInvite(
       guestsCanSeeOtherGuests: false,
     };
 
-    // If there's a join URL, add it as a conference-like entry point
-    if (params.joinUrl) {
-      event.conferenceData = {
-        entryPoints: [
-          {
-            entryPointType: "video",
-            uri: params.joinUrl,
-            label: "Join Webinar",
-          },
-        ],
-        conferenceSolution: {
-          key: { type: "addOn" },
-          name: "Webinar Link",
-        },
-        conferenceId: params.webinarId || "webinar",
-      };
-    }
-
     const response = await calendar.events.insert({
       calendarId: "primary", // support@coachinayah.com's primary calendar
       requestBody: event,
       sendUpdates: "all", // Send email invitations to attendees
-      conferenceDataVersion: params.joinUrl ? 1 : 0,
     });
 
     console.log(

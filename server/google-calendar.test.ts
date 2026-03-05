@@ -266,9 +266,9 @@ describe("Google Calendar Integration", () => {
       const ctx = createAdminContext();
       const trpc = caller(ctx);
 
-      // Clear any previously saved custom description by saving empty string
+      // Clear any previously saved custom name and description by saving empty strings
       await trpc.webinarSms.saveCalendarSettings({
-        calendarAutoSend: true,
+        calendarEventName: "",
         calendarEventDescription: "",
       });
 
@@ -281,16 +281,17 @@ describe("Google Calendar Integration", () => {
       // Should have default event name
       expect(settings.calendarEventName).toBeTruthy();
       expect(settings.calendarEventName).toContain("Coach Inayah");
-      expect(settings.calendarEventDescription).toContain("Launching");
+      // Description should mention launching
+      expect(settings.calendarEventDescription).toContain("launch");
     });
 
-    it("should toggle auto-send off", async () => {
+    it("should always report calendarAutoSend as true (cannot be disabled)", async () => {
       const ctx = createAdminContext();
       const trpc = caller(ctx);
 
-      await trpc.webinarSms.saveCalendarSettings({ calendarAutoSend: false });
+      // Even if someone tries to set it false, it should always be true
       const settings = await trpc.webinarSms.getSettings();
-      expect(settings.calendarAutoSend).toBe(false);
+      expect(settings.calendarAutoSend).toBe(true);
     });
   });
 });

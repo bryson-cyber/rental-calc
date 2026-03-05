@@ -1,0 +1,50 @@
+{
+  "query": "SELECT * FROM webinar_registrants WHERE email LIKE '%bryson%' OR email LIKE '%Bryson%' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM webinar_registrants WHERE email LIKE '%bryson%' OR email LIKE '%Bryson%' LIMIT 10;",
+  "rows": [
+    {
+      "id": "30823",
+      "webinarId": "370",
+      "name": "bryson blocker",
+      "email": "bryson@coachinayah.com",
+      "phone": "7025218792",
+      "source": "webinarjam",
+      "webinarName": "Webby 2.22.26",
+      "webinarDate": "NULL",
+      "attended": "0",
+      "optedOut": "0",
+      "tags": "NULL",
+      "metadata": "{\"attended_live\": \"No\", \"attended_replay\": \"No\", \"signup_date\": \"Sun, 15 Feb 2026, 09:42 PM\", \"time_live\": \"00:00:00\", \"utm_source\": null}",
+      "createdAt": "2026-02-23 18:59:30",
+      "updatedAt": "2026-02-23 18:59:30",
+      "calendarInviteSent": "0",
+      "calendarEventId": "NULL",
+      "calendarInviteError": "NULL",
+      "calendarInviteAt": "NULL"
+    },
+    {
+      "id": "300106",
+      "webinarId": "373",
+      "name": "bryson blocker",
+      "email": "bryson@coachinayah.com",
+      "phone": "7025218792",
+      "source": "webinarjam",
+      "webinarName": "Webby 3.04.26",
+      "webinarDate": "NULL",
+      "attended": "0",
+      "optedOut": "0",
+      "tags": "NULL",
+      "metadata": "{\"attended_live\": \"No\", \"attended_replay\": \"No\", \"signup_date\": \"Mon, 2 Mar 2026, 07:22 PM\", \"time_live\": \"00:00:00\", \"utm_source\": null}",
+      "createdAt": "2026-03-04 19:57:05",
+      "updatedAt": "2026-03-04 19:57:05",
+      "calendarInviteSent": "0",
+      "calendarEventId": "NULL",
+      "calendarInviteError": "NULL",
+      "calendarInviteAt": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\twebinarId\tname\temail\tphone\tsource\twebinarName\twebinarDate\tattended\toptedOut\ttags\tmetadata\tcreatedAt\tupdatedAt\tcalendarInviteSent\tcalendarEventId\tcalendarInviteError\tcalendarInviteAt\n30823\t370\tbryson blocker\tbryson@coachinayah.com\t7025218792\twebinarjam\tWebby 2.22.26\tNULL\t0\t0\tNULL\t{\"attended_live\": \"No\", \"attended_replay\": \"No\", \"signup_date\": \"Sun, 15 Feb 2026, 09:42 PM\", \"time_live\": \"00:00:00\", \"utm_source\": null}\t2026-02-23 18:59:30\t2026-02-23 18:59:30\t0\tNULL\tNULL\tNULL\n300106\t373\tbryson blocker\tbryson@coachinayah.com\t7025218792\twebinarjam\tWebby 3.04.26\tNULL\t0\t0\tNULL\t{\"attended_live\": \"No\", \"attended_replay\": \"No\", \"signup_date\": \"Mon, 2 Mar 2026, 07:22 PM\", \"time_live\": \"00:00:00\", \"utm_source\": null}\t2026-03-04 19:57:05\t2026-03-04 19:57:05\t0\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 86
+}

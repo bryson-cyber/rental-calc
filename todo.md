@@ -12743,3 +12743,23 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Simplified reminder-scheduler.ts to utility-only (UTM helpers + SMS-to-reminder mapping), removed standalone cron
 - [x] Updated Calendar tab UI to show unified schedule status (SMS + Calendar + Gmail all from one schedule)
 - [x] Tests for unified scheduling (35 tests passing including multi-channel dispatch and SMS mapping)
+
+## Calendar Auto-Send Always On
+- [x] Trigger calendar invite for Bryson (registrant 300106) — sent, eventId: pqqtrbr71tqrg4qb149uuctvmo
+- [x] Remove calendar_auto_send setting check from autoSendCalendarInvites — always send
+- [ ] Remove auto-send toggle from Calendar tab UI
+- [ ] Add "Send All Missing" button to catch registrants who missed invites
+
+## Calendar Invite Fixes (User Reported)
+- [x] Fix: Organizer name — added displayName "Inayah McMillan" to event organizer field
+- [x] Fix: "An error has occurred" — removed conferenceData hack that caused errors, join URL now in location + description
+- [x] Send calendar invites to ALL existing registrants (221 sent, 0 failed)
+
+## Calendar Event Corrections (3/5/2026)
+- [x] Fix event name: change from "My Custom Event" to "LIVE: Coach Inayah's 5-Step Airbnb Masterclass" on all 222 events
+- [x] Fix event time: change from 7:00 PM PT to 4:00 PM PT (7:00 PM ET) on all 222 events
+- [x] Update DB setting selected_schedule_date from '2026-03-08 19:00' to '2026-03-08 16:00'
+- [x] Update DB setting calendar_event_name to correct default name
+- [x] Fix selected_webinar_id from 'settings-test-webinar' to '373'
+- [x] Fix tests: updated event time in test fixtures, fixed auto-send toggle test (always on)
+- [ ] Save checkpoint after corrections

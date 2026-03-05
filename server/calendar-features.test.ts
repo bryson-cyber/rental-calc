@@ -10,7 +10,7 @@ describe("buildWebinarReminderEmail", () => {
     email: "jane@example.com",
     eventName: "LIVE: Coach Inayah's 5-Step Airbnb Masterclass",
     joinUrl: "https://webinarjam.com/live/123",
-    eventDate: "Saturday, March 8, 2:00 PM PST",
+    eventDate: "Saturday, March 8, 4:00 PM PST",
   };
 
   it("builds a 24h reminder email with correct subject and personalization", () => {

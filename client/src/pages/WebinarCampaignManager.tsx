@@ -1651,7 +1651,6 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
   );
 
   // Local state for settings form
-  const [autoSend, setAutoSend] = useState(true); // Default ON
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -1659,7 +1658,6 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
   // Sync settings from server when loaded
   useEffect(() => {
     if (settings.data && !settingsLoaded) {
-      setAutoSend(settings.data.calendarAutoSend ?? true);
       setEventName(settings.data.calendarEventName ?? "");
       setEventDescription(settings.data.calendarEventDescription ?? "");
       setSettingsLoaded(true);
@@ -1668,7 +1666,6 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
 
   const handleSaveSettings = () => {
     saveCalendarSettings.mutate({
-      calendarAutoSend: autoSend,
       calendarEventName: eventName,
       calendarEventDescription: eventDescription,
     });
@@ -1677,7 +1674,6 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
   const stats = calendarStats.data;
   const health = calendarStatus.data;
   const hasSettingsChanges = settingsLoaded && (
-    autoSend !== (settings.data?.calendarAutoSend ?? true) ||
     eventName !== (settings.data?.calendarEventName ?? "") ||
     eventDescription !== (settings.data?.calendarEventDescription ?? "")
   );
@@ -1732,28 +1728,26 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
-              Auto-Send Settings
+              Calendar Invite Settings
             </CardTitle>
             <CardDescription>
-              When enabled, every new registrant with an email address automatically gets a calendar invite the moment they opt in.
+              Customize the calendar event name and description. Every registrant automatically gets an invite.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Auto-send toggle */}
-            <div className="flex items-center justify-between p-4 rounded-lg border">
+            {/* Auto-send always on indicator */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
               <div className="space-y-1">
-                <Label htmlFor="calendar-auto-send" className="text-sm font-medium cursor-pointer">
-                  Auto-send calendar invites
-                </Label>
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  Auto-send is always ON
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Automatically send invites when registrants are imported or manually added
+                  Every new registrant with an email automatically gets a calendar invite when imported.
                 </p>
               </div>
-              <Switch
-                id="calendar-auto-send"
-                checked={autoSend}
-                onCheckedChange={setAutoSend}
-              />
+              <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-700">
+                Always On
+              </Badge>
             </div>
 
             {/* Custom Event Name */}
@@ -1819,11 +1813,7 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
                   <><Save className="w-4 h-4 mr-2" /> Save Calendar Settings</>
                 )}
               </Button>
-              {autoSend && settingsLoaded && (
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800">
-                  Auto-send is ON
-                </Badge>
-              )}
+
             </div>
           </CardContent>
         </Card>
