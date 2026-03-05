@@ -62,6 +62,7 @@ import {
   Check,
   X,
   Save,
+  Calendar,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -78,6 +79,8 @@ type Registrant = {
   webinarName: string | null;
   webinarId: string;
   createdAt: string;
+  calendarInviteSent?: number | null;
+  calendarEventId?: string | null;
 };
 
 type ScheduledMessage = {
@@ -253,6 +256,10 @@ function WebinarHeader({
           {!settings.data?.webinarApiKeyConfigured && (
             <span className="text-xs text-amber-500">Not set</span>
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${apiStatus.data?.googleCalendar?.configured ? "bg-emerald-500" : "bg-red-500"}`} />
+          <span className="text-muted-foreground">Calendar</span>
         </div>
         {settings.data?.cronEnabled && (
           <div className="flex items-center gap-2 ml-auto">
@@ -1542,6 +1549,159 @@ function CampaignHistory() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SECTION 5.5: Calendar Invite Panel
+// ═══════════════════════════════════════════════════════════════════════════
+
+function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
+  const calendarStatus = trpc.webinarSms.calendarStatus.useQuery();
+  const calendarStats = trpc.webinarSms.calendarInviteStats.useQuery({ webinarId });
+  const testConnection = trpc.webinarSms.testCalendarConnection.useMutation({
+    onSuccess: (data) => toast[data.success ? "success" : "error"](data.message),
+  });
+  const sendBulk = trpc.webinarSms.sendBulkCalendarInvites.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      calendarStats.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const stats = calendarStats.data;
+  const health = calendarStatus.data;
+
+  return (
+    <div className="space-y-6">
+      {/* Connection Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-amber-500" />
+            Google Calendar Integration
+          </CardTitle>
+          <CardDescription>
+            Send Google Calendar invites to registrants so they get a calendar event with the webinar link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${health?.authenticated ? "bg-emerald-500" : health?.configured ? "bg-amber-500" : "bg-red-500"}`} />
+              <div>
+                <p className="text-sm font-medium">Google Calendar API</p>
+                <p className="text-xs text-muted-foreground">
+                  {health?.authenticated
+                    ? `Connected as ${health.impersonateEmail}`
+                    : health?.configured
+                    ? `Configured but not authenticated: ${health.error || "Unknown error"}`
+                    : "Service account not configured"}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => testConnection.mutate()}
+              disabled={testConnection.isPending}
+            >
+              {testConnection.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invite Stats & Actions */}
+      {health?.authenticated && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Calendar Invite Status</CardTitle>
+            <CardDescription>
+              Track and send calendar invites to registrants for this webinar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg border bg-card">
+                <p className="text-2xl font-bold">{stats?.total ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Total Registrants</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-card">
+                <p className="text-2xl font-bold">{stats?.withEmail ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Have Email</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-emerald-50 dark:bg-emerald-950/20">
+                <p className="text-2xl font-bold text-emerald-600">{stats?.inviteSent ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Invites Sent</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-950/20">
+                <p className="text-2xl font-bold text-amber-600">{stats?.invitePending ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </div>
+
+            {/* Send Bulk Button */}
+            {(stats?.invitePending ?? 0) > 0 && (
+              <div className="flex items-center justify-between p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+                <div>
+                  <p className="text-sm font-medium">
+                    {stats!.invitePending} registrant{stats!.invitePending !== 1 ? "s" : ""} pending calendar invite
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Only registrants with email addresses will receive invites.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => sendBulk.mutate({ webinarId, onlyUnsent: true })}
+                  disabled={sendBulk.isPending}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {sendBulk.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
+                  ) : (
+                    <><Calendar className="w-4 h-4 mr-2" /> Send All Invites</>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {(stats?.invitePending ?? 0) === 0 && (stats?.inviteSent ?? 0) > 0 && (
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">All invites sent!</p>
+                  <p className="text-xs text-muted-foreground">
+                    All {stats!.inviteSent} registrants with email addresses have received calendar invites.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Re-send all option */}
+            {(stats?.inviteSent ?? 0) > 0 && (
+              <div className="pt-4 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm(`This will re-send calendar invites to ALL ${stats!.withEmail} registrants with email, including those who already received one. Continue?`)) {
+                      sendBulk.mutate({ webinarId, onlyUnsent: false });
+                    }
+                  }}
+                  disabled={sendBulk.isPending}
+                >
+                  <RefreshCw className="w-3 h-3 mr-2" />
+                  Re-send All Invites
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 6: Settings Panel
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -2240,7 +2400,7 @@ export default function WebinarCampaignManager() {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-7 w-full max-w-3xl">
+            <TabsList className="grid grid-cols-8 w-full max-w-4xl">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Audience</span>
@@ -2264,6 +2424,10 @@ export default function WebinarCampaignManager() {
               <TabsTrigger value="live" className="flex items-center gap-1.5">
                 <Bell className="w-4 h-4" />
                 <span className="hidden sm:inline">Live</span>
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                <span className="hidden sm:inline">Calendar</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-1.5">
                 <Settings className="w-4 h-4" />
@@ -2296,6 +2460,10 @@ export default function WebinarCampaignManager() {
 
             <TabsContent value="live" className="mt-6">
               <NoShowNudge webinarId={selectedWebinarId} scheduleDate={settings.data?.selectedScheduleDate || null} />
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-6">
+              <CalendarInvitePanel webinarId={selectedWebinarId} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-6">

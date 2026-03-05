@@ -2307,6 +2307,10 @@ export const webinarRegistrants = mysqlTable("webinar_registrants", {
   tags: json("tags").$type<string[]>(),
   /** Extra metadata from the import source */
   metadata: json("metadata").$type<Record<string, unknown>>(),
+  /** Whether a Google Calendar invite has been sent (0=no, 1=yes) */
+  calendarInviteSent: int("calendarInviteSent").default(0),
+  /** Google Calendar event ID (for tracking/cancellation) */
+  calendarEventId: varchar("calendarEventId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [

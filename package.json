@@ -53,6 +53,8 @@
     "file-saver": "^2.0.5",
     "form-data": "^4.0.5",
     "framer-motion": "^12.23.22",
+    "google-auth-library": "^10.6.1",
+    "googleapis": "^171.4.0",
     "jose": "6.1.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.2",

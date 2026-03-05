@@ -19,5 +19,7 @@ export const ENV = {
   webinarjamApiKey: process.env.WEBINARJAM_API_KEY ?? "",
   hubspotApiKey: process.env.HUBSPOT_API_KEY ?? "",
   golpoApiKey: process.env.GOLPO_API_KEY ?? "",
+  googleCalendarServiceAccountJson: process.env.GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON ?? "",
+  googleCalendarImpersonateEmail: process.env.GOOGLE_CALENDAR_IMPERSONATE_EMAIL ?? "",
   devMockApi: process.env.DEV_MOCK_API === "true",
 };

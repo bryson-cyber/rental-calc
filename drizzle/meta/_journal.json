@@ -50,6 +50,13 @@
       "when": 1772677971371,
       "tag": "0006_handy_morg",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1772697102923,
+      "tag": "0007_spotty_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

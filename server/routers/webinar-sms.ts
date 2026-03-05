@@ -35,6 +35,7 @@ import {
 import { invokeLLM } from "../_core/llm";
 import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth } from "../google-calendar";
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 
@@ -861,6 +862,10 @@ export const webinarSmsRouter = router({
         keyPreview: ENV.simpletextingApiKey
           ? `${ENV.simpletextingApiKey.slice(0, 6)}...${ENV.simpletextingApiKey.slice(-4)}`
           : null,
+      },
+      googleCalendar: {
+        configured: !!ENV.googleCalendarServiceAccountJson,
+        impersonateEmail: ENV.googleCalendarImpersonateEmail || "support@coachinayah.com",
       },
     };
   }),
@@ -2017,6 +2022,190 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       }).where(eq(webinarSmsCampaigns.id, campaignId));
 
       return { sent, failed, total: noShows.length, campaignId };
+    }),
+
+  // ═══ GOOGLE CALENDAR INVITES ═══════════════════════════════════════════════
+
+  /** Check Google Calendar integration health */
+  calendarStatus: adminProcedure.query(async () => {
+    const health = await checkCalendarHealth();
+    return health;
+  }),
+
+  /** Test Google Calendar connection */
+  testCalendarConnection: adminProcedure.mutation(async () => {
+    const health = await checkCalendarHealth();
+    if (health.authenticated) {
+      return { success: true, message: `Connected! Calendar is ready (${health.impersonateEmail}).` };
+    }
+    return { success: false, message: health.error || "Failed to authenticate with Google Calendar" };
+  }),
+
+  /** Send calendar invite to a single registrant */
+  sendCalendarInviteToRegistrant: adminProcedure
+    .input(z.object({
+      registrantId: z.number(),
+      webinarId: z.string(),
+      scheduleId: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get registrant
+      const [registrant] = await db.select().from(webinarRegistrants).where(eq(webinarRegistrants.id, input.registrantId));
+      if (!registrant) throw new TRPCError({ code: "NOT_FOUND", message: "Registrant not found" });
+      if (!registrant.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Registrant has no email address" });
+
+      // Get webinar details for the event
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+      const details = await fetchWebinarJamDetails(input.webinarId, perWebinarApiKey);
+
+      // Find the matching schedule
+      let scheduleDate: string | undefined;
+      let scheduleComment: string | undefined;
+      if (details.schedules && input.scheduleId) {
+        const schedule = details.schedules.find((s: any) => s.schedule === input.scheduleId);
+        if (schedule) {
+          scheduleDate = schedule.date;
+          scheduleComment = schedule.comment;
+        }
+      } else if (details.schedules?.length > 0) {
+        // Use first upcoming schedule
+        scheduleDate = details.schedules[0].date;
+        scheduleComment = details.schedules[0].comment;
+      }
+
+      if (!scheduleDate) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No schedule date found for this webinar" });
+      }
+
+      // Parse the schedule date (format: "YYYY-MM-DD HH:mm" in the webinar's timezone)
+      const timezone = details.timezone || "America/Los_Angeles";
+      const startTime = new Date(`${scheduleDate}:00`);
+
+      const result = await sendCalendarInvite({
+        attendeeEmail: registrant.email,
+        attendeeName: registrant.name,
+        title: details.title || details.name || "Webinar",
+        description: details.description || `You're registered for ${details.title || details.name || "our webinar"}!`,
+        startTime,
+        timezone,
+        joinUrl: details.direct_live_room_url || details.registration_url,
+        webinarId: input.webinarId,
+      });
+
+      if (result.success) {
+        await db.update(webinarRegistrants).set({
+          calendarInviteSent: 1,
+          calendarEventId: result.eventId || null,
+        }).where(eq(webinarRegistrants.id, input.registrantId));
+      }
+
+      return result;
+    }),
+
+  /** Send calendar invites to all registrants who haven't received one yet */
+  sendBulkCalendarInvites: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      scheduleId: z.number().optional(),
+      /** Only send to registrants who have an email and haven't received an invite yet */
+      onlyUnsent: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get webinar details
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+      const details = await fetchWebinarJamDetails(input.webinarId, perWebinarApiKey);
+
+      // Find schedule date
+      let scheduleDate: string | undefined;
+      if (details.schedules && input.scheduleId) {
+        const schedule = details.schedules.find((s: any) => s.schedule === input.scheduleId);
+        if (schedule) scheduleDate = schedule.date;
+      } else if (details.schedules?.length > 0) {
+        scheduleDate = details.schedules[0].date;
+      }
+
+      if (!scheduleDate) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No schedule date found for this webinar" });
+      }
+
+      const timezone = details.timezone || "America/Los_Angeles";
+      const startTime = new Date(`${scheduleDate}:00`);
+
+      // Get eligible registrants
+      const conditions = [
+        eq(webinarRegistrants.webinarId, input.webinarId),
+      ];
+      if (input.onlyUnsent) {
+        conditions.push(eq(webinarRegistrants.calendarInviteSent, 0));
+      }
+
+      const registrants = await db.select().from(webinarRegistrants).where(and(...conditions));
+
+      // Filter to only those with email addresses
+      const withEmail = registrants.filter(r => r.email);
+      if (withEmail.length === 0) {
+        return { total: 0, sent: 0, failed: 0, skippedNoEmail: registrants.length - withEmail.length, message: "No eligible registrants with email addresses" };
+      }
+
+      const attendees = withEmail.map(r => ({ email: r.email!, name: r.name }));
+
+      const result = await sendBulkCalendarInvites(attendees, {
+        title: details.title || details.name || "Webinar",
+        description: details.description || `You're registered for ${details.title || details.name || "our webinar"}!`,
+        startTime,
+        timezone,
+        joinUrl: details.direct_live_room_url || details.registration_url,
+        webinarId: input.webinarId,
+      });
+
+      // Update registrant records
+      for (let i = 0; i < withEmail.length; i++) {
+        const inviteResult = result.results[i];
+        if (inviteResult?.success) {
+          await db.update(webinarRegistrants).set({
+            calendarInviteSent: 1,
+            calendarEventId: inviteResult.eventId || null,
+          }).where(eq(webinarRegistrants.id, withEmail[i].id));
+        }
+      }
+
+      return {
+        total: withEmail.length,
+        sent: result.sent,
+        failed: result.failed,
+        skippedNoEmail: registrants.length - withEmail.length,
+        message: `Sent ${result.sent} calendar invites (${result.failed} failed, ${registrants.length - withEmail.length} skipped - no email)`,
+      };
+    }),
+
+  /** Get calendar invite stats for a webinar */
+  calendarInviteStats: adminProcedure
+    .input(z.object({ webinarId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [stats] = await db.select({
+        total: count(),
+        withEmail: sql<number>`SUM(CASE WHEN ${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != '' THEN 1 ELSE 0 END)`,
+        inviteSent: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteSent} = 1 THEN 1 ELSE 0 END)`,
+        invitePending: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteSent} = 0 AND ${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != '' THEN 1 ELSE 0 END)`,
+      }).from(webinarRegistrants).where(eq(webinarRegistrants.webinarId, input.webinarId));
+
+      return {
+        total: stats?.total || 0,
+        withEmail: Number(stats?.withEmail) || 0,
+        inviteSent: Number(stats?.inviteSent) || 0,
+        invitePending: Number(stats?.invitePending) || 0,
+      };
     }),
 });
 

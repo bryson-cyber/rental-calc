@@ -12682,3 +12682,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Bulk message all previous attendees at once (across all webinars, not just selected one)
 - [x] Bulk message all no-shows at once (across all webinars, not just selected one)
 - [x] Log TOS acceptance server-side (user ID + timestamp in database)
+- [x] Google Calendar integration - service account credentials added
+- [x] Google Calendar integration - server-side calendar invite service (server/google-calendar.ts)
+- [x] Google Calendar integration - tRPC procedures (calendarStatus, testCalendarConnection, sendCalendarInviteToRegistrant, sendBulkCalendarInvites, calendarInviteStats)
+- [x] Google Calendar integration - database columns (calendarInviteSent, calendarEventId on webinar_registrants)
+- [x] Google Calendar integration - Calendar tab in Webinar Campaign Manager UI
+- [x] Google Calendar integration - Calendar status indicator in header API bar
+- [x] Google Calendar integration - 16 vitest tests passing (access control, health check, stats, input validation)
