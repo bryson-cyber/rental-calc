@@ -3,6 +3,7 @@ import { apiCache } from './cache';
 import { logApiCall, getDbCache, setDbCache, checkDailyLimit } from './api-logger';
 import { notifyOwner } from './_core/notification';
 import { rateLimitedAirDNARequest, AirDNARateLimitError, AIRDNA_API_BASE } from './airdna-rate-limiter';
+import { isAdminRequest } from './request-context';
 
 // Helper to log cache hits to the API usage tracker
 function logCacheHit(endpoint: string, source?: string): void {
@@ -343,9 +344,14 @@ async function makeApiRequest<T>(
   retries: number = 3,
   source?: string
 ): Promise<T> {
+  // Capture admin status at call time from AsyncLocalStorage
+  // This ensures admin status is passed explicitly to the rate limiter
+  // even if the ALS context is lost in deeper async chains
+  const adminAtCallTime = isAdminRequest();
   return rateLimitedAirDNARequest<T>(endpoint, method, body, {
     retries,
     source,
+    isAdmin: adminAtCallTime,
   });
 }
 

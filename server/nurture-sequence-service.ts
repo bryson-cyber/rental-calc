@@ -6,6 +6,7 @@
  */
 
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
+import { isAdminRequest } from './request-context';
 const AIRDNA_API_KEY = process.env.AIRDNA_API_KEY;
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 const HUBSPOT_API_BASE = 'https://api.hubapi.com';
@@ -213,7 +214,7 @@ async function getMarketRevenue(marketId: string): Promise<{ avgRevenue: number;
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0]
       }
-    }, { retries: 2, source: 'nurture-service' });
+    }, { retries: 2, source: 'nurture-service', isAdmin: isAdminRequest() });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -261,7 +262,7 @@ async function getMarketOccupancy(marketId: string): Promise<{ avgOccupancy: num
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0]
       }
-    }, { retries: 2, source: 'nurture-service' });
+    }, { retries: 2, source: 'nurture-service', isAdmin: isAdminRequest() });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -302,7 +303,7 @@ async function getMarketAdr(marketId: string): Promise<{ avgAdr: number; seasona
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0]
       }
-    }, { retries: 2, source: 'nurture-service' });
+    }, { retries: 2, source: 'nurture-service', isAdmin: isAdminRequest() });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -335,7 +336,7 @@ async function getActiveListings(marketId: string): Promise<number | null> {
   try {
     const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/active_listings`, 'POST', {
       filters: []
-    }, { retries: 2, source: 'nurture-service' });
+    }, { retries: 2, source: 'nurture-service', isAdmin: isAdminRequest() });
     const result = data.payload?.listing_count || data.payload?.count || null;
     if (result) _ns(ck, result);
     return result;

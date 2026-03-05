@@ -12788,3 +12788,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Root cause: Production OWNER_OPEN_ID env var empty/missing, so openId comparison always fails
 - [x] Fix: Added email fallback — isOwner=true if openId matches OR email is bryson@stayly.com
 - [x] Tests: 10/10 passing including new email fallback test
+
+## Production "Service Unavailable" on Step 5 (3/5/2026)
+- [x] Diagnosed: AirDNA rate limiter blocking admin because isAdmin never propagated to rateLimitedAirDNARequest
+- [x] Fixed: All 4 files that call rateLimitedAirDNARequest now explicitly pass isAdmin from AsyncLocalStorage at call time
+- [x] Fix: Admin must bypass AirDNA API rate limiter too — root cause: isAdminRequest() via AsyncLocalStorage was never reaching rateLimitedAirDNARequest because makeApiRequest() didn't pass isAdmin. Fixed in airdna.ts, airdna-hierarchy.ts, market-research-simple.ts, nurture-sequence-service.ts

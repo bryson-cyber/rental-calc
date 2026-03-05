@@ -14,6 +14,7 @@ import { canPerformMarketResearch, recordMarketResearchUsage, recordApiCallsUsag
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
+import { isAdminRequest } from './request-context';
 import {
   searchMarkets,
   searchMarketsAPI,
@@ -848,7 +849,7 @@ export const marketResearchSimpleRouter = router({
         // Use the AirDNA /market/{market_id}/submarkets endpoint via rate limiter
         const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
           pagination: { page_size: 25, offset: 0 }
-        }, { retries: 2, source: 'market-research-getSubmarkets' });
+        }, { retries: 2, source: 'market-research-getSubmarkets', isAdmin: isAdminRequest() });
         
         if (data.status?.type === 'error') {
           console.error(`[getSubmarkets] API error:`, data.status?.message);
@@ -866,7 +867,7 @@ export const marketResearchSimpleRouter = router({
           try {
             const moreData = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
               pagination: { page_size: 25, offset }
-            }, { retries: 1, source: 'market-research-getSubmarkets-page' });
+            }, { retries: 1, source: 'market-research-getSubmarkets-page', isAdmin: isAdminRequest() });
             allSubmarkets.push(...(moreData.payload?.submarkets || []));
           } catch (err) {
             if (err instanceof AirDNARateLimitError) break; // Stop paginating if rate limited
@@ -976,14 +977,14 @@ export const marketResearchSimpleRouter = router({
         const fetchSubmarketPage = async (offset: number) => {
           return rateLimitedAirDNARequest<any>(`/submarket/${submarketId}/listings`, 'POST', {
             pagination: { page_size: pageSize, offset }
-          }, { retries: 1, source: 'market-research-zipcodes' });
+          }, { retries: 1, source: 'market-research-zipcodes', isAdmin: isAdminRequest() });
         };
         
         // Helper to fetch from market API (for when submarketId is actually a market)
         const fetchMarketPage = async (offset: number) => {
           return rateLimitedAirDNARequest<any>(`/market/${submarketId}/listings`, 'POST', {
             pagination: { page_size: pageSize, offset }
-          }, { retries: 1, source: 'market-research-zipcodes-market' });
+          }, { retries: 1, source: 'market-research-zipcodes-market', isAdmin: isAdminRequest() });
         };
         
         // Try submarket API first

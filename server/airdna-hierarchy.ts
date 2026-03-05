@@ -6,6 +6,7 @@
  */
 
 import { rateLimitedAirDNARequest, AIRDNA_API_BASE } from './airdna-rate-limiter';
+import { isAdminRequest } from './request-context';
 import { apiCache } from './cache';
 
 // Helper to make API requests - routes through centralized rate limiter
@@ -14,9 +15,11 @@ async function makeApiRequest<T>(
   method: "GET" | "POST" = "GET",
   body?: any
 ): Promise<T> {
+  const adminAtCallTime = isAdminRequest();
   const data = await rateLimitedAirDNARequest<any>(endpoint, method, body as Record<string, unknown>, {
     retries: 2,
     source: 'airdna-hierarchy',
+    isAdmin: adminAtCallTime,
   });
 
   if (data.status?.type === "error") {
