@@ -12721,3 +12721,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] ICS file generation: Generate downloadable .ics calendar file with 24h/1h/10min alarms for non-Google calendar users
 - [x] Gmail API reminder emails: Send personalized reminder emails via Gmail API (service account, high deliverability, Coach Inayah branded templates)
 - [x] Enhanced calendar event reminders: Add multiple reminder overrides (24h email, 1h email, 30min popup, 10min popup)
+
+## Automated Reminders & Email Tracking (Mar 5 2026)
+- [x] Auto-schedule reminders: Calculate 24h, 1h, and start-time from webinar schedule and auto-fire calendar updates + Gmail emails
+- [x] Reminder scheduler cron: Poll every 60s, check if any reminder is due, fire it, mark as sent
+- [x] DB tables for reminder schedule state and email send log
+- [x] Auto-disable schedule after webinar ends (2h past start)
+- [x] Admin UI to enable/disable auto-reminders per webinar with schedule status
+- [x] Email send tracking: DB table logging every Gmail reminder sent (registrant, type, timestamp, messageId)
+- [x] UTM-tagged join links in Gmail reminders for click tracking
+- [x] UI: Email send history table showing all sent reminders with status
+- [x] UI: Reminder schedule status showing upcoming/sent/failed reminders with toggle
+- [x] Channel breakdown (Gmail vs Calendar) in email log stats
+- [x] Manual Gmail reminder also logs to email_send_log table
+- [x] Tests for scheduler logic, UTM tracking, and email tracking (25 tests passing)

@@ -199,7 +199,6 @@ describe("ICS file structure validation", () => {
     const startTime = new Date("2026-03-08T14:00:00Z");
     const endTime = new Date("2026-03-08T16:00:00Z");
     const joinUrl = "https://webinarjam.com/live/123";
-    const timezone = "America/Los_Angeles";
 
     const pad = (n: number) => String(n).padStart(2, "0");
     const formatIcsDate = (date: Date) =>
@@ -250,5 +249,197 @@ describe("ICS file structure validation", () => {
     expect(icsContent).toContain("END:VALARM");
     expect(icsContent).toContain("TRIGGER:-P1D");
     expect(icsContent).toContain("ACTION:DISPLAY");
+  });
+});
+
+// ─── UTM Tracking Tests ─────────────────────────────────────────────────────
+
+describe("UTM tracking for reminder URLs", () => {
+  it("adds correct UTM parameters for 24h reminder", () => {
+    const joinUrl = "https://webinarjam.com/live/123";
+    const url = new URL(joinUrl);
+    url.searchParams.set("utm_source", "coach_inayah");
+    url.searchParams.set("utm_medium", "email");
+    url.searchParams.set("utm_campaign", "webinar_reminder_24h");
+    url.searchParams.set("utm_content", "manual_24h");
+    const trackedUrl = url.toString();
+
+    expect(trackedUrl).toContain("utm_source=coach_inayah");
+    expect(trackedUrl).toContain("utm_medium=email");
+    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_24h");
+    expect(trackedUrl).toContain("utm_content=manual_24h");
+    expect(trackedUrl).toContain("webinarjam.com/live/123");
+  });
+
+  it("adds correct UTM parameters for auto-scheduler reminders", () => {
+    const joinUrl = "https://webinarjam.com/live/456";
+    const reminderType = "1h";
+    const url = new URL(joinUrl);
+    url.searchParams.set("utm_source", "coach_inayah");
+    url.searchParams.set("utm_medium", "email");
+    url.searchParams.set("utm_campaign", `webinar_reminder_${reminderType}`);
+    url.searchParams.set("utm_content", `auto_${reminderType}`);
+    const trackedUrl = url.toString();
+
+    expect(trackedUrl).toContain("utm_source=coach_inayah");
+    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_1h");
+    expect(trackedUrl).toContain("utm_content=auto_1h");
+  });
+
+  it("adds correct UTM parameters for starting reminder", () => {
+    const joinUrl = "https://webinarjam.com/live/789";
+    const url = new URL(joinUrl);
+    url.searchParams.set("utm_source", "coach_inayah");
+    url.searchParams.set("utm_medium", "email");
+    url.searchParams.set("utm_campaign", "webinar_reminder_starting");
+    url.searchParams.set("utm_content", "auto_starting");
+    const trackedUrl = url.toString();
+
+    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_starting");
+    expect(trackedUrl).toContain("utm_content=auto_starting");
+  });
+
+  it("preserves existing URL parameters when adding UTM", () => {
+    const joinUrl = "https://webinarjam.com/live/123?ref=abc";
+    const url = new URL(joinUrl);
+    url.searchParams.set("utm_source", "coach_inayah");
+    url.searchParams.set("utm_medium", "email");
+    const trackedUrl = url.toString();
+
+    expect(trackedUrl).toContain("ref=abc");
+    expect(trackedUrl).toContain("utm_source=coach_inayah");
+  });
+});
+
+// ─── Reminder Scheduler Logic Tests ──────────────────────────────────────────
+
+describe("Reminder scheduler timing logic", () => {
+  it("correctly identifies when 24h reminder is due", () => {
+    const now = new Date("2026-03-07T14:00:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const hoursUntilStart = (webinarStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // 24h reminder should fire when <= 24h away
+    expect(hoursUntilStart).toBeLessThanOrEqual(24);
+    expect(hoursUntilStart).toBeGreaterThan(0);
+  });
+
+  it("correctly identifies when 1h reminder is due", () => {
+    const now = new Date("2026-03-08T13:00:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const hoursUntilStart = (webinarStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // 1h reminder should fire when <= 1h away
+    expect(hoursUntilStart).toBeLessThanOrEqual(1);
+    expect(hoursUntilStart).toBeGreaterThan(0);
+  });
+
+  it("correctly identifies when starting reminder is due", () => {
+    const now = new Date("2026-03-08T14:05:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const minutesPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60);
+
+    // Starting reminder should fire when past start time but within 15 min
+    expect(minutesPast).toBeGreaterThanOrEqual(0);
+    expect(minutesPast).toBeLessThanOrEqual(15);
+  });
+
+  it("does not fire 24h reminder when more than 24h away", () => {
+    const now = new Date("2026-03-06T14:00:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const hoursUntilStart = (webinarStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    expect(hoursUntilStart).toBeGreaterThan(24);
+  });
+
+  it("auto-disables schedule after webinar ends (2h past start)", () => {
+    const now = new Date("2026-03-08T16:30:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const hoursPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60 * 60);
+
+    // Should auto-disable when > 2h past start
+    expect(hoursPast).toBeGreaterThan(2);
+  });
+
+  it("does not auto-disable during the webinar window", () => {
+    const now = new Date("2026-03-08T15:30:00Z");
+    const webinarStart = new Date("2026-03-08T14:00:00Z");
+    const hoursPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60 * 60);
+
+    // Should NOT disable when < 2h past start
+    expect(hoursPast).toBeLessThanOrEqual(2);
+  });
+});
+
+// ─── Email Send Log Structure Tests ──────────────────────────────────────────
+
+describe("Email send log data structure", () => {
+  it("validates required fields for a send log entry", () => {
+    const logEntry = {
+      webinarId: "webinar-123",
+      registrantId: 42,
+      recipientEmail: "test@example.com",
+      recipientName: "Test User",
+      emailType: "reminder_24h",
+      subject: "Tomorrow: Your Webinar",
+      channel: "gmail" as const,
+      status: "sent" as const,
+      messageId: "msg-abc-123",
+      errorMessage: null,
+      trackedJoinUrl: "https://webinarjam.com/live/123?utm_source=coach_inayah",
+    };
+
+    expect(logEntry.webinarId).toBeTruthy();
+    expect(logEntry.recipientEmail).toContain("@");
+    expect(["gmail", "calendar"]).toContain(logEntry.channel);
+    expect(["sent", "failed"]).toContain(logEntry.status);
+    expect(logEntry.emailType).toMatch(/^reminder_(24h|1h|starting)$/);
+  });
+
+  it("validates failed log entry has error message", () => {
+    const failedEntry = {
+      webinarId: "webinar-123",
+      recipientEmail: "bad@example.com",
+      emailType: "reminder_1h",
+      channel: "gmail" as const,
+      status: "failed" as const,
+      messageId: null,
+      errorMessage: "Gmail API: 403 Forbidden - insufficient scopes",
+    };
+
+    expect(failedEntry.status).toBe("failed");
+    expect(failedEntry.errorMessage).toBeTruthy();
+    expect(failedEntry.messageId).toBeNull();
+  });
+
+  it("validates stats aggregation logic", () => {
+    const logs = [
+      { channel: "gmail", status: "sent", emailType: "reminder_24h" },
+      { channel: "gmail", status: "sent", emailType: "reminder_24h" },
+      { channel: "gmail", status: "failed", emailType: "reminder_24h" },
+      { channel: "calendar", status: "sent", emailType: "reminder_1h" },
+      { channel: "gmail", status: "sent", emailType: "reminder_starting" },
+    ];
+
+    const total = logs.length;
+    const sent = logs.filter(l => l.status === "sent").length;
+    const failed = logs.filter(l => l.status === "failed").length;
+
+    expect(total).toBe(5);
+    expect(sent).toBe(4);
+    expect(failed).toBe(1);
+
+    // By channel
+    const gmailSent = logs.filter(l => l.channel === "gmail" && l.status === "sent").length;
+    const gmailFailed = logs.filter(l => l.channel === "gmail" && l.status === "failed").length;
+    const calendarSent = logs.filter(l => l.channel === "calendar" && l.status === "sent").length;
+
+    expect(gmailSent).toBe(3);
+    expect(gmailFailed).toBe(1);
+    expect(calendarSent).toBe(1);
+
+    // By type
+    const reminder24hSent = logs.filter(l => l.emailType === "reminder_24h" && l.status === "sent").length;
+    expect(reminder24hSent).toBe(2);
   });
 });

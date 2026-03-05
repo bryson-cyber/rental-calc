@@ -31,12 +31,14 @@ import {
   scheduledSmsMessages,
   webinarCredentials,
   webinarTranscripts,
+  webinarReminderSchedule,
+  emailSendLog,
 } from "../../drizzle/schema";
 import { invokeLLM } from "../_core/llm";
-import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, count, lte, ne, isNull, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth, sendCalendarReminderUpdates } from "../google-calendar";
-import { sendBulkReminderEmails, checkGmailHealth, buildWebinarReminderEmail } from "../gmail-reminders";
+import { sendBulkReminderEmails, sendReminderEmail, checkGmailHealth, buildWebinarReminderEmail } from "../gmail-reminders";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -2531,25 +2533,214 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         return { sent: 0, failed: 0, errors: [], message: "No registrants with email addresses found" };
       }
 
-      const result = await sendBulkReminderEmails(
-        registrants.map(r => ({ email: r.email!, name: r.name })),
-        (recipient) => buildWebinarReminderEmail(
-          recipient.name,
-          recipient.email,
+      // Add UTM tracking to join URL
+      let trackedJoinUrl = joinUrl;
+      try {
+        if (joinUrl) {
+          const url = new URL(joinUrl);
+          url.searchParams.set("utm_source", "coach_inayah");
+          url.searchParams.set("utm_medium", "email");
+          url.searchParams.set("utm_campaign", `webinar_reminder_${input.reminderType}`);
+          url.searchParams.set("utm_content", `manual_${input.reminderType}`);
+          trackedJoinUrl = url.toString();
+        }
+      } catch { /* keep original URL */ }
+
+      // Send emails individually so we can log each one
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const reg of registrants) {
+        if (!reg.email) continue;
+        if (sent + failed > 0) await new Promise(r => setTimeout(r, 500));
+
+        const emailParams = buildWebinarReminderEmail(
+          reg.name || "there",
+          reg.email,
           input.reminderType,
           eventName,
-          joinUrl,
+          trackedJoinUrl,
           eventDate
-        )
-      );
+        );
+
+        const emailResult = await sendReminderEmail(emailParams);
+
+        // Log to email_send_log
+        await db.insert(emailSendLog).values({
+          webinarId: input.webinarId,
+          registrantId: reg.id,
+          recipientEmail: reg.email,
+          recipientName: reg.name,
+          emailType: `reminder_${input.reminderType}`,
+          subject: emailParams.subject,
+          channel: "gmail",
+          status: emailResult.success ? "sent" : "failed",
+          messageId: emailResult.messageId || null,
+          errorMessage: emailResult.error || null,
+          trackedJoinUrl: trackedJoinUrl || null,
+        });
+
+        if (emailResult.success) {
+          sent++;
+        } else {
+          failed++;
+          errors.push(`${reg.email}: ${emailResult.error}`);
+        }
+      }
 
       return {
-        ...result,
-        message: result.sent > 0
-          ? `Sent ${result.sent} reminder email${result.sent !== 1 ? "s" : ""} via Gmail (${result.failed} failed)`
-          : result.errors.length > 0
-          ? `Failed: ${result.errors[0]}`
+        sent,
+        failed,
+        errors,
+        message: sent > 0
+          ? `Sent ${sent} reminder email${sent !== 1 ? "s" : ""} via Gmail (${failed} failed)`
+          : errors.length > 0
+          ? `Failed: ${errors[0]}`
           : "No emails sent",
+      };
+    }),
+
+  // ─── Automated Reminder Schedule ──────────────────────────────────────────
+
+  enableAutoReminders: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      webinarName: z.string().optional(),
+      webinarStartTime: z.string(),
+      joinUrl: z.string().optional(),
+      enabled: z.boolean(),
+      sendCalendarUpdates: z.boolean().optional().default(true),
+      sendGmailReminders: z.boolean().optional().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const startTime = new Date(input.webinarStartTime);
+
+      // Check if schedule already exists
+      const existing = await db
+        .select()
+        .from(webinarReminderSchedule)
+        .where(eq(webinarReminderSchedule.webinarId, input.webinarId))
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing schedule
+        await db
+          .update(webinarReminderSchedule)
+          .set({
+            enabled: input.enabled ? 1 : 0,
+            webinarName: input.webinarName || existing[0].webinarName,
+            webinarStartTime: startTime,
+            joinUrl: input.joinUrl || existing[0].joinUrl,
+            sendCalendarUpdates: input.sendCalendarUpdates ? 1 : 0,
+            sendGmailReminders: input.sendGmailReminders ? 1 : 0,
+          })
+          .where(eq(webinarReminderSchedule.id, existing[0].id));
+
+        return { success: true, action: "updated", enabled: input.enabled };
+      }
+
+      // Create new schedule
+      await db.insert(webinarReminderSchedule).values({
+        webinarId: input.webinarId,
+        webinarName: input.webinarName || "Webinar",
+        webinarStartTime: startTime,
+        joinUrl: input.joinUrl || null,
+        enabled: input.enabled ? 1 : 0,
+        sendCalendarUpdates: input.sendCalendarUpdates ? 1 : 0,
+        sendGmailReminders: input.sendGmailReminders ? 1 : 0,
+      });
+
+      return { success: true, action: "created", enabled: input.enabled };
+    }),
+
+  getReminderSchedule: adminProcedure
+    .input(z.object({ webinarId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const rows = await db
+        .select()
+        .from(webinarReminderSchedule)
+        .where(eq(webinarReminderSchedule.webinarId, input.webinarId))
+        .limit(1);
+
+      if (rows.length === 0) return null;
+
+      const schedule = rows[0];
+      return {
+        id: schedule.id,
+        webinarId: schedule.webinarId,
+        webinarName: schedule.webinarName,
+        webinarStartTime: schedule.webinarStartTime?.toISOString() || null,
+        joinUrl: schedule.joinUrl,
+        enabled: schedule.enabled === 1,
+        sendCalendarUpdates: schedule.sendCalendarUpdates === 1,
+        sendGmailReminders: schedule.sendGmailReminders === 1,
+        reminder24h: schedule.reminder24h,
+        reminder24hAt: schedule.reminder24hAt?.toISOString() || null,
+        reminder24hResult: schedule.reminder24hResult,
+        reminder1h: schedule.reminder1h,
+        reminder1hAt: schedule.reminder1hAt?.toISOString() || null,
+        reminder1hResult: schedule.reminder1hResult,
+        reminderStarting: schedule.reminderStarting,
+        reminderStartingAt: schedule.reminderStartingAt?.toISOString() || null,
+        reminderStartingResult: schedule.reminderStartingResult,
+      };
+    }),
+
+  getEmailLog: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      limit: z.number().optional().default(100),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      const logs = await db
+        .select()
+        .from(emailSendLog)
+        .where(eq(emailSendLog.webinarId, input.webinarId))
+        .orderBy(desc(emailSendLog.sentAt))
+        .limit(input.limit);
+
+      // Aggregate stats
+      const stats = {
+        total: logs.length,
+        sent: logs.filter((l) => l.status === "sent").length,
+        failed: logs.filter((l) => l.status === "failed").length,
+        byType: {} as Record<string, { sent: number; failed: number }>,
+        byChannel: {} as Record<string, { sent: number; failed: number }>,
+      };
+
+      for (const log of logs) {
+        // By type
+        if (!stats.byType[log.emailType]) {
+          stats.byType[log.emailType] = { sent: 0, failed: 0 };
+        }
+        stats.byType[log.emailType][log.status === "sent" ? "sent" : "failed"]++;
+
+        // By channel
+        if (!stats.byChannel[log.channel]) {
+          stats.byChannel[log.channel] = { sent: 0, failed: 0 };
+        }
+        stats.byChannel[log.channel][log.status === "sent" ? "sent" : "failed"]++;
+      }
+
+      return {
+        logs: logs.map((l) => ({
+          id: l.id,
+          recipientEmail: l.recipientEmail,
+          recipientName: l.recipientName,
+          emailType: l.emailType,
+          channel: l.channel,
+          status: l.status,
+          messageId: l.messageId,
+          errorMessage: l.errorMessage,
+          subject: l.subject,
+          sentAt: l.sentAt?.toISOString() || null,
+        })),
+        stats,
       };
     }),
 });

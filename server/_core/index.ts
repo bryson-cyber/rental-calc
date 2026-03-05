@@ -1161,6 +1161,11 @@ async function startServer() {
         console.error('[SMS Dispatcher] Failed to start:', err),
       );
     }).catch(() => { /* sms dispatcher not critical */ });
+
+    // Start automated reminder scheduler (checks every 60s for due reminders)
+    import('../reminder-scheduler').then(({ startReminderScheduler }) => {
+      startReminderScheduler();
+    }).catch(() => { /* reminder scheduler not critical */ });
   });
 }
 

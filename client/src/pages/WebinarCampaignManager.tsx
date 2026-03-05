@@ -1594,7 +1594,7 @@ function CampaignHistory() {
 // SECTION 5.5: Calendar Invite Panel
 // ═══════════════════════════════════════════════════════════════════════════
 
-function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
+function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
   const calendarStatus = trpc.webinarSms.calendarStatus.useQuery();
   const calendarStats = trpc.webinarSms.calendarInviteStats.useQuery({ webinarId });
   const settings = trpc.webinarSms.getSettings.useQuery();
@@ -1626,9 +1626,29 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
   const sendGmailReminder = trpc.webinarSms.sendGmailReminder.useMutation({
     onSuccess: (data) => {
       toast[data.sent > 0 ? "success" : "error"](data.message);
+      emailLog.refetch();
     },
     onError: (err) => toast.error(err.message),
   });
+
+  // Auto-reminder schedule
+  const reminderSchedule = trpc.webinarSms.getReminderSchedule.useQuery(
+    { webinarId },
+    { enabled: !!webinarId }
+  );
+  const enableAutoReminders = trpc.webinarSms.enableAutoReminders.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.enabled ? "Auto-reminders enabled" : "Auto-reminders disabled");
+      reminderSchedule.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Email send log
+  const emailLog = trpc.webinarSms.getEmailLog.useQuery(
+    { webinarId },
+    { enabled: !!webinarId }
+  );
 
   // Local state for settings form
   const [autoSend, setAutoSend] = useState(true); // Default ON
@@ -1955,12 +1975,105 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
         </Card>
       )}
       {/* Show Rate Boosters */}
+      {/* Auto-Reminder Schedule */}
+      {health?.authenticated && scheduleDate && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="w-4 h-4 text-violet-500" />
+              Automated Reminder Schedule
+            </CardTitle>
+            <CardDescription>
+              Automatically send calendar updates and Gmail reminders at 24h, 1h, and start time. The scheduler checks every 60 seconds.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div>
+                <p className="text-sm font-medium">Auto-Reminders</p>
+                <p className="text-xs text-muted-foreground">
+                  {scheduleDate ? `Webinar: ${new Date(scheduleDate).toLocaleString()}` : "No schedule date selected"}
+                </p>
+              </div>
+              <Button
+                variant={reminderSchedule.data?.enabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  enableAutoReminders.mutate({
+                    webinarId,
+                    webinarStartTime: scheduleDate!,
+                    enabled: !reminderSchedule.data?.enabled,
+                    webinarName: settings.data?.calendarEventName || undefined,
+                    joinUrl: undefined,
+                  });
+                }}
+                disabled={enableAutoReminders.isPending || !scheduleDate}
+                className={reminderSchedule.data?.enabled ? "bg-violet-600 hover:bg-violet-700" : ""}
+              >
+                {enableAutoReminders.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : reminderSchedule.data?.enabled ? (
+                  "Enabled \u2713"
+                ) : (
+                  "Enable"
+                )}
+              </Button>
+            </div>
+
+            {/* Schedule Status */}
+            {reminderSchedule.data && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reminder Status</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["24h", "1h", "starting"] as const).map((type) => {
+                    const statusKey = type === "24h" ? "reminder24h" : type === "1h" ? "reminder1h" : "reminderStarting";
+                    const timeKey = type === "24h" ? "reminder24hAt" : type === "1h" ? "reminder1hAt" : "reminderStartingAt";
+                    const resultKey = type === "24h" ? "reminder24hResult" : type === "1h" ? "reminder1hResult" : "reminderStartingResult";
+                    const status = reminderSchedule.data?.[statusKey] || "pending";
+                    const sentAt = reminderSchedule.data?.[timeKey];
+                    const result = reminderSchedule.data?.[resultKey];
+                    const label = type === "24h" ? "24 Hour" : type === "1h" ? "1 Hour" : "Live Now";
+
+                    return (
+                      <div key={type} className={`p-2 rounded-lg border text-center ${
+                        status === "sent" ? "bg-green-50 border-green-200" :
+                        status === "failed" ? "bg-red-50 border-red-200" :
+                        "bg-gray-50 border-gray-200"
+                      }`}>
+                        <p className="text-xs font-medium">{label}</p>
+                        <p className={`text-[10px] mt-1 ${
+                          status === "sent" ? "text-green-600" :
+                          status === "failed" ? "text-red-600" :
+                          "text-gray-500"
+                        }`}>
+                          {status === "sent" ? "\u2713 Sent" : status === "failed" ? "\u2717 Failed" : "\u23f3 Pending"}
+                        </p>
+                        {sentAt && (
+                          <p className="text-[9px] text-muted-foreground mt-0.5">
+                            {new Date(sentAt).toLocaleTimeString()}
+                          </p>
+                        )}
+                        {result && status === "failed" && (
+                          <p className="text-[9px] text-red-500 mt-0.5 truncate" title={result}>{result}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Show Rate Boosters (Manual) */}
       {health?.authenticated && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Bell className="w-4 h-4 text-amber-500" />
-              Show Rate Boosters
+              Show Rate Boosters (Manual)
             </CardTitle>
             <CardDescription>
               Tools to maximize webinar attendance. Calendar event updates trigger Google notification emails to all attendees.
@@ -2130,6 +2243,109 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
               ) : (
                 <p className="text-xs text-muted-foreground italic">Checking Gmail status...</p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Email Send Log */}
+      {health?.authenticated && emailLog.data && emailLog.data.logs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Mail className="w-4 h-4 text-blue-500" />
+              Email & Calendar Send Log
+            </CardTitle>
+            <CardDescription>
+              History of all reminder emails and calendar updates sent for this webinar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-2 bg-blue-50 rounded-lg">
+                <p className="text-lg font-bold text-blue-700">{emailLog.data.stats.total}</p>
+                <p className="text-[10px] text-blue-600">Total Sent</p>
+              </div>
+              <div className="text-center p-2 bg-green-50 rounded-lg">
+                <p className="text-lg font-bold text-green-700">{emailLog.data.stats.sent}</p>
+                <p className="text-[10px] text-green-600">Delivered</p>
+              </div>
+              <div className="text-center p-2 bg-red-50 rounded-lg">
+                <p className="text-lg font-bold text-red-700">{emailLog.data.stats.failed}</p>
+                <p className="text-[10px] text-red-600">Failed</p>
+              </div>
+            </div>
+
+            {/* Channel Breakdown */}
+            {Object.keys(emailLog.data.stats.byChannel).length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">By Channel</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(emailLog.data.stats.byChannel).map(([channel, counts]) => (
+                    <div key={channel} className="text-xs px-2 py-1 rounded-full bg-gray-100">
+                      <span className="font-medium">{channel === "gmail" ? "Gmail" : "Calendar"}</span>: {(counts as any).sent} sent, {(counts as any).failed} failed
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Type Breakdown */}
+            {Object.keys(emailLog.data.stats.byType).length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">By Reminder Type</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(emailLog.data.stats.byType).map(([type, counts]) => (
+                    <div key={type} className="text-xs px-2 py-1 rounded-full bg-gray-100">
+                      <span className="font-medium">{type.replace("reminder_", "").toUpperCase()}</span>: {(counts as any).sent} sent, {(counts as any).failed} failed
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Log Table */}
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="border-b">
+                    <th className="text-left py-1 px-2">Recipient</th>
+                    <th className="text-left py-1 px-2">Type</th>
+                    <th className="text-left py-1 px-2">Channel</th>
+                    <th className="text-left py-1 px-2">Status</th>
+                    <th className="text-left py-1 px-2">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {emailLog.data.logs.slice(0, 50).map((log) => (
+                    <tr key={log.id} className="border-b border-dashed">
+                      <td className="py-1 px-2">
+                        <span className="font-medium">{log.recipientName || "—"}</span>
+                        <br />
+                        <span className="text-muted-foreground">{log.recipientEmail}</span>
+                      </td>
+                      <td className="py-1 px-2">{log.emailType.replace("reminder_", "")}</td>
+                      <td className="py-1 px-2">
+                        <span className={`px-1.5 py-0.5 rounded-full ${log.channel === "gmail" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                          {log.channel === "gmail" ? "Gmail" : "Calendar"}
+                        </span>
+                      </td>
+                      <td className="py-1 px-2">
+                        <span className={log.status === "sent" ? "text-green-600" : "text-red-600"}>
+                          {log.status === "sent" ? "\u2713" : "\u2717"} {log.status}
+                        </span>
+                        {log.errorMessage && (
+                          <p className="text-[9px] text-red-500 truncate max-w-[120px]" title={log.errorMessage}>{log.errorMessage}</p>
+                        )}
+                      </td>
+                      <td className="py-1 px-2 text-muted-foreground">
+                        {log.sentAt ? new Date(log.sentAt).toLocaleString() : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
@@ -2900,7 +3116,7 @@ export default function WebinarCampaignManager() {
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-6">
-              <CalendarInvitePanel webinarId={selectedWebinarId} />
+              <CalendarInvitePanel webinarId={selectedWebinarId} scheduleDate={settings.data?.selectedScheduleDate || null} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-6">

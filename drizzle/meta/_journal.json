@@ -64,6 +64,13 @@
       "when": 1772703782416,
       "tag": "0008_typical_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1772706373673,
+      "tag": "0009_complete_swordsman",
+      "breakpoints": true
     }
   ]
 }

@@ -2546,3 +2546,84 @@ export const tosAcceptances = mysqlTable("tos_acceptances", {
 
 export type TosAcceptance = typeof tosAcceptances.$inferSelect;
 export type InsertTosAcceptance = typeof tosAcceptances.$inferInsert;
+
+// ─── Automated Reminder Schedule ─────────────────────────────────────────────
+
+/**
+ * Tracks the automated reminder schedule for each webinar.
+ * The scheduler cron checks this table every 60s and fires reminders when due.
+ */
+export const webinarReminderSchedule = mysqlTable("webinar_reminder_schedule", {
+  id: int("id").autoincrement().primaryKey(),
+  webinarId: varchar("webinarId", { length: 64 }).notNull(),
+  webinarName: text("webinarName"),
+  webinarStartTime: timestamp("webinarStartTime").notNull(),
+  joinUrl: text("joinUrl"),
+  enabled: int("enabled").notNull().default(1),
+
+  /** Which channels to use */
+  sendCalendarUpdates: int("sendCalendarUpdates").notNull().default(1),
+  sendGmailReminders: int("sendGmailReminders").notNull().default(1),
+
+  /** Status for each reminder window: 'pending' | 'sent' | 'failed' | 'skipped' */
+  reminder24h: varchar("reminder24h", { length: 20 }).notNull().default("pending"),
+  reminder24hAt: timestamp("reminder24hAt"),
+  reminder24hResult: text("reminder24hResult"),
+
+  reminder1h: varchar("reminder1h", { length: 20 }).notNull().default("pending"),
+  reminder1hAt: timestamp("reminder1hAt"),
+  reminder1hResult: text("reminder1hResult"),
+
+  reminderStarting: varchar("reminderStarting", { length: 20 }).notNull().default("pending"),
+  reminderStartingAt: timestamp("reminderStartingAt"),
+  reminderStartingResult: text("reminderStartingResult"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("reminder_schedule_webinar_idx").on(table.webinarId),
+  index("reminder_schedule_enabled_idx").on(table.enabled),
+]);
+
+export type WebinarReminderSchedule = typeof webinarReminderSchedule.$inferSelect;
+export type InsertWebinarReminderSchedule = typeof webinarReminderSchedule.$inferInsert;
+
+// ─── Email Send Log ──────────────────────────────────────────────────────────
+
+/**
+ * Logs every email/notification sent for tracking delivery and engagement.
+ */
+export const emailSendLog = mysqlTable("email_send_log", {
+  id: int("id").autoincrement().primaryKey(),
+  webinarId: varchar("webinarId", { length: 64 }).notNull(),
+  registrantId: int("registrantId").notNull().default(0),
+  recipientEmail: varchar("recipientEmail", { length: 320 }).notNull(),
+  recipientName: text("recipientName"),
+
+  /** e.g. 'reminder_24h', 'reminder_1h', 'reminder_starting' */
+  emailType: varchar("emailType", { length: 64 }).notNull(),
+  subject: text("subject"),
+
+  /** 'gmail' | 'calendar_update' */
+  channel: varchar("channel", { length: 32 }).notNull().default("gmail"),
+
+  /** 'sent' | 'failed' | 'bounced' */
+  status: varchar("status", { length: 20 }).notNull().default("sent"),
+  messageId: varchar("messageId", { length: 256 }),
+  errorMessage: text("errorMessage"),
+
+  /** UTM-tagged join URL for click tracking */
+  trackedJoinUrl: text("trackedJoinUrl"),
+
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+}, (table) => [
+  index("email_log_webinar_idx").on(table.webinarId),
+  index("email_log_registrant_idx").on(table.registrantId),
+  index("email_log_type_idx").on(table.emailType),
+  index("email_log_channel_idx").on(table.channel),
+  index("email_log_status_idx").on(table.status),
+  index("email_log_sent_at_idx").on(table.sentAt),
+]);
+
+export type EmailSendLog = typeof emailSendLog.$inferSelect;
+export type InsertEmailSendLog = typeof emailSendLog.$inferInsert;
