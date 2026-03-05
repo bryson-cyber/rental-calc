@@ -12697,3 +12697,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add calendar settings UI to the Calendar tab (auto-send toggle, custom event name/description/location)
 - [x] Calendar settings persisted in getSettings response
 - [x] Write tests for auto-send behavior (21 tests total, all passing)
+## Calendar Invite Defaults & Transcript Description (Mar 5, 2026)
+- [x] Set calendarAutoSend default to ON (true) instead of requiring manual toggle
+- [x] Lock join URL to always use WebinarJam live room URL (not user-editable)
+- [ ] Extract event description from webinar transcript and set as default (transcript read, description ready to populate via Calendar tab)
+- [x] Update frontend: remove editable join URL field, show WebinarJam URL as read-only info
+- [x] Fix: ContextualAIChat.tsx dynamic import error — transient stale cache issue, resolved by clearing Vite cache and restarting server
+- [x] Fix: Build OOM crash blocking checkpoint saves - added NODE_OPTIONS max-old-space-size=2048 to build script

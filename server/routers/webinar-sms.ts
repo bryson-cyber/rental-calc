@@ -1015,10 +1015,9 @@ export const webinarSmsRouter = router({
       webinarApiKeyConfigured: !!creds.apiKey,
       webinarHashConfigured: !!creds.webinarHash,
       // Calendar settings
-      calendarAutoSend: settings["calendar_auto_send"] === "true",
+      calendarAutoSend: settings["calendar_auto_send"] !== "false", // Default ON
       calendarEventName: settings["calendar_event_name"] || "",
       calendarEventDescription: settings["calendar_event_description"] || "",
-      calendarEventLocation: settings["calendar_event_location"] || "",
     };
   }),
 
@@ -2238,7 +2237,6 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       calendarAutoSend: z.boolean(),
       calendarEventName: z.string().max(200).optional(),
       calendarEventDescription: z.string().max(2000).optional(),
-      calendarEventLocation: z.string().max(500).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -2251,9 +2249,6 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       }
       if (input.calendarEventDescription !== undefined) {
         upserts.push({ key: "calendar_event_description", value: input.calendarEventDescription, desc: "Custom calendar event description" });
-      }
-      if (input.calendarEventLocation !== undefined) {
-        upserts.push({ key: "calendar_event_location", value: input.calendarEventLocation, desc: "Custom calendar event location/join URL" });
       }
       for (const u of upserts) {
         await db.insert(webinarSmsSettings)
@@ -2285,7 +2280,8 @@ async function autoSendCalendarInvites(
   for (const row of settingRows) {
     settings[row.settingKey] = row.settingValue;
   }
-  if (settings["calendar_auto_send"] !== "true") {
+  // Default ON: only skip if explicitly set to "false"
+  if (settings["calendar_auto_send"] === "false") {
     console.log(`[Calendar Auto] Auto-send disabled, skipping ${newRegistrantEmails.length} invites`);
     return { sent: 0, failed: 0 };
   }
@@ -2322,7 +2318,8 @@ async function autoSendCalendarInvites(
   // Use custom settings if configured, otherwise fall back to webinar details
   const eventName = settings["calendar_event_name"] || details.title || details.name || "Webinar";
   const eventDescription = settings["calendar_event_description"] || details.description || `You're registered for ${eventName}!`;
-  const eventLocation = settings["calendar_event_location"] || details.direct_live_room_url || details.registration_url || "";
+  // Join URL always comes from WebinarJam — not user-configurable
+  const eventLocation = details.direct_live_room_url || details.registration_url || "";
 
   let sent = 0;
   let failed = 0;

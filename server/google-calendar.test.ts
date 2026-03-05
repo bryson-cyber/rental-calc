@@ -230,7 +230,6 @@ describe("Google Calendar Integration", () => {
         calendarAutoSend: true,
         calendarEventName: "Test Webinar Event",
         calendarEventDescription: "Join us for an amazing webinar",
-        calendarEventLocation: "https://example.com/join",
       });
       expect(result).toEqual({ success: true });
     });
@@ -244,7 +243,6 @@ describe("Google Calendar Integration", () => {
         calendarAutoSend: true,
         calendarEventName: "My Custom Event",
         calendarEventDescription: "Custom description",
-        calendarEventLocation: "https://join.example.com",
       });
 
       // Read them back via getSettings
@@ -252,7 +250,14 @@ describe("Google Calendar Integration", () => {
       expect(settings.calendarAutoSend).toBe(true);
       expect(settings.calendarEventName).toBe("My Custom Event");
       expect(settings.calendarEventDescription).toBe("Custom description");
-      expect(settings.calendarEventLocation).toBe("https://join.example.com");
+    });
+
+    it("should default calendarAutoSend to true when not explicitly set", async () => {
+      const ctx = createAdminContext();
+      const trpc = caller(ctx);
+      // getSettings should default to true (ON) even without explicit save
+      const settings = await trpc.webinarSms.getSettings();
+      expect(settings.calendarAutoSend).toBe(true);
     });
 
     it("should toggle auto-send off", async () => {

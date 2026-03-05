@@ -1577,19 +1577,17 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
   });
 
   // Local state for settings form
-  const [autoSend, setAutoSend] = useState(false);
+  const [autoSend, setAutoSend] = useState(true); // Default ON
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
-  const [eventLocation, setEventLocation] = useState("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Sync settings from server when loaded
   useEffect(() => {
     if (settings.data && !settingsLoaded) {
-      setAutoSend(settings.data.calendarAutoSend ?? false);
+      setAutoSend(settings.data.calendarAutoSend ?? true);
       setEventName(settings.data.calendarEventName ?? "");
       setEventDescription(settings.data.calendarEventDescription ?? "");
-      setEventLocation(settings.data.calendarEventLocation ?? "");
       setSettingsLoaded(true);
     }
   }, [settings.data, settingsLoaded]);
@@ -1599,17 +1597,15 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
       calendarAutoSend: autoSend,
       calendarEventName: eventName,
       calendarEventDescription: eventDescription,
-      calendarEventLocation: eventLocation,
     });
   };
 
   const stats = calendarStats.data;
   const health = calendarStatus.data;
   const hasSettingsChanges = settingsLoaded && (
-    autoSend !== (settings.data?.calendarAutoSend ?? false) ||
+    autoSend !== (settings.data?.calendarAutoSend ?? true) ||
     eventName !== (settings.data?.calendarEventName ?? "") ||
-    eventDescription !== (settings.data?.calendarEventDescription ?? "") ||
-    eventLocation !== (settings.data?.calendarEventLocation ?? "")
+    eventDescription !== (settings.data?.calendarEventDescription ?? "")
   );
 
   return (
@@ -1715,19 +1711,10 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
               </p>
             </div>
 
-            {/* Join URL / Location */}
-            <div className="space-y-2">
-              <Label htmlFor="calendar-event-location" className="text-sm font-medium">
-                Join URL / Location
-              </Label>
-              <Input
-                id="calendar-event-location"
-                placeholder="e.g. https://event.webinarjam.com/go/live/..."
-                value={eventLocation}
-                onChange={(e) => setEventLocation(e.target.value)}
-              />
+            {/* Join URL info */}
+            <div className="p-3 rounded-lg bg-muted/50 border">
               <p className="text-xs text-muted-foreground">
-                Leave blank to use the WebinarJam live room URL
+                <span className="font-medium">Join URL:</span> Automatically pulled from your WebinarJam live room link. No configuration needed.
               </p>
             </div>
 
