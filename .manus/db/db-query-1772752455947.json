@@ -1,0 +1,14 @@
+{
+  "query": "SELECT leadEmail, COUNT(*) as cnt FROM analysis_reports WHERE leadEmail IS NOT NULL GROUP BY leadEmail ORDER BY cnt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT leadEmail, COUNT(*) as cnt FROM analysis_reports WHERE leadEmail IS NOT NULL GROUP BY leadEmail ORDER BY cnt DESC LIMIT 20;",
+  "rows": [
+    {
+      "leadEmail": "bryson@coachinayah.com",
+      "cnt": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "leadEmail\tcnt\nbryson@coachinayah.com\t1\n",
+  "stderr": "",
+  "execution_time_ms": 116
+}

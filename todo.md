@@ -12779,4 +12779,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Investigate why isOwner wasn't working — confirmed OWNER_OPEN_ID matches bryson@stayly.com correctly. User may have been logged in with bryson@coachinayah.com at the time.
 
 ## Revenue Edit Bug - Confirmed (3/5/2026)
-- [ ] Fix: Revenue edit not showing for bryson@stayly.com despite being logged in as owner (confirmed via screenshot)
+- [x] Fix: Revenue edit not showing — confirmed code is correct but production site was running old build without isOwner code. Saved clean checkpoint for publish.
+
+## My Reports Bug (3/5/2026)
+- [x] Fix: My Reports page — code already correct, admin sees all analysis_reports, regular users see email-matched
+
+## Revenue Edit Still Not Working (3/5/2026 - continued)
+- [x] Confirmed: Production site running old build without isOwner code. Dev server working correctly. Need to publish latest checkpoint to fix production.
