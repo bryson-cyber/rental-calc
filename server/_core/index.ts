@@ -1162,10 +1162,8 @@ async function startServer() {
       );
     }).catch(() => { /* sms dispatcher not critical */ });
 
-    // Start automated reminder scheduler (checks every 60s for due reminders)
-    import('../reminder-scheduler').then(({ startReminderScheduler }) => {
-      startReminderScheduler();
-    }).catch(() => { /* reminder scheduler not critical */ });
+    // Calendar + Gmail reminders are now synced to the SMS dispatcher schedule
+    // (multi-channel reminders fire alongside SMS when sequence names match)
   });
 }
 

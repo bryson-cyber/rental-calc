@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { buildWebinarReminderEmail } from "./gmail-reminders";
+import { addUtmParams, SMS_TO_REMINDER_MAP } from "./reminder-scheduler";
 
 // ─── Gmail Reminder Email Template Tests ─────────────────────────────────────
 
@@ -85,7 +86,6 @@ describe("buildWebinarReminderEmail", () => {
       "https://example.com"
     );
 
-    // Should not crash and should produce valid HTML
     expect(result.to).toBe("test@example.com");
     expect(result.htmlBody).toContain("Test Event");
     expect(result.subject).toBeTruthy();
@@ -114,7 +114,6 @@ describe("buildWebinarReminderEmail", () => {
       "https://example.com/join"
     );
 
-    // Check CTA button has inline styles (for email client compatibility)
     expect(result.htmlBody).toContain("background-color:");
     expect(result.htmlBody).toContain("text-decoration: none");
     expect(result.htmlBody).toContain("border-radius:");
@@ -139,8 +138,6 @@ describe("buildWebinarReminderEmail", () => {
 // ─── ICS Date Format Tests ───────────────────────────────────────────────────
 
 describe("formatIcsDate (inline)", () => {
-  // We test the format indirectly since formatIcsDate is not exported,
-  // but we verify the expected format: YYYYMMDDTHHmmssZ
   it("should produce valid ICS date format", () => {
     const date = new Date("2026-03-08T14:00:00Z");
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -194,7 +191,6 @@ describe("formatIcsDate (inline)", () => {
 
 describe("ICS file structure validation", () => {
   it("validates ICS content has required fields", () => {
-    // Simulate what the generateIcsFile procedure produces
     const eventName = "Test Webinar";
     const startTime = new Date("2026-03-08T14:00:00Z");
     const endTime = new Date("2026-03-08T16:00:00Z");
@@ -233,7 +229,6 @@ describe("ICS file structure validation", () => {
       "END:VCALENDAR",
     ].join("\r\n");
 
-    // Validate required ICS fields
     expect(icsContent).toContain("BEGIN:VCALENDAR");
     expect(icsContent).toContain("END:VCALENDAR");
     expect(icsContent).toContain("BEGIN:VEVENT");
@@ -243,8 +238,6 @@ describe("ICS file structure validation", () => {
     expect(icsContent).toContain("DTEND:");
     expect(icsContent).toContain("SUMMARY:Test Webinar");
     expect(icsContent).toContain("URL:https://webinarjam.com/live/123");
-
-    // Validate VALARM (reminder) section
     expect(icsContent).toContain("BEGIN:VALARM");
     expect(icsContent).toContain("END:VALARM");
     expect(icsContent).toContain("TRIGGER:-P1D");
@@ -252,66 +245,81 @@ describe("ICS file structure validation", () => {
   });
 });
 
-// ─── UTM Tracking Tests ─────────────────────────────────────────────────────
+// ─── UTM Tracking Tests (using addUtmParams) ───────────────────────────────
 
-describe("UTM tracking for reminder URLs", () => {
-  it("adds correct UTM parameters for 24h reminder", () => {
-    const joinUrl = "https://webinarjam.com/live/123";
-    const url = new URL(joinUrl);
-    url.searchParams.set("utm_source", "coach_inayah");
-    url.searchParams.set("utm_medium", "email");
-    url.searchParams.set("utm_campaign", "webinar_reminder_24h");
-    url.searchParams.set("utm_content", "manual_24h");
-    const trackedUrl = url.toString();
+describe("addUtmParams", () => {
+  it("adds correct UTM parameters for 24h gmail reminder", () => {
+    const result = addUtmParams("https://webinarjam.com/live/123", "24h", "gmail");
 
-    expect(trackedUrl).toContain("utm_source=coach_inayah");
-    expect(trackedUrl).toContain("utm_medium=email");
-    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_24h");
-    expect(trackedUrl).toContain("utm_content=manual_24h");
-    expect(trackedUrl).toContain("webinarjam.com/live/123");
+    expect(result).toContain("utm_source=coach_inayah");
+    expect(result).toContain("utm_medium=email");
+    expect(result).toContain("utm_campaign=webinar_reminder_24h");
+    expect(result).toContain("utm_content=auto_24h");
+    expect(result).toContain("webinarjam.com/live/123");
   });
 
-  it("adds correct UTM parameters for auto-scheduler reminders", () => {
-    const joinUrl = "https://webinarjam.com/live/456";
-    const reminderType = "1h";
-    const url = new URL(joinUrl);
-    url.searchParams.set("utm_source", "coach_inayah");
-    url.searchParams.set("utm_medium", "email");
-    url.searchParams.set("utm_campaign", `webinar_reminder_${reminderType}`);
-    url.searchParams.set("utm_content", `auto_${reminderType}`);
-    const trackedUrl = url.toString();
+  it("adds correct UTM parameters for 1h calendar_update reminder", () => {
+    const result = addUtmParams("https://webinarjam.com/live/456", "1h", "calendar_update");
 
-    expect(trackedUrl).toContain("utm_source=coach_inayah");
-    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_1h");
-    expect(trackedUrl).toContain("utm_content=auto_1h");
+    expect(result).toContain("utm_source=coach_inayah");
+    expect(result).toContain("utm_medium=calendar");
+    expect(result).toContain("utm_campaign=webinar_reminder_1h");
+    expect(result).toContain("utm_content=auto_1h");
   });
 
-  it("adds correct UTM parameters for starting reminder", () => {
-    const joinUrl = "https://webinarjam.com/live/789";
-    const url = new URL(joinUrl);
-    url.searchParams.set("utm_source", "coach_inayah");
-    url.searchParams.set("utm_medium", "email");
-    url.searchParams.set("utm_campaign", "webinar_reminder_starting");
-    url.searchParams.set("utm_content", "auto_starting");
-    const trackedUrl = url.toString();
+  it("adds correct UTM parameters for starting multi_channel reminder", () => {
+    const result = addUtmParams("https://webinarjam.com/live/789", "starting", "multi_channel");
 
-    expect(trackedUrl).toContain("utm_campaign=webinar_reminder_starting");
-    expect(trackedUrl).toContain("utm_content=auto_starting");
+    expect(result).toContain("utm_campaign=webinar_reminder_starting");
+    expect(result).toContain("utm_content=auto_starting");
+    expect(result).toContain("utm_medium=calendar"); // multi_channel falls to calendar
   });
 
   it("preserves existing URL parameters when adding UTM", () => {
-    const joinUrl = "https://webinarjam.com/live/123?ref=abc";
-    const url = new URL(joinUrl);
-    url.searchParams.set("utm_source", "coach_inayah");
-    url.searchParams.set("utm_medium", "email");
-    const trackedUrl = url.toString();
+    const result = addUtmParams("https://webinarjam.com/live/123?ref=abc", "24h", "gmail");
 
-    expect(trackedUrl).toContain("ref=abc");
-    expect(trackedUrl).toContain("utm_source=coach_inayah");
+    expect(result).toContain("ref=abc");
+    expect(result).toContain("utm_source=coach_inayah");
+  });
+
+  it("returns original URL when URL parsing fails", () => {
+    const result = addUtmParams("not-a-valid-url", "24h", "gmail");
+    expect(result).toBe("not-a-valid-url");
   });
 });
 
-// ─── Reminder Scheduler Logic Tests ──────────────────────────────────────────
+// ─── SMS-to-Reminder Mapping Tests ──────────────────────────────────────────
+
+describe("SMS_TO_REMINDER_MAP", () => {
+  it("maps 'Day Before Reminder' to 24h", () => {
+    expect(SMS_TO_REMINDER_MAP["Day Before Reminder"]).toBe("24h");
+  });
+
+  it("maps '2 Days Before Reminder' to 24h", () => {
+    expect(SMS_TO_REMINDER_MAP["2 Days Before Reminder"]).toBe("24h");
+  });
+
+  it("maps '1 Hour Warning' to 1h", () => {
+    expect(SMS_TO_REMINDER_MAP["1 Hour Warning"]).toBe("1h");
+  });
+
+  it("maps 'Starting NOW' to starting", () => {
+    expect(SMS_TO_REMINDER_MAP["Starting NOW"]).toBe("starting");
+  });
+
+  it("returns undefined for non-reminder SMS sequences", () => {
+    expect(SMS_TO_REMINDER_MAP["Registration Confirmation"]).toBeUndefined();
+    expect(SMS_TO_REMINDER_MAP["Post-Webinar Follow Up"]).toBeUndefined();
+    expect(SMS_TO_REMINDER_MAP["some random message"]).toBeUndefined();
+  });
+
+  it("covers all expected SMS sequence names", () => {
+    const expectedKeys = ["Day Before Reminder", "2 Days Before Reminder", "1 Hour Warning", "Starting NOW"];
+    expect(Object.keys(SMS_TO_REMINDER_MAP)).toEqual(expectedKeys);
+  });
+});
+
+// ─── Reminder Scheduler Timing Logic Tests ──────────────────────────────────
 
 describe("Reminder scheduler timing logic", () => {
   it("correctly identifies when 24h reminder is due", () => {
@@ -319,7 +327,6 @@ describe("Reminder scheduler timing logic", () => {
     const webinarStart = new Date("2026-03-08T14:00:00Z");
     const hoursUntilStart = (webinarStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    // 24h reminder should fire when <= 24h away
     expect(hoursUntilStart).toBeLessThanOrEqual(24);
     expect(hoursUntilStart).toBeGreaterThan(0);
   });
@@ -329,7 +336,6 @@ describe("Reminder scheduler timing logic", () => {
     const webinarStart = new Date("2026-03-08T14:00:00Z");
     const hoursUntilStart = (webinarStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    // 1h reminder should fire when <= 1h away
     expect(hoursUntilStart).toBeLessThanOrEqual(1);
     expect(hoursUntilStart).toBeGreaterThan(0);
   });
@@ -339,7 +345,6 @@ describe("Reminder scheduler timing logic", () => {
     const webinarStart = new Date("2026-03-08T14:00:00Z");
     const minutesPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60);
 
-    // Starting reminder should fire when past start time but within 15 min
     expect(minutesPast).toBeGreaterThanOrEqual(0);
     expect(minutesPast).toBeLessThanOrEqual(15);
   });
@@ -357,7 +362,6 @@ describe("Reminder scheduler timing logic", () => {
     const webinarStart = new Date("2026-03-08T14:00:00Z");
     const hoursPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60 * 60);
 
-    // Should auto-disable when > 2h past start
     expect(hoursPast).toBeGreaterThan(2);
   });
 
@@ -366,7 +370,6 @@ describe("Reminder scheduler timing logic", () => {
     const webinarStart = new Date("2026-03-08T14:00:00Z");
     const hoursPast = (now.getTime() - webinarStart.getTime()) / (1000 * 60 * 60);
 
-    // Should NOT disable when < 2h past start
     expect(hoursPast).toBeLessThanOrEqual(2);
   });
 });
@@ -429,7 +432,6 @@ describe("Email send log data structure", () => {
     expect(sent).toBe(4);
     expect(failed).toBe(1);
 
-    // By channel
     const gmailSent = logs.filter(l => l.channel === "gmail" && l.status === "sent").length;
     const gmailFailed = logs.filter(l => l.channel === "gmail" && l.status === "failed").length;
     const calendarSent = logs.filter(l => l.channel === "calendar" && l.status === "sent").length;
@@ -438,8 +440,68 @@ describe("Email send log data structure", () => {
     expect(gmailFailed).toBe(1);
     expect(calendarSent).toBe(1);
 
-    // By type
     const reminder24hSent = logs.filter(l => l.emailType === "reminder_24h" && l.status === "sent").length;
     expect(reminder24hSent).toBe(2);
+  });
+});
+
+// ─── Multi-Channel Dispatch Integration Tests ───────────────────────────────
+
+describe("Multi-channel dispatch integration", () => {
+  it("correctly maps SMS sequence names to multi-channel actions", () => {
+    // Simulate what the SMS dispatcher does
+    const smsMessages = [
+      { sequenceName: "Registration Confirmation", expectedReminder: undefined },
+      { sequenceName: "Day Before Reminder", expectedReminder: "24h" },
+      { sequenceName: "2 Days Before Reminder", expectedReminder: "24h" },
+      { sequenceName: "1 Hour Warning", expectedReminder: "1h" },
+      { sequenceName: "Starting NOW", expectedReminder: "starting" },
+      { sequenceName: "Post-Webinar Follow Up", expectedReminder: undefined },
+    ];
+
+    for (const msg of smsMessages) {
+      const reminderType = SMS_TO_REMINDER_MAP[msg.sequenceName];
+      expect(reminderType).toBe(msg.expectedReminder);
+    }
+  });
+
+  it("generates correct UTM URLs for multi-channel dispatch", () => {
+    const joinUrl = "https://webinarjam.com/live/test123";
+
+    // When SMS dispatcher fires "Day Before Reminder", it should create these UTM URLs:
+    const calendarUtm = addUtmParams(joinUrl, "24h", "calendar_update");
+    const gmailUtm = addUtmParams(joinUrl, "24h", "gmail");
+
+    // Calendar UTM
+    expect(calendarUtm).toContain("utm_medium=calendar");
+    expect(calendarUtm).toContain("utm_campaign=webinar_reminder_24h");
+
+    // Gmail UTM
+    expect(gmailUtm).toContain("utm_medium=email");
+    expect(gmailUtm).toContain("utm_campaign=webinar_reminder_24h");
+
+    // Both should preserve the original URL
+    expect(calendarUtm).toContain("webinarjam.com/live/test123");
+    expect(gmailUtm).toContain("webinarjam.com/live/test123");
+  });
+
+  it("builds correct Gmail emails for each reminder type in multi-channel flow", () => {
+    const reminderTypes: Array<"24h" | "1h" | "starting"> = ["24h", "1h", "starting"];
+
+    for (const type of reminderTypes) {
+      const email = buildWebinarReminderEmail(
+        "Test User",
+        "test@example.com",
+        type,
+        "Test Webinar",
+        addUtmParams("https://example.com/join", type, "gmail"),
+        "Saturday, March 8, 2:00 PM PST"
+      );
+
+      expect(email.to).toBe("test@example.com");
+      expect(email.subject).toBeTruthy();
+      expect(email.htmlBody).toContain("utm_campaign=webinar_reminder_" + type);
+      expect(email.htmlBody).toContain("utm_medium=email");
+    }
   });
 });

@@ -1984,16 +1984,17 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
               Automated Reminder Schedule
             </CardTitle>
             <CardDescription>
-              Automatically send calendar updates and Gmail reminders at 24h, 1h, and start time. The scheduler checks every 60 seconds.
+              Calendar updates + Gmail reminders fire automatically alongside your scheduled SMS messages. When "Day Before Reminder", "1 Hour Warning", or "Starting NOW" SMS fires, the matching calendar update and Gmail reminder fire too.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Toggle */}
             <div className="flex items-center justify-between p-3 rounded-lg border">
               <div>
-                <p className="text-sm font-medium">Auto-Reminders</p>
+                <p className="text-sm font-medium">Multi-Channel Tracking</p>
                 <p className="text-xs text-muted-foreground">
                   {scheduleDate ? `Webinar: ${new Date(scheduleDate).toLocaleString()}` : "No schedule date selected"}
+                  {" "}&mdash; Tracks Calendar + Gmail delivery alongside SMS
                 </p>
               </div>
               <Button
@@ -2076,7 +2077,7 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
               Show Rate Boosters (Manual)
             </CardTitle>
             <CardDescription>
-              Tools to maximize webinar attendance. Calendar event updates trigger Google notification emails to all attendees.
+              Manual overrides — use these if you need to send reminders outside the SMS schedule, or to test before the webinar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -12735,3 +12735,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Channel breakdown (Gmail vs Calendar) in email log stats
 - [x] Manual Gmail reminder also logs to email_send_log table
 - [x] Tests for scheduler logic, UTM tracking, and email tracking (25 tests passing)
+
+## Unified Scheduling — Sync Calendar/Gmail Reminders to SMS Schedule (Mar 5 2026)
+- [x] Study SMS dispatcher cron to understand how scheduled messages are timed and fired
+- [x] Wire calendar event updates into SMS dispatcher so they fire alongside scheduled SMS at same intervals
+- [x] Wire Gmail reminder emails into SMS dispatcher so they fire alongside scheduled SMS at same intervals
+- [x] Simplified reminder-scheduler.ts to utility-only (UTM helpers + SMS-to-reminder mapping), removed standalone cron
+- [x] Updated Calendar tab UI to show unified schedule status (SMS + Calendar + Gmail all from one schedule)
+- [x] Tests for unified scheduling (35 tests passing including multi-channel dispatch and SMS mapping)

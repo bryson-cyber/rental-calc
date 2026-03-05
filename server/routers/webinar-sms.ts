@@ -3372,6 +3372,157 @@ export async function startSmsDispatcher() {
           console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed (campaign #${campaignId})`);
           console.log(`[SMS Dispatcher] Campaign #${campaignId} created in Campaign History`);
 
+          // ═══════════════════════════════════════════════════════════════════
+          // MULTI-CHANNEL: Fire Calendar Updates + Gmail Reminders alongside SMS
+          // Maps specific SMS sequence names to reminder types
+          // ═══════════════════════════════════════════════════════════════════
+          const reminderTypeMap: Record<string, "24h" | "1h" | "starting"> = {
+            "Day Before Reminder": "24h",
+            "2 Days Before Reminder": "24h",  // Also treat 2-day as 24h reminder
+            "1 Hour Warning": "1h",
+            "Starting NOW": "starting",
+          };
+
+          const reminderType = reminderTypeMap[msg.sequenceName];
+          if (reminderType) {
+            console.log(`[Multi-Channel] SMS "${msg.sequenceName}" maps to reminder type "${reminderType}" — firing Calendar + Gmail reminders`);
+
+            // Fire in background so it doesn't block the SMS dispatcher loop
+            (async () => {
+              try {
+                // Get settings for event name and join URL
+                const settingRows = await db.select().from(webinarSmsSettings);
+                const settings: Record<string, string> = {};
+                for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+                const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+
+                // Get webinar details for join URL
+                let joinUrl = "";
+                try {
+                  const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+                  const perWebinarApiKey = credRow?.apiKey || undefined;
+                  const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
+                  joinUrl = details.direct_live_room_url || details.registration_url || "";
+                } catch (e: any) {
+                  console.warn(`[Multi-Channel] Could not fetch webinar details for join URL: ${e.message}`);
+                }
+
+                // UTM-tagged join URL
+                const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=multi_channel&utm_medium=${reminderType}&utm_campaign=webinar_reminder` : "";
+
+                // 1) Calendar Event Updates
+                try {
+                  const calResult = await sendCalendarReminderUpdates(msg.webinarId, reminderType, utmJoinUrl || undefined);
+                  console.log(`[Multi-Channel] Calendar update for "${reminderType}": ${calResult.updated} updated, ${calResult.failed} failed`);
+
+                  // Log to email_send_log
+                  if (calResult.updated > 0) {
+                    await db.insert(emailSendLog).values({
+                      webinarId: msg.webinarId,
+                      registrantId: null,
+                      recipientEmail: `(${calResult.updated} calendar events)`,
+                      recipientName: "Bulk Calendar Update",
+                      channel: "calendar",
+                      reminderType,
+                      status: calResult.failed === 0 ? "sent" : "partial",
+                      error: calResult.errors.length > 0 ? calResult.errors.join("; ").slice(0, 1000) : null,
+                      triggeredBy: "sms_dispatcher",
+                    });
+                  }
+                } catch (calErr: any) {
+                  console.error(`[Multi-Channel] Calendar update failed: ${calErr.message}`);
+                  await db.insert(emailSendLog).values({
+                    webinarId: msg.webinarId,
+                    registrantId: null,
+                    recipientEmail: "(calendar update)",
+                    recipientName: "Calendar Update",
+                    channel: "calendar",
+                    reminderType,
+                    status: "failed",
+                    error: calErr.message?.slice(0, 1000),
+                    triggeredBy: "sms_dispatcher",
+                  }).catch(() => {});
+                }
+
+                // 2) Gmail Reminder Emails — send to all registrants with email
+                try {
+                  const emailRecipients = await db.select({
+                    id: webinarRegistrants.id,
+                    name: webinarRegistrants.name,
+                    email: webinarRegistrants.email,
+                  }).from(webinarRegistrants).where(
+                    and(
+                      eq(webinarRegistrants.webinarId, msg.webinarId),
+                      sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+                      sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`
+                    )
+                  );
+
+                  if (emailRecipients.length > 0) {
+                    // Get schedule date for email content
+                    let eventDate = "";
+                    try {
+                      const details2 = await fetchWebinarJamDetails(msg.webinarId);
+                      if (details2.schedules?.length > 0) {
+                        const d = new Date(details2.schedules[0].date + ":00");
+                        eventDate = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+                      }
+                    } catch (_) {}
+
+                    const gmailResult = await sendBulkReminderEmails(
+                      emailRecipients.map(r => ({ email: r.email!, name: r.name })),
+                      (recipient) => buildWebinarReminderEmail(
+                        recipient.name,
+                        recipient.email,
+                        reminderType,
+                        eventName,
+                        utmJoinUrl || joinUrl,
+                        eventDate
+                      )
+                    );
+
+                    console.log(`[Multi-Channel] Gmail ${reminderType}: ${gmailResult.sent} sent, ${gmailResult.failed} failed`);
+
+                    // Log each send to email_send_log
+                    for (const recipient of emailRecipients) {
+                      const wasError = gmailResult.errors.find(e => e.includes(recipient.email!));
+                      await db.insert(emailSendLog).values({
+                        webinarId: msg.webinarId,
+                        registrantId: recipient.id,
+                        recipientEmail: recipient.email!,
+                        recipientName: recipient.name,
+                        channel: "gmail",
+                        reminderType,
+                        status: wasError ? "failed" : "sent",
+                        error: wasError ? wasError.slice(0, 1000) : null,
+                        triggeredBy: "sms_dispatcher",
+                      }).catch(() => {});
+                    }
+                  }
+                } catch (gmailErr: any) {
+                  console.error(`[Multi-Channel] Gmail send failed: ${gmailErr.message}`);
+                  await db.insert(emailSendLog).values({
+                    webinarId: msg.webinarId,
+                    registrantId: null,
+                    recipientEmail: "(bulk gmail)",
+                    recipientName: "Gmail Bulk Send",
+                    channel: "gmail",
+                    reminderType,
+                    status: "failed",
+                    error: gmailErr.message?.slice(0, 1000),
+                    triggeredBy: "sms_dispatcher",
+                  }).catch(() => {});
+                }
+
+              } catch (multiErr: any) {
+                console.error(`[Multi-Channel] Error in multi-channel dispatch: ${multiErr.message}`);
+              }
+            })();
+          }
+          // ═══════════════════════════════════════════════════════════════════
+          // END MULTI-CHANNEL
+          // ═══════════════════════════════════════════════════════════════════
+
         } catch (err: any) {
           console.error(`[SMS Dispatcher] Error processing message #${msg.id}:`, err.message);
           await db.update(scheduledSmsMessages).set({
