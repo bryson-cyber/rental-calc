@@ -76,6 +76,7 @@ import { LightMarkdown } from '@/components/LightMarkdown';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { lazy, Suspense } from 'react';
+import { ReportDisclaimer } from './ReportDisclaimer';
 
 
 const SendToSlackModal = lazy(() => import('./SendToSlackModal'));
@@ -3402,9 +3403,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <p className="text-xs text-[oklch(0.55_0_0)] text-center italic">
             This report presents market data and projections for informational purposes only.
             All data is sourced from Coach Inayah market data based on trailing 12-month performance of comparable properties.
-            Actual results may vary based on property condition, management quality, and market conditions.
-            This is not investment advice.
           </p>
+          <ReportDisclaimer />
         </div>
       </div> {/* closes max-w-5xl */}
 

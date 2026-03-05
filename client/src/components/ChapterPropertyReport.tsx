@@ -50,6 +50,7 @@ import { ShareReportButton } from './ShareReportButton';
 import { StandaloneMarketAdvisor } from './StandaloneMarketAdvisor';
 import OpportunityFinderStep from './OpportunityFinderStep';
 import RentometerSection from './RentometerSection';
+import { ReportDisclaimer } from './ReportDisclaimer';
 
 
 // Helper function to extract Airbnb listing ID and construct image URL
@@ -1567,9 +1568,9 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               </div>
               <p className="text-xs text-[oklch(0.15_0_0)]/50 italic text-center">
                 Powered by Coach Inayah Market Data | Data from Airbnb & Vrbo listings.
-                All data is for the trailing 12-month period. Actual results may vary based on property condition,
-                management quality, and market conditions.
+                All data is for the trailing 12-month period.
               </p>
+              <ReportDisclaimer />
             </div>
           </ChapterSection>
 

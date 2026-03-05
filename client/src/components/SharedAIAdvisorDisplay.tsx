@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LightMarkdown } from '@/components/LightMarkdown';
+import { ReportDisclaimer } from '@/components/ReportDisclaimer';
 
 interface SharedAIAdvisorDisplayProps {
   data: {
@@ -160,6 +161,7 @@ export function SharedAIAdvisorDisplay({ data, address, bedrooms, bathrooms }: S
           </motion.div>
         </CardContent>
       </Card>
+      <ReportDisclaimer />
     </div>
   );
 }

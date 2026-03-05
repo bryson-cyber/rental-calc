@@ -23,6 +23,7 @@ import type { FullReportData } from '@/components/FullPropertyReport';
 import { SharedRegulationDisplay } from '@/components/SharedRegulationDisplay';
 import { SharedAIAdvisorDisplay } from '@/components/SharedAIAdvisorDisplay';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
+import { ReportDisclaimer } from '@/components/ReportDisclaimer';
 import {
   Loader2,
   ArrowLeft,
@@ -636,6 +637,7 @@ export default function ShareableReportViewer() {
             <p className="text-[#C9A962] text-xs mt-3">
               Powered by Coach Inayah market data
             </p>
+            <ReportDisclaimer />
           </div>
         </div>
         <ShareBar />
@@ -860,6 +862,7 @@ export default function ShareableReportViewer() {
             <p className="text-[#C9A962] text-xs mt-3">
               Powered by Coach Inayah market data
             </p>
+            <ReportDisclaimer />
           </div>
         </main>
       </div>

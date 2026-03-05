@@ -27,6 +27,7 @@ import {
   Sparkles,
   ChevronRight,
 } from 'lucide-react';
+import { ReportDisclaimer } from '@/components/ReportDisclaimer';
 
 // Exact same statusConfig from RegulationTrackerStep
 const statusConfig: Record<string, {
@@ -519,6 +520,7 @@ export function SharedRegulationDisplay({ data }: SharedRegulationDisplayProps) 
           </div>
         </motion.div>
       </div>
+      <ReportDisclaimer />
     </div>
   );
 }

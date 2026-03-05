@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { DISCLAIMER_TEXT } from '@/components/ReportDisclaimer';
 
 interface MonthlyForecast {
   month: string;
@@ -440,6 +441,19 @@ export const generateRentalReportPdf = (data: ReportData): void => {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Schedule a call to get started →', margin + 10, yPos + 40);
+
+  // === Disclaimer Page ===
+  doc.addPage();
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DISCLAIMER', margin, 30);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  const disclaimerLines = doc.splitTextToSize(DISCLAIMER_TEXT.replace('DISCLAIMER: ', ''), pageWidth - margin * 2);
+  doc.text(disclaimerLines, margin, 40);
 
   // Generate filename and save
   const addressSlug = propertyInfo.address

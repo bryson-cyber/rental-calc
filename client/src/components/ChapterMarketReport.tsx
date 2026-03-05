@@ -35,6 +35,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { ReportDisclaimer } from './ReportDisclaimer';
 
 
 // Types
@@ -1148,6 +1149,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                 This report was generated based on data from the Coach Inayah market analysis tool.
                 All data is for the trailing 12-month period ending {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
               </p>
+              <ReportDisclaimer />
             </div>
           </ChapterSection>
         </div>

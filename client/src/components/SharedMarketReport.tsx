@@ -5,6 +5,7 @@
 
 import { ArrowLeft, TrendingUp, DollarSign, Percent, Building, Star, Calendar, Home, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportDisclaimer } from '@/components/ReportDisclaimer';
 
 interface PropertyType {
   type: string;
@@ -530,6 +531,7 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
           <p className="text-sm text-slate-500">
             Powered by <span className="text-amber-600 font-semibold">Coach Inayah's Turnkey Program</span>
           </p>
+          <ReportDisclaimer />
         </div>
       </div>
     </div>

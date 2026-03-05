@@ -12674,3 +12674,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Tighten rate limiter daily limits to stay under 24K/month budget
 - [x] Write tests to verify API call reduction (16 new tests in api-optimization.test.ts, all passing)
 - [x] Update existing rate-limiter tests for new limit values (rate-limiter.test.ts + __tests__/rate-limiter.test.ts)
+- [x] Add I&B Coaching liability disclaimer to the end of every generated report

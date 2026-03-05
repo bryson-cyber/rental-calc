@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { DISCLAIMER_TEXT } from '@/components/ReportDisclaimer';
 
 interface MarketData {
   name: string;
@@ -489,6 +490,17 @@ export function exportMarketDetailPDF(
     doc.setFontSize(8);
     doc.text('Rental Revenue Calculator - Your Path to Rental Riches', 14, footerY + 9);
   }
+
+  // === Disclaimer Page ===
+  doc.addPage();
+  doc.setTextColor(120, 120, 120);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DISCLAIMER', 14, 25);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  const disclaimerLines = doc.splitTextToSize(DISCLAIMER_TEXT.replace('DISCLAIMER: ', ''), pageWidth - 28);
+  doc.text(disclaimerLines, 14, 35);
 
   // Save the PDF
   const safeName = market.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
