@@ -6029,7 +6029,7 @@ export default function LeadMagnet() {
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
                 revenueScenarios={result.revenueScenarios}
-                isOwner={isAdmin}
+                isOwner={isOwner}
                 shareCode={validatorShareCode || undefined}
                 dataSource={result.dataSource}
                 selectedAmenities={result.selectedAmenities}

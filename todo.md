@@ -12773,3 +12773,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Bug: Step 5 (Validate Deal) extremely slow — increased admin per-minute rate limit from 12 to 30, reduced wait intervals from 5s to 3s and max wait from 60s to 30s
 - [x] Bug: Admin revenue edit option missing — changed isOwner check to isAdmin so any admin (including bryson@coachinayah.com) can edit revenue, not just the OWNER_OPEN_ID account
 - [x] Bug: Amenity selections on property not matching comp annual revenue — investigated and confirmed the logic IS correct: amenities filter comps, comp-median adjusts revenue. If < 3 amenity-matched comps found, falls back to all comps (amber banner shown). Revenue difference depends on how different the amenity-filtered comp pool is from the unfiltered pool.
+
+## Revenue Edit Access Fix (3/5/2026)
+- [x] Revert revenue edit from isAdmin back to isOwner (bryson@stayly.com only)
+- [x] Investigate why isOwner wasn't working — confirmed OWNER_OPEN_ID matches bryson@stayly.com correctly. User may have been logged in with bryson@coachinayah.com at the time.
