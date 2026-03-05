@@ -2,19 +2,21 @@
  * TermsAcceptanceModal
  * 
  * A modal that requires users to accept the Terms of Service before using the tool.
- * Acceptance is stored in localStorage so users only see it once per browser.
+ * Acceptance is stored in localStorage (for instant checks) AND logged server-side
+ * in the tos_acceptances table (for legal proof).
  * The modal cannot be dismissed without accepting.
  */
 
 import { useState } from 'react';
-import { FileText, CheckCircle2 } from 'lucide-react';
+import { FileText, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import { trpc } from '@/lib/trpc';
 
 const TOS_ACCEPTED_KEY = 'tos_accepted_v1';
 
 /**
- * Check if the user has already accepted the TOS.
+ * Check if the user has already accepted the TOS (local check for instant UI gating).
  * Can be called from any component to gate functionality.
  */
 export function hasTosBeenAccepted(): boolean {
@@ -43,12 +45,31 @@ interface TermsAcceptanceModalProps {
 
 export function TermsAcceptanceModal({ isOpen, onAccept }: TermsAcceptanceModalProps) {
   const [checked, setChecked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const acceptMutation = trpc.tos.accept.useMutation();
 
   if (!isOpen) return null;
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!checked) return;
+    setSubmitting(true);
+
+    try {
+      // Log acceptance server-side (fire-and-forget — don't block the user if it fails)
+      await acceptMutation.mutateAsync({
+        tosVersion: '1.0',
+        sessionId: getSessionId(),
+      });
+    } catch (err) {
+      // Server logging failed — still allow the user to proceed.
+      // The localStorage record is the fallback.
+      console.warn('[TOS] Server-side acceptance logging failed:', err);
+    }
+
+    // Always mark locally and proceed
     markTosAccepted();
+    setSubmitting(false);
     onAccept();
   };
 
@@ -130,13 +151,35 @@ export function TermsAcceptanceModal({ isOpen, onAccept }: TermsAcceptanceModalP
           {/* Accept Button */}
           <Button
             onClick={handleAccept}
-            disabled={!checked}
+            disabled={!checked || submitting}
             className="w-full bg-[oklch(0.55_0.14_75)] hover:bg-[oklch(0.50_0.14_75)] text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Continue to Tool
+            {submitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing...
+              </span>
+            ) : (
+              'Continue to Tool'
+            )}
           </Button>
         </div>
       </div>
     </div>
   );
+}
+
+/** Get or create a session ID for anonymous users */
+function getSessionId(): string {
+  const key = 'tos_session_id';
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 }

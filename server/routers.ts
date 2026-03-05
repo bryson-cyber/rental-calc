@@ -57,6 +57,7 @@ import {
   webinarSmsRouter,
   leaseReaderRouter,
   webinarEnvRouter,
+  tosRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -186,6 +187,9 @@ export const appRouter = router({
 
   // Webinar Environment (admin toggle for demo mode)
   webinarEnv: webinarEnvRouter,
+
+  // Terms of Service acceptance tracking
+  tos: tosRouter,
 });
 
 export type AppRouter = typeof appRouter;

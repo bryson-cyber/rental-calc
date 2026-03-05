@@ -12681,3 +12681,4 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Webinar Messaging Enhancements (Mar 5, 2026)
 - [x] Bulk message all previous attendees at once (across all webinars, not just selected one)
 - [x] Bulk message all no-shows at once (across all webinars, not just selected one)
+- [x] Log TOS acceptance server-side (user ID + timestamp in database)

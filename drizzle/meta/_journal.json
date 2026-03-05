@@ -43,6 +43,13 @@
       "when": 1772574565067,
       "tag": "0005_previous_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772677971371,
+      "tag": "0006_handy_morg",
+      "breakpoints": true
     }
   ]
 }

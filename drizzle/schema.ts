@@ -2504,3 +2504,37 @@ export const webinarSettings = mysqlTable("webinar_settings", {
 });
 export type WebinarSetting = typeof webinarSettings.$inferSelect;
 export type InsertWebinarSetting = typeof webinarSettings.$inferInsert;
+
+
+/**
+ * TOS Acceptance log — records when each user accepted the Terms of Service.
+ * Provides legal proof of agreement with timestamp and version tracking.
+ */
+export const tosAcceptances = mysqlTable("tos_acceptances", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  /** User who accepted (null for anonymous/pre-login users) */
+  userId: int("userId"),
+  
+  /** Session ID for anonymous users who haven't logged in yet */
+  sessionId: varchar("sessionId", { length: 64 }),
+  
+  /** IP address at time of acceptance */
+  userIp: varchar("userIp", { length: 45 }),
+  
+  /** User agent string at time of acceptance */
+  userAgent: text("userAgent"),
+  
+  /** TOS version accepted (allows tracking when TOS changes) */
+  tosVersion: varchar("tosVersion", { length: 20 }).notNull().default("1.0"),
+  
+  /** Timestamp of acceptance */
+  acceptedAt: timestamp("acceptedAt").defaultNow().notNull(),
+}, (table) => [
+  index("tos_user_id_idx").on(table.userId),
+  index("tos_session_id_idx").on(table.sessionId),
+  index("tos_accepted_at_idx").on(table.acceptedAt),
+]);
+
+export type TosAcceptance = typeof tosAcceptances.$inferSelect;
+export type InsertTosAcceptance = typeof tosAcceptances.$inferInsert;
