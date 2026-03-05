@@ -205,4 +205,63 @@ describe("Google Calendar Integration", () => {
       ).rejects.toThrow();
     });
   });
+
+  describe("saveCalendarSettings", () => {
+    it("should reject unauthenticated users", async () => {
+      const ctx = createUnauthContext();
+      const trpc = caller(ctx);
+      await expect(
+        trpc.webinarSms.saveCalendarSettings({ calendarAutoSend: true })
+      ).rejects.toThrow();
+    });
+
+    it("should reject non-admin users", async () => {
+      const ctx = createUserContext();
+      const trpc = caller(ctx);
+      await expect(
+        trpc.webinarSms.saveCalendarSettings({ calendarAutoSend: true })
+      ).rejects.toThrow();
+    });
+
+    it("should save calendar settings for admin users", async () => {
+      const ctx = createAdminContext();
+      const trpc = caller(ctx);
+      const result = await trpc.webinarSms.saveCalendarSettings({
+        calendarAutoSend: true,
+        calendarEventName: "Test Webinar Event",
+        calendarEventDescription: "Join us for an amazing webinar",
+        calendarEventLocation: "https://example.com/join",
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should persist calendar settings in getSettings", async () => {
+      const ctx = createAdminContext();
+      const trpc = caller(ctx);
+
+      // Save settings first
+      await trpc.webinarSms.saveCalendarSettings({
+        calendarAutoSend: true,
+        calendarEventName: "My Custom Event",
+        calendarEventDescription: "Custom description",
+        calendarEventLocation: "https://join.example.com",
+      });
+
+      // Read them back via getSettings
+      const settings = await trpc.webinarSms.getSettings();
+      expect(settings.calendarAutoSend).toBe(true);
+      expect(settings.calendarEventName).toBe("My Custom Event");
+      expect(settings.calendarEventDescription).toBe("Custom description");
+      expect(settings.calendarEventLocation).toBe("https://join.example.com");
+    });
+
+    it("should toggle auto-send off", async () => {
+      const ctx = createAdminContext();
+      const trpc = caller(ctx);
+
+      await trpc.webinarSms.saveCalendarSettings({ calendarAutoSend: false });
+      const settings = await trpc.webinarSms.getSettings();
+      expect(settings.calendarAutoSend).toBe(false);
+    });
+  });
 });

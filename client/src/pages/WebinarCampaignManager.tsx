@@ -65,6 +65,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { Link } from "wouter";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -1555,6 +1557,7 @@ function CampaignHistory() {
 function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
   const calendarStatus = trpc.webinarSms.calendarStatus.useQuery();
   const calendarStats = trpc.webinarSms.calendarInviteStats.useQuery({ webinarId });
+  const settings = trpc.webinarSms.getSettings.useQuery();
   const testConnection = trpc.webinarSms.testCalendarConnection.useMutation({
     onSuccess: (data) => toast[data.success ? "success" : "error"](data.message),
   });
@@ -1565,9 +1568,49 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
     },
     onError: (err) => toast.error(err.message),
   });
+  const saveCalendarSettings = trpc.webinarSms.saveCalendarSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Calendar settings saved");
+      settings.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Local state for settings form
+  const [autoSend, setAutoSend] = useState(false);
+  const [eventName, setEventName] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Sync settings from server when loaded
+  useEffect(() => {
+    if (settings.data && !settingsLoaded) {
+      setAutoSend(settings.data.calendarAutoSend ?? false);
+      setEventName(settings.data.calendarEventName ?? "");
+      setEventDescription(settings.data.calendarEventDescription ?? "");
+      setEventLocation(settings.data.calendarEventLocation ?? "");
+      setSettingsLoaded(true);
+    }
+  }, [settings.data, settingsLoaded]);
+
+  const handleSaveSettings = () => {
+    saveCalendarSettings.mutate({
+      calendarAutoSend: autoSend,
+      calendarEventName: eventName,
+      calendarEventDescription: eventDescription,
+      calendarEventLocation: eventLocation,
+    });
+  };
 
   const stats = calendarStats.data;
   const health = calendarStatus.data;
+  const hasSettingsChanges = settingsLoaded && (
+    autoSend !== (settings.data?.calendarAutoSend ?? false) ||
+    eventName !== (settings.data?.calendarEventName ?? "") ||
+    eventDescription !== (settings.data?.calendarEventDescription ?? "") ||
+    eventLocation !== (settings.data?.calendarEventLocation ?? "")
+  );
 
   return (
     <div className="space-y-6">
@@ -1579,7 +1622,7 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
             Google Calendar Integration
           </CardTitle>
           <CardDescription>
-            Send Google Calendar invites to registrants so they get a calendar event with the webinar link.
+            Automatically send Google Calendar invites when someone registers for your webinar.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1609,32 +1652,134 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
         </CardContent>
       </Card>
 
+      {/* Auto-Send Settings */}
+      {health?.authenticated && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Auto-Send Settings
+            </CardTitle>
+            <CardDescription>
+              When enabled, every new registrant with an email address automatically gets a calendar invite the moment they opt in.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Auto-send toggle */}
+            <div className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="space-y-1">
+                <Label htmlFor="calendar-auto-send" className="text-sm font-medium cursor-pointer">
+                  Auto-send calendar invites
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically send invites when registrants are imported or manually added
+                </p>
+              </div>
+              <Switch
+                id="calendar-auto-send"
+                checked={autoSend}
+                onCheckedChange={setAutoSend}
+              />
+            </div>
+
+            {/* Custom Event Name */}
+            <div className="space-y-2">
+              <Label htmlFor="calendar-event-name" className="text-sm font-medium">
+                Event Name
+              </Label>
+              <Input
+                id="calendar-event-name"
+                placeholder="e.g. Live Masterclass: How to Start Your Airbnb Business"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to use the WebinarJam webinar name
+              </p>
+            </div>
+
+            {/* Custom Description */}
+            <div className="space-y-2">
+              <Label htmlFor="calendar-event-desc" className="text-sm font-medium">
+                Event Description
+              </Label>
+              <Textarea
+                id="calendar-event-desc"
+                placeholder="e.g. Join Coach Inayah for a live training on building your short-term rental business. Click the link below to join!"
+                value={eventDescription}
+                onChange={(e) => setEventDescription(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to use the WebinarJam description
+              </p>
+            </div>
+
+            {/* Join URL / Location */}
+            <div className="space-y-2">
+              <Label htmlFor="calendar-event-location" className="text-sm font-medium">
+                Join URL / Location
+              </Label>
+              <Input
+                id="calendar-event-location"
+                placeholder="e.g. https://event.webinarjam.com/go/live/..."
+                value={eventLocation}
+                onChange={(e) => setEventLocation(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to use the WebinarJam live room URL
+              </p>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                onClick={handleSaveSettings}
+                disabled={saveCalendarSettings.isPending || !hasSettingsChanges}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {saveCalendarSettings.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving...</>
+                ) : (
+                  <><Save className="w-4 h-4 mr-2" /> Save Calendar Settings</>
+                )}
+              </Button>
+              {autoSend && settingsLoaded && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800">
+                  Auto-send is ON
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Invite Stats & Actions */}
       {health?.authenticated && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Calendar Invite Status</CardTitle>
             <CardDescription>
-              Track and send calendar invites to registrants for this webinar.
+              Track and manually send calendar invites to registrants for this webinar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg border bg-card">
-                <p className="text-2xl font-bold">{stats?.total ?? "—"}</p>
+                <p className="text-2xl font-bold">{stats?.total ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Total Registrants</p>
               </div>
               <div className="p-4 rounded-lg border bg-card">
-                <p className="text-2xl font-bold">{stats?.withEmail ?? "—"}</p>
+                <p className="text-2xl font-bold">{stats?.withEmail ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Have Email</p>
               </div>
               <div className="p-4 rounded-lg border bg-emerald-50 dark:bg-emerald-950/20">
-                <p className="text-2xl font-bold text-emerald-600">{stats?.inviteSent ?? "—"}</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats?.inviteSent ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Invites Sent</p>
               </div>
               <div className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-950/20">
-                <p className="text-2xl font-bold text-amber-600">{stats?.invitePending ?? "—"}</p>
+                <p className="text-2xl font-bold text-amber-600">{stats?.invitePending ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Pending</p>
               </div>
             </div>

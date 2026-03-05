@@ -361,14 +361,33 @@ export const webinarSmsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const normalizedPhone = normalizePhone(input.phone);
+
+      // Get the selected webinar ID from settings so we can attach it
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const settingsMap: Record<string, string> = {};
+      for (const row of settingRows) {
+        settingsMap[row.settingKey] = row.settingValue;
+      }
+      const selectedWebinarId = settingsMap["selected_webinar_id"] || undefined;
+
       const [result] = await db.insert(webinarRegistrants).values({
         name: input.name,
         email: input.email,
         phone: normalizedPhone,
         source: "manual",
         webinarName: input.webinarName,
+        webinarId: selectedWebinarId,
         tags: input.tags,
       });
+
+      // Auto-send calendar invite if email is provided and a webinar is selected
+      if (input.email && selectedWebinarId) {
+        autoSendCalendarInvites(
+          db,
+          selectedWebinarId,
+          [{ id: Number(result.insertId), email: input.email, name: input.name }],
+        ).catch(err => console.error(`[Calendar Auto] Manual add invite failed:`, err.message));
+      }
 
       return { success: true, id: result.insertId };
     }),
@@ -995,6 +1014,11 @@ export const webinarSmsRouter = router({
       webinarIntegrationId: creds.integrationWebinarId,
       webinarApiKeyConfigured: !!creds.apiKey,
       webinarHashConfigured: !!creds.webinarHash,
+      // Calendar settings
+      calendarAutoSend: settings["calendar_auto_send"] === "true",
+      calendarEventName: settings["calendar_event_name"] || "",
+      calendarEventDescription: settings["calendar_event_description"] || "",
+      calendarEventLocation: settings["calendar_event_location"] || "",
     };
   }),
 
@@ -2207,7 +2231,139 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         invitePending: Number(stats?.invitePending) || 0,
       };
     }),
+  // ═══ CALENDAR SETTINGS ═════════════════════════════════════════════════════
+  /** Save calendar invite settings (auto-send, custom event name/description) */
+  saveCalendarSettings: adminProcedure
+    .input(z.object({
+      calendarAutoSend: z.boolean(),
+      calendarEventName: z.string().max(200).optional(),
+      calendarEventDescription: z.string().max(2000).optional(),
+      calendarEventLocation: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const upserts = [
+        { key: "calendar_auto_send", value: input.calendarAutoSend ? "true" : "false", desc: "Auto-send calendar invites on registration" },
+      ];
+      if (input.calendarEventName !== undefined) {
+        upserts.push({ key: "calendar_event_name", value: input.calendarEventName, desc: "Custom calendar event name" });
+      }
+      if (input.calendarEventDescription !== undefined) {
+        upserts.push({ key: "calendar_event_description", value: input.calendarEventDescription, desc: "Custom calendar event description" });
+      }
+      if (input.calendarEventLocation !== undefined) {
+        upserts.push({ key: "calendar_event_location", value: input.calendarEventLocation, desc: "Custom calendar event location/join URL" });
+      }
+      for (const u of upserts) {
+        await db.insert(webinarSmsSettings)
+          .values({ settingKey: u.key, settingValue: u.value, description: u.desc })
+          .onDuplicateKeyUpdate({ set: { settingValue: u.value } });
+      }
+      return { success: true };
+    }),
 });
+
+// ─── Auto-send calendar invite helper ───────────────────────────────────────
+
+/**
+ * Sends a calendar invite to a newly imported registrant if auto-send is enabled.
+ * Called after inserting new registrants in both manual import and cron import.
+ * Runs in the background (fire-and-forget) so it doesn't block the import.
+ */
+async function autoSendCalendarInvites(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  webinarId: string,
+  newRegistrantEmails: Array<{ id: number; email: string; name: string }>,
+  overrideApiKey?: string
+): Promise<{ sent: number; failed: number }> {
+  if (newRegistrantEmails.length === 0) return { sent: 0, failed: 0 };
+
+  // Check if auto-send is enabled
+  const settingRows = await db.select().from(webinarSmsSettings);
+  const settings: Record<string, string> = {};
+  for (const row of settingRows) {
+    settings[row.settingKey] = row.settingValue;
+  }
+  if (settings["calendar_auto_send"] !== "true") {
+    console.log(`[Calendar Auto] Auto-send disabled, skipping ${newRegistrantEmails.length} invites`);
+    return { sent: 0, failed: 0 };
+  }
+
+  // Check calendar health first
+  const health = await checkCalendarHealth();
+  if (!health.authenticated) {
+    console.error(`[Calendar Auto] Calendar not authenticated, skipping invites: ${health.error}`);
+    return { sent: 0, failed: 0 };
+  }
+
+  // Get webinar details for the event
+  let details: any;
+  try {
+    details = await fetchWebinarJamDetails(webinarId, overrideApiKey);
+  } catch (err: any) {
+    console.error(`[Calendar Auto] Failed to fetch webinar details: ${err.message}`);
+    return { sent: 0, failed: 0 };
+  }
+
+  // Find schedule date
+  let scheduleDate: string | undefined;
+  if (details.schedules?.length > 0) {
+    scheduleDate = details.schedules[0].date;
+  }
+  if (!scheduleDate) {
+    console.error(`[Calendar Auto] No schedule date found for webinar ${webinarId}`);
+    return { sent: 0, failed: 0 };
+  }
+
+  const timezone = details.timezone || "America/Los_Angeles";
+  const startTime = new Date(`${scheduleDate}:00`);
+
+  // Use custom settings if configured, otherwise fall back to webinar details
+  const eventName = settings["calendar_event_name"] || details.title || details.name || "Webinar";
+  const eventDescription = settings["calendar_event_description"] || details.description || `You're registered for ${eventName}!`;
+  const eventLocation = settings["calendar_event_location"] || details.direct_live_room_url || details.registration_url || "";
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const registrant of newRegistrantEmails) {
+    try {
+      // Small delay between invites to avoid rate limiting
+      if (sent + failed > 0) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      const result = await sendCalendarInvite({
+        attendeeEmail: registrant.email,
+        attendeeName: registrant.name,
+        title: eventName,
+        description: eventDescription,
+        startTime,
+        timezone,
+        joinUrl: eventLocation || undefined,
+        webinarId,
+      });
+
+      if (result.success) {
+        await db.update(webinarRegistrants).set({
+          calendarInviteSent: 1,
+          calendarEventId: result.eventId || null,
+        }).where(eq(webinarRegistrants.id, registrant.id));
+        sent++;
+      } else {
+        console.error(`[Calendar Auto] Failed for ${registrant.email}: ${result.error}`);
+        failed++;
+      }
+    } catch (err: any) {
+      console.error(`[Calendar Auto] Error for ${registrant.email}: ${err.message}`);
+      failed++;
+    }
+  }
+
+  console.log(`[Calendar Auto] Sent ${sent} invites, ${failed} failed for webinar ${webinarId}`);
+  return { sent, failed };
+}
 
 // ─── Shared import logic (used by manual trigger and cron) ──────────────────
 
@@ -2274,6 +2430,30 @@ async function runWebinarImport(
     const batch = newRegistrants.slice(i, i + 500);
     await db.insert(webinarRegistrants).values(batch);
     imported += batch.length;
+  }
+
+  // Auto-send calendar invites to new registrants with email addresses
+  if (imported > 0) {
+    // Query back the newly inserted registrants to get their IDs
+    const recentRegistrants = await db.select({
+      id: webinarRegistrants.id,
+      email: webinarRegistrants.email,
+      name: webinarRegistrants.name,
+    }).from(webinarRegistrants)
+      .where(and(
+        eq(webinarRegistrants.webinarId, webinarId),
+        eq(webinarRegistrants.calendarInviteSent, 0),
+      ));
+    const withEmail = recentRegistrants.filter(r => r.email);
+    if (withEmail.length > 0) {
+      // Fire-and-forget: don't block the import response
+      autoSendCalendarInvites(
+        db,
+        webinarId,
+        withEmail.map(r => ({ id: r.id, email: r.email!, name: r.name })),
+        overrideApiKey
+      ).catch(err => console.error(`[Calendar Auto] Background send failed:`, err.message));
+    }
   }
 
   return {

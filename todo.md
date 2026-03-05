@@ -12689,3 +12689,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Google Calendar integration - Calendar tab in Webinar Campaign Manager UI
 - [x] Google Calendar integration - Calendar status indicator in header API bar
 - [x] Google Calendar integration - 16 vitest tests passing (access control, health check, stats, input validation)
+## Auto Calendar Invites on Opt-In (Mar 5, 2026)
+- [x] Auto-send calendar invite immediately when registrant is added (addRegistrant procedure)
+- [x] Auto-send calendar invite for new registrants during cron auto-import (runWebinarImport)
+- [x] Auto-send calendar invite for new registrants during manual import (importFromWebinarJam)
+- [x] Add customizable calendar event settings (event name, description, location/join URL) via saveCalendarSettings
+- [x] Add calendar settings UI to the Calendar tab (auto-send toggle, custom event name/description/location)
+- [x] Calendar settings persisted in getSettings response
+- [x] Write tests for auto-send behavior (21 tests total, all passing)
