@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, name, role FROM users LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, role FROM users LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Bryson blocker",
+      "role": "admin"
+    },
+    {
+      "id": "6330915",
+      "name": "Ronald Pedrosa",
+      "role": "user"
+    },
+    {
+      "id": "6390023",
+      "name": "Sean Anderson",
+      "role": "user"
+    },
+    {
+      "id": "6420001",
+      "name": "Shaquaris Jones Smith",
+      "role": "user"
+    },
+    {
+      "id": "6570238",
+      "name": "natalie",
+      "role": "user"
+    },
+    {
+      "id": "6570422",
+      "name": "Allen Gito",
+      "role": "user"
+    },
+    {
+      "id": "6571028",
+      "name": "Victoria Santos",
+      "role": "user"
+    },
+    {
+      "id": "6572045",
+      "name": "odufuyij",
+      "role": "user"
+    },
+    {
+      "id": "6720273",
+      "name": "Lasandra Daniels",
+      "role": "user"
+    },
+    {
+      "id": "6720617",
+      "name": "wwrzesinska.v",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\n1\tBryson blocker\tadmin\n6330915\tRonald Pedrosa\tuser\n6390023\tSean Anderson\tuser\n6420001\tShaquaris Jones Smith\tuser\n6570238\tnatalie\tuser\n6570422\tAllen Gito\tuser\n6571028\tVictoria Santos\tuser\n6572045\todufuyij\tuser\n6720273\tLasandra Daniels\tuser\n6720617\twwrzesinska.v\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

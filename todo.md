@@ -12762,4 +12762,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update DB setting calendar_event_name to correct default name
 - [x] Fix selected_webinar_id from 'settings-test-webinar' to '373'
 - [x] Fix tests: updated event time in test fixtures, fixed auto-send toggle test (always on)
-- [ ] Save checkpoint after corrections
+- [x] Save checkpoint after corrections
+
+## Market Advisor Bug (3/5/2026)
+- [x] Fix: Market Advisor "Something went wrong" error — admin was being blocked by daily rate limit
+- [x] Admin requests now bypass daily hard limit entirely (warn + notify but never block)
+- [x] Non-admin users still blocked at soft limit (400) and hard limit (700)
+
+## Bugs Reported (3/5/2026 - Batch 2)
+- [x] Bug: Step 5 (Validate Deal) extremely slow — increased admin per-minute rate limit from 12 to 30, reduced wait intervals from 5s to 3s and max wait from 60s to 30s
+- [x] Bug: Admin revenue edit option missing — changed isOwner check to isAdmin so any admin (including bryson@coachinayah.com) can edit revenue, not just the OWNER_OPEN_ID account
+- [x] Bug: Amenity selections on property not matching comp annual revenue — investigated and confirmed the logic IS correct: amenities filter comps, comp-median adjusts revenue. If < 3 amenity-matched comps found, falls back to all comps (amber banner shown). Revenue difference depends on how different the amenity-filtered comp pool is from the unfiltered pool.

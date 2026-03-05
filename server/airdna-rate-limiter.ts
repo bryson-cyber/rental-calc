@@ -41,8 +41,11 @@ const NON_ADMIN_SOFT_LIMIT = 400;
 /** Warning threshold - notifications sent beyond this */
 const DAILY_WARN_THRESHOLD = 350;
 
-/** Per-minute limit - prevents burst usage */
+/** Per-minute limit - prevents burst usage (non-admin) */
 const PER_MINUTE_LIMIT = 12;
+
+/** Per-minute limit for admin users - higher to avoid slowness */
+const ADMIN_PER_MINUTE_LIMIT = 30;
 
 /** Monthly budget tracking */
 const MONTHLY_BUDGET = 24_000;
@@ -288,41 +291,41 @@ async function _rateLimitedAirDNARequestImpl<T>(
   // ── Rate limit checks (unless bypassed or webinar mode) ──
   if (!options?.bypassRateLimit && !isWebinarMode()) {
     // 1. Check per-minute limit (memory-based, instant)
-    // ALL users (including admin) wait up to 60s for the per-minute window to clear
+    // Admin users get a higher per-minute limit to avoid slowness
+    const effectivePerMinuteLimit = isAdmin ? ADMIN_PER_MINUTE_LIMIT : PER_MINUTE_LIMIT;
     let callsThisMinute = getCallsInLastMinute();
-    if (callsThisMinute >= PER_MINUTE_LIMIT) {
-      // ALL users (including admin) must respect per-minute limits to avoid AirDNA throttling
+    if (callsThisMinute >= effectivePerMinuteLimit) {
       {
-        // Wait for the per-minute window to clear (check every 5s, up to 60s)
-        console.log(`[AirDNA-RateLimit] Per-minute limit hit (${callsThisMinute}/${PER_MINUTE_LIMIT}), waiting for window to clear...`);
+        // Wait for the per-minute window to clear (check every 3s for admin, 5s for non-admin)
+        const CHECK_INTERVAL_MS = isAdmin ? 3_000 : 5_000;
+        const MAX_WAIT_MS = isAdmin ? 30_000 : 60_000;
+        console.log(`[AirDNA-RateLimit] Per-minute limit hit (${callsThisMinute}/${effectivePerMinuteLimit})${isAdmin ? ' [admin]' : ''}, waiting for window to clear...`);
         let waited = 0;
-        const MAX_WAIT_MS = 60_000;
-        const CHECK_INTERVAL_MS = 5_000;
         while (waited < MAX_WAIT_MS) {
           await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL_MS));
           waited += CHECK_INTERVAL_MS;
           callsThisMinute = getCallsInLastMinute();
-          if (callsThisMinute < PER_MINUTE_LIMIT) {
-            console.log(`[AirDNA-RateLimit] Per-minute window cleared after ${waited}ms (${callsThisMinute}/${PER_MINUTE_LIMIT})`);
+          if (callsThisMinute < effectivePerMinuteLimit) {
+            console.log(`[AirDNA-RateLimit] Per-minute window cleared after ${waited}ms (${callsThisMinute}/${effectivePerMinuteLimit})`);
             break;
           }
-          console.log(`[AirDNA-RateLimit] Still waiting... ${callsThisMinute}/${PER_MINUTE_LIMIT} (${waited}ms elapsed)`);
+          console.log(`[AirDNA-RateLimit] Still waiting... ${callsThisMinute}/${effectivePerMinuteLimit} (${waited}ms elapsed)`);
         }
         // If still over limit after waiting, throw
-        if (callsThisMinute >= PER_MINUTE_LIMIT) {
-          console.warn(`[AirDNA-RateLimit] Per-minute limit still exceeded after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
+        if (callsThisMinute >= effectivePerMinuteLimit) {
+          console.warn(`[AirDNA-RateLimit] Per-minute limit still exceeded after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${effectivePerMinuteLimit}`);
           logApiCall({
             provider: 'airdna',
             endpoint,
             params: body,
             statusCode: 429,
             success: false,
-            errorMessage: `Per-minute rate limit after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${PER_MINUTE_LIMIT}`,
+            errorMessage: `Per-minute rate limit after ${MAX_WAIT_MS}ms wait: ${callsThisMinute}/${effectivePerMinuteLimit}`,
             responseTimeMs: Date.now() - startTime,
             cacheHit: false,
             source: source || 'rate_limited',
           });
-          throw new AirDNARateLimitError('per_minute', callsThisMinute, PER_MINUTE_LIMIT);
+          throw new AirDNARateLimitError('per_minute', callsThisMinute, effectivePerMinuteLimit);
         }
       }
     }
@@ -349,16 +352,33 @@ async function _rateLimitedAirDNARequestImpl<T>(
       throw new AirDNARateLimitError('daily', dailyCallCount, NON_ADMIN_SOFT_LIMIT);
     }
     
-    // ADMIN users: now ALSO blocked at ADMIN_DAILY_LIMIT (was unlimited before — that caused overages)
+    // ADMIN users: bypass daily limit entirely — admin is the owner and should never be blocked
+    // We still warn and notify, but never throw
     if (isAdmin && dailyCallCount >= ADMIN_DAILY_LIMIT) {
-      console.error(`[AirDNA-RateLimit] ADMIN DAILY LIMIT EXCEEDED: ${dailyCallCount}/${ADMIN_DAILY_LIMIT} - BLOCKING ADMIN REQUEST`);
+      console.warn(`[AirDNA-RateLimit] Admin over daily limit (${dailyCallCount}/${ADMIN_DAILY_LIMIT}) — ALLOWING (admin bypass)`);
       
+      resetDailyNotifyIfNewDay();
+      if (!warnNotified) {
+        warnNotified = true;
+        notifyOwner({
+          title: 'INFO: Admin exceeding daily API budget',
+          content: `AirDNA API is at ${dailyCallCount} calls today (budget: ${ADMIN_DAILY_LIMIT}). Admin requests are still going through. Non-admin requests are blocked at ${NON_ADMIN_SOFT_LIMIT}.`,
+        }).catch(() => {});
+      }
+      // Admin proceeds — do NOT throw
+    }
+    
+    // NON-ADMIN users: blocked at the absolute hard limit
+    if (!isAdmin && dailyCallCount >= DAILY_HARD_LIMIT) {
+      console.error(`[AirDNA-RateLimit] DAILY LIMIT EXCEEDED (memory): ${dailyCallCount}/${DAILY_HARD_LIMIT} - BLOCKING NON-ADMIN REQUEST`);
+      
+      // Notify owner once per day
       resetDailyNotifyIfNewDay();
       if (!dailyLimitNotified) {
         dailyLimitNotified = true;
         notifyOwner({
-          title: 'ALERT: Admin Daily API Limit REACHED',
-          content: `AirDNA API has hit the admin limit of ${ADMIN_DAILY_LIMIT} calls today (actual: ${dailyCallCount}). ALL requests are now blocked including admin. Use webinar mode for cached data. The limit resets at midnight.`,
+          title: 'ALERT: Daily API Limit REACHED - Non-Admin Requests Blocked',
+          content: `AirDNA API has hit the hard limit of ${DAILY_HARD_LIMIT} calls today (actual: ${dailyCallCount}). Non-admin API requests are being blocked. Admin requests still go through. Cached data is still being served. The limit resets at midnight.`,
         }).catch(() => {});
       }
 
@@ -368,47 +388,13 @@ async function _rateLimitedAirDNARequestImpl<T>(
         params: body,
         statusCode: 429,
         success: false,
-        errorMessage: `Admin daily limit: ${dailyCallCount}/${ADMIN_DAILY_LIMIT}`,
+        errorMessage: `Daily rate limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`,
         responseTimeMs: 0,
         cacheHit: false,
-        source: source || 'rate_limited_admin',
+        source: source || 'rate_limited',
       });
 
-      throw new AirDNARateLimitError('daily', dailyCallCount, ADMIN_DAILY_LIMIT);
-    }
-    
-    // ALL users: blocked at the absolute hard limit
-    if (dailyCallCount >= DAILY_HARD_LIMIT) {
-      if (isAdmin) {
-        // Should not reach here since ADMIN_DAILY_LIMIT <= DAILY_HARD_LIMIT, but safety net
-        console.error(`[AirDNA-RateLimit] Admin request BLOCKED at hard limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`);
-      } else {
-        console.error(`[AirDNA-RateLimit] DAILY LIMIT EXCEEDED (memory): ${dailyCallCount}/${DAILY_HARD_LIMIT} - BLOCKING REQUEST`);
-        
-        // Notify owner once per day
-        resetDailyNotifyIfNewDay();
-        if (!dailyLimitNotified) {
-          dailyLimitNotified = true;
-          notifyOwner({
-            title: 'ALERT: Daily API Limit REACHED - Non-Admin Requests Blocked',
-            content: `AirDNA API has hit the hard limit of ${DAILY_HARD_LIMIT} calls today (actual: ${dailyCallCount}). Non-admin API requests are being blocked. Admin requests still go through. Cached data is still being served. The limit resets at midnight.`,
-          }).catch(() => {});
-        }
-
-        logApiCall({
-          provider: 'airdna',
-          endpoint,
-          params: body,
-          statusCode: 429,
-          success: false,
-          errorMessage: `Daily rate limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`,
-          responseTimeMs: 0,
-          cacheHit: false,
-          source: source || 'rate_limited',
-        });
-
-        throw new AirDNARateLimitError('daily', dailyCallCount, DAILY_HARD_LIMIT);
-      }
+      throw new AirDNARateLimitError('daily', dailyCallCount, DAILY_HARD_LIMIT);
     }
 
     // Warn when approaching limit
