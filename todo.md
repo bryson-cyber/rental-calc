@@ -12708,3 +12708,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] DEFAULT_CALENDAR_DESCRIPTION constant used across all calendar invite paths
 - [x] getSettings returns transcript-based description when no custom one is saved
 - [x] All 23 google-calendar tests passing
+
+## Custom Event Name & Audience Calendar Status (Mar 5, 2026)
+- [x] Set custom default event name (e.g., "LIVE: Coach Inayah's 5-Step Airbnb Masterclass")
+- [x] Add calendar invite status icon/column to Audience tab registrant list

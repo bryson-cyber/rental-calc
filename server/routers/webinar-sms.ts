@@ -39,6 +39,8 @@ import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth } from
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
+const DEFAULT_CALENDAR_EVENT_NAME = "LIVE: Coach Inayah's 5-Step Airbnb Masterclass";
+
 const DEFAULT_CALENDAR_DESCRIPTION = `Join Coach Inayah for an exclusive live masterclass where you'll learn the proven 5-Step System to launch your short-term rental business — even with no experience, no property, and no perfect credit.
 
 What You'll Learn:
@@ -48,9 +50,7 @@ What You'll Learn:
 • Step 4: Funding Your Deal
 • Step 5: Launching & Scaling
 
-This is the exact system Coach Inayah used to build a multi-property portfolio and has helped hundreds of students do the same.
-
-Hosted by I&B Coaching | support@coachinayah.com`;
+This is the exact system Coach Inayah used to build a multi-property portfolio and has helped hundreds of students do the same.`;
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 
@@ -1031,7 +1031,7 @@ export const webinarSmsRouter = router({
       webinarHashConfigured: !!creds.webinarHash,
       // Calendar settings
       calendarAutoSend: settings["calendar_auto_send"] !== "false", // Default ON
-      calendarEventName: settings["calendar_event_name"] || "",
+      calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
       calendarEventDescription: settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION,
     };
   }),
@@ -1475,7 +1475,7 @@ export const webinarSmsRouter = router({
       const conditions = input.webinarId ? [eq(webinarRegistrants.webinarId, input.webinarId)] : [];
       const baseWhere = conditions.length ? and(...conditions) : undefined;
 
-      const [totalResult, attendedResult, noShowResult, optedOutResult] = await Promise.all([
+      const [totalResult, attendedResult, noShowResult, optedOutResult, calendarInvitesResult] = await Promise.all([
         db.select({ count: count() }).from(webinarRegistrants).where(baseWhere),
         db.select({ count: count() }).from(webinarRegistrants).where(
           baseWhere
@@ -1492,6 +1492,11 @@ export const webinarSmsRouter = router({
             ? and(baseWhere, eq(webinarRegistrants.optedOut, 1))
             : eq(webinarRegistrants.optedOut, 1)
         ),
+        db.select({ count: count() }).from(webinarRegistrants).where(
+          baseWhere
+            ? and(baseWhere, eq(webinarRegistrants.calendarInviteSent, 1))
+            : eq(webinarRegistrants.calendarInviteSent, 1)
+        ),
       ]);
 
       return {
@@ -1499,6 +1504,7 @@ export const webinarSmsRouter = router({
         attended: Number(attendedResult[0]?.count ?? 0),
         noShow: Number(noShowResult[0]?.count ?? 0),
         optedOut: Number(optedOutResult[0]?.count ?? 0),
+        calendarInvitesSent: Number(calendarInvitesResult[0]?.count ?? 0),
       };
     }),
 
@@ -2126,7 +2132,7 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       const result = await sendCalendarInvite({
         attendeeEmail: registrant.email,
         attendeeName: registrant.name,
-        title: details.title || details.name || "Webinar",
+        title: DEFAULT_CALENDAR_EVENT_NAME,
         description: DEFAULT_CALENDAR_DESCRIPTION,
         startTime,
         timezone,
@@ -2195,7 +2201,7 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       const attendees = withEmail.map(r => ({ email: r.email!, name: r.name }));
 
       const result = await sendBulkCalendarInvites(attendees, {
-        title: details.title || details.name || "Webinar",
+        title: DEFAULT_CALENDAR_EVENT_NAME,
         description: DEFAULT_CALENDAR_DESCRIPTION,
         startTime,
         timezone,
@@ -2329,7 +2335,7 @@ async function autoSendCalendarInvites(
   const startTime = new Date(`${scheduleDate}:00`);
 
   // Use custom settings if configured, otherwise fall back to webinar details
-  const eventName = settings["calendar_event_name"] || details.title || details.name || "Webinar";
+  const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
   const eventDescription = settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
   // Join URL always comes from WebinarJam — not user-configurable
   const eventLocation = details.direct_live_room_url || details.registration_url || "";

@@ -63,10 +63,12 @@ import {
   X,
   Save,
   Calendar,
+  CalendarCheck,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -466,7 +468,7 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-3">
@@ -532,6 +534,19 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <CalendarCheck className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-700">{summary.data?.calendarInvitesSent ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Cal Invites</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Action buttons */}
@@ -587,7 +602,19 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
                       <p className="text-sm font-medium truncate">{r.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{formatPhone(r.phone)}</p>
                     </div>
-                    {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50" />}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <CalendarCheck className={`w-3.5 h-3.5 ${r.calendarInviteSent ? 'text-emerald-500' : 'text-muted-foreground/30'}`} />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="text-xs">{r.calendarInviteSent ? 'Calendar invite sent' : 'No calendar invite'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                 ))
               )}
@@ -642,7 +669,19 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
                         <p className="text-sm font-medium truncate">{r.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{formatPhone(r.phone)}</p>
                       </div>
-                      {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {r.email && <Mail className="w-3.5 h-3.5 text-muted-foreground/50" />}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <CalendarCheck className={`w-3.5 h-3.5 ${r.calendarInviteSent ? 'text-emerald-500' : 'text-muted-foreground/30'}`} />
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">{r.calendarInviteSent ? 'Calendar invite sent' : 'No calendar invite'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1685,12 +1724,12 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
               </Label>
               <Input
                 id="calendar-event-name"
-                placeholder="e.g. Live Masterclass: How to Start Your Airbnb Business"
+                placeholder="LIVE: Coach Inayah's 5-Step Airbnb Masterclass"
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Leave blank to use the WebinarJam webinar name
+                The name that appears on the registrant's calendar event
               </p>
             </div>
 

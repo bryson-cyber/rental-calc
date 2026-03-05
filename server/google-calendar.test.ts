@@ -278,7 +278,10 @@ describe("Google Calendar Integration", () => {
       expect(settings.calendarEventDescription.length).toBeGreaterThan(50);
       // Should mention the 5-step system
       expect(settings.calendarEventDescription).toContain("5-Step");
-      expect(settings.calendarEventDescription).toContain("Coach Inayah");
+      // Should have default event name
+      expect(settings.calendarEventName).toBeTruthy();
+      expect(settings.calendarEventName).toContain("Coach Inayah");
+      expect(settings.calendarEventDescription).toContain("Launching");
     });
 
     it("should toggle auto-send off", async () => {
