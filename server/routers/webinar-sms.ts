@@ -37,6 +37,21 @@ import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm
 import { TRPCError } from "@trpc/server";
 import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth } from "../google-calendar";
 
+// ─── Default Calendar Event Description ──────────────────────────────────────
+
+const DEFAULT_CALENDAR_DESCRIPTION = `Join Coach Inayah for an exclusive live masterclass where you'll learn the proven 5-Step System to launch your short-term rental business — even with no experience, no property, and no perfect credit.
+
+What You'll Learn:
+• Step 1: Setting Up Your Business Entity (LLC)
+• Step 2: Building Business Credit
+• Step 3: Securing Your First Property
+• Step 4: Funding Your Deal
+• Step 5: Launching & Scaling
+
+This is the exact system Coach Inayah used to build a multi-property portfolio and has helped hundreds of students do the same.
+
+Hosted by I&B Coaching | support@coachinayah.com`;
+
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 
 async function sendSms(phone: string, message: string): Promise<{ success: boolean; smsId?: string; error?: string }> {
@@ -1017,7 +1032,7 @@ export const webinarSmsRouter = router({
       // Calendar settings
       calendarAutoSend: settings["calendar_auto_send"] !== "false", // Default ON
       calendarEventName: settings["calendar_event_name"] || "",
-      calendarEventDescription: settings["calendar_event_description"] || "",
+      calendarEventDescription: settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION,
     };
   }),
 
@@ -2112,13 +2127,12 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         attendeeEmail: registrant.email,
         attendeeName: registrant.name,
         title: details.title || details.name || "Webinar",
-        description: details.description || `You're registered for ${details.title || details.name || "our webinar"}!`,
+        description: DEFAULT_CALENDAR_DESCRIPTION,
         startTime,
         timezone,
         joinUrl: details.direct_live_room_url || details.registration_url,
         webinarId: input.webinarId,
       });
-
       if (result.success) {
         await db.update(webinarRegistrants).set({
           calendarInviteSent: 1,
@@ -2182,13 +2196,12 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
 
       const result = await sendBulkCalendarInvites(attendees, {
         title: details.title || details.name || "Webinar",
-        description: details.description || `You're registered for ${details.title || details.name || "our webinar"}!`,
+        description: DEFAULT_CALENDAR_DESCRIPTION,
         startTime,
         timezone,
         joinUrl: details.direct_live_room_url || details.registration_url,
         webinarId: input.webinarId,
       });
-
       // Update registrant records
       for (let i = 0; i < withEmail.length; i++) {
         const inviteResult = result.results[i];
@@ -2317,7 +2330,7 @@ async function autoSendCalendarInvites(
 
   // Use custom settings if configured, otherwise fall back to webinar details
   const eventName = settings["calendar_event_name"] || details.title || details.name || "Webinar";
-  const eventDescription = settings["calendar_event_description"] || details.description || `You're registered for ${eventName}!`;
+  const eventDescription = settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
   // Join URL always comes from WebinarJam — not user-configurable
   const eventLocation = details.direct_live_room_url || details.registration_url || "";
 

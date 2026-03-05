@@ -133,14 +133,16 @@ describe("Google Calendar Integration", () => {
       const trpc = caller(ctx);
       const result = await trpc.webinarSms.calendarStatus();
 
-      // Should return the health check structure
+      // Should return the health check structure regardless of whether auth succeeds
       expect(result).toHaveProperty("configured");
       expect(result).toHaveProperty("authenticated");
       expect(result).toHaveProperty("impersonateEmail");
       expect(typeof result.configured).toBe("boolean");
       expect(typeof result.authenticated).toBe("boolean");
       expect(typeof result.impersonateEmail).toBe("string");
-    });
+      // impersonateEmail should always be set (defaults to support@coachinayah.com)
+      expect(result.impersonateEmail.length).toBeGreaterThan(0);
+    }, 15000); // 15s timeout — this calls the real Google API
   });
 
   describe("testCalendarConnection (admin)", () => {
@@ -153,7 +155,7 @@ describe("Google Calendar Integration", () => {
       expect(result).toHaveProperty("message");
       expect(typeof result.success).toBe("boolean");
       expect(typeof result.message).toBe("string");
-    });
+    }, 15000); // 15s timeout — this calls the real Google API
   });
 
   describe("getApiStatus includes googleCalendar", () => {
@@ -258,6 +260,25 @@ describe("Google Calendar Integration", () => {
       // getSettings should default to true (ON) even without explicit save
       const settings = await trpc.webinarSms.getSettings();
       expect(settings.calendarAutoSend).toBe(true);
+    });
+
+    it("should default calendarEventDescription to transcript-based description when cleared", async () => {
+      const ctx = createAdminContext();
+      const trpc = caller(ctx);
+
+      // Clear any previously saved custom description by saving empty string
+      await trpc.webinarSms.saveCalendarSettings({
+        calendarAutoSend: true,
+        calendarEventDescription: "",
+      });
+
+      // Now getSettings should return the default transcript-based description
+      const settings = await trpc.webinarSms.getSettings();
+      expect(settings.calendarEventDescription).toBeTruthy();
+      expect(settings.calendarEventDescription.length).toBeGreaterThan(50);
+      // Should mention the 5-step system
+      expect(settings.calendarEventDescription).toContain("5-Step");
+      expect(settings.calendarEventDescription).toContain("Coach Inayah");
     });
 
     it("should toggle auto-send off", async () => {

@@ -12704,3 +12704,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update frontend: remove editable join URL field, show WebinarJam URL as read-only info
 - [x] Fix: ContextualAIChat.tsx dynamic import error — transient stale cache issue, resolved by clearing Vite cache and restarting server
 - [x] Fix: Build OOM crash blocking checkpoint saves - added NODE_OPTIONS max-old-space-size=2048 to build script
+- [x] Pre-populate default calendar event description from webinar transcript (5-Step System summary)
+- [x] DEFAULT_CALENDAR_DESCRIPTION constant used across all calendar invite paths
+- [x] getSettings returns transcript-based description when no custom one is saved
+- [x] All 23 google-calendar tests passing
