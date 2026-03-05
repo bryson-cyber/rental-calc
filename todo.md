@@ -12678,3 +12678,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add disclaimer to global site footer
 - [x] Create Terms of Service page
 - [x] Add TOS acceptance gate before tool usage
+## Webinar Messaging Enhancements (Mar 5, 2026)
+- [x] Bulk message all previous attendees at once (across all webinars, not just selected one)
+- [x] Bulk message all no-shows at once (across all webinars, not just selected one)

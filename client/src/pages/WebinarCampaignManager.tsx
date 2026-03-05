@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Radio,
+  Globe,
   Users,
   UserCheck,
   UserX,
@@ -650,6 +651,7 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
 // ═══════════════════════════════════════════════════════════════════════════
 
 function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?: string | null }) {
+  const [scope, setScope] = useState<"this_webinar" | "all_webinars">("this_webinar");
   const [audience, setAudience] = useState<"all" | "attended" | "not_attended">("all");
   const [message, setMessage] = useState("");
   const [campaignName, setCampaignName] = useState("");
@@ -657,7 +659,11 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
   const [aiPrompt, setAiPrompt] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [showTestDialog, setShowTestDialog] = useState(false);
-  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
+  const effectiveWebinarId = scope === "all_webinars" ? undefined : webinarId;
+  const summary = trpc.webinarSms.getAttendanceSummary.useQuery(
+    { webinarId: effectiveWebinarId }
+  );
+  const globalSummary = trpc.webinarSms.getAttendanceSummary.useQuery({});
   const templates = trpc.webinarSms.listTemplates.useQuery();
   const composeMessage = trpc.webinarSms.composeMessage.useMutation({
     onSuccess: (data) => {
@@ -699,7 +705,7 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
       name: campaignName,
       messageBody: message,
       filter: {
-        webinarId,
+        webinarId: effectiveWebinarId,
         attended: audience === "attended" ? 1 : audience === "not_attended" ? 0 : undefined,
       },
     });
@@ -723,6 +729,41 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
         <CardDescription>Send a one-time SMS to your webinar audience</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Scope selector — This Webinar vs All Webinars */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setScope("this_webinar")}
+            className={`p-3 rounded-xl border-2 text-center transition-all ${
+              scope === "this_webinar"
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "border-border hover:border-primary/30"
+            }`}
+          >
+            <Radio className={`w-5 h-5 mx-auto mb-1 ${scope === "this_webinar" ? "text-primary" : "text-muted-foreground"}`} />
+            <p className="text-sm font-medium">This Webinar</p>
+            <p className="text-xs text-muted-foreground">{webinarName || "Selected"}</p>
+          </button>
+          <button
+            onClick={() => setScope("all_webinars")}
+            className={`p-3 rounded-xl border-2 text-center transition-all ${
+              scope === "all_webinars"
+                ? "border-purple-500 bg-purple-50 shadow-sm"
+                : "border-border hover:border-purple-200"
+            }`}
+          >
+            <Globe className={`w-5 h-5 mx-auto mb-1 ${scope === "all_webinars" ? "text-purple-600" : "text-muted-foreground"}`} />
+            <p className="text-sm font-medium">All Webinars</p>
+            <p className="text-xs text-muted-foreground">{globalSummary.data?.total ?? 0} total registrants</p>
+          </button>
+        </div>
+
+        {scope === "all_webinars" && (
+          <div className="flex items-center gap-2 text-sm text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Sending to registrants from <strong>all webinars</strong> — not just the currently selected one.</span>
+          </div>
+        )}
+
         {/* Audience selector — big buttons */}
         <div className="grid grid-cols-3 gap-3">
           <button
@@ -863,7 +904,7 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
             ) : (
               <Send className="w-4 h-4 mr-2" />
             )}
-            Send to {recipientCount} {audience === "attended" ? "Attendees" : audience === "not_attended" ? "No-Shows" : "Registrants"}
+            Send to {recipientCount} {audience === "attended" ? "Attendees" : audience === "not_attended" ? "No-Shows" : "Registrants"}{scope === "all_webinars" ? " (All Webinars)" : ""}
           </Button>
         </div>
 
@@ -920,7 +961,7 @@ function QuickSend({ webinarId, webinarName }: { webinarId: string; webinarName?
             <DialogHeader>
               <DialogTitle>Confirm Send</DialogTitle>
               <DialogDescription>
-                You're about to send an SMS to <strong>{recipientCount}</strong> {audience === "attended" ? "attendees" : audience === "not_attended" ? "no-shows" : "registrants"}.
+                You're about to send an SMS to <strong>{recipientCount}</strong> {audience === "attended" ? "attendees" : audience === "not_attended" ? "no-shows" : "registrants"}{scope === "all_webinars" ? " across ALL webinars" : ` from ${webinarName || "the selected webinar"}`}.
               </DialogDescription>
             </DialogHeader>
             <div>
