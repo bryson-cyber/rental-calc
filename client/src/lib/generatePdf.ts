@@ -97,6 +97,7 @@ export const generateRentalReportPdf = (data: ReportData): void => {
   
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
   let yPos = 20;
 

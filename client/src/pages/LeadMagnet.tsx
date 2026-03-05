@@ -128,6 +128,7 @@ const BuildFullReportButton = lazy(() => import('@/components/BuildFullReportBut
 import StepErrorBoundary from '@/components/StepErrorBoundary';
 import { useReportMode } from '@/contexts/ReportModeContext';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { TermsAcceptanceModal, hasTosBeenAccepted } from '@/components/TermsAcceptanceModal';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -417,6 +418,9 @@ export default function LeadMagnet() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
   const isOwner = isAuthenticated && !!(user as any)?.isOwner;
+  
+  // Terms of Service acceptance state
+  const [tosAccepted, setTosAccepted] = useState(() => hasTosBeenAccepted());
   
   // Interactive tour state
   const { showTour, isFirstVisit, startTour, closeTour, completeTour, resetTour } = useInteractiveTour();
@@ -6925,8 +6929,20 @@ export default function LeadMagnet() {
                     Privacy Policy
                   </a>
                 </li>
+                <li>
+                  <a href="/terms-of-service" className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
               </ul>
             </div>
+          </div>
+          
+          {/* Disclaimer */}
+          <div className="border-t border-[oklch(0.90_0_0)] pt-6 mb-6">
+            <p className="text-[oklch(0.55_0_0)] text-[10px] leading-relaxed max-w-3xl mx-auto">
+              <span className="font-semibold">DISCLAIMER:</span> The information provided by this tool is for informational and educational purposes only and does not constitute financial, investment, real estate, tax, or legal advice. All revenue projections, occupancy rates, and other estimates are derived from third-party data sources and algorithmic models and are not guarantees of actual or future performance. I&B Coaching is not a licensed real estate broker, appraiser, financial advisor, or investment advisor. Users should conduct their own independent due diligence and consult with qualified licensed professionals before making any investment or business decisions. To the fullest extent permitted by law, I&B Coaching disclaims all liability for any loss, damage, or expense arising from the use of or reliance on this tool. By using this tool, you agree to our <a href="/terms-of-service" className="underline hover:text-[oklch(0.55_0.14_75)] transition-colors">Terms of Service</a>.
+            </p>
           </div>
           
           <div className="border-t border-[oklch(0.90_0_0)] pt-6 text-center text-[oklch(0.55_0_0)] text-sm">
@@ -7103,6 +7119,12 @@ export default function LeadMagnet() {
         }}
       />
       </Suspense>
+      
+      {/* Terms of Service Acceptance Modal */}
+      <TermsAcceptanceModal
+        isOpen={!tosAccepted}
+        onAccept={() => setTosAccepted(true)}
+      />
     </div>
     </LoginGate>
   );

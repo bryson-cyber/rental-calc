@@ -38,6 +38,7 @@ const SavedItemsPage = lazy(() => import("./pages/SavedItemsPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const Contact = lazy(() => import("./pages/Contact"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const SavedRegulations = lazy(() => import("./pages/SavedRegulations"));
 const AdminPortal = lazy(() => import("./pages/AdminPortal"));
@@ -115,6 +116,7 @@ function Router() {
         <Route path={"/refund-policy"} component={RefundPolicy} />
         <Route path={"/contact"} component={Contact} />
         <Route path={"/privacy-policy"} component={PrivacyPolicy} />
+        <Route path={"/terms-of-service"} component={TermsOfService} />
         
         {/* Shared Reports */}
         <Route path="/report/:shareId" component={SharedReportPage} />
