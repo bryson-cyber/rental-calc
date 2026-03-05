@@ -2311,6 +2311,10 @@ export const webinarRegistrants = mysqlTable("webinar_registrants", {
   calendarInviteSent: int("calendarInviteSent").default(0),
   /** Google Calendar event ID (for tracking/cancellation) */
   calendarEventId: varchar("calendarEventId", { length: 255 }),
+  /** Error message if calendar invite failed to send */
+  calendarInviteError: text("calendarInviteError"),
+  /** Timestamp when calendar invite was sent or last attempted */
+  calendarInviteAt: timestamp("calendarInviteAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [

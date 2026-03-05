@@ -35,7 +35,8 @@ import {
 import { invokeLLM } from "../_core/llm";
 import { eq, desc, sql, and, inArray, count, lte, ne, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth } from "../google-calendar";
+import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth, sendCalendarReminderUpdates } from "../google-calendar";
+import { sendBulkReminderEmails, checkGmailHealth, buildWebinarReminderEmail } from "../gmail-reminders";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -2129,11 +2130,18 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       const timezone = details.timezone || "America/Los_Angeles";
       const startTime = new Date(`${scheduleDate}:00`);
 
+      // Use custom settings if configured
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const allSettings: Record<string, string> = {};
+      for (const row of settingRows) allSettings[row.settingKey] = row.settingValue;
+      const eventName = allSettings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+      const eventDescription = allSettings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
+
       const result = await sendCalendarInvite({
         attendeeEmail: registrant.email,
         attendeeName: registrant.name,
-        title: DEFAULT_CALENDAR_EVENT_NAME,
-        description: DEFAULT_CALENDAR_DESCRIPTION,
+        title: eventName,
+        description: eventDescription,
         startTime,
         timezone,
         joinUrl: details.direct_live_room_url || details.registration_url,
@@ -2143,6 +2151,14 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         await db.update(webinarRegistrants).set({
           calendarInviteSent: 1,
           calendarEventId: result.eventId || null,
+          calendarInviteError: null,
+          calendarInviteAt: new Date(),
+        }).where(eq(webinarRegistrants.id, input.registrantId));
+      } else {
+        await db.update(webinarRegistrants).set({
+          calendarInviteSent: 0,
+          calendarInviteError: result.error || "Unknown error",
+          calendarInviteAt: new Date(),
         }).where(eq(webinarRegistrants.id, input.registrantId));
       }
 
@@ -2239,14 +2255,37 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         total: count(),
         withEmail: sql<number>`SUM(CASE WHEN ${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != '' THEN 1 ELSE 0 END)`,
         inviteSent: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteSent} = 1 THEN 1 ELSE 0 END)`,
-        invitePending: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteSent} = 0 AND ${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != '' THEN 1 ELSE 0 END)`,
+        invitePending: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteSent} = 0 AND ${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != '' AND (${webinarRegistrants.calendarInviteError} IS NULL OR ${webinarRegistrants.calendarInviteError} = '') THEN 1 ELSE 0 END)`,
+        inviteFailed: sql<number>`SUM(CASE WHEN ${webinarRegistrants.calendarInviteError} IS NOT NULL AND ${webinarRegistrants.calendarInviteError} != '' THEN 1 ELSE 0 END)`,
       }).from(webinarRegistrants).where(eq(webinarRegistrants.webinarId, input.webinarId));
+
+      // Get details of failed invites for manual follow-up
+      const failedRegistrants = await db.select({
+        id: webinarRegistrants.id,
+        name: webinarRegistrants.name,
+        email: webinarRegistrants.email,
+        error: webinarRegistrants.calendarInviteError,
+        lastAttempt: webinarRegistrants.calendarInviteAt,
+      }).from(webinarRegistrants).where(
+        and(
+          eq(webinarRegistrants.webinarId, input.webinarId),
+          sql`${webinarRegistrants.calendarInviteError} IS NOT NULL AND ${webinarRegistrants.calendarInviteError} != ''`
+        )
+      );
 
       return {
         total: stats?.total || 0,
         withEmail: Number(stats?.withEmail) || 0,
         inviteSent: Number(stats?.inviteSent) || 0,
         invitePending: Number(stats?.invitePending) || 0,
+        inviteFailed: Number(stats?.inviteFailed) || 0,
+        failedRegistrants: failedRegistrants.map(r => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          error: r.error,
+          lastAttempt: r.lastAttempt?.toISOString() || null,
+        })),
       };
     }),
   // ═══ CALENDAR SETTINGS ═════════════════════════════════════════════════════
@@ -2263,11 +2302,23 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       const upserts = [
         { key: "calendar_auto_send", value: input.calendarAutoSend ? "true" : "false", desc: "Auto-send calendar invites on registration" },
       ];
+      // If event name/description are provided and non-empty, save them.
+      // If empty string, delete the custom value so the default kicks in.
       if (input.calendarEventName !== undefined) {
-        upserts.push({ key: "calendar_event_name", value: input.calendarEventName, desc: "Custom calendar event name" });
+        if (input.calendarEventName.trim()) {
+          upserts.push({ key: "calendar_event_name", value: input.calendarEventName.trim(), desc: "Custom calendar event name" });
+        } else {
+          // Delete custom value so DEFAULT_CALENDAR_EVENT_NAME is used
+          await db.delete(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "calendar_event_name"));
+        }
       }
       if (input.calendarEventDescription !== undefined) {
-        upserts.push({ key: "calendar_event_description", value: input.calendarEventDescription, desc: "Custom calendar event description" });
+        if (input.calendarEventDescription.trim()) {
+          upserts.push({ key: "calendar_event_description", value: input.calendarEventDescription.trim(), desc: "Custom calendar event description" });
+        } else {
+          // Delete custom value so DEFAULT_CALENDAR_DESCRIPTION is used
+          await db.delete(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "calendar_event_description"));
+        }
       }
       for (const u of upserts) {
         await db.insert(webinarSmsSettings)
@@ -2275,6 +2326,231 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
           .onDuplicateKeyUpdate({ set: { settingValue: u.value } });
       }
       return { success: true };
+    }),
+
+  // ═══ CALENDAR REMINDER UPDATES ═══════════════════════════════════════════════
+  /**
+   * Send a reminder update to all calendar events for a webinar.
+   * This updates the event description and triggers Google Calendar to send
+   * notification emails to all attendees — a high-deliverability reminder.
+   */
+  sendCalendarReminder: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      reminderType: z.enum(["24h", "1h", "starting"]),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get webinar details for join URL
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+      let joinUrl: string | undefined;
+      try {
+        const details = await fetchWebinarJamDetails(input.webinarId, perWebinarApiKey);
+        joinUrl = details.direct_live_room_url || details.registration_url;
+      } catch {
+        // Continue without join URL
+      }
+
+      const result = await sendCalendarReminderUpdates(input.webinarId, input.reminderType, joinUrl);
+
+      return {
+        ...result,
+        message: result.updated > 0
+          ? `Reminder sent! Updated ${result.updated} calendar event${result.updated !== 1 ? "s" : ""} (${result.failed} failed)`
+          : result.errors.length > 0
+          ? `Failed: ${result.errors[0]}`
+          : "No calendar events found for this webinar",
+      };
+    }),
+
+  // ═══ ICS FILE GENERATION ═══════════════════════════════════════════════════════
+  /**
+   * Generate an ICS (iCalendar) file for a webinar event.
+   * Returns the ICS content as a string that can be downloaded by non-Google users.
+   */
+  generateIcsFile: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      scheduleId: z.number().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get webinar details
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+      const details = await fetchWebinarJamDetails(input.webinarId, perWebinarApiKey);
+
+      // Find schedule date
+      let scheduleDate: string | undefined;
+      if (details.schedules && input.scheduleId) {
+        const schedule = details.schedules.find((s: any) => s.schedule === input.scheduleId);
+        if (schedule) scheduleDate = schedule.date;
+      } else if (details.schedules?.length > 0) {
+        scheduleDate = details.schedules[0].date;
+      }
+      if (!scheduleDate) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No schedule date found" });
+      }
+
+      const timezone = details.timezone || "America/Los_Angeles";
+      const startTime = new Date(`${scheduleDate}:00`);
+      const endTime = new Date(startTime.getTime() + 90 * 60 * 1000);
+      const joinUrl = details.direct_live_room_url || details.registration_url || "";
+
+      // Get custom settings
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const settings: Record<string, string> = {};
+      for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+      const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+      const eventDescription = settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
+
+      // Generate ICS content (RFC 5545)
+      const uid = `webinar-${input.webinarId}-${Date.now()}@coachinayah.com`;
+      const now = formatIcsDate(new Date());
+      const dtStart = formatIcsDate(startTime);
+      const dtEnd = formatIcsDate(endTime);
+
+      // Escape special characters for ICS
+      const escDesc = (eventDescription + (joinUrl ? `\n\nJoin: ${joinUrl}` : ""))
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,")
+        .replace(/\n/g, "\\n");
+      const escSummary = eventName.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,");
+
+      const icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Coach Inayah//Rental Calculator//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTAMP:${now}`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        `SUMMARY:${escSummary}`,
+        `DESCRIPTION:${escDesc}`,
+        joinUrl ? `URL:${joinUrl}` : "",
+        joinUrl ? `LOCATION:${joinUrl}` : "",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Webinar starts tomorrow!",
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT1H",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Webinar starts in 1 hour!",
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT10M",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Webinar starts in 10 minutes!",
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR",
+      ].filter(Boolean).join("\r\n");
+
+      return {
+        icsContent,
+        filename: `${eventName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}.ics`,
+        eventName,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        timezone,
+        joinUrl,
+      };
+    }),
+
+  // ═══ GMAIL REMINDER EMAILS ═══════════════════════════════════════════════════════
+  /** Check if Gmail API is configured and authorized */
+  gmailStatus: adminProcedure.query(async () => {
+    return await checkGmailHealth();
+  }),
+
+  /** Send personalized reminder emails via Gmail API to all registrants with email */
+  sendGmailReminder: adminProcedure
+    .input(z.object({
+      webinarId: z.string(),
+      reminderType: z.enum(["24h", "1h", "starting"]),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get webinar details
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const perWebinarApiKey = credRow?.apiKey || undefined;
+      let joinUrl = "";
+      let eventDate = "";
+      try {
+        const details = await fetchWebinarJamDetails(input.webinarId, perWebinarApiKey);
+        joinUrl = details.direct_live_room_url || details.registration_url || "";
+        if (details.schedules?.length > 0) {
+          const schedDate = details.schedules[0].date;
+          const tz = details.timezone || "America/Los_Angeles";
+          eventDate = new Date(`${schedDate}:00`).toLocaleString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: tz,
+            timeZoneName: "short",
+          });
+        }
+      } catch {
+        // Continue without details
+      }
+
+      // Get custom event name
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const settings: Record<string, string> = {};
+      for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+      const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+
+      // Get all registrants with email for this webinar
+      const registrants = await db.select({
+        id: webinarRegistrants.id,
+        name: webinarRegistrants.name,
+        email: webinarRegistrants.email,
+      }).from(webinarRegistrants).where(
+        and(
+          eq(webinarRegistrants.webinarId, input.webinarId),
+          sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`
+        )
+      );
+
+      if (registrants.length === 0) {
+        return { sent: 0, failed: 0, errors: [], message: "No registrants with email addresses found" };
+      }
+
+      const result = await sendBulkReminderEmails(
+        registrants.map(r => ({ email: r.email!, name: r.name })),
+        (recipient) => buildWebinarReminderEmail(
+          recipient.name,
+          recipient.email,
+          input.reminderType,
+          eventName,
+          joinUrl,
+          eventDate
+        )
+      );
+
+      return {
+        ...result,
+        message: result.sent > 0
+          ? `Sent ${result.sent} reminder email${result.sent !== 1 ? "s" : ""} via Gmail (${result.failed} failed)`
+          : result.errors.length > 0
+          ? `Failed: ${result.errors[0]}`
+          : "No emails sent",
+      };
     }),
 });
 
@@ -2365,14 +2641,26 @@ async function autoSendCalendarInvites(
         await db.update(webinarRegistrants).set({
           calendarInviteSent: 1,
           calendarEventId: result.eventId || null,
+          calendarInviteError: null, // Clear any previous error
+          calendarInviteAt: new Date(),
         }).where(eq(webinarRegistrants.id, registrant.id));
         sent++;
       } else {
         console.error(`[Calendar Auto] Failed for ${registrant.email}: ${result.error}`);
+        await db.update(webinarRegistrants).set({
+          calendarInviteSent: 0,
+          calendarInviteError: result.error || "Unknown error",
+          calendarInviteAt: new Date(),
+        }).where(eq(webinarRegistrants.id, registrant.id));
         failed++;
       }
     } catch (err: any) {
       console.error(`[Calendar Auto] Error for ${registrant.email}: ${err.message}`);
+      await db.update(webinarRegistrants).set({
+        calendarInviteSent: 0,
+        calendarInviteError: err.message || String(err),
+        calendarInviteAt: new Date(),
+      }).where(eq(webinarRegistrants.id, registrant.id)).catch(() => {});
       failed++;
     }
   }
@@ -2909,4 +3197,23 @@ export async function startSmsDispatcher() {
   // Run immediately on startup, then every 30 seconds
   processScheduledMessages();
   smsDispatcherInterval = setInterval(processScheduledMessages, 30_000);
+}
+
+// ─── ICS Date Formatter ──────────────────────────────────────────────────────
+
+/**
+ * Format a Date object to ICS date-time format (UTC): YYYYMMDDTHHmmssZ
+ */
+function formatIcsDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    date.getUTCFullYear().toString() +
+    pad(date.getUTCMonth() + 1) +
+    pad(date.getUTCDate()) +
+    "T" +
+    pad(date.getUTCHours()) +
+    pad(date.getUTCMinutes()) +
+    pad(date.getUTCSeconds()) +
+    "Z"
+  );
 }

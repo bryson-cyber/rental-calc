@@ -12712,3 +12712,12 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Custom Event Name & Audience Calendar Status (Mar 5, 2026)
 - [x] Set custom default event name (e.g., "LIVE: Coach Inayah's 5-Step Airbnb Masterclass")
 - [x] Add calendar invite status icon/column to Audience tab registrant list
+
+## Calendar Fixes & Show Rate Boosters (Mar 5, 2026)
+- [x] Fix: Default event name not pre-filled in Calendar tab input field (was stale test data in DB + improved save logic to handle empty strings)
+- [x] Fix: Remove "Hosted by I&B Coaching | support@coachinayah.com" from sendCalendarInvite function
+- [x] Add calendar invite delivery failure tracking (error column in DB, failure log, UI table with retry)
+- [x] Event Update Reminders: Manual buttons for 24h, 1h, and "Live Now" reminder updates that trigger Google notification emails
+- [x] ICS file generation: Generate downloadable .ics calendar file with 24h/1h/10min alarms for non-Google calendar users
+- [x] Gmail API reminder emails: Send personalized reminder emails via Gmail API (service account, high deliverability, Coach Inayah branded templates)
+- [x] Enhanced calendar event reminders: Add multiple reminder overrides (24h email, 1h email, 30min popup, 10min popup)

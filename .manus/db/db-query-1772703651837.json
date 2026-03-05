@@ -1,0 +1,42 @@
+{
+  "query": "SELECT * FROM webinar_sms_settings WHERE settingKey LIKE 'calendar%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM webinar_sms_settings WHERE settingKey LIKE 'calendar%';",
+  "rows": [
+    {
+      "id": "450167",
+      "settingKey": "calendar_auto_send",
+      "settingValue": "false",
+      "description": "Auto-send calendar invites on registration",
+      "createdAt": "2026-03-05 08:11:29",
+      "updatedAt": "2026-03-05 09:22:48"
+    },
+    {
+      "id": "450168",
+      "settingKey": "calendar_event_name",
+      "settingValue": "My Custom Event",
+      "description": "Custom calendar event name",
+      "createdAt": "2026-03-05 08:11:29",
+      "updatedAt": "2026-03-05 09:22:47"
+    },
+    {
+      "id": "450169",
+      "settingKey": "calendar_event_description",
+      "settingValue": "",
+      "description": "Custom calendar event description",
+      "createdAt": "2026-03-05 08:11:29",
+      "updatedAt": "2026-03-05 09:22:47"
+    },
+    {
+      "id": "450170",
+      "settingKey": "calendar_event_location",
+      "settingValue": "https://join.example.com",
+      "description": "Custom calendar event location/join URL",
+      "createdAt": "2026-03-05 08:11:29",
+      "updatedAt": "2026-03-05 08:12:53"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsettingKey\tsettingValue\tdescription\tcreatedAt\tupdatedAt\n450167\tcalendar_auto_send\tfalse\tAuto-send calendar invites on registration\t2026-03-05 08:11:29\t2026-03-05 09:22:48\n450168\tcalendar_event_name\tMy Custom Event\tCustom calendar event name\t2026-03-05 08:11:29\t2026-03-05 09:22:47\n450169\tcalendar_event_description\t\tCustom calendar event description\t2026-03-05 08:11:29\t2026-03-05 09:22:47\n450170\tcalendar_event_location\thttps://join.example.com\tCustom calendar event location/join URL\t2026-03-05 08:11:29\t2026-03-05 08:12:53\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

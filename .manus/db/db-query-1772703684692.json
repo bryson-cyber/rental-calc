@@ -1,0 +1,30 @@
+{
+  "query": "SELECT settingKey, LENGTH(settingValue) as val_len, LEFT(settingValue, 100) as val_preview FROM webinar_sms_settings WHERE settingKey LIKE 'calendar%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT settingKey, LENGTH(settingValue) as val_len, LEFT(settingValue, 100) as val_preview FROM webinar_sms_settings WHERE settingKey LIKE 'calendar%';",
+  "rows": [
+    {
+      "settingKey": "calendar_auto_send",
+      "val_len": "5",
+      "val_preview": "false"
+    },
+    {
+      "settingKey": "calendar_event_name",
+      "val_len": "15",
+      "val_preview": "My Custom Event"
+    },
+    {
+      "settingKey": "calendar_event_description",
+      "val_len": "0",
+      "val_preview": ""
+    },
+    {
+      "settingKey": "calendar_event_location",
+      "val_len": "24",
+      "val_preview": "https://join.example.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "settingKey\tval_len\tval_preview\ncalendar_auto_send\t5\tfalse\ncalendar_event_name\t15\tMy Custom Event\ncalendar_event_description\t0\t\ncalendar_event_location\t24\thttps://join.example.com\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

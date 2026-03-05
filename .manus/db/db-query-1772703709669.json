@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE webinar_sms_settings SET settingValue = 'true' WHERE settingKey = 'calendar_auto_send'; DELETE FROM webinar_sms_settings WHERE settingKey IN ('calendar_event_name', 'calendar_event_description', 'calendar_event_location');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute UPDATE webinar_sms_settings SET settingValue = 'true' WHERE settingKey = 'calendar_auto_send'; DELETE FROM webinar_sms_settings WHERE settingKey IN ('calendar_event_name', 'calendar_event_description', 'calendar_event_location');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 66
+}

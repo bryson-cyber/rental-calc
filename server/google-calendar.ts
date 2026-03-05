@@ -120,7 +120,6 @@ export async function sendCalendarInvite(
     if (params.joinUrl) {
       description += `\n\n🔗 Join the webinar: ${params.joinUrl}`;
     }
-    description += `\n\nHosted by I&B Coaching | support@coachinayah.com`;
 
     const event: calendar_v3.Schema$Event = {
       summary: params.title,
@@ -141,12 +140,16 @@ export async function sendCalendarInvite(
           responseStatus: "needsAction",
         },
       ],
-      // Reminders for the organizer
+      // Reminders: these apply to the organizer's calendar; attendees get
+      // their own default reminders from Google Calendar, but the event
+      // creation email (sendUpdates: "all") serves as the initial notification.
       reminders: {
         useDefault: false,
         overrides: [
-          { method: "email", minutes: 60 },
-          { method: "popup", minutes: 15 },
+          { method: "email", minutes: 1440 },  // 24 hours before
+          { method: "email", minutes: 60 },     // 1 hour before
+          { method: "popup", minutes: 30 },     // 30 minutes before
+          { method: "popup", minutes: 10 },     // 10 minutes before
         ],
       },
       // Store webinar metadata for tracking
@@ -306,6 +309,139 @@ export async function checkCalendarHealth(): Promise<{
       impersonateEmail,
       error: error?.message || String(error),
     };
+  }
+}
+
+/**
+ * Update an existing calendar event and optionally notify attendees.
+ * 
+ * This is the key mechanism for sending "reminder" emails through Google Calendar:
+ * When you update an event with sendUpdates: "all", Google sends a change notification
+ * email to all attendees. This is a legitimate way to remind people about the event
+ * since the email comes directly from Google Calendar (high deliverability).
+ */
+export async function updateCalendarEvent(
+  eventId: string,
+  updates: {
+    description?: string;
+    summary?: string;
+    location?: string;
+  },
+  sendNotification: boolean = true
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const calendar = getCalendarClient();
+
+    // First get the current event
+    const existing = await calendar.events.get({
+      calendarId: "primary",
+      eventId,
+    });
+
+    if (!existing.data) {
+      return { success: false, error: "Event not found" };
+    }
+
+    // Merge updates
+    const updatedEvent: calendar_v3.Schema$Event = {
+      ...existing.data,
+    };
+    if (updates.description !== undefined) updatedEvent.description = updates.description;
+    if (updates.summary !== undefined) updatedEvent.summary = updates.summary;
+    if (updates.location !== undefined) updatedEvent.location = updates.location;
+
+    await calendar.events.update({
+      calendarId: "primary",
+      eventId,
+      requestBody: updatedEvent,
+      sendUpdates: sendNotification ? "all" : "none",
+    });
+
+    console.log(`[Calendar] Event ${eventId} updated${sendNotification ? " (notifications sent)" : ""}`);
+    return { success: true };
+  } catch (error: any) {
+    const message = error?.message || String(error);
+    console.error(`[Calendar] Failed to update event ${eventId}:`, message);
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Send reminder updates to all calendar events for a webinar.
+ * Updates the event description with a reminder message and triggers
+ * Google Calendar to send notification emails to all attendees.
+ * 
+ * @param webinarId - The webinar ID to find events for
+ * @param reminderType - "24h" or "1h" to customize the reminder message
+ */
+export async function sendCalendarReminderUpdates(
+  webinarId: string,
+  reminderType: "24h" | "1h" | "starting",
+  joinUrl?: string
+): Promise<{ updated: number; failed: number; errors: string[] }> {
+  try {
+    const calendar = getCalendarClient();
+
+    // Find all events for this webinar using extended properties
+    const events = await calendar.events.list({
+      calendarId: "primary",
+      privateExtendedProperty: `webinarId=${webinarId}`,
+      maxResults: 2500,
+      singleEvents: true,
+    });
+
+    const items = events.data.items || [];
+    if (items.length === 0) {
+      return { updated: 0, failed: 0, errors: ["No calendar events found for this webinar"] };
+    }
+
+    let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    // Build reminder prefix based on type
+    const reminderPrefix = reminderType === "24h"
+      ? "\u23f0 REMINDER: This webinar starts TOMORROW!"
+      : reminderType === "1h"
+      ? "\u26a1 STARTING SOON: This webinar begins in 1 hour!"
+      : "\ud83d\udfe2 LIVE NOW: The webinar is starting!";
+
+    const joinLine = joinUrl ? `\n\n\ud83d\udd17 Join now: ${joinUrl}` : "";
+
+    for (const event of items) {
+      if (!event.id) continue;
+
+      // Small delay to avoid rate limiting
+      if (updated + failed > 0) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      // Prepend reminder to existing description
+      const currentDesc = event.description || "";
+      // Remove any previous reminder prefix (to avoid stacking)
+      const cleanDesc = currentDesc
+        .replace(/^(\u23f0|\u26a1|\ud83d\udfe2).*?\n\n/s, "")
+        .trim();
+      const newDesc = `${reminderPrefix}${joinLine}\n\n${cleanDesc}`;
+
+      const result = await updateCalendarEvent(event.id, {
+        description: newDesc,
+      }, true);
+
+      if (result.success) {
+        updated++;
+      } else {
+        failed++;
+        errors.push(`Event ${event.id}: ${result.error}`);
+      }
+    }
+
+    console.log(`[Calendar Reminder] ${reminderType}: Updated ${updated}, failed ${failed} for webinar ${webinarId}`);
+    return { updated, failed, errors };
+  } catch (error: any) {
+    const message = error?.message || String(error);
+    console.error(`[Calendar Reminder] Failed:`, message);
+    return { updated: 0, failed: 0, errors: [message] };
   }
 }
 

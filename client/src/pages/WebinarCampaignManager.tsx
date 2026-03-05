@@ -64,6 +64,7 @@ import {
   Save,
   Calendar,
   CalendarCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
@@ -1614,6 +1615,20 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
     },
     onError: (err) => toast.error(err.message),
   });
+  const sendReminder = trpc.webinarSms.sendCalendarReminder.useMutation({
+    onSuccess: (data) => {
+      toast[data.updated > 0 ? "success" : "error"](data.message);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const icsFile = trpc.webinarSms.generateIcsFile.useQuery({ webinarId }, { enabled: !!webinarId });
+  const gmailStatus = trpc.webinarSms.gmailStatus.useQuery();
+  const sendGmailReminder = trpc.webinarSms.sendGmailReminder.useMutation({
+    onSuccess: (data) => {
+      toast[data.sent > 0 ? "success" : "error"](data.message);
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   // Local state for settings form
   const [autoSend, setAutoSend] = useState(true); // Default ON
@@ -1646,6 +1661,10 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
     eventName !== (settings.data?.calendarEventName ?? "") ||
     eventDescription !== (settings.data?.calendarEventDescription ?? "")
   );
+
+  // Show "(Default)" label when using the system default values
+  const isDefaultName = !eventName || eventName === settings.data?.calendarEventName;
+  const isDefaultDesc = !eventDescription || eventDescription === settings.data?.calendarEventDescription;
 
   return (
     <div className="space-y-6">
@@ -1719,34 +1738,44 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
 
             {/* Custom Event Name */}
             <div className="space-y-2">
-              <Label htmlFor="calendar-event-name" className="text-sm font-medium">
-                Event Name
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="calendar-event-name" className="text-sm font-medium">
+                  Event Name
+                </Label>
+                {settingsLoaded && isDefaultName && (
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Default</span>
+                )}
+              </div>
               <Input
                 id="calendar-event-name"
-                placeholder="LIVE: Coach Inayah's 5-Step Airbnb Masterclass"
+                placeholder="Enter a custom event name..."
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                The name that appears on the registrant's calendar event
+                The name that appears on the registrant's calendar event. Clear to reset to default.
               </p>
             </div>
 
             {/* Custom Description */}
             <div className="space-y-2">
-              <Label htmlFor="calendar-event-desc" className="text-sm font-medium">
-                Event Description
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="calendar-event-desc" className="text-sm font-medium">
+                  Event Description
+                </Label>
+                {settingsLoaded && isDefaultDesc && (
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Default</span>
+                )}
+              </div>
               <Textarea
                 id="calendar-event-desc"
-                placeholder="e.g. Join Coach Inayah for a live training on building your short-term rental business. Click the link below to join!"
+                placeholder="Enter a custom event description..."
                 value={eventDescription}
                 onChange={(e) => setEventDescription(e.target.value)}
-                rows={3}
+                rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Leave blank to use the WebinarJam description
+                Clear to reset to the default 5-Step System description.
               </p>
             </div>
 
@@ -1791,7 +1820,7 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="p-4 rounded-lg border bg-card">
                 <p className="text-2xl font-bold">{stats?.total ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Total Registrants</p>
@@ -1807,6 +1836,10 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
               <div className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-950/20">
                 <p className="text-2xl font-bold text-amber-600">{stats?.invitePending ?? "\u2014"}</p>
                 <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-red-50 dark:bg-red-950/20">
+                <p className="text-2xl font-bold text-red-600">{stats?.inviteFailed ?? "\u2014"}</p>
+                <p className="text-xs text-muted-foreground">Failed</p>
               </div>
             </div>
 
@@ -1847,6 +1880,59 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
               </div>
             )}
 
+            {/* Failed Invites - Manual Follow-up Section */}
+            {(stats?.inviteFailed ?? 0) > 0 && stats?.failedRegistrants && (
+              <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                      {stats.inviteFailed} invite{stats.inviteFailed !== 1 ? "s" : ""} failed — needs manual follow-up
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    onClick={() => {
+                      if (confirm(`Retry sending calendar invites to ${stats.inviteFailed} failed registrant${stats.inviteFailed !== 1 ? "s" : ""}?`)) {
+                        sendBulk.mutate({ webinarId, onlyUnsent: false });
+                      }
+                    }}
+                    disabled={sendBulk.isPending}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" /> Retry Failed
+                  </Button>
+                </div>
+                <div className="px-4 pb-4">
+                  <div className="rounded border bg-white dark:bg-zinc-900 overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left p-2 font-medium">Name</th>
+                          <th className="text-left p-2 font-medium">Email</th>
+                          <th className="text-left p-2 font-medium">Error</th>
+                          <th className="text-left p-2 font-medium">Last Attempt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.failedRegistrants.map((r: any) => (
+                          <tr key={r.id} className="border-b last:border-0">
+                            <td className="p-2">{r.name}</td>
+                            <td className="p-2 text-muted-foreground">{r.email}</td>
+                            <td className="p-2 text-red-600 max-w-[200px] truncate" title={r.error}>{r.error}</td>
+                            <td className="p-2 text-muted-foreground">
+                              {r.lastAttempt ? new Date(r.lastAttempt).toLocaleString() : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Re-send all option */}
             {(stats?.inviteSent ?? 0) > 0 && (
               <div className="pt-4 border-t">
@@ -1868,11 +1954,191 @@ function CalendarInvitePanel({ webinarId }: { webinarId: string }) {
           </CardContent>
         </Card>
       )}
+      {/* Show Rate Boosters */}
+      {health?.authenticated && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-500" />
+              Show Rate Boosters
+            </CardTitle>
+            <CardDescription>
+              Tools to maximize webinar attendance. Calendar event updates trigger Google notification emails to all attendees.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Calendar Reminder Updates */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Send Calendar Reminder Updates</p>
+              <p className="text-xs text-muted-foreground">
+                Updates the calendar event description and triggers Google to send a notification email to every attendee. 
+                Use these before the webinar to remind people to show up.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Send a 24-hour reminder update to all calendar events for this webinar? Google will email all attendees.")) {
+                      sendReminder.mutate({ webinarId, reminderType: "24h" });
+                    }
+                  }}
+                  disabled={sendReminder.isPending}
+                  className="border-amber-300 hover:bg-amber-50"
+                >
+                  {sendReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                  24h Reminder
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Send a 1-hour reminder update to all calendar events? Google will email all attendees.")) {
+                      sendReminder.mutate({ webinarId, reminderType: "1h" });
+                    }
+                  }}
+                  disabled={sendReminder.isPending}
+                  className="border-orange-300 hover:bg-orange-50"
+                >
+                  {sendReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Timer className="w-3 h-3 mr-1" />}
+                  1h Reminder
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Send a 'LIVE NOW' update to all calendar events? Google will email all attendees.")) {
+                      sendReminder.mutate({ webinarId, reminderType: "starting" });
+                    }
+                  }}
+                  disabled={sendReminder.isPending}
+                  className="border-emerald-300 hover:bg-emerald-50"
+                >
+                  {sendReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Zap className="w-3 h-3 mr-1" />}
+                  Live Now!
+                </Button>
+              </div>
+            </div>
+
+            {/* ICS File Download */}
+            <div className="pt-4 border-t space-y-3">
+              <p className="text-sm font-medium">ICS Calendar File</p>
+              <p className="text-xs text-muted-foreground">
+                Download an .ics file for this webinar event. Share this link with registrants who don't use Google Calendar 
+                (Apple Calendar, Outlook, etc.). The file includes built-in reminders at 24h, 1h, and 10 minutes before.
+              </p>
+              {icsFile.data ? (
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const blob = new Blob([icsFile.data.icsContent], { type: "text/calendar" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = icsFile.data.filename;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("ICS file downloaded!");
+                    }}
+                  >
+                    <Download className="w-3 h-3 mr-1" /> Download .ics File
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {icsFile.data.eventName} • {new Date(icsFile.data.startTime).toLocaleDateString()}
+                  </span>
+                </div>
+              ) : icsFile.isLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Generating ICS file...
+                </div>
+              ) : icsFile.error ? (
+                <p className="text-xs text-red-500">Could not generate ICS file: {icsFile.error.message}</p>
+              ) : null}
+            </div>
+
+            {/* Gmail Reminder Emails */}
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-500" />
+                <p className="text-sm font-medium">Gmail Reminder Emails</p>
+                {gmailStatus.data?.authorized ? (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Connected</span>
+                ) : gmailStatus.data?.configured ? (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Not Authorized</span>
+                ) : (
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Not Configured</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Send personalized reminder emails directly from {gmailStatus.data?.senderEmail || "support@coachinayah.com"} via Gmail API. 
+                Higher deliverability than third-party email services because emails come from your real Google Workspace account.
+              </p>
+              {gmailStatus.data?.authorized ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Send a 24-hour reminder email to ALL registrants with email? This sends from your Gmail.")) {
+                        sendGmailReminder.mutate({ webinarId, reminderType: "24h" });
+                      }
+                    }}
+                    disabled={sendGmailReminder.isPending}
+                    className="border-blue-300 hover:bg-blue-50"
+                  >
+                    {sendGmailReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Mail className="w-3 h-3 mr-1" />}
+                    Email: 24h Reminder
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Send a 1-hour reminder email to ALL registrants? This sends from your Gmail.")) {
+                        sendGmailReminder.mutate({ webinarId, reminderType: "1h" });
+                      }
+                    }}
+                    disabled={sendGmailReminder.isPending}
+                    className="border-blue-300 hover:bg-blue-50"
+                  >
+                    {sendGmailReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Mail className="w-3 h-3 mr-1" />}
+                    Email: 1h Reminder
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Send a 'LIVE NOW' email to ALL registrants? This sends from your Gmail.")) {
+                        sendGmailReminder.mutate({ webinarId, reminderType: "starting" });
+                      }
+                    }}
+                    disabled={sendGmailReminder.isPending}
+                    className="border-emerald-300 hover:bg-emerald-50"
+                  >
+                    {sendGmailReminder.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Zap className="w-3 h-3 mr-1" />}
+                    Email: Live Now!
+                  </Button>
+                </div>
+              ) : gmailStatus.data?.error ? (
+                <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg">
+                  <p className="font-medium mb-1">Gmail API not authorized</p>
+                  <p>Add the Gmail send scope to your service account's domain-wide delegation:</p>
+                  <code className="block mt-1 text-[10px] bg-white p-1 rounded">https://www.googleapis.com/auth/gmail.send</code>
+                  <p className="mt-1 text-[10px] text-amber-500">Error: {gmailStatus.data.error}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Checking Gmail status...</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════
 // SECTION 6: Settings Panel
 // ═══════════════════════════════════════════════════════════════════════════
 
