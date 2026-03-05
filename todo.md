@@ -12785,4 +12785,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix: My Reports page — code already correct, admin sees all analysis_reports, regular users see email-matched
 
 ## Revenue Edit Still Not Working (3/5/2026 - continued)
-- [x] Confirmed: Production site running old build without isOwner code. Dev server working correctly. Need to publish latest checkpoint to fix production.
+- [x] Root cause: Production OWNER_OPEN_ID env var empty/missing, so openId comparison always fails
+- [x] Fix: Added email fallback — isOwner=true if openId matches OR email is bryson@stayly.com
+- [x] Tests: 10/10 passing including new email fallback test

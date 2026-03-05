@@ -53,12 +53,21 @@ describe("auth.me isOwner flag", () => {
   });
 
   it("returns isOwner=false for non-owner users", async () => {
-    const ctx = createContext({ openId: "definitely-not-the-owner" });
+    const ctx = createContext({ openId: "definitely-not-the-owner", email: "notowner@example.com" });
     const caller = appRouter.createCaller(ctx);
     const result = await caller.auth.me();
 
     expect(result).toBeDefined();
     expect(result?.isOwner).toBe(false);
+  });
+
+  it("returns isOwner=true for bryson@stayly.com even if OWNER_OPEN_ID doesn't match (email fallback)", async () => {
+    const ctx = createContext({ openId: "some-random-open-id", email: "bryson@stayly.com" });
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.auth.me();
+
+    expect(result).toBeDefined();
+    expect(result?.isOwner).toBe(true);
   });
 
   it("returns null for unauthenticated users", async () => {

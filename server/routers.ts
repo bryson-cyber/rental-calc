@@ -87,11 +87,15 @@ export const appRouter = router({
     me: publicProcedure.query(opts => {
       if (!opts.ctx.user) return null;
       // Add isOwner flag so frontend can restrict owner-only features
+      // Primary check: openId matches OWNER_OPEN_ID env var
+      // Fallback: email is bryson@stayly.com (hardcoded owner email)
       const userOpenId = opts.ctx.user.openId;
       const envOwnerOpenId = ENV.ownerOpenId;
-      const isOwner = userOpenId === envOwnerOpenId;
-      if (!isOwner && opts.ctx.user.role === 'admin') {
-        console.log(`[auth.me] isOwner=false for admin user. userOpenId="${userOpenId}" envOwnerOpenId="${envOwnerOpenId}"`);
+      const isOwnerByOpenId = !!(envOwnerOpenId && userOpenId === envOwnerOpenId);
+      const isOwnerByEmail = opts.ctx.user.email === 'bryson@stayly.com';
+      const isOwner = isOwnerByOpenId || isOwnerByEmail;
+      if (opts.ctx.user.role === 'admin') {
+        console.log(`[auth.me] isOwner=${isOwner} (byOpenId=${isOwnerByOpenId}, byEmail=${isOwnerByEmail}) userOpenId="${userOpenId}" envOwnerOpenId="${envOwnerOpenId}" email="${opts.ctx.user.email}"`);
       }
       return { ...opts.ctx.user, isOwner };
     }),
