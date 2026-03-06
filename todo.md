@@ -12805,3 +12805,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Reframe Section 1: Investment Return card — 2x2 grid (Setup Cost, Monthly Profit, Annual Gross Profit, ROI) + comparison in years ("Year 1" for Airbnb)
 - [x] Reframe Section 2: Profit Potential — Typical Host / Strong Host / Top Performer, monthly profit as headline, no breakeven months
 - [x] Reframe Section 3: Safety Margin — only shows when positive, hidden when negative
+- [x] Remove break-even occupancy bar and cushion text from Investment Analysis section

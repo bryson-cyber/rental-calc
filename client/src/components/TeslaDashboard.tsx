@@ -2078,35 +2078,7 @@ function ArbitrageCalculator({
           </div>
         );})()}
         
-        {/* Break-even Analysis */}
-        <div className="p-4 bg-slate-50 rounded-xl">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-600">Break-even Occupancy</span>
-            <span className="font-bold text-slate-900">{breakEvenOccupancy.toFixed(0)}%</span>
-          </div>
-          <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500 rounded-full"
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div className="flex justify-between mt-1">
-            <div 
-              className="flex flex-col items-center"
-              style={{ marginLeft: `${Math.min(breakEvenOccupancy, 95)}%`, transform: 'translateX(-50%)' }}
-            >
-              <div className="w-0.5 h-2 bg-slate-900" />
-              <span className="text-[10px] text-slate-500">Break-even</span>
-            </div>
-          </div>
-          <p className="text-sm text-slate-600 mt-3">
-            You need <span className="font-medium">{breakEvenOccupancy.toFixed(0)}%</span> occupancy to cover rent + expenses. 
-            Current projection is <span className="font-medium text-emerald-600">{Math.round(occupancy)}%</span> — 
-            that's a <span className={`font-medium ${occupancyCushion >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-              {occupancyCushion.toFixed(0)}%
-            </span> cushion.
-          </p>
-        </div>
+
 
         {/* Profit Potential — By Scenario */}
         {revenueScenarios && furnitureCost > 0 && (() => {
