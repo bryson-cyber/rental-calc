@@ -12793,3 +12793,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Diagnosed: AirDNA rate limiter blocking admin because isAdmin never propagated to rateLimitedAirDNARequest
 - [x] Fixed: All 4 files that call rateLimitedAirDNARequest now explicitly pass isAdmin from AsyncLocalStorage at call time
 - [x] Fix: Admin must bypass AirDNA API rate limiter too — root cause: isAdminRequest() via AsyncLocalStorage was never reaching rateLimitedAirDNARequest because makeApiRequest() didn't pass isAdmin. Fixed in airdna.ts, airdna-hierarchy.ts, market-research-simple.ts, nurture-sequence-service.ts
+
+## Shared Reports Should Reflect Edited Revenue (3/5/2026)
+- [x] Investigated: UniversalShareButton creates report with original annualRevenue, TeslaDashboard tracks override separately
+- [x] Fixed: Added revenueOverride prop flow: TeslaDashboard -> onRevenueOverrideChange -> LeadMagnet state -> UniversalShareButton -> createShareableReport (stores in DB)
+- [x] Shared report page already uses persistedRevenueOverride from DB to display overridden revenue
+- [x] Tests: 10/10 passing for revenue override share logic

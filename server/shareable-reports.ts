@@ -89,6 +89,9 @@ export async function createShareableReport(
     
     const shareCode = generateShareCode();
     
+    // Extract revenue override from reportData if embedded by admin
+    const revenueOverride = input.reportData?._revenueOverride ?? null;
+    
     const [result] = await db.insert(universalShareableReports).values({
       shareCode,
       reportType: input.reportType,
@@ -116,6 +119,7 @@ export async function createShareableReport(
       creatorName: input.creatorName,
       creatorUserId: input.creatorUserId,
       sessionId: input.sessionId,
+      revenueOverride: revenueOverride,
     });
     
     console.log(`[ShareableReport] Created ${input.reportType} report with code: ${shareCode}`);

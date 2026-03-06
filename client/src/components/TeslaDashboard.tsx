@@ -185,6 +185,7 @@ interface TeslaDashboardProps {
   isOwner?: boolean;  // Only the owner can override revenue numbers
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
+  onRevenueOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes revenue override
   // Data source info for fallback estimates (new construction / unknown addresses)
   dataSource?: {
     type: 'comp_fallback';
@@ -3419,7 +3420,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, dataSource, selectedAmenities, amenityFilter }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, onRevenueOverrideChange, dataSource, selectedAmenities, amenityFilter }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3441,6 +3442,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   
   const handleRevenueOverride = (newValue: number | null) => {
     setRevenueOverride(newValue);
+    // Notify parent component so share button can include the override
+    onRevenueOverrideChange?.(newValue);
     // Auto-save to DB if we have a shareCode
     if (shareCode) {
       updateOverrideMutation.mutate({

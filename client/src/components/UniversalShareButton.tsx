@@ -78,6 +78,8 @@ interface UniversalShareButtonProps {
   existingShareCode?: string;
   /** Callback when a share code is created */
   onShareCreated?: (shareCode: string) => void;
+  /** Admin revenue override to persist when creating the share */
+  revenueOverride?: number | null;
 }
 
 /**
@@ -113,6 +115,7 @@ export function UniversalShareButton({
   showLabel = true,
   existingShareCode,
   onShareCreated,
+  revenueOverride,
 }: UniversalShareButtonProps) {
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(
@@ -136,9 +139,15 @@ export function UniversalShareButton({
     
     setIsCreating(true);
     try {
+      // If admin has overridden revenue, embed it in the report data
+      const finalReportData = revenueOverride != null
+        ? { ...reportData, _revenueOverride: revenueOverride }
+        : reportData;
+      const finalAnnualRevenue = revenueOverride ?? annualRevenue;
+
       const result = await createReport.mutateAsync({
         reportType,
-        reportData,
+        reportData: finalReportData,
         address,
         city,
         state,
@@ -152,7 +161,7 @@ export function UniversalShareButton({
         marketName,
         title: title || generateTitle(),
         summary: summary || generateSummary(),
-        annualRevenue,
+        annualRevenue: finalAnnualRevenue,
         occupancyRate,
         averageDailyRate,
         profitMargin,
