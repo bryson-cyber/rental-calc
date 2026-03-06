@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { sharedReports } from "../../drizzle/schema";
 import { eq, desc, or } from "drizzle-orm";
@@ -42,7 +42,7 @@ function extractCityStateFromAddress(addr: string | undefined | null): { city: s
 
 export const sharedReportsRouter = router({
     // Create a new shared report
-    create: publicProcedure
+    create: adminProcedure
       .input(z.object({
         reportType: z.enum(['property', 'market', 'full']),
         // Property fields
@@ -445,7 +445,7 @@ export const sharedReportsRouter = router({
       }),
 
     // Regenerate a shared report with fresh data from AirDNA + Claude AI
-    regenerate: protectedProcedure
+    regenerate: adminProcedure
       .input(z.object({
         shareId: z.string(),
       }))
@@ -868,7 +868,7 @@ export const sharedReportsRouter = router({
       }),
 
     // Generate a full report from scratch using just address + property details
-    generateFromAddress: protectedProcedure
+    generateFromAddress: adminProcedure
       .input(z.object({
         address: z.string().min(5),
         bedrooms: z.number().int().min(0).max(10),

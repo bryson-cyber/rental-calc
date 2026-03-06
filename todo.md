@@ -12813,3 +12813,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add global unhandledRejection and uncaughtException handlers to prevent server crashes
 - [x] Add AirDNARateLimitError re-throw in market data fallback chains to prevent cascading failures
 - [x] Allow admin to type in a custom revenue number (not just +/- $5,000 buttons)
+
+### Role-Based Access: Non-Admin Simplified Experience (March 6, 2026)
+- [x] Create simplified Rentalizer-only server procedure (1 API call) for non-admin Step 5 — uses existing getEstimate procedure
+- [x] Add role-based gating to server procedures - block non-admin from AirDNA-heavy endpoints (Steps 3, 4, full 5, 8, 9, deal alerts)
+- [x] Update Step 2 UI - remove bulk report for non-admins, each property links to simplified Step 5
+- [x] Build simplified Step 5 UI for non-admin users (revenue estimate + rent input + profit calc) — TeslaDashboard gracefully hides empty sections
+- [x] Gate homepage tool cards - hide/disable AirDNA-heavy steps for non-admins — TAB_ORDER filtered by isAdmin
+- [x] Shared reports remain accessible to all users (no changes needed)
+- [x] Fix type="url" on Zillow input in Home.tsx causing browser pattern validation errors

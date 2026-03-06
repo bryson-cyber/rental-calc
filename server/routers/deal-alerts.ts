@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { eq } from "drizzle-orm";
 
 export const dealAlertsRouter = router({
     // Create a new deal alert criteria
-    create: publicProcedure
+    create: adminProcedure
       .input(z.object({
         email: z.string().email(),
         firstName: z.string().optional(),
@@ -38,7 +38,7 @@ export const dealAlertsRouter = router({
       }),
 
     // List user's deal alert criteria
-    list: publicProcedure
+    list: adminProcedure
       .input(z.object({
         email: z.string().optional(),
         sessionId: z.string().optional(),
@@ -49,7 +49,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Get matches for a criteria
-    getMatches: publicProcedure
+    getMatches: adminProcedure
       .input(z.object({
         criteriaId: z.number(),
         status: z.enum(['new', 'notified', 'viewed', 'saved', 'dismissed']).optional(),
@@ -61,7 +61,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Update match status
-    updateMatchStatus: publicProcedure
+    updateMatchStatus: adminProcedure
       .input(z.object({
         matchId: z.number(),
         status: z.enum(['viewed', 'saved', 'dismissed']),
@@ -73,7 +73,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Toggle criteria active/inactive
-    toggle: publicProcedure
+    toggle: adminProcedure
       .input(z.object({ criteriaId: z.number() }))
       .mutation(async ({ input }) => {
         const { toggleCriteriaActive } = await import('../deal-alert-agent');
@@ -81,7 +81,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Delete a criteria
-    delete: publicProcedure
+    delete: adminProcedure
       .input(z.object({ criteriaId: z.number() }))
       .mutation(async ({ input }) => {
         const { deleteDealAlertCriteria } = await import('../deal-alert-agent');
@@ -90,7 +90,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Manually trigger a scan for a criteria
-    scan: publicProcedure
+    scan: adminProcedure
       .input(z.object({ criteriaId: z.number() }))
       .mutation(async ({ input }) => {
         const { scanForCriteria } = await import('../deal-alert-agent');
@@ -98,7 +98,7 @@ export const dealAlertsRouter = router({
       }),
 
     // Run the full scan job (admin)
-    runScanJob: publicProcedure
+    runScanJob: adminProcedure
       .mutation(async () => {
         const { runDealAlertScanJob } = await import('../deal-alert-agent');
         return runDealAlertScanJob();
@@ -106,7 +106,7 @@ export const dealAlertsRouter = router({
 
     // Run a one-click market evaluation
     // Returns evaluationId immediately and runs the evaluation asynchronously
-    evaluateMarket: publicProcedure
+    evaluateMarket: adminProcedure
       .input(z.object({
         city: z.string(),
         state: z.string(),

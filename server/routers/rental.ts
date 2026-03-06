@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leads, analysisReports } from "../../drizzle/schema";
 import { and, lt, max, min, or } from "drizzle-orm";
@@ -1037,7 +1037,7 @@ export const rentalRouter = router({
       }),
 
     // Get comprehensive property report with market data
-    getPropertyReport: publicProcedure
+    getPropertyReport: adminProcedure
       .input(propertyReportInputSchema)
       .mutation(async ({ input, ctx }) => {
         // Wrap entire handler in request context so the AirDNA rate limiter
@@ -1213,7 +1213,7 @@ export const rentalRouter = router({
       }),
 
     // Get AI-enhanced property report with profitability analysis
-    getAIPropertyReport: publicProcedure
+    getAIPropertyReport: adminProcedure
       .input(aiPropertyReportInputSchema)
       .mutation(async ({ input, ctx }) => {
         const isAdmin = ctx.user?.role === 'admin';
@@ -1548,7 +1548,7 @@ export const rentalRouter = router({
       }),
 
     // Get comprehensive market report with AI analysis
-    getMarketReport: publicProcedure
+    getMarketReport: adminProcedure
       .input(marketReportInputSchema)
       .mutation(async ({ input, ctx }) => {
         const isAdmin = ctx.user?.role === 'admin';
@@ -1658,7 +1658,7 @@ export const rentalRouter = router({
       }),
 
     // Get comprehensive submarket/zip code report with AI analysis
-    getSubmarketReport: publicProcedure
+    getSubmarketReport: adminProcedure
       .input(submarketReportInputSchema)
       .mutation(async ({ input, ctx }) => {
         const isAdmin = ctx.user?.role === 'admin';
@@ -1768,7 +1768,7 @@ export const rentalRouter = router({
       }),
 
     // Explore submarkets within a market - returns ranked list with recommendations
-    exploreSubmarkets: publicProcedure
+    exploreSubmarkets: adminProcedure
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
         sortBy: z.enum(['revenue', 'occupancy', 'revpar', 'overall']).default('overall'),
@@ -1826,7 +1826,7 @@ export const rentalRouter = router({
       }),
 
     // Get booking patterns for a market
-    getBookingPatterns: publicProcedure
+    getBookingPatterns: adminProcedure
       .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
       .mutation(async ({ input }) => {
         try {
@@ -1847,7 +1847,7 @@ export const rentalRouter = router({
       }),
 
     // Get supply trend for a market
-    getSupplyTrend: publicProcedure
+    getSupplyTrend: adminProcedure
       .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
       .mutation(async ({ input }) => {
         try {
@@ -1868,7 +1868,7 @@ export const rentalRouter = router({
       }),
 
     // Get forward-looking demand indicators
-    getForwardDemand: publicProcedure
+    getForwardDemand: adminProcedure
       .input(z.object({ 
         marketId: z.union([z.number(), z.string()]),
         numMonths: z.number().optional().default(6),

@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getRentalizerBulkSummary } from "../airdna";
 
 export const bulkSummaryRouter = router({
-    get: publicProcedure
+    get: adminProcedure
       .input(z.object({
         queries: z.array(z.object({
           address: z.string().min(1),

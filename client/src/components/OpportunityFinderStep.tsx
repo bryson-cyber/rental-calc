@@ -167,6 +167,7 @@ interface OpportunityFinderStepProps {
   onLocationChange?: (location: { city?: string; state?: string }) => void;
   initialCity?: string;
   initialState?: string;
+  isAdmin?: boolean;
 }
 
 // Home type options
@@ -285,7 +286,7 @@ function saveState(state: { location: string; searchType: 'forRent' | 'forSale';
   }
 }
 
-export default function OpportunityFinderStep({ onSelectProperty, initialLocation, onLocationChange, initialCity, initialState }: OpportunityFinderStepProps) {
+export default function OpportunityFinderStep({ onSelectProperty, initialLocation, onLocationChange, initialCity, initialState, isAdmin = false }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
   
@@ -1514,8 +1515,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
             )}
           </div>
           
-          {/* Batch Analyze All Button */}
-          {displayedProperties.length > 0 && !isSearching && (
+          {/* Batch Analyze All Button - Admin Only */}
+          {isAdmin && displayedProperties.length > 0 && !isSearching && (
             <div className="mt-4">
               {/* Profit Threshold + Analyze All Button */}
               {!isBatchAnalyzing && !showBatchResults && (
@@ -2710,6 +2711,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                         </>
                       )}
                     </Button>
+                    {isAdmin && (
                     <Button
                       onClick={handleLoadMoreAndAnalyze}
                       disabled={isLoadingMore || isBatchAnalyzing}
@@ -2732,6 +2734,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                         </>
                       )}
                     </Button>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getCountryMarkets } from "../airdna";
 
 export const marketDiscoveryRouter = router({
     // Get all markets in a country with filtering
-    getCountryMarkets: publicProcedure
+    getCountryMarkets: adminProcedure
       .input(z.object({
         countryCode: z.string().default('us'),
         minMarketScore: z.number().min(0).max(100).optional(),

@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getListingsByArea } from "../airdna";
 
 export const listingsByAreaRouter = router({
-    get: publicProcedure
+    get: adminProcedure
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         radiusMeters: z.number().int().min(100).max(50000).default(3000),

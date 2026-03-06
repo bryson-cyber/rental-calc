@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { compareMarkets } from "../airdna";
 
 export const marketComparisonRouter = router({
     // Compare multiple markets side-by-side
-    compare: publicProcedure
+    compare: adminProcedure
       .input(z.object({
         marketIds: z.array(z.string()).min(2).max(5),
         bedrooms: z.number().int().min(0).max(10).optional(),

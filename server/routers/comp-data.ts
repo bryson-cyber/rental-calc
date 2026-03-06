@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getAllMarketListings, getAllSubmarketListings, getMarketHistoricalData, getMarketListings, getSubmarketListings } from "../airdna";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
 import { recordApiCallsUsage } from "../usage-limits";
 
 export const compDataRouter = router({
-    getListings: publicProcedure
+    getListings: adminProcedure
       .input(z.object({
         submarketId: z.string(),
         isMarketLevel: z.boolean().default(false), // true = city/metro level, false = neighborhood level
@@ -96,7 +96,7 @@ export const compDataRouter = router({
       }),
 
     // Get ALL listings for a market/submarket (with pagination to bypass 25 limit)
-    getAllListings: publicProcedure
+    getAllListings: adminProcedure
       .input(z.object({
         submarketId: z.string(),
         isMarketLevel: z.boolean().default(false),
@@ -183,7 +183,7 @@ export const compDataRouter = router({
         }
       }),
 
-    getHistoricalData: publicProcedure
+    getHistoricalData: adminProcedure
       .input(z.object({
         marketId: z.string(),
         numMonths: z.number().int().min(12).max(60).default(24),
@@ -245,7 +245,7 @@ export const compDataRouter = router({
       }),
 
     // Get listings by zip code - auto-finds market/submarket and fetches listings
-    getListingsByZipcode: publicProcedure
+    getListingsByZipcode: adminProcedure
       .input(z.object({
         zipcode: z.string().length(5),
         pageSize: z.number().int().min(1).max(100).default(50),

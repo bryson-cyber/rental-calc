@@ -452,7 +452,10 @@ export default function LeadMagnet() {
   // Swipe gesture state for mobile navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
-  const TAB_ORDER: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'];
+  // Tabs that require admin access (AirDNA-heavy features)
+  const ADMIN_ONLY_TABS: TabType[] = ['prove', 'find', 'market', 'advisor'];
+  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'];
+  const TAB_ORDER: TabType[] = isAdmin ? ALL_TABS : ALL_TABS.filter(t => !ADMIN_ONLY_TABS.includes(t));
   
   // Swipe handlers for mobile navigation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1181,6 +1184,7 @@ export default function LeadMagnet() {
   // TRPC MUTATIONS
   // ============================================
   const analyzeProperty = trpc.rental.getPropertyReport.useMutation();
+  const getSimplifiedEstimate = trpc.rental.getEstimate.useMutation();
   const getAreaListings = trpc.listingsByArea.get.useMutation();
   const searchMarkets = trpc.marketResearchSimple.searchMarkets.useMutation();
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
@@ -1711,6 +1715,79 @@ export default function LeadMagnet() {
     }
   };
   
+  // Simplified analysis for non-admin users (1 Rentalizer API call only)
+  const handleSimplifiedAnalyze = async () => {
+    if (!address) {
+      toast.error('Please enter a property address');
+      return;
+    }
+    
+    setIsAnalyzing(true);
+    setLoadingStep(1);
+    setAnalysisTimer(0);
+    
+    let timerInterval: ReturnType<typeof setInterval> | null = null;
+    timerInterval = setInterval(() => {
+      setAnalysisTimer(prev => prev + 1);
+    }, 1000);
+    
+    try {
+      const response = await getSimplifiedEstimate.mutateAsync({
+        address,
+        bedrooms: parseInt(bedrooms) || undefined,
+        bathrooms: parseFloat(bathrooms) || undefined,
+        accommodates: (parseInt(bedrooms) || 2) * 2,
+      });
+      
+      if (!response.success || !response.data) {
+        toast.error(response.error || 'Could not analyze this property');
+        return;
+      }
+      
+      const data = response.data;
+      const annualRevenue = data.estimates?.annual_revenue || 0;
+      const monthlyRevenue = annualRevenue / 12;
+      const rent = parseFloat(monthlyRent) || 0;
+      const effectiveRent = globalMode === 'purchase' ? 0 : rent;
+      const occ = data.estimates?.occupancy_rate || 0;
+      
+      setResult({
+        revenue: {
+          projected: annualRevenue,
+          low: data.estimates?.annual_revenue_low || annualRevenue * 0.8,
+          high: data.estimates?.annual_revenue_high || annualRevenue * 1.2,
+        },
+        metrics: {
+          adr: data.estimates?.average_daily_rate || 0,
+          occupancy: occ < 1 ? Math.round(occ * 100) : Math.round(occ),
+        },
+        cashFlow: {
+          monthlyRevenue,
+          monthlyRent: effectiveRent,
+          monthlyProfit: monthlyRevenue - effectiveRent - (monthlyRevenue * 0.20),
+        },
+        forecast: (data.monthly_forecast || []).map((m: any) => ({
+          month: m.month,
+          revenue: m.revenue || 0,
+          adr: m.adr || 0,
+          occupancy: (m.occupancy || 0) > 1 ? m.occupancy : (m.occupancy || 0) * 100,
+        })),
+        comparables: [], // No comps for simplified version
+      });
+      
+      toast.success('Property estimate ready!');
+      trackValidateAction('simplified_analysis_complete', { address });
+    } catch (error) {
+      console.error('Simplified analysis error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not analyze this property. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setIsAnalyzing(false);
+      setLoadingStep(0);
+      if (timerInterval) clearInterval(timerInterval);
+    }
+  };
+
   // tRPC utils for imperative queries
   const trpcUtils = trpc.useUtils();
   
@@ -2577,21 +2654,19 @@ export default function LeadMagnet() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-sm font-medium text-[oklch(0.45_0_0)]">
                   {(() => {
-                    const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
-                    const currentIndex = tabs.indexOf(activeTab);
-                    return `Tool ${currentIndex + 1} of ${tabs.length}`;
+                    const currentIndex = TAB_ORDER.indexOf(activeTab);
+                    return `Tool ${currentIndex + 1} of ${TAB_ORDER.length}`;
                   })()}
                 </span>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => {
-                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
-                      const currentIndex = tabs.indexOf(activeTab);
+                      const currentIndex = TAB_ORDER.indexOf(activeTab);
                       if (currentIndex > 0) {
-                        setActiveTab(tabs[currentIndex - 1]);
+                        setActiveTab(TAB_ORDER[currentIndex - 1]);
                       }
                     }}
-                    disabled={activeTab === 'ebook'}
+                    disabled={TAB_ORDER.indexOf(activeTab) <= 0}
                     className="w-11 h-11 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
                     aria-label="Previous tool"
                   >
@@ -2599,13 +2674,12 @@ export default function LeadMagnet() {
                   </button>
                   <button
                     onClick={() => {
-                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
-                      const currentIndex = tabs.indexOf(activeTab);
-                      if (currentIndex < tabs.length - 1) {
-                        setActiveTab(tabs[currentIndex + 1]);
+                      const currentIndex = TAB_ORDER.indexOf(activeTab);
+                      if (currentIndex < TAB_ORDER.length - 1) {
+                        setActiveTab(TAB_ORDER[currentIndex + 1]);
                       }
                     }}
-                    disabled={activeTab === 'lease'}
+                    disabled={TAB_ORDER.indexOf(activeTab) >= TAB_ORDER.length - 1}
                     className="w-11 h-11 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
                     aria-label="Next tool"
                   >
@@ -2618,8 +2692,7 @@ export default function LeadMagnet() {
               {(() => {
                 const job = jobDescriptions[activeTab];
                 const Icon = job.icon;
-                const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[];
-                const currentIndex = tabs.indexOf(activeTab);
+                const currentIndex = TAB_ORDER.indexOf(activeTab);
                 
                 return (
                   <div className="apple-card p-4 ring-2 ring-[oklch(0.55_0.14_75)]/30">
@@ -2647,7 +2720,7 @@ export default function LeadMagnet() {
               
               {/* Quick Jump Pills */}
               <div className="flex gap-2 mt-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[]).map((tab, index) => {
+                {TAB_ORDER.map((tab, index) => {
                   const isActive = activeTab === tab;
                   return (
                     <button
@@ -2668,7 +2741,7 @@ export default function LeadMagnet() {
             
             {/* Desktop: Grid Layout */}
             <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'] as TabType[]).map((tab, index) => {
+              {TAB_ORDER.map((tab, index) => {
                 const job = jobDescriptions[tab];
                 const Icon = job.icon;
                 const isActive = activeTab === tab;
@@ -3431,7 +3504,7 @@ export default function LeadMagnet() {
                 )}
                 
                 <button
-                  onClick={handleAnalyze}
+                  onClick={isAdmin ? handleAnalyze : handleSimplifiedAnalyze}
                   disabled={isAnalyzing || !address || (globalMode === 'rent' ? (!monthlyRent || parseFloat(monthlyRent) <= 0) : (!myProperty?.purchasePrice || myProperty.purchasePrice <= 0)) || !isAuthenticated}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   data-analyze-button
@@ -3440,12 +3513,12 @@ export default function LeadMagnet() {
                   {isAnalyzing ? (
                     <>
                       <div className="w-5 h-5 border-2 border-[oklch(0.55_0.14_75)]/30 border-t-[oklch(0.55_0.14_75)] rounded-full animate-spin" />
-                      <span>Validating Deal... ({analysisTimer}s)</span>
+                      <span>{isAdmin ? 'Validating Deal' : 'Getting Estimate'}... ({analysisTimer}s)</span>
                     </>
                   ) : (
                     <>
                       <Target className="w-5 h-5" />
-                      <span>Validate This Deal</span>
+                      <span>{isAdmin ? 'Validate This Deal' : 'Get Revenue Estimate'}</span>
                     </>
                   )}
                 </button>
@@ -3899,6 +3972,7 @@ export default function LeadMagnet() {
                 />
                 <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
                 <OpportunityFinderStep
+                  isAdmin={isAdmin}
                   initialLocation={exploreAddress} // Pass location from URL params (HubSpot emails)
                   onSelectProperty={(property) => {
                     // Pre-fill the validate tab with this property (but don't switch tabs)

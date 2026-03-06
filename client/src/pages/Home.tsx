@@ -637,7 +637,7 @@ export default function RentalEstimator() {
                   </label>
                   <div className="flex gap-2">
                     <input
-                      type="url"
+                      type="text"
                       value={zillowUrl}
                       onChange={(e) => setZillowUrl(e.target.value)}
                       placeholder="https://www.zillow.com/homedetails/..."

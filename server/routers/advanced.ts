@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { aiAdvisorCache, analysisReports } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -30,7 +30,7 @@ import { isWebinarMode, getCachedStep5Data } from "../webinar-cache";
 
 export const advancedRouter = router({
     // Market Scorecard - Get all markets in a country with scores
-    getCountryMarkets: publicProcedure
+    getCountryMarkets: adminProcedure
       .input(z.object({
         countryCode: z.string().default("us"),
         limit: z.number().int().min(1).max(25).default(25),
@@ -78,7 +78,7 @@ export const advancedRouter = router({
       }),
 
     // Radius-Based Opportunity Finder
-    getListingsInRadius: publicProcedure
+    getListingsInRadius: adminProcedure
       .input(z.object({
         latitude: z.number().min(-90).max(90),
         longitude: z.number().min(-180).max(180),
@@ -119,7 +119,7 @@ export const advancedRouter = router({
       }),
 
     // Seasonality Calendar / Heatmap
-    getMarketSeasonality: publicProcedure
+    getMarketSeasonality: adminProcedure
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
       }))
@@ -142,7 +142,7 @@ export const advancedRouter = router({
       }),
 
     // Top Performers Finder
-    getTopPerformers: publicProcedure
+    getTopPerformers: adminProcedure
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
         limit: z.number().int().min(1).max(25).default(25),
@@ -183,7 +183,7 @@ export const advancedRouter = router({
       }),
 
     // Rental Arbitrage Feasibility Tool
-    calculateArbitrageFeasibility: publicProcedure
+    calculateArbitrageFeasibility: adminProcedure
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         monthlyRent: z.number().min(0, "Monthly rent is required"),
@@ -222,7 +222,7 @@ export const advancedRouter = router({
       }),
 
     // Lead Magnet Property Analysis - Comprehensive structured report
-    analyzeProperty: publicProcedure
+    analyzeProperty: adminProcedure
       .input(z.object({
         address: z.string().min(1, "Address is required"),
         monthly_rent: z.number().positive("Monthly rent must be positive"),
@@ -540,7 +540,7 @@ export const advancedRouter = router({
       }),
 
     // AI Investment Advisor Chat
-    getInvestmentAdvice: publicProcedure
+    getInvestmentAdvice: adminProcedure
       .input(z.object({
         question: z.string().min(1, "Question is required"),
         conversationHistory: z.array(z.object({
@@ -574,7 +574,7 @@ export const advancedRouter = router({
 
 
     // Comprehensive AI Property Advisor - synthesizes all data into actionable advice
-    propertyAdvisor: publicProcedure
+    propertyAdvisor: adminProcedure
       .input(z.object({
         property: z.object({
           address: z.string(),
@@ -659,7 +659,7 @@ export const advancedRouter = router({
       }),
 
     // Market Trend Narrator - AI-powered natural language insights
-    marketTrendNarrative: publicProcedure
+    marketTrendNarrative: adminProcedure
       .input(z.object({
         marketName: z.string(),
         currentYearRevenue: z.number(),
@@ -695,7 +695,7 @@ export const advancedRouter = router({
       }),
 
     // Maximum Capacity Property Advisor - Full 65K token output
-    propertyAdvisorMax: publicProcedure
+    propertyAdvisorMax: adminProcedure
       .input(z.object({
         property: z.object({
           address: z.string(),
@@ -1018,7 +1018,7 @@ export const advancedRouter = router({
       }),
 
     // Maximum Capacity Market Advisor - Full 65K token output
-    marketAdvisorMax: publicProcedure
+    marketAdvisorMax: adminProcedure
       .input(z.object({
         market: z.object({
           name: z.string(),
@@ -1191,7 +1191,7 @@ export const advancedRouter = router({
 
     // Standalone Market Advisor - Fetches all data and generates AI report
     // Simplified Market Advisor - Only bedroom filter, fixed to entire_home property type
-    standaloneMarketAdvisor: publicProcedure
+    standaloneMarketAdvisor: adminProcedure
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
         marketType: z.enum(['market', 'submarket', 'zipcode']).default('market'),

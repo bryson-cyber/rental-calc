@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import { getMarketListings, getSubmarketListings, getSubmarketsInMarket, searchMarkets, searchMarketsAPI } from "../airdna";
 
 export const marketExplorerRouter = router({
     // Search for markets/submarkets by city or neighborhood name
-    searchMarkets: publicProcedure
+    searchMarkets: adminProcedure
       .input(z.object({
         query: z.string().min(2),
         limit: z.number().optional().default(10),
@@ -31,7 +31,7 @@ export const marketExplorerRouter = router({
       }),
 
     // Get listings for a market with images
-    getListings: publicProcedure
+    getListings: adminProcedure
       .input(z.object({
         marketId: z.string(),
         marketType: z.enum(['market', 'submarket']).default('market'),
@@ -163,7 +163,7 @@ export const marketExplorerRouter = router({
       }),
 
     // Get neighborhoods (submarkets) for a market
-    getNeighborhoods: publicProcedure
+    getNeighborhoods: adminProcedure
       .input(z.object({
         marketId: z.string(),
       }))
