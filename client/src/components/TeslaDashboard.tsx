@@ -349,7 +349,7 @@ function HeroRevenueCard({
               </button>
             )}
             <span className={`text-4xl md:text-5xl font-bold tracking-tight ${
-              revenueOverrideActive ? 'text-amber-700' : 'text-[oklch(0.25_0_0)]'
+              isOwner && revenueOverrideActive ? 'text-amber-700' : 'text-[oklch(0.25_0_0)]'
             }`}>
               {formatCurrency(annualRevenue)}
             </span>

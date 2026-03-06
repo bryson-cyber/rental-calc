@@ -12799,3 +12799,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fixed: Added revenueOverride prop flow: TeslaDashboard -> onRevenueOverrideChange -> LeadMagnet state -> UniversalShareButton -> createShareableReport (stores in DB)
 - [x] Shared report page already uses persistedRevenueOverride from DB to display overridden revenue
 - [x] Tests: 10/10 passing for revenue override share logic
+- [x] Hide all revenue override indicators from non-owner viewers — buttons/text already gated by isOwner, fixed amber color on revenue number to also require isOwner
