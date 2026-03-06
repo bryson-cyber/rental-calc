@@ -2002,23 +2002,32 @@ function ArbitrageCalculator({
           const savingsYears = annualProfit > 0 ? Math.ceil(annualProfit / (furnitureCost * 0.04)) : 999;
           
           return (
-          <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
-            {/* Main Payback Display */}
-            <div className="text-center mb-4">
-              <span className="text-sm font-medium text-slate-600">Time to Recoup Your {formatCurrency(furnitureCost)} Investment</span>
-              <div className="flex items-baseline justify-center gap-2 mt-2">
-                <span className="text-4xl font-bold text-emerald-600">
-                  {monthsToRecoup === Infinity ? '—' : monthsToRecoup}
-                </span>
-                <span className="text-xl text-slate-600">months</span>
-              </div>
-              <p className="text-sm text-emerald-700 font-medium mt-1">
-                Then you keep {formatCurrency(trueMonthlyProfit)}/month profit forever
-              </p>
-            </div>
+          <div className="p-5 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+            {/* Header */}
+            <p className="text-sm font-semibold text-slate-800 mb-4">Investment Return</p>
             
-            {/* Time Comparison - How long would other investments take? */}
-            <div className="bg-white/70 rounded-lg p-4 mb-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white/70 rounded-xl p-3">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wide">Setup Cost</p>
+                <p className="text-xl font-bold text-slate-800">{formatCurrency(furnitureCost)}</p>
+              </div>
+              <div className="bg-white/70 rounded-xl p-3">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
+                <p className="text-xl font-bold text-emerald-600">{formatCurrency(trueMonthlyProfit)}</p>
+              </div>
+              <div className="bg-white/70 rounded-xl p-3">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wide">Annual Gross Profit</p>
+                <p className="text-xl font-bold text-emerald-600">{formatCurrency(annualProfit)}</p>
+              </div>
+              <div className="bg-white/70 rounded-xl p-3">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wide">ROI</p>
+                <p className="text-xl font-bold text-emerald-600">{Math.round(annualROI)}%</p>
+              </div>
+            </div>
+
+            {/* Comparison Chart */}
+            <div className="bg-white/70 rounded-xl p-4">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
                 To earn {formatCurrency(annualProfit)}/year from {formatCurrency(furnitureCost)}, other investments would take:
               </p>
@@ -2029,9 +2038,7 @@ function ArbitrageCalculator({
                     <div className="w-3 h-3 rounded-full bg-emerald-500" />
                     <span className="text-sm font-medium text-slate-700">Your Airbnb</span>
                   </div>
-                  <span className="text-lg font-bold text-emerald-600">
-                    {monthsToRecoup === Infinity ? '—' : `${monthsToRecoup} months`}
-                  </span>
+                  <span className="text-sm font-bold text-emerald-600">Year 1</span>
                 </div>
                 
                 {/* Stock Market */}
@@ -2068,22 +2075,6 @@ function ArbitrageCalculator({
                 </div>
               </div>
             </div>
-            
-            {/* Investment breakdown */}
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white/50 rounded-lg p-2">
-                <p className="text-xs text-slate-500">Setup Cost</p>
-                <p className="font-semibold text-slate-700">{formatCurrency(furnitureCost)}</p>
-              </div>
-              <div className="bg-white/50 rounded-lg p-2">
-                <p className="text-xs text-slate-500">Monthly Profit</p>
-                <p className="font-semibold text-emerald-600">{formatCurrency(trueMonthlyProfit)}</p>
-              </div>
-              <div className="bg-white/50 rounded-lg p-2">
-                <p className="text-xs text-slate-500">Year 1 Profit</p>
-                <p className="font-semibold text-emerald-600">{formatCurrency(annualProfit)}</p>
-              </div>
-            </div>
           </div>
         );})()}
         
@@ -2117,50 +2108,45 @@ function ArbitrageCalculator({
           </p>
         </div>
 
-        {/* Tiered Breakeven Times — Conservative / Target / Optimistic */}
+        {/* Profit Potential — By Scenario */}
         {revenueScenarios && furnitureCost > 0 && (() => {
-          const calcTierBreakeven = (annualRevenue: number) => {
+          const calcTierProfit = (annualRevenue: number) => {
             const monthlyRev = annualRevenue / 12;
             const monthlyExp = monthlyRev * (expensePercent / 100);
             const monthlyProfit = monthlyRev - monthlyRent - monthlyExp;
-            const months = monthlyProfit > 0 ? Math.ceil(furnitureCost / monthlyProfit) : Infinity;
-            return { monthlyProfit, months };
+            const annualGross = monthlyProfit * 12;
+            return { monthlyProfit, annualGross };
           };
-          const conservative = calcTierBreakeven(revenueScenarios.conservative);
-          const target = calcTierBreakeven(revenueScenarios.target);
-          const optimistic = calcTierBreakeven(revenueScenarios.optimistic);
+          const baseline = calcTierProfit(revenueScenarios.conservative);
+          const strong = calcTierProfit(revenueScenarios.target);
+          const top = calcTierProfit(revenueScenarios.optimistic);
           const tiers = [
-            { label: 'Conservative', sublabel: 'Average host', ...conservative, bgClass: 'bg-amber-50 border-amber-200', textClass: 'text-amber-700', labelClass: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-700' },
-            { label: 'Target', sublabel: 'Good host', ...target, bgClass: 'bg-blue-50 border-blue-200', textClass: 'text-blue-700', labelClass: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-700' },
-            { label: 'Optimistic', sublabel: 'Top 10%', ...optimistic, bgClass: 'bg-emerald-50 border-emerald-200', textClass: 'text-emerald-700', labelClass: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-700' },
+            { label: 'Typical Host', ...baseline, bgClass: 'bg-amber-50 border-amber-200', textClass: 'text-amber-700', labelClass: 'text-amber-600' },
+            { label: 'Strong Host', ...strong, bgClass: 'bg-blue-50 border-blue-200', textClass: 'text-blue-700', labelClass: 'text-blue-600' },
+            { label: 'Top Performer', ...top, bgClass: 'bg-emerald-50 border-emerald-200', textClass: 'text-emerald-700', labelClass: 'text-emerald-600' },
           ];
           return (
             <div className="pt-4 border-t border-slate-200">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">Time to Recoup — By Scenario</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Based on {revenueScenarios.compCount} comparable {revenueScenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}
-                  </p>
-                </div>
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-800">Profit Potential</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Based on {revenueScenarios.compCount} comparable {revenueScenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {tiers.map((tier) => (
                   <div key={tier.label} className={`rounded-xl p-4 border ${tier.bgClass} transition-shadow hover:shadow-md`}>
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <span className={`text-xs font-bold uppercase tracking-wider ${tier.labelClass}`}>{tier.label}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tier.badgeClass} font-medium`}>{tier.sublabel}</span>
-                    </div>
-                    <div className="mb-2">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Breakeven Time</p>
-                      <p className={`text-2xl font-bold ${tier.textClass}`}>
-                        {tier.months === Infinity ? '—' : `${tier.months} mo`}
+                    <span className={`text-xs font-bold uppercase tracking-wider ${tier.labelClass}`}>{tier.label}</span>
+                    <div className="mt-2 mb-1">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
+                      <p className={`text-2xl font-bold ${tier.monthlyProfit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {tier.monthlyProfit > 0 ? '+' : ''}{formatCurrency(tier.monthlyProfit)}
                       </p>
                     </div>
                     <div className="pt-2 border-t border-dashed border-slate-200">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
-                      <p className={`text-base font-bold ${tier.monthlyProfit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {tier.monthlyProfit > 0 ? '+' : ''}{formatCurrency(tier.monthlyProfit)}
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Gross</p>
+                      <p className={`text-base font-bold ${tier.annualGross > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatCurrency(tier.annualGross)}
                       </p>
                     </div>
                   </div>
@@ -2170,24 +2156,21 @@ function ArbitrageCalculator({
           );
         })()}
         
-        {/* Risk Scenario */}
-        <div className={`p-4 rounded-xl ${
-          riskProfit >= 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'
-        }`}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className={`w-4 h-4 ${riskProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-            <span className="text-sm font-medium text-slate-700">If occupancy drops 20%</span>
+        {/* Safety Margin - only show when positive */}
+        {riskProfit >= 0 && (
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-medium text-slate-700">Built-in Safety Margin</span>
+            </div>
+            <p className="text-lg font-bold text-emerald-700">
+              Even at 20% lower occupancy, this property still profits {formatCurrency(riskProfit)}/month
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue (after {expensePercent}% expenses)
+            </p>
           </div>
-          <p className={`text-lg font-bold ${riskProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-            {riskProfit >= 0 
-              ? `You'd still profit ${formatCurrency(riskProfit)}/month`
-              : `You'd lose ${formatCurrency(Math.abs(riskProfit))}/month`
-            }
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue (after {expensePercent}% expenses)
-          </p>
-        </div>
+        )}
 
       </div>
     </div>

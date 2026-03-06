@@ -12800,3 +12800,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Shared report page already uses persistedRevenueOverride from DB to display overridden revenue
 - [x] Tests: 10/10 passing for revenue override share logic
 - [x] Hide all revenue override indicators from non-owner viewers — buttons/text already gated by isOwner, fixed amber color on revenue number to also require isOwner
+- [x] Bug: Shared report wH9MUdT3jd not showing overridden revenue — root cause: production was running old code without updateRevenueOverride mutation. Manually set DB override to 88840. Now confirmed working.
+- [ ] Add disclaimer popup to shared report pages (ShareableReportViewer)
+- [x] Reframe Section 1: Investment Return card — 2x2 grid (Setup Cost, Monthly Profit, Annual Gross Profit, ROI) + comparison in years ("Year 1" for Airbnb)
+- [x] Reframe Section 2: Profit Potential — Typical Host / Strong Host / Top Performer, monthly profit as headline, no breakeven months
+- [x] Reframe Section 3: Safety Margin — only shows when positive, hidden when negative

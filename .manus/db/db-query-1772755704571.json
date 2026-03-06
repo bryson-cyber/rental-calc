@@ -1,0 +1,17 @@
+{
+  "query": "SELECT shareCode, annualRevenue, revenueOverride, reportType, address FROM universal_shareable_reports WHERE shareCode = 'wH9MUdT3jd';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareCode, annualRevenue, revenueOverride, reportType, address FROM universal_shareable_reports WHERE shareCode = 'wH9MUdT3jd';",
+  "rows": [
+    {
+      "shareCode": "wH9MUdT3jd",
+      "annualRevenue": "61209",
+      "revenueOverride": "NULL",
+      "reportType": "validator",
+      "address": "3405 Saint Emanuel St, Houston, TX 77004"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareCode\tannualRevenue\trevenueOverride\treportType\taddress\nwH9MUdT3jd\t61209\tNULL\tvalidator\t3405 Saint Emanuel St, Houston, TX 77004\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}
