@@ -40,7 +40,9 @@ import {
   MapPin,
   Sparkles,
   Bot,
-  Loader2
+  Loader2,
+  Pencil,
+  Check
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import MaxPurchasePriceCalculator from './MaxPurchasePriceCalculator';
@@ -284,6 +286,10 @@ function HeroRevenueCard({
     compCount: number;
   };
 }) {
+  // Inline editing state for typing custom revenue
+  const [isEditingRevenue, setIsEditingRevenue] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
   // Calculate monthly values
   const monthlyRevenue = annualRevenue / 12;
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
@@ -339,7 +345,7 @@ function HeroRevenueCard({
           </Tooltip>
           <div className="flex items-baseline gap-3 flex-wrap">
             {/* Owner override controls: decrement */}
-            {isOwner && onRevenueOverride && (
+            {isOwner && onRevenueOverride && !isEditingRevenue && (
               <button
                 onClick={() => onRevenueOverride(annualRevenue - 5000)}
                 className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition-colors border border-red-300 shadow-sm"
@@ -348,13 +354,82 @@ function HeroRevenueCard({
                 <Minus className="w-4 h-4" />
               </button>
             )}
-            <span className={`text-4xl md:text-5xl font-bold tracking-tight ${
-              isOwner && revenueOverrideActive ? 'text-amber-700' : 'text-[oklch(0.25_0_0)]'
-            }`}>
-              {formatCurrency(annualRevenue)}
-            </span>
+            {/* Revenue display: click to edit (admin only) */}
+            {isOwner && onRevenueOverride && isEditingRevenue ? (
+              <div className="flex items-center gap-2">
+                <span className="text-3xl md:text-4xl font-bold text-amber-700">$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  value={editValue}
+                  onChange={(e) => {
+                    // Allow only digits and commas
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    if (raw === '') {
+                      setEditValue('');
+                      return;
+                    }
+                    // Format with commas
+                    setEditValue(Number(raw).toLocaleString('en-US'));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const numericValue = Number(editValue.replace(/[^0-9]/g, ''));
+                      if (numericValue > 0) {
+                        onRevenueOverride(numericValue);
+                      }
+                      setIsEditingRevenue(false);
+                    } else if (e.key === 'Escape') {
+                      setIsEditingRevenue(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    const numericValue = Number(editValue.replace(/[^0-9]/g, ''));
+                    if (numericValue > 0) {
+                      onRevenueOverride(numericValue);
+                    }
+                    setIsEditingRevenue(false);
+                  }}
+                  className="w-48 text-3xl md:text-4xl font-bold text-amber-700 bg-amber-50 border-2 border-amber-400 rounded-lg px-3 py-1 outline-none focus:ring-2 focus:ring-amber-300"
+                  placeholder={annualRevenue.toLocaleString('en-US')}
+                />
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent blur from firing first
+                    const numericValue = Number(editValue.replace(/[^0-9]/g, ''));
+                    if (numericValue > 0) {
+                      onRevenueOverride(numericValue);
+                    }
+                    setIsEditingRevenue(false);
+                  }}
+                  className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
+                  title="Confirm"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <span
+                className={`text-4xl md:text-5xl font-bold tracking-tight ${
+                  isOwner && revenueOverrideActive ? 'text-amber-700' : 'text-[oklch(0.25_0_0)]'
+                } ${isOwner && onRevenueOverride ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                onClick={() => {
+                  if (isOwner && onRevenueOverride) {
+                    setEditValue(annualRevenue.toLocaleString('en-US'));
+                    setIsEditingRevenue(true);
+                  }
+                }}
+                title={isOwner && onRevenueOverride ? 'Click to type a custom revenue amount' : undefined}
+              >
+                {formatCurrency(annualRevenue)}
+                {isOwner && onRevenueOverride && (
+                  <Pencil className="w-4 h-4 inline-block ml-2 opacity-40" />
+                )}
+              </span>
+            )}
             {/* Owner override controls: increment */}
-            {isOwner && onRevenueOverride && (
+            {isOwner && onRevenueOverride && !isEditingRevenue && (
               <button
                 onClick={() => onRevenueOverride(annualRevenue + 5000)}
                 className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
@@ -364,7 +439,7 @@ function HeroRevenueCard({
               </button>
             )}
             {/* Owner reset button when override is active */}
-            {isOwner && onRevenueOverride && revenueOverrideActive && (
+            {isOwner && onRevenueOverride && revenueOverrideActive && !isEditingRevenue && (
               <button
                 onClick={() => onRevenueOverride(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors border border-slate-300 shadow-sm"
@@ -373,7 +448,9 @@ function HeroRevenueCard({
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
-            <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
+            {!isEditingRevenue && (
+              <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
+            )}
             {yearlyChange !== undefined && (
               <span className={`flex items-center gap-1 text-sm font-medium ${
                 yearlyChange >= 0 ? 'text-emerald-600' : 'text-red-600'

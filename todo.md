@@ -12812,3 +12812,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix admin being rate-limited by AirDNA: runWithRequestContext was missing from getPropertyReport, getAIPropertyReport, getMarketReport, getSubmarketReport procedures — admin requests were treated as non-admin and blocked at 400-call soft limit
 - [x] Add global unhandledRejection and uncaughtException handlers to prevent server crashes
 - [x] Add AirDNARateLimitError re-throw in market data fallback chains to prevent cascading failures
+- [x] Allow admin to type in a custom revenue number (not just +/- $5,000 buttons)
