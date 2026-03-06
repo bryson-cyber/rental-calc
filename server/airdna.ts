@@ -3655,6 +3655,11 @@ export async function getComprehensivePropertyReport(
       historicalData = results[1];
       submarketList = results[2];
     } catch (marketErr) {
+      // Re-throw rate limit errors immediately — don't try fallbacks when we're out of API calls
+      if (marketErr instanceof AirDNARateLimitError) {
+        console.warn(`[Market Data] Rate limit hit during market fetch for ${marketId}`);
+        throw marketErr;
+      }
       console.log(`[Market Data] Failed to fetch market ${marketId}, may be a submarket. Trying submarket endpoint first...`);
       
       // Strategy 1: Try getSubmarketDetails - if the ID is actually a submarket, this will work
@@ -3692,6 +3697,8 @@ export async function getComprehensivePropertyReport(
           }
         }
       } catch (submarketErr) {
+        // Re-throw rate limit errors
+        if (submarketErr instanceof AirDNARateLimitError) throw submarketErr;
         console.log(`[Market Data] Submarket lookup for ${marketId} also failed:`, (submarketErr as Error).message);
       }
       

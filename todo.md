@@ -12806,3 +12806,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Reframe Section 2: Profit Potential — Typical Host / Strong Host / Top Performer, monthly profit as headline, no breakeven months
 - [x] Reframe Section 3: Safety Margin — only shows when positive, hidden when negative
 - [x] Remove break-even occupancy bar and cushion text from Investment Analysis section
+- [ ] Bug: "The string did not match the expected pattern" error when entering Zillow URL for 3810 Hiford Dr UNIT B Houston TX 77047
+
+### Bug Fixes (March 6, 2026)
+- [x] Fix admin being rate-limited by AirDNA: runWithRequestContext was missing from getPropertyReport, getAIPropertyReport, getMarketReport, getSubmarketReport procedures — admin requests were treated as non-admin and blocked at 400-call soft limit
+- [x] Add global unhandledRejection and uncaughtException handlers to prevent server crashes
+- [x] Add AirDNARateLimitError re-throw in market data fallback chains to prevent cascading failures

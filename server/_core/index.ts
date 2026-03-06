@@ -1,4 +1,23 @@
 import "dotenv/config";
+// ============================================
+// GLOBAL ERROR HANDLERS — prevent server crashes from unhandled errors
+// ============================================
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Promise Rejection:', reason);
+  if (reason instanceof Error && reason.stack) {
+    console.error('[FATAL] Stack:', reason.stack);
+  }
+  // Do NOT exit — keep the server alive
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[FATAL] Uncaught Exception:', error.message);
+  if (error.stack) {
+    console.error('[FATAL] Stack:', error.stack);
+  }
+  // Do NOT exit — keep the server alive
+});
+
 import { installMockApi } from "../dev-mock-api";
 
 // Install mock API interceptor early (only activates when DEV_MOCK_API=true)

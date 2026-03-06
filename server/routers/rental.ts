@@ -22,6 +22,7 @@ import {
 } from "../airdna";
 import { batchScrapeAirbnbImages } from "../airbnb-scraper";
 import { AirDNARateLimitError } from "../airdna-rate-limiter";
+import { runWithRequestContext } from "../request-context";
 import { isWebinarMode, getCachedStep2Data } from "../webinar-cache";
 import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../report-generator";
@@ -1039,6 +1040,11 @@ export const rentalRouter = router({
     getPropertyReport: publicProcedure
       .input(propertyReportInputSchema)
       .mutation(async ({ input, ctx }) => {
+        // Wrap entire handler in request context so the AirDNA rate limiter
+        // can detect admin status deep in the call chain
+        const isAdmin = ctx.user?.role === 'admin';
+        const ctxUserId = ctx.user?.id;
+        return runWithRequestContext({ isAdmin, userId: ctxUserId }, async () => {
         try {
           // Enforce daily usage limits (admins bypass)
           const userId = ctx.user?.id;
@@ -1203,12 +1209,16 @@ export const rentalRouter = router({
             data: null,
           };
         }
+        }); // end runWithRequestContext
       }),
 
     // Get AI-enhanced property report with profitability analysis
     getAIPropertyReport: publicProcedure
       .input(aiPropertyReportInputSchema)
       .mutation(async ({ input, ctx }) => {
+        const isAdmin = ctx.user?.role === 'admin';
+        const ctxUserId = ctx.user?.id;
+        return runWithRequestContext({ isAdmin, userId: ctxUserId }, async () => {
         try {
           // Enforce daily usage limits (admins bypass)
           const userId = ctx.user?.id;
@@ -1534,12 +1544,16 @@ export const rentalRouter = router({
             data: null,
           };
         }
+        }); // end runWithRequestContext
       }),
 
     // Get comprehensive market report with AI analysis
     getMarketReport: publicProcedure
       .input(marketReportInputSchema)
       .mutation(async ({ input, ctx }) => {
+        const isAdmin = ctx.user?.role === 'admin';
+        const ctxUserId = ctx.user?.id;
+        return runWithRequestContext({ isAdmin, userId: ctxUserId }, async () => {
         try {
           // Enforce daily market research limits (admins bypass)
           const mrUserId = ctx.user?.id;
@@ -1640,12 +1654,16 @@ export const rentalRouter = router({
             data: null,
           };
         }
+        }); // end runWithRequestContext
       }),
 
     // Get comprehensive submarket/zip code report with AI analysis
     getSubmarketReport: publicProcedure
       .input(submarketReportInputSchema)
       .mutation(async ({ input, ctx }) => {
+        const isAdmin = ctx.user?.role === 'admin';
+        const ctxUserId = ctx.user?.id;
+        return runWithRequestContext({ isAdmin, userId: ctxUserId }, async () => {
         try {
           // Enforce daily market research limits (admins bypass)
           const smUserId = ctx.user?.id;
@@ -1746,6 +1764,7 @@ export const rentalRouter = router({
             data: null,
           };
         }
+        }); // end runWithRequestContext
       }),
 
     // Explore submarkets within a market - returns ranked list with recommendations
