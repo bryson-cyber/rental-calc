@@ -2841,38 +2841,68 @@ async function autoSendCalendarInvites(
 
   let sent = 0;
   let failed = 0;
+  let consecutiveRateLimits = 0;
 
-  for (const registrant of newRegistrantEmails) {
+  console.log(`[Calendar Auto] Starting auto-send for ${newRegistrantEmails.length} registrants`);
+
+  for (let i = 0; i < newRegistrantEmails.length; i++) {
+    const registrant = newRegistrantEmails[i];
     try {
-      // Small delay between invites to avoid rate limiting
-      if (sent + failed > 0) {
-        await new Promise(r => setTimeout(r, 200));
+      // Rate-limited delay: 1500ms base (~40/min, under Google's 60/min limit)
+      if (i > 0) {
+        const cooldownMs = consecutiveRateLimits > 0
+          ? 1500 + (consecutiveRateLimits * 2000)
+          : 1500;
+        await new Promise(r => setTimeout(r, cooldownMs));
       }
 
-      const result = await sendCalendarInvite({
-        attendeeEmail: registrant.email,
-        attendeeName: registrant.name,
-        title: eventName,
-        description: eventDescription,
-        startTime,
-        timezone,
-        joinUrl: eventLocation || undefined,
-        webinarId,
-      });
+      // Try with retries on rate limit
+      let result: CalendarInviteResult | null = null;
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        result = await sendCalendarInvite({
+          attendeeEmail: registrant.email,
+          attendeeName: registrant.name,
+          title: eventName,
+          description: eventDescription,
+          startTime,
+          timezone,
+          joinUrl: eventLocation || undefined,
+          webinarId,
+        });
 
-      if (result.success) {
+        if (result.success) {
+          consecutiveRateLimits = 0;
+          break;
+        }
+
+        // Check for rate limit error and retry with backoff
+        const errLower = (result.error || "").toLowerCase();
+        const isRateLimit = errLower.includes("rate limit") || errLower.includes("quota") ||
+          errLower.includes("429") || errLower.includes("too many requests");
+
+        if (isRateLimit && attempt < 3) {
+          consecutiveRateLimits++;
+          const backoffMs = 5000 * Math.pow(2, attempt);
+          console.log(`[Calendar Auto] Rate limited on ${registrant.email} (attempt ${attempt + 1}/4), backing off ${backoffMs / 1000}s...`);
+          await new Promise(r => setTimeout(r, backoffMs));
+          continue;
+        }
+        break;
+      }
+
+      if (result!.success) {
         await db.update(webinarRegistrants).set({
           calendarInviteSent: 1,
-          calendarEventId: result.eventId || null,
+          calendarEventId: result!.eventId || null,
           calendarInviteError: null, // Clear any previous error
           calendarInviteAt: new Date(),
         }).where(eq(webinarRegistrants.id, registrant.id));
         sent++;
       } else {
-        console.error(`[Calendar Auto] Failed for ${registrant.email}: ${result.error}`);
+        console.error(`[Calendar Auto] Failed for ${registrant.email}: ${result!.error}`);
         await db.update(webinarRegistrants).set({
           calendarInviteSent: 0,
-          calendarInviteError: result.error || "Unknown error",
+          calendarInviteError: result!.error || "Unknown error",
           calendarInviteAt: new Date(),
         }).where(eq(webinarRegistrants.id, registrant.id));
         failed++;
@@ -2885,6 +2915,11 @@ async function autoSendCalendarInvites(
         calendarInviteAt: new Date(),
       }).where(eq(webinarRegistrants.id, registrant.id)).catch(() => {});
       failed++;
+    }
+
+    // Progress logging every 25 invites
+    if ((i + 1) % 25 === 0 || i === newRegistrantEmails.length - 1) {
+      console.log(`[Calendar Auto] Progress: ${i + 1}/${newRegistrantEmails.length} (${sent} sent, ${failed} failed)`);
     }
   }
 
@@ -2977,10 +3012,11 @@ async function runWebinarImport(
     imported += batch.length;
   }
 
-  // Auto-send calendar invites to new registrants with email addresses
-  if (imported > 0) {
-    // Query back the newly inserted registrants to get their IDs
-    const recentRegistrants = await db.select({
+  // Auto-send calendar invites to ALL pending registrants (not just newly imported)
+  // This catches both new imports AND any existing registrants who haven't received invites yet
+  // (e.g., registrants imported before calendar was configured, or failed invites that need retry)
+  {
+    const pendingRegistrants = await db.select({
       id: webinarRegistrants.id,
       email: webinarRegistrants.email,
       name: webinarRegistrants.name,
@@ -2988,9 +3024,13 @@ async function runWebinarImport(
       .where(and(
         eq(webinarRegistrants.webinarId, webinarId),
         eq(webinarRegistrants.calendarInviteSent, 0),
+        // Only include those without a recent error (avoid hammering failed ones every 15 min)
+        // Registrants with errors can be retried via the manual "Retry Failed" button
+        sql`(${webinarRegistrants.calendarInviteError} IS NULL OR ${webinarRegistrants.calendarInviteError} = '')`,
       ));
-    const withEmail = recentRegistrants.filter(r => r.email);
+    const withEmail = pendingRegistrants.filter(r => r.email);
     if (withEmail.length > 0) {
+      console.log(`[Calendar Auto] Found ${withEmail.length} pending registrants for auto-send (webinar ${webinarId})`);
       // Fire-and-forget: don't block the import response
       autoSendCalendarInvites(
         db,

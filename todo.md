@@ -12833,3 +12833,7 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Bug: Calendar Invite Rate Limit Errors (March 8, 2026)
 - [x] Fix calendar invites failing with "Rate Limit" error for 9+ registrants (increased delay from 200ms to 1500ms, added exponential backoff + retry)
 - [x] 189 registrants pending calendar invite, bulk send hitting rate limits (also fixed sendCalendarReminderUpdates and sendBulkReminderEmails)
+
+### Bug: Auto-Send Calendar Invites Not Triggering (March 8, 2026)
+- [x] Fix auto-send calendar invites not triggering despite setting being enabled (auto-send now processes ALL pending registrants, not just newly imported ones)
+- [x] Invites stay in "pending" state requiring manual send button click (also fixed 200ms rate limit in autoSendCalendarInvites + added retry/backoff)
