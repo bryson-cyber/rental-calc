@@ -212,9 +212,31 @@ export async function sendCalendarInvite(
 }
 
 /**
+ * Check if an error message indicates a rate limit from Google Calendar API.
+ */
+function isRateLimitError(errorMsg: string): boolean {
+  const lower = errorMsg.toLowerCase();
+  return (
+    lower.includes("rate limit") ||
+    lower.includes("ratelimit") ||
+    lower.includes("quota") ||
+    lower.includes("too many requests") ||
+    lower.includes("429") ||
+    lower.includes("user rate limit exceeded") ||
+    lower.includes("calendar usage limits")
+  );
+}
+
+/**
  * Send calendar invites to multiple attendees for the same webinar event.
  * Creates individual events (not one event with multiple attendees) so each
  * person gets their own calendar entry they can accept/decline independently.
+ *
+ * Rate limiting strategy:
+ * - 1500ms base delay between invites (~40/min, under Google's 60/min limit)
+ * - Exponential backoff on rate limit errors (5s → 10s → 20s → 40s)
+ * - Up to 3 retries per invite on rate limit errors
+ * - Progress logging every 25 invites
  */
 export async function sendBulkCalendarInvites(
   attendees: Array<{ email: string; name?: string }>,
@@ -229,21 +251,69 @@ export async function sendBulkCalendarInvites(
   let sent = 0;
   let failed = 0;
 
-  for (const attendee of attendees) {
-    // Small delay between invites to avoid rate limiting
-    if (results.length > 0) {
-      await new Promise((r) => setTimeout(r, 200));
+  // Base delay between invites: 1500ms = ~40 invites/minute (safely under Google's 60/min limit)
+  const BASE_DELAY_MS = 1500;
+  // Max retries for rate-limited invites
+  const MAX_RETRIES = 3;
+  // Initial backoff delay when rate-limited
+  const INITIAL_BACKOFF_MS = 5000;
+  // Consecutive rate limits trigger a longer cooldown
+  let consecutiveRateLimits = 0;
+
+  console.log(`[Calendar] Starting bulk invite: ${attendees.length} attendees`);
+
+  for (let i = 0; i < attendees.length; i++) {
+    const attendee = attendees[i];
+
+    // Delay between invites (skip for the first one)
+    if (i > 0) {
+      // If we've been hitting rate limits, add extra cooldown
+      const cooldownMs = consecutiveRateLimits > 0
+        ? BASE_DELAY_MS + (consecutiveRateLimits * 2000)
+        : BASE_DELAY_MS;
+      await new Promise((r) => setTimeout(r, cooldownMs));
     }
 
-    const result = await sendCalendarInvite({
-      ...eventDetails,
-      attendeeEmail: attendee.email,
-      attendeeName: attendee.name,
-    });
+    // Try sending with retries on rate limit
+    let result: CalendarInviteResult | null = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      result = await sendCalendarInvite({
+        ...eventDetails,
+        attendeeEmail: attendee.email,
+        attendeeName: attendee.name,
+      });
 
-    results.push(result);
-    if (result.success) sent++;
+      if (result.success) {
+        consecutiveRateLimits = 0; // Reset on success
+        break;
+      }
+
+      // Check if this is a rate limit error
+      if (result.error && isRateLimitError(result.error) && attempt < MAX_RETRIES) {
+        consecutiveRateLimits++;
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt); // 5s, 10s, 20s
+        console.log(
+          `[Calendar] Rate limited on ${attendee.email} (attempt ${attempt + 1}/${MAX_RETRIES + 1}), ` +
+          `backing off ${backoffMs / 1000}s...`
+        );
+        await new Promise((r) => setTimeout(r, backoffMs));
+        continue;
+      }
+
+      // Non-rate-limit error or max retries exhausted — accept the failure
+      break;
+    }
+
+    results.push(result!);
+    if (result!.success) sent++;
     else failed++;
+
+    // Progress logging every 25 invites
+    if ((i + 1) % 25 === 0 || i === attendees.length - 1) {
+      console.log(
+        `[Calendar] Progress: ${i + 1}/${attendees.length} processed (${sent} sent, ${failed} failed)`
+      );
+    }
   }
 
   console.log(
@@ -394,12 +464,18 @@ export async function sendCalendarReminderUpdates(
 
     const joinLine = joinUrl ? `\n\n\ud83d\udd17 Join now: ${joinUrl}` : "";
 
-    for (const event of items) {
+    let consecutiveRateLimits = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const event = items[i];
       if (!event.id) continue;
 
-      // Small delay to avoid rate limiting
+      // Rate-limited delay between updates (1500ms base, more if rate-limited)
       if (updated + failed > 0) {
-        await new Promise(r => setTimeout(r, 200));
+        const cooldownMs = consecutiveRateLimits > 0
+          ? 1500 + (consecutiveRateLimits * 2000)
+          : 1500;
+        await new Promise(r => setTimeout(r, cooldownMs));
       }
 
       // Prepend reminder to existing description
@@ -410,15 +486,38 @@ export async function sendCalendarReminderUpdates(
         .trim();
       const newDesc = `${reminderPrefix}${joinLine}\n\n${cleanDesc}`;
 
-      const result = await updateCalendarEvent(event.id, {
-        description: newDesc,
-      }, true);
+      // Try with retries on rate limit
+      let result: { success: boolean; error?: string } = { success: false };
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        result = await updateCalendarEvent(event.id, {
+          description: newDesc,
+        }, true);
+
+        if (result.success) {
+          consecutiveRateLimits = 0;
+          break;
+        }
+
+        if (result.error && isRateLimitError(result.error) && attempt < 3) {
+          consecutiveRateLimits++;
+          const backoffMs = 5000 * Math.pow(2, attempt);
+          console.log(`[Calendar Reminder] Rate limited on event ${event.id} (attempt ${attempt + 1}/4), backing off ${backoffMs / 1000}s...`);
+          await new Promise(r => setTimeout(r, backoffMs));
+          continue;
+        }
+        break;
+      }
 
       if (result.success) {
         updated++;
       } else {
         failed++;
         errors.push(`Event ${event.id}: ${result.error}`);
+      }
+
+      // Progress logging every 25 events
+      if ((i + 1) % 25 === 0 || i === items.length - 1) {
+        console.log(`[Calendar Reminder] Progress: ${i + 1}/${items.length} processed (${updated} updated, ${failed} failed)`);
       }
     }
 

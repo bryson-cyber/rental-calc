@@ -12829,3 +12829,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix registrants not popping up in the dashboard (338 registrants now in DB for webinar 374)
 - [x] Debug: Cron using stale cached webinar settings — fixed: cron now re-reads settings from DB each run
 - [x] Fix: Ensure cron reloads webinar settings dynamically instead of caching at startup — also added restartWebinarImportCron() to saveWebinarSelection
+
+### Bug: Calendar Invite Rate Limit Errors (March 8, 2026)
+- [x] Fix calendar invites failing with "Rate Limit" error for 9+ registrants (increased delay from 200ms to 1500ms, added exponential backoff + retry)
+- [x] 189 registrants pending calendar invite, bulk send hitting rate limits (also fixed sendCalendarReminderUpdates and sendBulkReminderEmails)

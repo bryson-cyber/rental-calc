@@ -203,21 +203,57 @@ export async function sendBulkReminderEmails(
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
+  let consecutiveRateLimits = 0;
 
-  for (const recipient of recipients) {
-    // Rate limiting: Gmail API allows ~100 emails/day for service accounts
-    if (sent + failed > 0) {
-      await new Promise(r => setTimeout(r, 500));
+  console.log(`[Gmail] Starting bulk send: ${recipients.length} recipients`);
+
+  for (let i = 0; i < recipients.length; i++) {
+    const recipient = recipients[i];
+
+    // Rate limiting: 1500ms base delay (~40/min), with extra cooldown on rate limits
+    if (i > 0) {
+      const cooldownMs = consecutiveRateLimits > 0
+        ? 1500 + (consecutiveRateLimits * 2000)
+        : 1500;
+      await new Promise(r => setTimeout(r, cooldownMs));
     }
 
     const emailParams = buildEmail(recipient);
-    const result = await sendReminderEmail(emailParams);
+
+    // Try with retries on rate limit
+    let result: { success: boolean; error?: string } = { success: false };
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      result = await sendReminderEmail(emailParams);
+
+      if (result.success) {
+        consecutiveRateLimits = 0;
+        break;
+      }
+
+      const errLower = (result.error || "").toLowerCase();
+      const isRateLimit = errLower.includes("rate limit") || errLower.includes("quota") ||
+        errLower.includes("429") || errLower.includes("too many requests");
+
+      if (isRateLimit && attempt < 3) {
+        consecutiveRateLimits++;
+        const backoffMs = 5000 * Math.pow(2, attempt);
+        console.log(`[Gmail] Rate limited on ${recipient.email} (attempt ${attempt + 1}/4), backing off ${backoffMs / 1000}s...`);
+        await new Promise(r => setTimeout(r, backoffMs));
+        continue;
+      }
+      break;
+    }
 
     if (result.success) {
       sent++;
     } else {
       failed++;
       errors.push(`${recipient.email}: ${result.error}`);
+    }
+
+    // Progress logging every 25 emails
+    if ((i + 1) % 25 === 0 || i === recipients.length - 1) {
+      console.log(`[Gmail] Progress: ${i + 1}/${recipients.length} processed (${sent} sent, ${failed} failed)`);
     }
   }
 
