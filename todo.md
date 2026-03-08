@@ -12837,3 +12837,7 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Bug: Auto-Send Calendar Invites Not Triggering (March 8, 2026)
 - [x] Fix auto-send calendar invites not triggering despite setting being enabled (auto-send now processes ALL pending registrants, not just newly imported ones)
 - [x] Invites stay in "pending" state requiring manual send button click (also fixed 200ms rate limit in autoSendCalendarInvites + added retry/backoff)
+
+### Bug: Duplicate SMS Sequence Messages (March 8, 2026)
+- [x] Fix SMS sequence "Morning Of" message firing twice to same 341 recipients (race condition: startup recovery was fire-and-forget, ran concurrently with first dispatch)
+- [x] Prevent duplicate scheduled message sends (added mutex + awaited startup recovery before first dispatch)

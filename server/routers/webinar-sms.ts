@@ -3156,6 +3156,7 @@ export async function restartWebinarImportCron() {
 // sends them via SimpleTexting, and updates status/counts.
 
 let smsDispatcherInterval: ReturnType<typeof setInterval> | null = null;
+let smsDispatcherRunning = false; // Mutex to prevent concurrent dispatch runs
 
 export async function startSmsDispatcher() {
   if (smsDispatcherInterval) {
@@ -3169,10 +3170,12 @@ export async function startSmsDispatcher() {
   // Recover messages stuck in "sending" state from previous server runs.
   // These messages were marked "sending" but the process was interrupted before
   // the final status update. Reset them to "pending" so they get retried.
-  (async () => {
+  // IMPORTANT: This MUST complete before the first processScheduledMessages() runs
+  // to prevent race conditions where recovery resets a message while dispatch is
+  // already sending it (causing duplicate sends).
+  try {
     const db = await getDb();
-    if (!db) return;
-    try {
+    if (db) {
       const staleThresholdMs = 30 * 60 * 1000; // 30 minutes
       const now = new Date();
       const stuckMessages = await db.select().from(scheduledSmsMessages)
@@ -3200,15 +3203,27 @@ export async function startSmsDispatcher() {
       if (stuckMessages.length > 0) {
         console.log(`[SMS Dispatcher] RECOVERY: Processed ${stuckMessages.length} stuck message(s)`);
       }
-    } catch (err: any) {
-      console.error("[SMS Dispatcher] RECOVERY error:", err.message);
     }
-  })();
+  } catch (err: any) {
+    console.error("[SMS Dispatcher] RECOVERY error:", err.message);
+  }
   // ─── END STARTUP RECOVERY ──────────────────────────────────────────────────
 
   const processScheduledMessages = async () => {
+    // Mutex: prevent concurrent dispatch runs.
+    // If a previous run is still sending (e.g., 341 recipients takes > 30s),
+    // skip this tick to avoid duplicate sends.
+    if (smsDispatcherRunning) {
+      console.log("[SMS Dispatcher] Previous run still in progress, skipping this tick");
+      return;
+    }
+    smsDispatcherRunning = true;
+
     const db = await getDb();
-    if (!db) return;
+    if (!db) {
+      smsDispatcherRunning = false;
+      return;
+    }
 
     try {
       // Find pending messages whose scheduled time has passed
@@ -3222,7 +3237,10 @@ export async function startSmsDispatcher() {
         )
         .orderBy(scheduledSmsMessages.scheduledAt);
 
-      if (dueMessages.length === 0) return;
+      if (dueMessages.length === 0) {
+        smsDispatcherRunning = false;
+        return;
+      }
 
       console.log(`[SMS Dispatcher] Found ${dueMessages.length} due message(s) to send`);
 
@@ -3640,6 +3658,8 @@ export async function startSmsDispatcher() {
       }
     } catch (err: any) {
       console.error("[SMS Dispatcher] Error in dispatch loop:", err.message);
+    } finally {
+      smsDispatcherRunning = false;
     }
   };
 
