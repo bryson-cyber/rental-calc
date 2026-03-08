@@ -1,0 +1,38 @@
+{
+  "query": "SELECT settingKey, settingValue FROM webinar_sms_settings WHERE settingKey IN ('selected_webinar_id', 'selected_webinar_name', 'selected_schedule_id', 'cron_enabled', 'cron_interval_minutes', 'last_auto_import_at', 'last_auto_import_result');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT settingKey, settingValue FROM webinar_sms_settings WHERE settingKey IN ('selected_webinar_id', 'selected_webinar_name', 'selected_schedule_id', 'cron_enabled', 'cron_interval_minutes', 'last_auto_import_at', 'last_auto_import_result');",
+  "rows": [
+    {
+      "settingKey": "selected_webinar_id",
+      "settingValue": "374"
+    },
+    {
+      "settingKey": "selected_webinar_name",
+      "settingValue": "Webby 3.08.26"
+    },
+    {
+      "settingKey": "selected_schedule_id",
+      "settingValue": "658"
+    },
+    {
+      "settingKey": "cron_enabled",
+      "settingValue": "true"
+    },
+    {
+      "settingKey": "cron_interval_minutes",
+      "settingValue": "15"
+    },
+    {
+      "settingKey": "last_auto_import_at",
+      "settingValue": "2026-03-08T18:10:36.672Z"
+    },
+    {
+      "settingKey": "last_auto_import_result",
+      "settingValue": "Imported 0, skipped 0 (total 0) at 2026-03-08T18:10:36.672Z"
+    }
+  ],
+  "messages": [],
+  "stdout": "settingKey\tsettingValue\nselected_webinar_id\t374\nselected_webinar_name\tWebby 3.08.26\nselected_schedule_id\t658\ncron_enabled\ttrue\ncron_interval_minutes\t15\nlast_auto_import_at\t2026-03-08T18:10:36.672Z\nlast_auto_import_result\tImported 0, skipped 0 (total 0) at 2026-03-08T18:10:36.672Z\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

@@ -12822,3 +12822,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Gate homepage tool cards - hide/disable AirDNA-heavy steps for non-admins — TAB_ORDER filtered by isAdmin
 - [x] Shared reports remain accessible to all users (no changes needed)
 - [x] Fix type="url" on Zillow input in Home.tsx causing browser pattern validation errors
+
+### Bug: WebinarJam SMS & Import Issues (March 8, 2026)
+- [x] Fix WebinarJam registrant import - 336 found in WebinarJam but only 1 in system (root cause: stale schedule_id 658 instead of 660, plus cron used stale closure values)
+- [x] Fix WebinarJam SMS feature not working (import now works, 337 registrants imported)
+- [x] Fix registrants not popping up in the dashboard (338 registrants now in DB for webinar 374)
+- [x] Debug: Cron using stale cached webinar settings — fixed: cron now re-reads settings from DB each run
+- [x] Fix: Ensure cron reloads webinar settings dynamically instead of caching at startup — also added restartWebinarImportCron() to saveWebinarSelection

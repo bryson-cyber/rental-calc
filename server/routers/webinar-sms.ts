@@ -1095,6 +1095,9 @@ export const webinarSmsRouter = router({
           });
       }
 
+      // Restart cron so it picks up the new webinar selection
+      await restartWebinarImportCron();
+
       return { success: true };
     }),
 
@@ -2909,6 +2912,24 @@ async function runWebinarImport(
     page++;
   }
 
+  // FALLBACK: If schedule_id returned 0 registrants, retry without schedule_id.
+  // This handles cases where WebinarJam changes schedule IDs (e.g., webinar recreated)
+  // or the schedule_id filter is too restrictive.
+  if (allRegistrants.length === 0 && scheduleId) {
+    console.log(`[WebinarImport] schedule_id ${scheduleId} returned 0 registrants, retrying without schedule_id...`);
+    page = 1;
+    hasMore = true;
+    while (hasMore && page <= 100) {
+      const result = await fetchWebinarJamRegistrants(webinarId, undefined, page, overrideApiKey);
+      allRegistrants = allRegistrants.concat(result.registrants);
+      hasMore = result.hasMore;
+      page++;
+    }
+    if (allRegistrants.length > 0) {
+      console.log(`[WebinarImport] Fallback succeeded: found ${allRegistrants.length} registrants without schedule_id filter`);
+    }
+  }
+
   if (allRegistrants.length === 0) {
     return { success: true, imported: 0, skipped: 0, total: 0 };
   }
@@ -3032,19 +3053,36 @@ export async function startWebinarImportCron() {
 
   const runImport = async () => {
     try {
-      console.log(`[WebinarSMS Cron] Running auto-import for webinar ${webinarId}...`);
       const freshDb = await getDb();
       if (!freshDb) return;
 
+      // Re-read settings from DB each run so we always use the latest webinar selection
+      const freshRows = await freshDb.select().from(webinarSmsSettings);
+      const freshSettings: Record<string, string> = {};
+      for (const row of freshRows) {
+        freshSettings[row.settingKey] = row.settingValue;
+      }
+
+      const currentWebinarId = freshSettings["selected_webinar_id"];
+      const currentWebinarName = freshSettings["selected_webinar_name"] || "Unknown";
+      const currentScheduleId = freshSettings["selected_schedule_id"];
+
+      if (!currentWebinarId) {
+        console.log(`[WebinarSMS Cron] No webinar selected, skipping import`);
+        return;
+      }
+
+      console.log(`[WebinarSMS Cron] Running auto-import for webinar "${currentWebinarName}" (${currentWebinarId})...`);
+
       // Re-fetch credentials each run in case they were updated
-      const [freshCred] = await freshDb.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, webinarId));
+      const [freshCred] = await freshDb.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, currentWebinarId));
       const freshApiKey = freshCred?.apiKey || undefined;
 
       const result = await runWebinarImport(
         freshDb,
-        webinarId,
-        webinarName,
-        scheduleId ? parseInt(scheduleId, 10) : undefined,
+        currentWebinarId,
+        currentWebinarName,
+        currentScheduleId ? parseInt(currentScheduleId, 10) : undefined,
         freshApiKey
       );
 
