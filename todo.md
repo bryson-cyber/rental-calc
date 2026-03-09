@@ -12841,3 +12841,7 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Bug: Duplicate SMS Sequence Messages (March 8, 2026)
 - [x] Fix SMS sequence "Morning Of" message firing twice to same 341 recipients (race condition: startup recovery was fire-and-forget, ran concurrently with first dispatch)
 - [x] Prevent duplicate scheduled message sends (added mutex + awaited startup recovery before first dispatch)
+
+### Bug: Calendar Invite Wrong Time (March 9, 2026)
+- [x] Fix calendar invite showing 12pm PDT instead of 4pm PST / 7pm ET on Wed/Sun (new Date() parsed as UTC, .toISOString() Z suffix made Google ignore timeZone field)
+- [x] Ensure calendar invite timezone is correctly set to America/New_York (7pm ET) — now passes raw date strings, no Z suffix, Google respects timeZone field

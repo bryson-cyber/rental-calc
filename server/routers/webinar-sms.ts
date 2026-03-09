@@ -2131,9 +2131,11 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         throw new TRPCError({ code: "BAD_REQUEST", message: "No schedule date found for this webinar" });
       }
 
-      // Parse the schedule date (format: "YYYY-MM-DD HH:mm" in the webinar's timezone)
+      // Pass the schedule date string directly — DO NOT convert through new Date()
+      // WebinarJam returns "YYYY-MM-DD HH:mm" in the webinar's timezone.
+      // new Date() would parse it as UTC, causing a 4-5 hour offset.
       const timezone = details.timezone || "America/Los_Angeles";
-      const startTime = new Date(`${scheduleDate}:00`);
+      const startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
 
       // Use custom settings if configured
       const settingRows = await db.select().from(webinarSmsSettings);
@@ -2201,7 +2203,8 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       }
 
       const timezone = details.timezone || "America/Los_Angeles";
-      const startTime = new Date(`${scheduleDate}:00`);
+      // Pass raw schedule date string — DO NOT convert through new Date()
+      const startTime = scheduleDate; // e.g. "2026-03-11 19:00"
 
       // Get eligible registrants
       const conditions = [
@@ -2400,8 +2403,13 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       }
 
       const timezone = details.timezone || "America/Los_Angeles";
-      const startTime = new Date(`${scheduleDate}:00`);
-      const endTime = new Date(startTime.getTime() + 90 * 60 * 1000);
+      // Pass raw schedule date string — DO NOT convert through new Date()
+      const startTime = scheduleDate; // e.g. "2026-03-11 19:00"
+      // End time: 90 minutes after start, computed from the string
+      const [eDatePart, eTimePart] = scheduleDate.split(" ");
+      const [eHours, eMinutes] = eTimePart.split(":").map(Number);
+      const eTotalMin = eHours * 60 + eMinutes + 90;
+      const endTime = `${eDatePart} ${String(Math.floor(eTotalMin / 60) % 24).padStart(2, "0")}:${String(eTotalMin % 60).padStart(2, "0")}`;
       const joinUrl = details.direct_live_room_url || details.registration_url || "";
 
       // Get custom settings
@@ -2831,7 +2839,9 @@ async function autoSendCalendarInvites(
   }
 
   const timezone = details.timezone || "America/Los_Angeles";
-  const startTime = new Date(`${scheduleDate}:00`);
+  // Pass the raw schedule date string — DO NOT convert through new Date()
+  // new Date("2026-03-11 19:00:00") parses as UTC, causing a 4-5 hour offset
+  const startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
 
   // Use custom settings if configured, otherwise fall back to webinar details
   const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;

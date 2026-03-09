@@ -104,16 +104,61 @@ export async function sendCalendarInvite(
   try {
     const calendar = getCalendarClient();
 
-    const startDate = typeof params.startTime === "string"
-      ? new Date(params.startTime)
-      : params.startTime;
-
-    // Default end time: 90 minutes after start
-    const endDate = params.endTime
-      ? (typeof params.endTime === "string" ? new Date(params.endTime) : params.endTime)
-      : new Date(startDate.getTime() + 90 * 60 * 1000);
-
     const timezone = params.timezone || "America/Los_Angeles";
+
+    // ─── TIMEZONE-AWARE DATE HANDLING ─────────────────────────────────────────
+    // WebinarJam returns schedule dates like "2026-03-11 19:00" in the webinar's
+    // timezone (e.g., America/New_York). We must NOT convert through JavaScript's
+    // Date object because `new Date("2026-03-11 19:00:00")` parses as UTC,
+    // causing a 4-5 hour offset.
+    //
+    // Google Calendar API accepts dateTime in two formats:
+    //   1. "2026-03-11T19:00:00Z"     → UTC (ignores timeZone field)
+    //   2. "2026-03-11T19:00:00"      → local time, uses timeZone field
+    //
+    // We use format #2 so the timeZone field is respected.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    let startDateTimeLocal: string;
+    let endDateTimeLocal: string;
+
+    if (typeof params.startTime === "string") {
+      // If it's a string like "2026-03-11 19:00" or "2026-03-11T19:00:00",
+      // normalize to "YYYY-MM-DDTHH:mm:ss" format (NO Z suffix)
+      startDateTimeLocal = params.startTime.replace(" ", "T");
+      if (!startDateTimeLocal.includes(":", 14)) {
+        startDateTimeLocal += ":00"; // Add seconds if missing
+      }
+      // Strip any trailing Z or timezone offset — we want local time
+      startDateTimeLocal = startDateTimeLocal.replace(/Z$/, "").replace(/[+-]\d{2}:\d{2}$/, "");
+    } else {
+      // It's a Date object — format as local ISO without Z
+      // WARNING: This still uses UTC internally, so only use Date objects
+      // when they already represent the correct wall-clock time
+      const d = params.startTime;
+      startDateTimeLocal = d.toISOString().replace(/Z$/, "");
+    }
+
+    if (params.endTime) {
+      if (typeof params.endTime === "string") {
+        endDateTimeLocal = params.endTime.replace(" ", "T");
+        if (!endDateTimeLocal.includes(":", 14)) {
+          endDateTimeLocal += ":00";
+        }
+        endDateTimeLocal = endDateTimeLocal.replace(/Z$/, "").replace(/[+-]\d{2}:\d{2}$/, "");
+      } else {
+        endDateTimeLocal = params.endTime.toISOString().replace(/Z$/, "");
+      }
+    } else {
+      // Default end time: 90 minutes after start
+      // Parse the local time string to compute end time
+      const [datePart, timePart] = startDateTimeLocal.split("T");
+      const [hours, minutes, seconds] = timePart.split(":").map(Number);
+      const totalMinutes = hours * 60 + minutes + 90;
+      const endHours = Math.floor(totalMinutes / 60) % 24;
+      const endMinutes = totalMinutes % 60;
+      endDateTimeLocal = `${datePart}T${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}:${String(seconds || 0).padStart(2, "0")}`;
+    }
 
     // Build description with join link
     let description = params.description || "";
@@ -131,11 +176,11 @@ export async function sendCalendarInvite(
         displayName: "Inayah McMillan",
       },
       start: {
-        dateTime: startDate.toISOString(),
+        dateTime: startDateTimeLocal,
         timeZone: timezone,
       },
       end: {
-        dateTime: endDate.toISOString(),
+        dateTime: endDateTimeLocal,
         timeZone: timezone,
       },
       attendees: [
