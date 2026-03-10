@@ -12847,10 +12847,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Ensure calendar invite timezone is correctly set to America/New_York (7pm ET) — now passes raw date strings, no Z suffix, Google respects timeZone field
 
 ### Feature: Editable Calendar Invite Time Override (March 9, 2026)
-- [ ] Add backend settings for calendar_invite_time and calendar_invite_timezone overrides
-- [ ] Add UI controls in admin calendar settings to edit invite time and timezone
-- [ ] Wire override into all calendar invite sending paths (single, bulk, auto-send)
-- [ ] Default to WebinarJam schedule time when no override is set
+- [x] Add backend settings for calendar_invite_time and calendar_invite_timezone overrides
+- [x] Add UI controls in admin calendar settings to edit invite time and timezone
+- [x] Wire override into all calendar invite sending paths (single, bulk, auto-send)
+- [x] Default to WebinarJam schedule time when no override is set
 
 ### Bug: Shared Link Missing Manual Revenue Edits (March 10, 2026)
 - [x] Fix shared link not showing manual revenue edits from Step 5 "Validate the Deal" (revenueOverride not passed to create mutation, no auto-sync for post-creation edits)

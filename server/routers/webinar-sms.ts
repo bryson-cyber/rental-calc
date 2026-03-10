@@ -2884,10 +2884,19 @@ async function autoSendCalendarInvites(
     return { sent: 0, failed: 0 };
   }
 
-  const timezone = details.timezone || "America/Los_Angeles";
+  let timezone = details.timezone || "America/Los_Angeles";
   // Pass the raw schedule date string — DO NOT convert through new Date()
   // new Date("2026-03-11 19:00:00") parses as UTC, causing a 4-5 hour offset
-  const startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
+  let startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
+
+  // Apply time override if configured (replaces the HH:mm portion of the schedule date)
+  if (settings["calendar_invite_time"]) {
+    const datePart = scheduleDate.split(" ")[0]; // "2026-03-11"
+    startTime = `${datePart} ${settings["calendar_invite_time"]}`; // e.g. "2026-03-11 19:00"
+  }
+  if (settings["calendar_invite_timezone"]) {
+    timezone = settings["calendar_invite_timezone"];
+  }
 
   // Use custom settings if configured, otherwise fall back to webinar details
   const eventName = settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
