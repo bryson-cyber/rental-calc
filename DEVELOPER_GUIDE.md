@@ -1,4 +1,4 @@
-# Coach Inayah Rental Revenue Calculator — Complete Developer Guide
+# Coach Inayah Rental Revenue Calculator — Deep Developer Guide
 
 **Last Updated:** March 10, 2026
 **Live URL:** https://coachinayahturnkeytool.com
@@ -9,764 +9,1634 @@
 
 ## Table of Contents
 
-1. [How This App Works (Plain English)](#1-how-this-app-works-plain-english)
-2. [Project Architecture](#2-project-architecture)
-3. [Every Folder and What It Does](#3-every-folder-and-what-it-does)
-4. [Every Backend File and What It Does](#4-every-backend-file-and-what-it-does)
-5. [Every Frontend File and What It Does](#5-every-frontend-file-and-what-it-does)
-6. [Database Tables](#6-database-tables)
-7. [External API Integrations](#7-external-api-integrations)
-8. [Background Jobs (Crons)](#8-background-jobs-crons)
-9. [Environment Variables](#9-environment-variables)
-10. [How tRPC Works (The API Layer)](#10-how-trpc-works-the-api-layer)
-11. [Safe Editing Rules](#11-safe-editing-rules)
-12. [How to Push Changes Without Breaking Anything](#12-how-to-push-changes-without-breaking-anything)
-13. [Common Bugs and How to Fix Them](#13-common-bugs-and-how-to-fix-them)
+1. [What This App Actually Does (Business Logic)](#1-what-this-app-actually-does)
+2. [Architecture: How Every Piece Connects](#2-architecture-how-every-piece-connects)
+3. [How tRPC Works In This Codebase (With Examples)](#3-how-trpc-works-in-this-codebase)
+4. [Server Startup Sequence (What Happens When the Server Boots)](#4-server-startup-sequence)
+5. [The 10-Step Lead Magnet System (End-to-End)](#5-the-10-step-lead-magnet-system)
+6. [WebinarJam Import System (Deep Dive)](#6-webinarjam-import-system)
+7. [SMS Scheduling and Dispatch System](#7-sms-scheduling-and-dispatch-system)
+8. [Google Calendar Invite System (All 4 Sending Paths)](#8-google-calendar-invite-system)
+9. [Shareable Reports System](#9-shareable-reports-system)
+10. [Revenue Override System (Admin Feature)](#10-revenue-override-system)
+11. [External API Integrations (Every API, How It's Called)](#11-external-api-integrations)
+12. [Database Schema (Every Table, What It Stores, Why)](#12-database-schema)
+13. [Every Backend File Explained](#13-every-backend-file-explained)
+14. [Every Frontend File Explained](#14-every-frontend-file-explained)
+15. [Admin Portal (All 13 Tabs)](#15-admin-portal)
+16. [Background Jobs and Cron Systems](#16-background-jobs-and-cron-systems)
+17. [Rate Limiting and Access Control](#17-rate-limiting-and-access-control)
+18. [Environment Variables (Every Key, What It Does)](#18-environment-variables)
+19. [Safe Editing Rules (What You Can and Cannot Touch)](#19-safe-editing-rules)
+20. [How to Add a New Feature Without Breaking Anything](#20-how-to-add-a-new-feature)
+21. [Bugs That Were Fixed and Why They Happened](#21-bugs-that-were-fixed)
+22. [Troubleshooting Playbook](#22-troubleshooting-playbook)
 
 ---
 
-## 1. How This App Works (Plain English)
+## 1. What This App Actually Does
 
-This is a **lead generation tool** for Coach Inayah's Airbnb rental arbitrage business. A visitor enters a property address, the app pulls real market data (AirDNA, Rentometer, Zillow, Redfin), runs an AI analysis, and shows projected rental revenue. Before seeing results, the visitor enters their name/email/phone — that's the lead capture. The lead goes to HubSpot CRM and gets enrolled in SMS sequences via SimpleTexting.
+This is not just a calculator. It is a **multi-system lead generation and webinar management platform** for Coach Inayah's Airbnb rental arbitrage coaching business. There are two completely separate audiences using this app:
 
-There is also an **admin portal** where you (the owner) can:
-- View all leads and their reports
-- Manage WebinarJam SMS campaigns (auto-import registrants, send SMS sequences, send Google Calendar invites)
-- Send newsletters
-- Manage deal alerts
-- View API usage and analytics
-- Generate content for social media
+**Public Users (Leads):** A visitor arrives at coachinayahturnkeytool.com, enters a property address, and the app pulls real market data from AirDNA, Rentometer, Zillow, and Redfin. Before seeing the full results, the visitor enters their name, email, and phone number — that is the lead capture. The lead is automatically sent to HubSpot CRM. The visitor then walks through a multi-step analysis tool (the "10-Step Lead Magnet") that helps them evaluate whether a rental property is a good investment. Each step uses different data sources and AI analysis. At any step, the visitor can share their report via a unique link.
 
-The app is hosted on Manus infrastructure. The database is TiDB (MySQL-compatible). Files are stored on S3.
+**Admin (Coach Inayah / Bryson):** The admin accesses `/admin/dashboard` and manages everything: viewing all leads and their reports, running WebinarJam SMS campaigns (auto-importing registrants from WebinarJam, scheduling SMS sequences via SimpleTexting, sending Google Calendar invites), managing newsletters, monitoring API usage, generating social media content, and configuring deal alerts.
+
+The business model is straightforward: the free tool generates leads. Those leads get enrolled in webinar funnels. The webinar sells coaching packages. The SMS/Calendar systems keep leads engaged and attending webinars.
 
 ---
 
-## 2. Project Architecture
+## 2. Architecture: How Every Piece Connects
 
 ```
-Browser (React SPA)
-    ↓ tRPC calls over HTTP
-Express Server (Node.js)
-    ↓ Drizzle ORM queries
-TiDB Database (MySQL)
-    ↓
-S3 Storage (file uploads)
+┌─────────────────────────────────────────────────────────────────────┐
+│                        BROWSER (React SPA)                          │
+│                                                                     │
+│  LeadMagnet.tsx ─── 10 tabs, each calling different tRPC procedures │
+│  UnifiedAdmin.tsx ── 13 tabs for admin management                   │
+│  ShareableReportViewer.tsx ── public shared report pages             │
+│                                                                     │
+│  All API calls go through:  trpc.routerName.procedureName.useQuery  │
+│                              trpc.routerName.procedureName.useMutation│
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │ HTTP POST to /api/trpc/*
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    EXPRESS SERVER (server/_core/index.ts)            │
+│                                                                     │
+│  1. Express app with body parser (50MB limit)                       │
+│  2. OAuth routes registered (/api/oauth/callback)                   │
+│  3. SSE endpoints for progress tracking and listing streams         │
+│  4. tRPC middleware mounted at /api/trpc                            │
+│  5. Vite dev server (development) or static file serving (prod)     │
+│  6. SPA fallback (all non-API routes serve index.html)              │
+│                                                                     │
+│  ON STARTUP (after server.listen):                                  │
+│    → startWebinarImportCron()  (imports registrants every N min)    │
+│    → startSmsDispatcher()      (sends due SMS every 30 sec)        │
+│    → initWebinarMode()         (loads demo/live toggle from DB)     │
+│    → resumeIncompleteJobs()    (resumes video generation)           │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     tRPC ROUTER TREE (server/routers.ts)            │
+│                                                                     │
+│  appRouter = {                                                      │
+│    system:          systemRouter,        // health, notifications    │
+│    auth:            { me, logout },      // session management       │
+│    rental:          rentalRouter,        // AirDNA property reports  │
+│    advanced:        advancedRouter,      // multi-year trends, etc.  │
+│    webinarSms:      webinarSmsRouter,    // 3753 lines of SMS/cal   │
+│    shareableReports: shareableReportsRouter, // share links          │
+│    sharedReports:   sharedReportsRouter, // legacy share system      │
+│    newsletter:      newsletterRouter,    // email campaigns          │
+│    ... 30+ more routers                                             │
+│  }                                                                  │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+┌──────────────────┐ ┌─────────────────┐ ┌──────────────────────────┐
+│   MySQL (TiDB)   │ │  External APIs  │ │   Background Workers     │
+│                  │ │                 │ │                          │
+│  65 tables       │ │  AirDNA         │ │  Cron: Registrant Import │
+│  Drizzle ORM     │ │  Rentometer     │ │  Cron: SMS Dispatcher    │
+│  drizzle/schema  │ │  WebinarJam     │ │  Cron: Calendar Auto-Send│
+│                  │ │  SimpleTexting  │ │  Cron: Newsletter Jobs   │
+│                  │ │  Google Calendar│ │                          │
+│                  │ │  Gmail API      │ │                          │
+│                  │ │  HubSpot CRM   │ │                          │
+│                  │ │  Zillow (HasData)│ │                          │
+│                  │ │  Redfin (HasData)│ │                          │
+│                  │ │  Claude AI      │ │                          │
+│                  │ │  Gemini AI      │ │                          │
+│                  │ │  Zapier Webhooks│ │                          │
+└──────────────────┘ └─────────────────┘ └──────────────────────────┘
 ```
 
-**How requests flow:**
-
-1. User clicks something in the browser (React frontend)
-2. Frontend calls `trpc.someRouter.someMethod.useQuery()` or `.useMutation()`
-3. This hits the Express server at `/api/trpc`
-4. The server runs the tRPC procedure defined in `server/routers/*.ts`
-5. The procedure calls a service file (e.g., `server/airdna.ts`) or queries the DB directly
-6. Result flows back to the frontend
-
-**Key concept:** There are NO REST endpoints. Everything goes through tRPC. The only exceptions are OAuth callbacks and webhook endpoints.
+The critical thing to understand is that **the server does two jobs simultaneously**: it serves HTTP requests from the browser via tRPC, AND it runs background cron jobs (registrant import, SMS dispatch, calendar auto-send). These background jobs share the same database connection and the same external API clients. This dual nature is what caused several of the bugs we fixed — the cron jobs and the HTTP handlers can step on each other if not carefully coordinated.
 
 ---
 
-## 3. Every Folder and What It Does
+## 3. How tRPC Works In This Codebase
 
-| Folder | What It Is | Safe to Edit? |
-|--------|-----------|---------------|
-| `client/` | The entire frontend (React app) | YES |
-| `client/public/` | Static files served at root (favicon, images) | YES |
-| `client/public/images/` | Hero images, backgrounds | YES |
-| `client/src/pages/` | One file per page/route | YES |
-| `client/src/pages/admin/` | Admin-only pages | YES |
-| `client/src/components/` | Reusable UI components | YES |
-| `client/src/components/ui/` | shadcn/ui primitives (Button, Card, Dialog, etc.) | CAREFUL — these are from a library |
-| `client/src/contexts/` | React context providers (theme, translation, property state) | YES |
-| `client/src/hooks/` | Custom React hooks | YES |
-| `client/src/utils/` | Utility functions (PDF export) | YES |
-| `client/src/lib/` | tRPC client setup | DO NOT EDIT |
-| `client/src/_core/` | Auth hook (`useAuth`) | DO NOT EDIT |
-| `client/src/data/` | Static data files | YES |
-| `server/` | The entire backend | YES (with care) |
-| `server/_core/` | Framework plumbing (OAuth, tRPC setup, LLM helpers) | DO NOT EDIT |
-| `server/routers/` | tRPC router files (API endpoints) | YES — this is where you add features |
-| `drizzle/` | Database schema and migrations | YES — but run `pnpm db:push` after changes |
-| `drizzle/migrations/` | Auto-generated migration SQL files | DO NOT EDIT manually |
-| `shared/` | Types and constants shared between frontend and backend | YES |
-| `shared/_core/` | Framework-level shared types | DO NOT EDIT |
-| `docs/` | Documentation files | YES |
-| `notes/` | Development notes | YES |
-| `research/` | Research files | YES |
-| `patches/` | npm package patches | DO NOT EDIT unless you know what you're doing |
+tRPC is the API layer. Instead of writing REST endpoints like `GET /api/registrants` and then writing a separate fetch call on the frontend, tRPC lets you define a **procedure** on the server and call it from the frontend with full TypeScript type safety. Here is exactly how it works in this codebase:
 
----
+### 3.1 Defining a Procedure (Server Side)
 
-## 4. Every Backend File and What It Does
+Every procedure lives in a file under `server/routers/`. Here is a real example from `server/routers/webinar-sms.ts`:
 
-### 4A. Server Core Files (DO NOT EDIT)
+```typescript
+// server/routers/webinar-sms.ts
+import { z } from "zod";
+import { adminProcedure, router } from "../_core/trpc";
 
-These files are framework-level. Editing them can break authentication, database connections, or the entire server.
+export const webinarSmsRouter = router({
+  // This defines a procedure called "listRegistrants"
+  listRegistrants: adminProcedure          // <-- requires admin login
+    .input(z.object({                      // <-- validates input shape
+      webinarId: z.string().optional(),
+      page: z.number().default(0),
+      limit: z.number().default(50),
+    }))
+    .query(async ({ input }) => {          // <-- .query = read-only (GET)
+      const db = await getDb();
+      // ... fetch registrants from database ...
+      return { registrants, total, page: input.page };
+    }),
 
-| File | What It Does |
-|------|-------------|
-| `server/_core/index.ts` | Server entry point. Starts Express, mounts tRPC, starts Vite dev server. |
-| `server/_core/context.ts` | Creates tRPC context for each request (injects `ctx.user`, `ctx.req`). |
-| `server/_core/trpc.ts` | Defines `publicProcedure`, `protectedProcedure`, `router`. |
-| `server/_core/oauth.ts` | Handles Manus OAuth login/callback. |
-| `server/_core/cookies.ts` | Session cookie configuration. |
-| `server/_core/env.ts` | All environment variables. If you need a new env var, add it here AND in Manus secrets. |
-| `server/_core/sdk.ts` | Internal SDK for Manus platform APIs. |
-| `server/_core/llm.ts` | `invokeLLM()` helper — calls AI models. Use this for any AI feature. |
-| `server/_core/imageGeneration.ts` | `generateImage()` helper. |
-| `server/_core/voiceTranscription.ts` | `transcribeAudio()` helper. |
-| `server/_core/map.ts` | `makeRequest()` for Google Maps API (geocoding, etc.). |
-| `server/_core/notification.ts` | `notifyOwner()` — sends push notifications to you. |
-| `server/_core/dataApi.ts` | Manus Data API helpers. |
-| `server/_core/vite.ts` | Vite dev server integration. |
-| `server/_core/systemRouter.ts` | System-level tRPC routes (health check, notify owner). |
+  // This defines a mutation (write operation)
+  sendTestSms: adminProcedure
+    .input(z.object({
+      phone: z.string(),
+      message: z.string(),
+    }))
+    .mutation(async ({ input }) => {       // <-- .mutation = write (POST)
+      const result = await sendSms(input.phone, input.message);
+      return result;
+    }),
+});
+```
 
-### 4B. Main Router File
+**Key concepts:**
+- `adminProcedure` means the user must be logged in AND have `role === 'admin'`. If not, tRPC automatically returns a 403 error. You never write auth checks manually.
+- `publicProcedure` means anyone can call it, no login required.
+- `protectedProcedure` means the user must be logged in (any role).
+- `.input(z.object({...}))` uses Zod to validate the input. If the frontend sends bad data, tRPC rejects it before your code runs.
+- `.query()` is for reading data (like GET). `.mutation()` is for writing data (like POST/PUT/DELETE).
 
-| File | What It Does |
-|------|-------------|
-| `server/routers.ts` | **The master router.** Imports ALL sub-routers and combines them into `appRouter`. Also defines `auth.me`, `auth.logout`, and `usage` procedures. If you create a new router file, you MUST register it here. |
+### 3.2 Registering the Router
 
-### 4C. Feature Router Files (server/routers/)
+All routers are imported in `server/routers/index.ts` (barrel exports) and then composed into the `appRouter` in `server/routers.ts`:
 
-Each file defines tRPC procedures (API endpoints) for one feature. These are the files you edit to change backend behavior.
+```typescript
+// server/routers.ts
+export const appRouter = router({
+  rental: rentalRouter,           // trpc.rental.*
+  webinarSms: webinarSmsRouter,   // trpc.webinarSms.*
+  shareableReports: shareableReportsRouter,  // trpc.shareableReports.*
+  // ... 30+ more
+});
+```
 
-| File | What It Does | Key Procedures |
-|------|-------------|----------------|
-| `rental.ts` | Core rental analysis — takes an address, calls AirDNA, returns revenue estimate | `analyze`, `getEstimate` |
-| `advanced.ts` | Advanced analysis features (AI narrative, deep comps) | `getAdvancedAnalysis` |
-| `ai.ts` | AI advisor chat, property Q&A | `chat`, `getAdvisorResponse` |
-| `webinar-sms.ts` | **BIGGEST FILE (~3700 lines).** WebinarJam integration, SMS campaigns, Google Calendar invites, cron jobs. | `importRegistrants`, `sendBulkSms`, `sendCalendarInvite`, `saveWebinarSelection`, `saveCronConfig`, `saveCalendarSettings` |
-| `webinar-env.ts` | WebinarJam environment/credential management | `getCredentials`, `saveCredentials` |
-| `shareable-reports.ts` | Create/view/update shareable report links | `create`, `get`, `updateRevenueOverride` |
-| `shared-reports.ts` | Legacy shared reports (older format) | `getSharedReport` |
-| `my-reports.ts` | User's saved reports list | `list`, `delete` |
-| `export.ts` | PDF and Excel export | `generatePdf`, `generateExcel` |
-| `deep-analysis.ts` | Deep property analysis with AI | `startDeepAnalysis` |
-| `comp-data.ts` | Comparable property data | `getComps` |
-| `bulk-summary.ts` | Bulk property analysis | `analyzeBulk` |
-| `listings-by-area.ts` | Zillow/Redfin listings in an area | `getListings` |
-| `zillow.ts` | Zillow data fetching | `getProperty`, `searchListings` |
-| `redfin.ts` | Redfin data fetching | `getProperty` |
-| `rentometer.ts` | Rentometer rent estimates | `getRentEstimate` |
-| `market-explorer.ts` | Market-level data browsing | `getMarketData` |
-| `market-comparison.ts` | Compare multiple markets side by side | `compareMarkets` |
-| `market-discovery.ts` | Discover top US markets | `discoverMarkets` |
-| `market-alerts.ts` | Automated market alerts | `createAlert`, `getAlerts` |
-| `deal-alerts.ts` | Automated deal scanning agent | `createCriteria`, `getMatches` |
-| `favorites.ts` | Saved favorite properties | `add`, `remove`, `list` |
-| `favorite-listings.ts` | Saved listings from map view | `save`, `list` |
-| `favorite-markets.ts` | Saved favorite markets | `add`, `remove`, `list` |
-| `saved-searches.ts` | Saved search history | `save`, `list` |
-| `regulation-tracker.ts` | STR regulation lookup by city | `getRegulations` |
-| `email-optin.ts` | Email opt-in / lead capture | `submit` |
-| `notifications.ts` | In-app notifications | `list`, `markRead` |
-| `admin-tracking.ts` | Admin analytics and tracking | `getStats`, `getEvents` |
-| `bug-reports.ts` | User bug reports | `submit`, `list` |
-| `voice-bug-report.ts` | Voice-recorded bug reports | `submit` |
-| `translation.ts` | Multi-language translation | `translate`, `getTranslation` |
-| `content-studio.ts` | AI content generation for social media | `generatePost` |
-| `lease-reader.ts` | AI lease document analysis | `analyzeLeaseDocument` |
-| `behavior-engine.ts` | User behavior tracking for personalization | `trackEvent`, `getProfile` |
-| `webhook.ts` | Incoming webhook handlers (Zapier, etc.) | `handleWebhook` |
-| `tos.ts` | Terms of service acceptance | `accept`, `getStatus` |
+The key in the object (`webinarSms`) becomes the namespace on the frontend. So `webinarSmsRouter.listRegistrants` is called as `trpc.webinarSms.listRegistrants` on the frontend.
 
-### 4D. Service Files (server/*.ts — NOT in routers/)
+### 3.3 Calling a Procedure (Frontend Side)
 
-These are helper/service files that routers call. They contain the actual business logic.
+On the frontend, you import `trpc` from `@/lib/trpc` and call procedures like this:
 
-| File | What It Does |
-|------|-------------|
-| `airdna.ts` | **LARGEST FILE (~7700 lines).** All AirDNA API calls — market data, property estimates, comps, trends, forecasts. |
-| `airdna-hierarchy.ts` | AirDNA market hierarchy (country → state → city → submarket) |
-| `airdna-rate-limiter.ts` | Rate limiting for AirDNA API calls |
-| `ai-analyzer.ts` | AI-powered property analysis (generates the narrative report) |
-| `ai-analyzer-enhanced.ts` | Enhanced version of AI analyzer with more data points |
-| `ai-advisor.ts` | AI advisor chatbot logic |
-| `ai-advisor-enhanced.ts` | Enhanced AI advisor with market context |
-| `ai-fallback.ts` | Fallback when AI calls fail |
-| `ai-streaming.ts` | Streaming AI responses |
-| `rentometer.ts` | Rentometer API integration (long-term rent estimates) |
-| `hasdata.ts` | HasData API — Zillow scraping proxy |
-| `hasdata-zillow.ts` | Zillow-specific HasData queries |
-| `hasdata-redfin.ts` | Redfin-specific HasData queries |
-| `hubspot.ts` | HubSpot CRM integration — create/update contacts, deals |
-| `hubspot-email.ts` | HubSpot email sending |
-| `google-calendar.ts` | Google Calendar API — send calendar invites, update events |
-| `gmail-reminders.ts` | Gmail API — send reminder emails |
-| `shareable-reports.ts` | Create/read/update shareable report records in DB |
-| `report-generator.ts` | Full report generation (combines all data sources) |
-| `deep-analysis.ts` | Deep analysis logic |
-| `opportunity-finder.ts` | Opportunity finder (browse Zillow listings with revenue estimates) |
-| `market-research.ts` | Market research logic (v1) |
-| `market-research-v2.ts` | Market research logic (v2 — current) |
-| `market-research-simple.ts` | Simplified market research for quick lookups |
-| `regulation-tracker.ts` | STR regulation data fetching and caching |
-| `behavior-engine.ts` | User behavior tracking engine |
-| `deal-alert-agent.ts` | Automated deal scanning agent |
-| `notification-service.ts` | Notification delivery service |
-| `sms-email-notifications.ts` | SMS and email notification helpers |
-| `newsletter-orchestrator.ts` | Newsletter generation orchestrator |
-| `newsletter-content-generator.ts` | AI content for newsletters |
-| `newsletter-deal-finder.ts` | Find deals for newsletter |
-| `newsletter-email-sender.ts` | Send newsletter emails |
-| `newsletter-market-data.ts` | Market data for newsletters |
-| `newsletter-router.ts` | Newsletter tRPC router |
-| `newsletter-sms.ts` | Newsletter SMS notifications |
-| `nurture-sequence-service.ts` | Lead nurture SMS sequences |
-| `content-studio.ts` | Content generation service |
-| `video-generation.ts` | Video generation service |
-| `translation-service.ts` | Translation service |
-| `translation-cache-db.ts` | Translation cache in DB |
-| `lease-reader.ts` | Lease document AI reader |
-| `property-chat.ts` | Property chatbot logic |
-| `sop-reports.ts` | Standard operating procedure reports |
-| `export-pdf.ts` | PDF export logic |
-| `export-excel.ts` | Excel export logic |
-| `location-quality.ts` | Location quality scoring |
-| `webinar-cache.ts` | WebinarJam data caching |
-| `model-router.ts` | AI model selection/routing |
-| `llm-provider.ts` | LLM provider abstraction |
-| `gemini-provider.ts` | Google Gemini API provider |
-| `opus-provider.ts` | Anthropic Claude Opus provider |
-| `admin-router.ts` | Admin panel tRPC router |
-| `slack-admin-router.ts` | Slack integration for admin |
-| `reminder-scheduler.ts` | Webinar reminder scheduling |
-| `pro-mode-prompts.ts` | Pro mode AI prompts |
-| `progress-tracker.ts` | Analysis progress tracking |
-| `request-context.ts` | Request context helpers |
-| `cache.ts` | In-memory cache with TTL |
-| `rate-limiter.ts` | Rate limiting for user actions |
-| `usage-limits.ts` | Usage limit tracking (free tier limits) |
-| `api-logger.ts` | API call logging |
-| `activity.ts` | User activity tracking |
-| `airbnb-scraper.ts` | Airbnb listing scraper |
-| `content-data-pipeline.ts` | Content data pipeline |
-| `storage.ts` | S3 storage helpers (`storagePut`, `storageGet`) |
-| `db.ts` | Database connection and query helpers |
+```typescript
+// Reading data (query):
+const { data, isLoading, error } = trpc.webinarSms.listRegistrants.useQuery({
+  webinarId: "374",
+  page: 0,
+  limit: 50,
+});
+// data is fully typed — TypeScript knows it has { registrants, total, page }
 
-### 4E. Other Backend Files
+// Writing data (mutation):
+const sendSms = trpc.webinarSms.sendTestSms.useMutation({
+  onSuccess: () => toast.success("SMS sent!"),
+  onError: (err) => toast.error(err.message),
+});
+// Call it:
+sendSms.mutate({ phone: "+15551234567", message: "Hello!" });
+```
 
-| File | What It Does |
-|------|-------------|
-| `server/index.ts` | Re-exports from `_core/index.ts` |
-| `server/seed-translations.mjs` | Script to seed translation data |
-| `server/test-deal-alert.ts` | Test script for deal alerts |
-| `server/fixtures/` | Test fixture data |
-| `server/__tests__/` | Integration test directory |
+**The type safety is automatic.** If you change the server procedure's input or output shape, TypeScript will show errors on the frontend wherever the old shape is used. This is why tRPC is used instead of REST — you cannot have a mismatch between what the server expects and what the frontend sends.
+
+### 3.4 The Three Procedure Types and When to Use Each
+
+| Procedure Type | Who Can Call It | Defined In | Use For |
+|---|---|---|---|
+| `publicProcedure` | Anyone, no login needed | `server/_core/trpc.ts` | Lead capture forms, shared report viewing, property estimates |
+| `protectedProcedure` | Any logged-in user | `server/_core/trpc.ts` | Saving favorites, viewing own reports, account settings |
+| `adminProcedure` | Admin users only (`role === 'admin'`) | `server/_core/trpc.ts` | All WebinarJam/SMS features, API-heavy reports, admin dashboard |
+
+### 3.5 How the Context Object Works
+
+Every procedure receives a `ctx` object that contains the current user (if logged in) and the Express request/response objects. This is built by `server/_core/context.ts`:
+
+```typescript
+// Inside any procedure:
+.query(async ({ ctx, input }) => {
+  ctx.user       // { id, email, name, role, openId } or null
+  ctx.user.role  // 'admin' or 'user'
+  ctx.req        // Express Request object
+  ctx.res        // Express Response object
+})
+```
+
+The user is extracted from a JWT session cookie that was set during OAuth login. The cookie is named `__session` and is signed with `JWT_SECRET`.
 
 ---
 
-## 5. Every Frontend File and What It Does
+## 4. Server Startup Sequence
 
-### 5A. Pages (client/src/pages/)
+When the server starts (via `pnpm dev` or in production), here is exactly what happens, in order:
 
-Each page maps to a URL route defined in `App.tsx`.
+1. **`server/_core/index.ts`** is the entry point. It imports dotenv, sets up global error handlers (`unhandledRejection`, `uncaughtException`) so the server never crashes from a stray promise rejection.
+
+2. **Mock API check:** `installMockApi()` from `server/dev-mock-api.ts` is called. If `DEV_MOCK_API=true` in the environment, it intercepts all outgoing HTTP requests to AirDNA, Rentometer, etc. and returns fake data. This is for local development without burning API credits.
+
+3. **Express app creation:** Standard Express setup with 50MB body parser limit (needed for file uploads like lease PDFs), trust proxy enabled (for HTTPS detection behind reverse proxies).
+
+4. **OAuth routes:** `/api/oauth/callback` is registered for Manus OAuth login flow.
+
+5. **SSE endpoints:** Two Server-Sent Events endpoints are registered:
+   - `/api/progress/:sessionId` — streams real-time progress updates during long-running property analyses
+   - `/api/stream/listings` — streams market listing data progressively (for the Explore Listings step)
+
+6. **tRPC middleware:** The entire `appRouter` is mounted at `/api/trpc` with the context builder that extracts the user from the session cookie.
+
+7. **Custom API routes:** Several non-tRPC routes are registered for special cases:
+   - `/api/share-redirect/:shareCode` — redirects short share URLs
+   - `/api/seo/:shareCode` — returns SEO metadata for shared reports
+   - `/api/admin/reports` — admin report listing with pagination
+   - `/api/zapier/lead` — webhook endpoint for Zapier lead ingestion
+
+8. **Vite/Static serving:** In development, Vite dev server is attached for hot module replacement. In production, static files are served from `dist/public`.
+
+9. **SPA fallback:** Any route that does not match `/api/*` serves `index.html` so client-side routing works.
+
+10. **Port binding:** Server listens on the configured port (auto-finds available port if default is busy).
+
+11. **Post-startup initialization (async, non-blocking):**
+    - `initWebinarMode()` — reads the `webinar_mode` setting from DB to determine if the app is in demo mode or live mode
+    - `resumeIncompleteJobs()` — finds any video generation jobs that were interrupted by a server restart and resumes them
+    - **`startWebinarImportCron()`** — starts the registrant import cron job (see Section 6)
+    - **`startSmsDispatcher()`** — starts the SMS dispatch loop (see Section 7)
+
+The post-startup jobs are all wrapped in `.catch()` so if any of them fail, the server keeps running. They are not critical for the HTTP server to function.
+
+---
+
+## 5. The 10-Step Lead Magnet System
+
+The lead magnet is the main public-facing feature. It lives in `client/src/pages/LeadMagnet.tsx` (the largest frontend file) and presents a tabbed interface where each tab is a "step" in evaluating a rental property.
+
+### 5.1 Tab System Architecture
+
+The tabs are defined as a TypeScript union type:
+
+```typescript
+type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate'
+             | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease';
+```
+
+The tabs are displayed in a specific order, and **some tabs are admin-only** (they require heavy AirDNA API usage that would be too expensive for every visitor):
+
+| Step # | Tab ID | Display Name | Admin Only? | What It Does |
+|--------|--------|-------------|-------------|--------------|
+| — | `ebook` | Learn the System | No | Inline e-book about Airbnb arbitrage |
+| 1 | `regulations` | Check Regulations | No | Checks local STR regulations for a city |
+| 2 | `opportunity` | Find a Property | No | Browses Zillow listings to find opportunities |
+| 3 | `prove` | See Real Revenue | **Yes** | Full AirDNA property report (15-30 API calls) |
+| 4 | `find` | Explore Listings | **Yes** | Shows all Airbnb/VRBO listings in an area |
+| 5 | `validate` | Validate the Deal | No* | Property validator with revenue estimate |
+| 6 | `compare` | Compare Favorites | No | Side-by-side comparison of saved properties |
+| 7 | `map` | See the Map | No | Interactive map with listings overlay |
+| 8 | `market` | Market Advisor | **Yes** | AI-powered market analysis |
+| 9 | `advisor` | AI Advisor | **Yes** | Conversational AI property advisor |
+| 10 | `lease` | Lease Reader | No | Upload a lease PDF for AI analysis |
+
+*Step 5 (`validate`) is available to non-admins but uses a lighter API call (`getEstimate` = 1 AirDNA call) instead of the full `getPropertyReport` (15-30 AirDNA calls) that admins get.
+
+### 5.2 How Non-Admin vs Admin Steps Differ
+
+The `ADMIN_ONLY_TABS` array controls which tabs are hidden for non-admin users:
+
+```typescript
+const ADMIN_ONLY_TABS: TabType[] = ['prove', 'find', 'market', 'advisor'];
+const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find',
+                              'validate', 'compare', 'map', 'market', 'advisor', 'lease'];
+const TAB_ORDER: TabType[] = isAdmin
+  ? ALL_TABS
+  : ALL_TABS.filter(t => !ADMIN_ONLY_TABS.includes(t));
+```
+
+Non-admin users see: ebook → regulations → opportunity → validate → compare → map → lease (7 steps).
+Admin users see all 11 tabs.
+
+### 5.3 URL Deep Linking
+
+The lead magnet supports URL parameters for deep linking (used in HubSpot email campaigns):
+
+- `?tab=validate` — opens directly to the Validate tab
+- `?step=5` — opens to step 5 (mapped to `validate`)
+- `?address=123+Main+St&bedrooms=3&bathrooms=2` — pre-fills the property form
+- `?autoAnalyze=true` — automatically triggers analysis after loading
+
+The step-to-tab mapping is:
+
+```typescript
+const stepMapping: Record<string, TabType> = {
+  '1': 'regulations',    '2': 'opportunity',   '3': 'prove',
+  '4': 'find',           '5': 'validate',      '6': 'compare',
+  '7': 'map',            '8': 'market',        '9': 'advisor',
+};
+```
+
+### 5.4 Data Flow: What Happens When a User Analyzes a Property
+
+Here is the complete data flow when a user enters an address in Step 5 (Validate the Deal):
+
+1. **User types address** → `AddressAutocomplete` component uses Google Places API (via Manus proxy) to suggest addresses
+2. **User clicks "Analyze"** → `trpc.rental.getEstimate.useMutation()` is called (for non-admin) or `trpc.rental.getPropertyReport.useMutation()` (for admin)
+3. **Server receives the call** → The procedure in `server/routers/rental.ts` runs:
+   - For `getEstimate`: Makes 1 AirDNA API call to get basic revenue estimate
+   - For `getPropertyReport`: Makes 15-30 AirDNA API calls (property details, revenue, comps, market stats, historical data, supply trends, booking patterns, forward demand)
+4. **Rate limit check** → `checkReportRateLimit()` verifies the user hasn't exceeded 5 reports/day (admins are exempt)
+5. **AirDNA rate limiter** → `rateLimitedAirDNARequest()` in `server/routers/advanced.ts` ensures we don't exceed AirDNA's API rate limits. Uses `AsyncLocalStorage` via `server/request-context.ts` to detect if the caller is admin (admins bypass the soft limit of 400 calls/day)
+6. **Results returned** → The `TeslaDashboard` component renders the results with revenue projections, occupancy rates, comparable properties, and investment analysis
+7. **Lead capture** → If the user hasn't already provided their info, a lead capture form appears. On submit, `trpc.rental.submitLead.useMutation()` sends the data to the server, which stores it in the `leads` table and optionally sends it to HubSpot CRM via webhook
+
+---
+
+## 6. WebinarJam Import System
+
+This is one of the most complex subsystems. It automatically pulls registrant data from WebinarJam's API and stores it in the local database so SMS campaigns and calendar invites can be sent.
+
+### 6.1 How the Import Works (Step by Step)
+
+The import is handled by `runWebinarImport()` in `server/routers/webinar-sms.ts` (line ~2997):
+
+```
+WebinarJam API                    Our Database
+┌──────────────┐                  ┌──────────────────────┐
+│ /webinar/    │  HTTP POST       │ webinar_registrants  │
+│ registrants  │ ──────────────►  │                      │
+│              │  (paginated,     │ phone, email, name,  │
+│ Returns:     │   500/page)      │ attended, source,    │
+│ - first_name │                  │ calendarInviteSent,  │
+│ - last_name  │                  │ calendarEventId      │
+│ - email      │                  └──────────────────────┘
+│ - phone      │                           │
+│ - attended   │                           │ After import, check for
+│ - phone_code │                           │ pending calendar invites
+└──────────────┘                           ▼
+                                  ┌──────────────────────┐
+                                  │ autoSendCalendarInvites│
+                                  │ (fire-and-forget)     │
+                                  └──────────────────────┘
+```
+
+Here is what `runWebinarImport()` does:
+
+1. **Paginated fetch:** Calls `fetchWebinarJamRegistrants()` in a loop, page by page (500 registrants per page, up to 100 pages max). The WebinarJam API requires a POST request with `api_key` and `webinar_id`.
+
+2. **Schedule ID fallback:** If a `schedule_id` is configured and it returns 0 registrants, the function automatically retries WITHOUT the schedule_id filter. This was added because WebinarJam sometimes changes schedule IDs when a webinar is recreated, and the old schedule_id returns nothing.
+
+3. **Deduplication:** Fetches all existing phone numbers from the database for this webinar. Normalizes phone numbers (strips non-digits, handles country codes) and skips any registrant whose normalized phone already exists.
+
+4. **Batch insert:** New registrants are inserted in batches of 500 to avoid hitting MySQL's max packet size.
+
+5. **Calendar auto-send:** After import, queries ALL registrants who have `calendarInviteSent = 0` and no error message. This catches both newly imported registrants AND any existing registrants who were imported before calendar was configured. Fires `autoSendCalendarInvites()` as a background task (fire-and-forget, does not block the import response).
+
+### 6.2 The Cron Job
+
+`startWebinarImportCron()` (line ~3121) sets up a `setInterval` that runs the import on a configurable schedule (default: every 30 minutes). Critical details:
+
+- **Re-reads settings from DB on every run.** This was a bug fix — the original code captured `webinarId` and `scheduleId` in a closure at startup and never refreshed them. If you changed the selected webinar in the UI, the cron kept importing from the old webinar.
+- **Re-reads API credentials on every run.** Same reason — credentials stored in the `webinar_credentials` table might be updated.
+- **Writes results to `webinar_sms_settings`** table with keys `last_auto_import_at` and `last_auto_import_result` so the admin UI can show when the last import ran and what happened.
+
+### 6.3 How to Change the Selected Webinar
+
+The admin UI calls `trpc.webinarSms.saveWebinarSelection` which:
+1. Saves the new webinar ID, schedule ID, and webinar name to `webinar_sms_settings`
+2. Calls `restartWebinarImportCron()` which clears the old interval and starts a new one with the fresh settings
+
+### 6.4 Per-Webinar API Keys
+
+WebinarJam gives each webinar its own API credentials. These are stored in the `webinar_credentials` table. The import function checks this table first and uses the per-webinar key if available, falling back to the global `WEBINARJAM_API_KEY` environment variable.
+
+---
+
+## 7. SMS Scheduling and Dispatch System
+
+The SMS system allows the admin to schedule a sequence of text messages to be sent to webinar registrants at specific times (e.g., "1 hour before webinar", "going live now", "replay available").
+
+### 7.1 How SMS Sequences Work
+
+An SMS sequence is a series of `scheduled_sms_messages` rows in the database. Each row has:
+
+| Field | Purpose |
+|-------|---------|
+| `webinarId` | Which webinar's registrants to target |
+| `sequenceName` | Human-readable label (e.g., "1 Hour Before") |
+| `sequenceOrder` | Position in sequence (1-9) |
+| `messageBody` | The SMS text. Supports `%FIRST_NAME%` variable substitution |
+| `scheduledAt` | UTC timestamp of when to send |
+| `status` | `pending` → `sending` → `sent` or `failed` or `cancelled` |
+| `audience` | `all`, `attended`, or `not_attended` |
+
+The admin creates these via the UI, which calls `trpc.webinarSms.upsertScheduledMessage`. The AI can also generate a full sequence via `trpc.webinarSms.generateSequence`, which uses Claude AI to write contextually appropriate messages.
+
+### 7.2 The SMS Dispatcher (How Messages Actually Get Sent)
+
+`startSmsDispatcher()` (line ~3226) runs a loop every 30 seconds that:
+
+1. **Mutex check:** If a previous dispatch run is still in progress (`smsDispatcherRunning === true`), the new tick is skipped entirely. This prevents duplicate sends when a large batch (e.g., 341 recipients) takes longer than 30 seconds.
+
+2. **Startup recovery:** On first run, finds any messages stuck in `sending` status (from a previous server crash) and resets them to `pending`. This MUST complete before the first `processScheduledMessages()` runs — it is `await`ed, not fire-and-forget.
+
+3. **Find due messages:** Queries for messages where `status = 'pending'` AND `scheduledAt <= now`.
+
+4. **Stale message check:** If a message is more than 30 minutes past its scheduled time, it is automatically cancelled (marked as `cancelled`). This prevents sending stale messages from a previous webinar or after a long server outage.
+
+5. **Attendance-targeted messages (HARD RULES):** If a message targets `attended` or `not_attended` audience:
+   - **RULE 1:** Force a fresh attendance sync from WebinarJam API before sending. This re-fetches all registrants and updates their `attended` flag in the database.
+   - **RULE 2:** If the sync fails, the message is BLOCKED (marked as `failed`). It will NOT send to the wrong audience.
+   - **RULE 3:** After sync, count how many registrants match the target audience. If zero, the message is cancelled.
+
+6. **Recipient selection:** Based on the `audience` field:
+   - `all` → all registrants for this webinar who haven't opted out
+   - `attended` → only registrants with `attended = 1`
+   - `not_attended` → only registrants with `attended = 0`
+
+7. **Send loop:** For each recipient:
+   - Substitute `%FIRST_NAME%` in the message body
+   - Call `sendSms()` which hits the SimpleTexting v2 API
+   - Wait 100ms between sends to avoid overwhelming SimpleTexting
+   - Track sent/failed counts
+
+8. **Multi-channel:** If the message's `sequenceName` matches a configured reminder schedule, it also triggers calendar reminder updates and/or Gmail reminder emails alongside the SMS.
+
+### 7.3 The sendSms() Function
+
+`sendSms()` (line ~58) is the actual SimpleTexting API call:
+
+1. Strips phone to digits only
+2. Rejects international numbers (SimpleTexting only supports US/Canada NANP numbers)
+3. Normalizes to 10 digits (strips leading "1" if 11 digits)
+4. POSTs to `https://api-app2.simpletexting.com/v2/api/messages` with Bearer auth
+5. Uses `AUTO` mode for messages ≤160 chars, `MMS_PREFERRED` for longer messages
+6. Returns `{ success, smsId, error }`
+
+---
+
+## 8. Google Calendar Invite System
+
+The calendar system sends Google Calendar invites to webinar registrants so the webinar appears on their calendar with reminders. The invites come from `support@coachinayah.com` using Google Workspace domain-wide delegation.
+
+### 8.1 Authentication
+
+`server/google-calendar.ts` uses a Google Service Account with domain-wide delegation:
+
+1. The service account JSON credentials are stored in `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` environment variable
+2. The service account impersonates `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` (support@coachinayah.com)
+3. This allows creating calendar events on behalf of support@coachinayah.com and sending invites to attendees
+
+### 8.2 The Timezone Fix (Critical Bug That Was Fixed)
+
+WebinarJam returns schedule dates like `"2026-03-11 19:00"` in the webinar's timezone (e.g., America/New_York). The original code did this:
+
+```typescript
+// BROKEN: new Date("2026-03-11 19:00:00") parses as UTC
+const startTime = new Date(scheduleDate).toISOString();
+// Result: "2026-03-11T19:00:00.000Z" — the Z means UTC
+// Google Calendar sees the Z and ignores the timeZone field
+// Event shows at 3:00 PM ET instead of 7:00 PM ET (4 hours early)
+```
+
+The fix passes raw date strings WITHOUT the Z suffix:
+
+```typescript
+// FIXED: Pass "2026-03-11T19:00:00" (no Z) so Google respects timeZone
+startDateTimeLocal = params.startTime.replace(" ", "T");
+// Strip any trailing Z or timezone offset
+startDateTimeLocal = startDateTimeLocal.replace(/Z$/, "").replace(/[+-]\d{2}:\d{2}$/, "");
+```
+
+Google Calendar API accepts two formats:
+- `"2026-03-11T19:00:00Z"` → treats as UTC, ignores `timeZone` field
+- `"2026-03-11T19:00:00"` → treats as local time, uses `timeZone` field
+
+We use format #2 so the `timeZone: "America/New_York"` field is respected.
+
+### 8.3 The Four Sending Paths
+
+Calendar invites can be sent through four different code paths. ALL FOUR must use the same timezone-safe date handling:
+
+| Path | Trigger | Function | Location |
+|------|---------|----------|----------|
+| **Single invite** | Admin clicks "Send Invite" on one registrant | `sendCalendarInviteToRegistrant` procedure | webinar-sms.ts line ~2097 |
+| **Bulk invite** | Admin clicks "Send All" button | `sendBulkCalendarInvites` procedure | webinar-sms.ts line ~2187 |
+| **Auto-send** | Cron imports new registrants | `autoSendCalendarInvites()` function | webinar-sms.ts line ~2846 |
+| **Reminder update** | Admin sends reminder to existing invitees | `sendCalendarReminder` procedure | webinar-sms.ts line ~2388 |
+
+All four paths:
+1. Fetch webinar details from WebinarJam API to get the schedule date
+2. Check `webinar_sms_settings` for time/timezone overrides
+3. Build the event with the raw date string (no Z suffix)
+4. Call `sendCalendarInvite()` from `server/google-calendar.ts`
+
+### 8.4 Rate Limiting for Calendar API
+
+Google Calendar API allows approximately 60 write requests per minute per user. The code uses:
+- **1500ms delay** between each invite (≈40/min, safely under the limit)
+- **Exponential backoff** on rate limit errors: 5s → 10s → 20s
+- **3 retries** per invite on rate limit errors
+- **Adaptive cooldown:** If consecutive rate limits are hit, the base delay increases by 2000ms per consecutive failure
+- **Progress logging** every 25 invites
+
+### 8.5 Calendar Settings Override
+
+The admin can override the calendar invite time and timezone via the UI. These are stored in `webinar_sms_settings`:
+
+| Setting Key | Purpose | Default |
+|-------------|---------|---------|
+| `calendar_auto_send` | Enable/disable auto-send on import | `"false"` |
+| `calendar_event_name` | Custom event title | "LIVE: Coach Inayah's 5-Step Airbnb Masterclass" |
+| `calendar_event_description` | Custom event description | (long default text) |
+| `calendar_invite_time` | Override time (HH:mm format) | Uses WebinarJam schedule time |
+| `calendar_invite_timezone` | Override timezone | Uses WebinarJam timezone |
+
+
+---
+
+## 9. Shareable Reports System
+
+Any analysis result can be shared via a unique URL. There are two share systems (legacy and universal), but the universal system is the one actively used.
+
+### 9.1 How Sharing Works (End-to-End)
+
+```
+Admin clicks "Share" on a report
+        │
+        ▼
+UniversalShareButton.tsx
+  → trpc.shareableReports.create.useMutation()
+  → Sends: reportType, reportData (full JSON), address, metrics, revenueOverride
+        │
+        ▼
+server/routers/shareable-reports.ts → server/shareable-reports.ts
+  → createShareableReport()
+  → Generates random 10-char share code
+  → Extracts _revenueOverride from reportData and stores in DB column
+  → Inserts into universal_shareable_reports table
+  → Returns { shareCode, shareUrl }
+        │
+        ▼
+Frontend receives shareCode
+  → Copies https://coachinayahturnkeytool.com/share/{shareCode} to clipboard
+  → Optionally sends SMS/email notification to the lead
+        │
+        ▼
+Lead opens the link
+  → Route: /share/:shareCode → ShareableReportViewer.tsx
+  → trpc.shareableReports.get.useQuery({ shareCode })
+  → Server fetches from universal_shareable_reports
+  → Returns reportData + revenueOverride
+  → Viewer renders the appropriate report type
+```
+
+### 9.2 Revenue Override in Shared Reports
+
+When the admin manually adjusts the revenue number (via the +/- buttons or by clicking the number to type a custom value), that override needs to persist in the shared report. Here is how it works:
+
+1. **TeslaDashboard** has an `onRevenueOverrideChange` callback that fires whenever the admin changes the revenue
+2. **LeadMagnet** receives this via `setCurrentRevenueOverride` state
+3. **UniversalShareButton** receives `revenueOverride` as a prop
+4. When creating a share, the override is stored in TWO places:
+   - `reportData._revenueOverride` (embedded in the JSON blob)
+   - `revenueOverride` column (dedicated DB column)
+5. **After share creation**, a `useEffect` in UniversalShareButton watches for changes to `revenueOverride` and auto-syncs to the DB via `trpc.shareableReports.updateRevenueOverride`
+6. **ShareableReportViewer** reads the override from the DB column first, with a fallback to `reportData._revenueOverride` for backwards compatibility
+
+The amber text color on the revenue number only appears for the owner/admin. Non-owner viewers see the overridden number in normal black text with no visual indication it was adjusted.
+
+### 9.3 Report Types Supported
+
+Each report type maps to a different viewer component in `ShareableReportViewer.tsx`:
+
+| Report Type | Step | Viewer Component | What It Shows |
+|-------------|------|-----------------|---------------|
+| `revenue` | Step 3 | TeslaDashboard | Full revenue analysis with charts, comps, investment calc |
+| `validator` | Step 5 | TeslaDashboard (lighter) | Revenue estimate with basic metrics |
+| `market` | Step 8 | MarketAdvisorViewer | Market-level analysis and trends |
+| `ai_advisor` | Step 9 | AIAdvisorViewer | AI conversation transcript |
+| `listings` | Step 4 | ListingsViewer | Airbnb/VRBO listing grid |
+| `comparison` | Step 6 | ComparisonViewer | Side-by-side property comparison |
+| `map` | Step 7 | MapViewer | Interactive map snapshot |
+| `regulation` | Step 1 | RegulationViewer | STR regulation summary |
+
+---
+
+## 10. Revenue Override System
+
+This is an admin-only feature that lets the owner manually adjust the headline revenue number shown to a lead. The business reason: sometimes the AirDNA data is slightly off, or the owner wants to show a more conservative/aggressive number based on their local knowledge.
+
+### 10.1 How It Works in the UI
+
+The `TeslaDashboard` component (3948 lines, `client/src/components/TeslaDashboard.tsx`) contains the revenue display. When `isOwner` is true:
+
+1. **+/- buttons** appear next to the revenue number, adjusting by $5,000 per click
+2. **Click the number** to type a custom value directly (input with auto-formatting)
+3. **Pencil icon** hints that the number is clickable
+4. **Amber text color** indicates an override is active (only visible to admin)
+5. **"Admin override active" label** appears below the number (only visible to admin)
+
+### 10.2 Data Flow
+
+```
+TeslaDashboard (isOwner=true)
+  → User clicks +/- or types custom value
+  → setRevenueOverride(newValue)
+  → onRevenueOverrideChange(newValue)  // callback to parent
+        │
+        ▼
+LeadMagnet.tsx
+  → setCurrentRevenueOverride(newValue)
+  → Passes to UniversalShareButton as prop
+        │
+        ▼
+UniversalShareButton
+  → If share already exists: useEffect auto-syncs to DB
+  → If creating new share: includes in create mutation
+```
+
+---
+
+## 11. External API Integrations
+
+### 11.1 AirDNA (Primary Data Source)
+
+**What it provides:** Short-term rental market data — revenue estimates, occupancy rates, comparable properties, market trends, supply data, booking patterns, forward demand.
+
+**How it's called:** All AirDNA calls go through `rateLimitedAirDNARequest()` in `server/routers/advanced.ts`. This wrapper:
+- Adds the API key from `ENV.airdnaApiKey`
+- Enforces a soft limit of 400 calls/day for non-admin users
+- Uses `AsyncLocalStorage` (via `server/request-context.ts`) to detect admin requests and bypass the soft limit
+- Logs all calls to the `api_call_logs` table for usage tracking
+
+**Key endpoints used:**
+
+| Endpoint | Purpose | Calls Per Report |
+|----------|---------|-----------------|
+| `/api/v2/market/search` | Search for markets by name | 1 |
+| `/api/v2/property/details` | Get property details | 1 |
+| `/api/v2/property/revenue` | Revenue estimate | 1 |
+| `/api/v2/property/comps` | Comparable properties | 1 |
+| `/api/v2/market/stats` | Market-level statistics | 1 |
+| `/api/v2/market/supply` | Supply trends | 1 |
+| `/api/v2/market/demand` | Forward demand data | 1 |
+| `/api/v2/market/listings` | Individual listings | 1-10 (paginated) |
+| `/api/v2/property/historical` | Historical performance | 1 |
+
+A full `getPropertyReport` makes 15-30 of these calls. A simple `getEstimate` makes 1.
+
+### 11.2 WebinarJam
+
+**What it provides:** Webinar registrant data, webinar details, schedule information.
+
+**How it's called:** Direct HTTP POST requests in `server/routers/webinar-sms.ts`.
+
+**Key endpoints:**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `https://api.webinarjam.com/everwebinar/webinars` | List all webinars |
+| `https://api.webinarjam.com/everwebinar/webinar` | Get webinar details + schedules |
+| `https://api.webinarjam.com/everwebinar/registrants` | Get registrants (paginated) |
+
+**Authentication:** POST body includes `api_key`. Each webinar can have its own API key stored in `webinar_credentials` table, falling back to the global `WEBINARJAM_API_KEY`.
+
+### 11.3 SimpleTexting (SMS)
+
+**What it provides:** SMS sending to US/Canada phone numbers.
+
+**How it's called:** `sendSms()` function in `server/routers/webinar-sms.ts`.
+
+**Endpoint:** `POST https://api-app2.simpletexting.com/v2/api/messages`
+
+**Authentication:** Bearer token in Authorization header (`SIMPLETEXTING_API_KEY`).
+
+**Limitations:** US/Canada numbers only (NANP). Messages >160 chars use MMS mode.
+
+### 11.4 Google Calendar API
+
+**What it provides:** Calendar event creation and management for webinar invites.
+
+**How it's called:** `server/google-calendar.ts` using the `googleapis` npm package.
+
+**Authentication:** Service account with domain-wide delegation, impersonating `support@coachinayah.com`.
+
+**Rate limit:** ~60 writes/minute per user. Code uses 1500ms delay + exponential backoff.
+
+### 11.5 Gmail API
+
+**What it provides:** Email sending for webinar reminders and no-show follow-ups.
+
+**How it's called:** `server/gmail-reminders.ts` using the `googleapis` npm package.
+
+**Authentication:** Same service account as Calendar, impersonating `support@coachinayah.com`.
+
+### 11.6 HubSpot CRM
+
+**What it provides:** Contact management, email campaigns, lead tracking.
+
+**How it's called:** `server/hubspot.ts` and `server/hubspot-email.ts`.
+
+**Endpoint:** `https://api.hubapi.com/crm/v3/objects/contacts`
+
+**Authentication:** Bearer token (`HUBSPOT_API_KEY`).
+
+**Used for:** Creating/updating contacts when leads are captured, sending newsletter emails, tracking contact properties.
+
+### 11.7 Rentometer
+
+**What it provides:** Long-term rental market data (median rent, percentiles, comps).
+
+**How it's called:** `server/rentometer.ts`.
+
+**Endpoint:** `https://www.rentometer.com/api/v1/summary`
+
+**Authentication:** API key in query parameter.
+
+### 11.8 HasData (Zillow + Redfin Scraping)
+
+**What it provides:** Property listings, Zestimates, property details from Zillow and Redfin.
+
+**How it's called:** `server/hasdata-zillow.ts` and `server/hasdata.ts`.
+
+**Endpoint:** HasData's web scraping API.
+
+**Authentication:** API key (`HASDATA_API_KEY`).
+
+### 11.9 Claude AI (Anthropic) and Gemini
+
+**What it provides:** AI-generated property analysis, market insights, SMS message generation, newsletter content.
+
+**How it's called:** `server/llm-provider.ts` (Claude) and `server/gemini-provider.ts` (Gemini). The `server/model-router.ts` selects between them based on task type and availability.
+
+**Authentication:** `ANTHROPIC_API_KEY` for Claude, `GEMINI_API_KEY` for Gemini.
+
+**Model router logic:** Claude is the primary model. Gemini is used as a fallback when Claude is rate-limited or for specific tasks where Gemini performs better (e.g., structured data extraction).
+
+### 11.10 Zapier Webhooks
+
+**What it provides:** Lead data forwarding to external systems.
+
+**How it's called:** POST to `ZAPIER_WEBHOOK_URL` when a lead is captured.
+
+---
+
+## 12. Database Schema
+
+The database has 65 tables. Here are the most important ones grouped by feature:
+
+### 12.1 Core User and Lead Tables
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `users` | Registered users (via OAuth) | `id`, `email`, `name`, `role` (admin/user), `openId`, `reportMode` (pro/guided) |
+| `leads` | Captured leads from the tool | `id`, `email`, `phone`, `name`, `address`, `city`, `state`, `bedrooms`, `bathrooms`, `source`, `hubspotContactId` |
+| `email_optins` | Email opt-in tracking | `email`, `source`, `city`, `state`, `optedIn` |
+
+### 12.2 Webinar and SMS Tables
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `webinar_registrants` | Imported registrants | `phone`, `email`, `name`, `webinarId`, `attended` (0/1), `calendarInviteSent` (0/1), `calendarEventId`, `calendarInviteError`, `source` |
+| `webinar_sms_settings` | Key-value config store | `settingKey`, `settingValue` — stores selected_webinar_id, cron_enabled, calendar_auto_send, calendar_invite_time, etc. |
+| `webinar_credentials` | Per-webinar API keys | `webinarId`, `apiKey`, `webinarHash`, `memberId` |
+| `scheduled_sms_messages` | SMS sequence messages | `webinarId`, `sequenceName`, `messageBody`, `scheduledAt`, `status`, `audience`, `sentCount`, `failedCount` |
+| `webinar_sms_templates` | Reusable SMS templates | `name`, `body` |
+| `webinar_sms_campaigns` | Campaign tracking | `name`, `webinarId`, `templateId`, `status`, `sentCount` |
+| `webinar_sms_deliveries` | Per-recipient delivery log | `campaignId`, `registrantId`, `status`, `smsId`, `error` |
+| `webinar_reminder_schedule` | Multi-channel reminder config | `webinarId`, `reminderName`, `smsEnabled`, `emailEnabled`, `calendarEnabled`, `scheduledAt` |
+| `email_send_log` | Gmail send tracking | `registrantId`, `emailType`, `subject`, `status`, `sentAt` |
+| `webinar_transcripts` | Stored webinar transcripts | `webinarId`, `transcript`, `summary` |
+
+### 12.3 Report and Sharing Tables
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `universal_shareable_reports` | Shared report links | `shareCode`, `reportType`, `reportData` (JSON), `revenueOverride`, `address`, `annualRevenue`, `verdict`, `viewCount` |
+| `shared_reports` | Legacy share system | `shareId`, `reportData`, `createdAt` |
+| `analysis_reports` | Saved full analyses | `address`, `reportData`, `userId`, `reportType` |
+| `deep_analysis` | Deep AI analyses | `reportId`, `analysisData`, `status` |
+
+### 12.4 Market and Property Tables
+
+| Table | Purpose |
+|-------|---------|
+| `saved_searches` | User's saved search criteria |
+| `favorite_properties` | User's favorited properties |
+| `favorite_listings` | User's favorited Airbnb/VRBO listings |
+| `favorite_markets` | User's favorited markets |
+| `market_alerts` | Price/occupancy alert configurations |
+| `market_evaluations` | One-click market evaluation results |
+| `market_research_reports` | Cached market research data |
+| `regulation_cache` | Cached STR regulation data |
+
+### 12.5 System Tables
+
+| Table | Purpose |
+|-------|---------|
+| `api_call_logs` | Every external API call logged |
+| `api_cache` | Cached API responses (TTL-based) |
+| `api_usage_summary` | Daily API usage aggregates |
+| `user_usage` | Per-user daily usage counts |
+| `usage_limits_config` | Configurable usage limits |
+| `activity_logs` | User activity tracking |
+| `tool_usage_events` | Tool-level usage analytics |
+| `bug_reports` | User-submitted bug reports |
+| `notification_analytics` | Notification delivery tracking |
+| `tos_acceptances` | Terms of service acceptance records |
+| `translation_cache` | Cached translations |
+
+### 12.6 Newsletter Tables
+
+| Table | Purpose |
+|-------|---------|
+| `newsletter_cities` | Cities with active subscribers |
+| `newsletter_deals` | Discovered rental deals |
+| `newsletter_sends` | Email send log |
+| `newsletter_preferences` | Per-contact preferences |
+| `newsletter_jobs` | Job execution history |
+
+### 12.7 Content and Media Tables
+
+| Table | Purpose |
+|-------|---------|
+| `content_scripts` | AI-generated content scripts |
+| `video_jobs` | Video generation job tracking |
+| `property_images` | Stored property images |
+
+---
+
+## 13. Every Backend File Explained
+
+### 13.1 Server Core (`server/_core/`)
+
+These files are **framework-level plumbing**. Do not edit them unless you are changing infrastructure.
+
+| File | What It Does |
+|------|-------------|
+| `index.ts` | **THE entry point.** Creates Express app, mounts tRPC, registers routes, starts cron jobs. ~1189 lines. |
+| `trpc.ts` | Defines `publicProcedure`, `protectedProcedure`, `adminProcedure`. The auth middleware lives here. |
+| `context.ts` | Builds the tRPC context from each HTTP request — extracts user from JWT cookie. |
+| `env.ts` | Centralizes all environment variables into a typed `ENV` object. **If you add a new env var, add it here first.** |
+| `oauth.ts` | Handles the Manus OAuth callback at `/api/oauth/callback`. |
+| `cookies.ts` | Session cookie configuration (SameSite, Secure, etc.). |
+| `llm.ts` | `invokeLLM()` helper for calling the built-in LLM API. |
+| `notification.ts` | `notifyOwner()` helper for sending notifications to the app owner. |
+| `sdk.ts` | HTTP client for the Manus built-in API (forge). |
+| `vite.ts` | Vite dev server integration for development mode. |
+| `imageGeneration.ts` | Image generation helper. |
+| `voiceTranscription.ts` | Audio transcription helper. |
+| `map.ts` | Google Maps proxy helper for server-side geocoding. |
+| `dataApi.ts` | Built-in data API helper. |
+| `systemRouter.ts` | System health check and notification procedures. |
+
+### 13.2 Router Files (`server/routers/`)
+
+Each file exports a tRPC router. Here is what each one does and its key procedures:
+
+**`rental.ts` (2013 lines) — Core Property Analysis**
+
+The heart of the app. Contains all AirDNA-powered property analysis procedures.
+
+| Procedure | Access | What It Does |
+|-----------|--------|-------------|
+| `getEstimate` | public | Light revenue estimate (1 AirDNA call). Used by non-admin Step 5. |
+| `getPropertyReport` | admin | Full property report (15-30 AirDNA calls). Revenue, comps, market stats, historical data. |
+| `getAIPropertyReport` | admin | Same as above but adds AI-generated narrative analysis via Claude. |
+| `getMarketReport` | admin | Market-level analysis for a city/region. |
+| `getSubmarketReport` | admin | Submarket breakdown within a larger market. |
+| `searchMarkets` | public | Search AirDNA markets by name. |
+| `searchZipCodes` | public | Search by zip code. |
+| `getLocationQuality` | public | Neighborhood quality score. |
+| `submitLead` | public | Captures lead data (name, email, phone) and sends to HubSpot/Zapier. |
+| `smartSearch` | public | AI-powered property search. |
+| `getBookingPatterns` | admin | Booking pattern analysis for a property. |
+| `getSupplyTrend` | admin | Supply trend data for a market. |
+| `getForwardDemand` | admin | Forward-looking demand indicators. |
+
+**`webinar-sms.ts` (3753 lines) — WebinarJam + SMS + Calendar**
+
+The largest router. Completely isolated — only imports from schema, _core, and db. Contains 50+ procedures for managing registrants, SMS campaigns, calendar invites, email reminders, and AI message composition.
+
+Key procedure groups:
+- **Registrant CRUD:** `listRegistrants`, `addRegistrant`, `updateRegistrant`, `deleteRegistrants`, `importCsv`, `importFromWebinarJam`, `triggerManualImport`
+- **SMS:** `sendCampaign`, `resendCampaign`, `sendTestSms`, `listScheduledMessages`, `upsertScheduledMessage`, `generateSequence`
+- **Calendar:** `sendCalendarInviteToRegistrant`, `sendBulkCalendarInvites`, `sendCalendarReminder`, `saveCalendarSettings`, `calendarInviteStats`, `sendMissingCalendarInvites`
+- **Email:** `composeEmail`, `emailNoShows`, `sendNoShowNudge`, `sendGmailReminder`, `enableAutoReminders`
+- **WebinarJam:** `listWebinars`, `listWebinarsWithSchedules`, `getWebinarDetails`, `saveWebinarSelection`, `testWebinarJamConnection`
+- **Config:** `getSettings`, `saveCronConfig`, `getWebinarCredentials`, `getDashboardStats`, `getApiStatus`
+- **AI Compose:** `composeMessage`, `composeEmail` — uses Claude to generate contextual SMS/email content
+
+**`advanced.ts` (1353 lines) — Advanced Analytics**
+
+Contains `rateLimitedAirDNARequest()` (the central AirDNA rate limiter), multi-year trend analysis, booking patterns, supply trends, and forward demand procedures. This file is the gateway for all AirDNA API calls — even `rental.ts` procedures call through here.
+
+**`shareable-reports.ts` (197 lines) — Universal Share Links**
+
+Thin router that delegates to `server/shareable-reports.ts`. Procedures: `create`, `get`, `notify`, `createAndNotify`, `updateRevenueOverride`, `getAnalytics`.
+
+**`shared-reports.ts` (1416 lines) — Legacy Share System**
+
+The older share system. Still functional for backwards compatibility. Handles shared property reports, market reports, and comparison reports.
+
+**`regulation-tracker.ts` (701 lines) — STR Regulation Checking**
+
+Checks short-term rental regulations for a city. Uses AI to analyze regulation data and provide a summary.
+
+**`admin-tracking.ts` (637 lines) — Usage Analytics**
+
+Tracks tool usage events, generates dashboard summaries, and provides per-user analytics. Key procedures: `trackEvent`, `getDashboardSummary`, `getUserActivity`, `getToolUsageBreakdown`.
+
+**`voice-bug-report.ts` (565 lines) — Voice Bug Reports**
+
+Allows users to record voice messages describing bugs. Transcribes audio via Whisper, then uses AI to extract structured bug report data.
+
+**`content-studio.ts` (373 lines) — Social Media Content**
+
+AI-powered content generation for social media posts, ad scripts, and marketing copy.
+
+**`comp-data.ts` (366 lines) — Comparable Properties**
+
+Fetches and formats comparable property data from AirDNA.
+
+**`my-reports.ts` (333 lines) — Saved Reports**
+
+CRUD for user's saved analysis reports.
+
+**`ai.ts` (256 lines) — AI Chat**
+
+Conversational AI advisor that answers property investment questions.
+
+**`favorite-listings.ts` (237 lines) — Saved Listings**
+
+CRUD for saving Airbnb/VRBO listings from the map/explore views.
+
+**`favorites.ts` (204 lines) — Saved Properties**
+
+CRUD for saving properties the user has analyzed.
+
+**`saved-searches.ts` (199 lines) — Search History**
+
+Saves and retrieves the user's past property searches.
+
+**`market-explorer.ts` (193 lines) — Market Browsing**
+
+Browse and explore different rental markets.
+
+**`webhook.ts` (193 lines) — Zapier Integration**
+
+Receives webhook data from Zapier for lead ingestion.
+
+**`translation.ts` (176 lines) — Multi-language**
+
+Translates report content to other languages via AI.
+
+**`notifications.ts` (164 lines) — In-App Notifications**
+
+CRUD for the notification bell in the header.
+
+**`export.ts` (153 lines) — PDF/Excel Export**
+
+Triggers PDF and Excel report generation.
+
+**`email-optin.ts` (143 lines) — Email Collection**
+
+Manages email opt-in forms and subscriptions.
+
+**`rentometer.ts` (140 lines) — Rent Data**
+
+Fetches long-term rental data from Rentometer API.
+
+**`market-alerts.ts` (139 lines) — Market Alerts**
+
+Configures automated alerts for market changes.
+
+**`deal-alerts.ts` (137 lines) — Deal Scanning**
+
+Configures criteria for automated deal alerts.
+
+**`favorite-markets.ts` (126 lines) — Saved Markets**
+
+CRUD for saving favorite markets.
+
+**`lease-reader.ts` (94 lines) — Lease Analysis**
+
+Uploads and analyzes lease PDFs using AI.
+
+**`deep-analysis.ts` (81 lines) — Deep Analysis**
+
+Triggers deep AI analysis on a property report.
+
+**`zillow.ts` (78 lines) — Zillow Data**
+
+Fetches Zillow property data via HasData.
+
+**`bug-reports.ts` (430 lines) — Bug Reports**
+
+User-submitted bug reports with screenshots and system info.
+
+### 13.3 Service Files (Business Logic)
+
+These files contain the actual business logic that routers call. They are in `server/` (not in `server/routers/`):
+
+| File | Lines | What It Does |
+|------|-------|-------------|
+| `sop-reports.ts` | 4310 | Generates comprehensive SOP (Standard Operating Procedure) reports. The largest service file. |
+| `report-generator.ts` | 2495 | Generates formatted property analysis reports with AI narratives. |
+| `newsletter-email-sender.ts` | 1727 | Newsletter email sending via HubSpot Single Send API. |
+| `opportunity-finder.ts` | 1371 | Scans Zillow listings to find rental arbitrage opportunities. |
+| `market-research-simple.ts` | 1192 | Simplified market research for non-admin users. |
+| `nurture-sequence-service.ts` | 1032 | Lead nurture email sequences. |
+| `regulation-tracker.ts` | 929 | STR regulation data fetching and AI analysis. |
+| `dev-mock-api.ts` | 897 | Mock API responses for development without burning API credits. |
+| `hasdata.ts` | 810 | HasData API base client for web scraping. |
+| `llm-provider.ts` | 756 | Claude API client with retry logic and error handling. |
+| `hubspot.ts` | 706 | HubSpot CRM integration — contact CRUD, search, property updates. |
+| `newsletter-orchestrator.ts` | 687 | Coordinates the full newsletter automation flow. |
+| `hasdata-zillow.ts` | 649 | Zillow-specific HasData queries and data parsing. |
+| `google-calendar.ts` | 583 | Google Calendar API integration — `sendCalendarInvite()`, `sendBulkCalendarInvites()`, `checkCalendarHealth()`. |
+| `market-research.ts` | 581 | Market research report generation (v1). |
+| `market-research-v2.ts` | 568 | Updated market research with more data sources. |
+| `video-generation.ts` | 543 | AI video generation for content studio. |
+| `lease-reader.ts` | 543 | Lease PDF parsing and AI analysis. |
+| `shareable-reports.ts` | 539 | Creates shareable report links, generates share codes, sends notifications. |
+| `export-pdf.ts` | 457 | PDF report generation using the built-in PDF library. |
+| `rentometer.ts` | 443 | Rentometer API integration for long-term rental data. |
+| `usage-limits.ts` | 431 | Configurable usage limits per user/session. |
+| `newsletter-sms.ts` | 417 | SMS notifications for newsletter system. |
+| `gmail-reminders.ts` | 407 | Gmail API integration for sending reminder emails. |
+| `sms-email-notifications.ts` | 399 | SMS and email notification helpers used by the share system. |
+| `model-router.ts` | 393 | Routes AI requests to Claude or Gemini based on task type. |
+| `newsletter-content-generator.ts` | 371 | AI-generated newsletter content. |
+| `hubspot-email.ts` | 365 | HubSpot email sending via Single Send API. |
+| `newsletter-deal-finder.ts` | 360 | Scans markets for deals to include in newsletters. |
+| `notification-service.ts` | 332 | In-app notification system. |
+| `property-chat.ts` | 318 | AI chatbot for property-specific questions. |
+| `newsletter-market-data.ts` | 315 | Market data aggregation for newsletters. |
+| `webinar-cache.ts` | 302 | Caches webinar mode (demo/live) in memory. Reads from DB on startup. |
+| `location-quality.ts` | 291 | Neighborhood quality scoring algorithm. |
+| `export-excel.ts` | 272 | Excel report generation. |
+| `translation-service.ts` | 270 | Translation via AI models. |
+| `request-context.ts` | ~55 | `AsyncLocalStorage`-based request context for detecting admin requests deep in the call chain. |
+| `rate-limiter.ts` | ~100 | Report generation rate limiter (5/day per user, admins exempt). |
+| `db.ts` | varies | Database connection singleton and query helpers. |
+| `storage.ts` | varies | S3 storage helpers (`storagePut`, `storageGet`). |
+
+---
+
+## 14. Every Frontend File Explained
+
+### 14.1 Pages (`client/src/pages/`)
 
 | File | Route | What It Does |
 |------|-------|-------------|
-| `LeadMagnet.tsx` | `/` | **THE MAIN PAGE.** The 7-step property analysis flow. This is where leads enter their address, provide contact info, and see results. ~6000 lines. |
-| `MapViewPage.tsx` | `/map` | Interactive map with Zillow/Redfin listings and revenue overlays |
-| `MarketAdvisor.tsx` | `/market-advisor` | AI-powered market analysis chat |
-| `MarketComparisonPage.tsx` | `/compare-markets` | Side-by-side market comparison |
-| `MarketDiscoveryPage.tsx` | `/discover-markets` | Browse top US markets |
-| `MyFavoritesPage.tsx` | `/my-favorites` | Saved favorite markets |
-| `MyFavorites.tsx` | `/saved-properties` | Saved favorite listings |
-| `MarketAlertsPage.tsx` | `/market-alerts` | Market alert subscriptions |
-| `SavedItemsPage.tsx` | `/saved-items` | All saved items in one place |
-| `SavedRegulations.tsx` | `/saved-regulations` | Saved STR regulations |
-| `MyReportsPage.tsx` | `/my-reports` | User's report history |
-| `AccountPage.tsx` | `/account` | User account settings |
-| `RefundPolicy.tsx` | `/refund-policy` | Refund policy page |
-| `Contact.tsx` | `/contact` | Contact page |
-| `PrivacyPolicy.tsx` | `/privacy-policy` | Privacy policy |
-| `TermsOfService.tsx` | `/terms-of-service` | Terms of service |
-| `SharedReportPage.tsx` | `/report/:shareId` | View a shared report (legacy) |
-| `SharedComparisonPage.tsx` | `/share/compare/:data` | View a shared market comparison |
-| `ShareableReport.tsx` | `/regulation/:shareCode` | View a shared regulation report |
-| `ShareableReportViewer.tsx` | `/share/:shareCode` | **View a shared property report.** This is what your clients see when you share a link. |
-| `ShareRedirect.tsx` | (redirect logic) | Handles share URL redirects |
-| `BugReportPage.tsx` | `/bug/:shareCode` | View a bug report |
-| `OpportunityFinder.tsx` | `/opportunity-finder` | Browse Zillow listings with revenue estimates |
-| `InvestmentCalculator.tsx` | `/investment-calculator` | Property purchase investment calculator |
-| `FullReportGenerator.tsx` | `/full-report` | Generate a full report from an address |
-| `DealAlertsPage.tsx` | `/deal-alerts` | Automated deal scanning |
-| `MarketEvaluationPage.tsx` | `/evaluate-market` | One-click market evaluation |
-| `PropertyAnalyzer.tsx` | `/full-analysis` | Full property analysis page |
-| `DeepAnalysis.tsx` | `/deep-analysis/:reportId` | Deep AI analysis of a property |
-| `WebinarCampaignManager.tsx` | `/webinar-campaigns` | **Admin: WebinarJam SMS campaigns, calendar invites, sequences** |
-| `WebinarSmsTab.tsx` | (tab component) | SMS tab within webinar manager |
-| `WebinarEnvTab.tsx` | (tab component) | Environment/credentials tab |
-| `ContentStudioPage.tsx` | (admin) | AI content generation studio |
-| `UnifiedAdmin.tsx` | `/admin/dashboard` | **Admin: Unified admin dashboard** |
-| `AdminViewReport.tsx` | `/admin/report/:id` | Admin: View a specific report |
-| `AdminUsers.tsx` | (admin) | Admin: User management |
-| `ApiUsage.tsx` | (admin) | Admin: API usage dashboard |
-| `NotificationAnalytics.tsx` | (admin) | Admin: Notification analytics |
-| `ComponentShowcase.tsx` | (dev) | Component showcase for development |
-| `NotFound.tsx` | `/404` | 404 page |
-| `admin/NewsletterDashboard.tsx` | (admin) | Admin: Newsletter management |
+| `Home.tsx` | `/` | Landing page with property search form. Redirects to LeadMagnet. |
+| `LeadMagnet.tsx` | `/` | **THE main page.** 10-step tabbed analysis tool. Largest frontend file. |
+| `UnifiedAdmin.tsx` | `/admin/dashboard` | Admin portal with 13 tabs (see Section 15). |
+| `WebinarSmsTab.tsx` | (tab in admin) | WebinarJam SMS management UI. |
+| `WebinarEnvTab.tsx` | (tab in admin) | Demo/live mode toggle. |
+| `WebinarCampaignManager.tsx` | `/webinar-campaigns` | Standalone SMS campaign manager. |
+| `ShareableReportViewer.tsx` | `/share/:shareCode` | Public shared report viewer. Routes to correct viewer based on reportType. |
+| `SharedReportPage.tsx` | `/report/:shareId` | Legacy shared report viewer. |
+| `MapViewPage.tsx` | `/map` | Full-screen map with Zillow/Redfin listings and revenue overlays. |
+| `MarketAdvisor.tsx` | `/market-advisor` | Standalone market analysis page. |
+| `MarketComparisonPage.tsx` | `/compare-markets` | Side-by-side market comparison. |
+| `MarketDiscoveryPage.tsx` | `/discover-markets` | Browse top US markets by criteria. |
+| `DealAlertsPage.tsx` | `/deal-alerts` | Automated deal scanning configuration. |
+| `InvestmentCalculator.tsx` | `/investment-calculator` | Property investment calculator (mortgage, ROI, break-even). |
+| `FullReportGenerator.tsx` | `/full-report` | Generate full report from address. |
+| `MarketEvaluationPage.tsx` | `/evaluate-market` | One-click market evaluation. |
+| `OpportunityFinder.tsx` | `/opportunity-finder` | Browse Zillow listings with revenue estimates. |
+| `ContentStudioPage.tsx` | (tab in admin) | AI content generation for social media. |
+| `AccountPage.tsx` | `/account` | User account settings. |
+| `MyReportsPage.tsx` | `/my-reports` | User's saved reports. |
+| `MyFavoritesPage.tsx` | `/my-favorites` | User's favorite markets. |
+| `SavedItemsPage.tsx` | `/saved-items` | User's saved items (searches, properties, listings). |
+| `BugReportPage.tsx` | `/bug/:shareCode` | Bug report viewer. |
+| `TermsOfService.tsx` | `/terms-of-service` | TOS page. |
+| `PrivacyPolicy.tsx` | `/privacy-policy` | Privacy policy. |
+| `RefundPolicy.tsx` | `/refund-policy` | Refund policy. |
+| `Contact.tsx` | `/contact` | Contact page. |
 
-### 5B. Key Components (client/src/components/)
+### 14.2 Key Components (`client/src/components/`)
+
+**Data Display Components:**
+
+| Component | Lines | What It Does |
+|-----------|-------|-------------|
+| `TeslaDashboard.tsx` | 3948 | **The main results dashboard.** Revenue projections, occupancy, comps, investment analysis, revenue charts. Contains the revenue override feature. Named "Tesla" because of its dashboard-style design. |
+| `CompDataTable.tsx` | varies | Comparable properties table with sorting and filtering. |
+| `HistoricalCharts.tsx` | varies | Historical revenue/occupancy charts using Chart.js. |
+| `RevenueCharts.tsx` | varies | Monthly revenue forecast charts. |
+| `RentometerSection.tsx` | varies | Rentometer data display (median rent, percentiles). |
+| `STRvsLTRComparison.tsx` | varies | Short-term vs long-term rental comparison table. |
+| `BreakEvenCalculator.tsx` | varies | Investment break-even analysis with charts. |
+| `LoanCalculator.tsx` | varies | Mortgage/loan calculator. |
+| `MaxPurchasePriceCalculator.tsx` | varies | Max purchase price calculator. |
+| `AmortizationSchedule.tsx` | varies | Loan amortization table. |
+
+**Step Components (used inside LeadMagnet tabs):**
 
 | Component | What It Does |
 |-----------|-------------|
-| `TeslaDashboard.tsx` | **THE RESULTS DASHBOARD.** Shows projected revenue, comps, charts, profit projections. Has the revenue override feature. Used in both the main flow and shared reports. |
-| `StartWithProperty.tsx` | Step 1-4 of the lead magnet flow (address input, property details) |
-| `UniversalShareButton.tsx` | Creates shareable report links. Passes `revenueOverride` to the share. |
-| `FullPropertyReport.tsx` | Complete property report with all sections |
-| `GooglePlacesAutocomplete.tsx` | Address autocomplete using Google Places API |
-| `AddressAutocomplete.tsx` | Alternative address autocomplete |
-| `SmartAddressInput.tsx` | Smart address input with validation |
-| `Map.tsx` | Google Maps integration component |
-| `MapViewContent.tsx` | Map view with listings overlay |
-| `MapFirstLayoutV2.tsx` | Map-first layout for property browsing |
-| `CompsMapView.tsx` | Map showing comparable properties |
-| `CompDataTable.tsx` | Table of comparable property data |
-| `RevenueCharts.tsx` | Revenue projection charts |
-| `HistoricalCharts.tsx` | Historical trend charts |
-| `MultiYearTrends.tsx` | Multi-year trend visualization |
-| `ForwardDemandCard.tsx` | Forward demand metrics card |
-| `EnhancedInsights.tsx` | Enhanced AI insights display |
-| `RentometerSection.tsx` | Rentometer data display |
-| `STRvsLTRComparison.tsx` | Short-term vs long-term rental comparison |
-| `LoanCalculator.tsx` | Mortgage/loan calculator |
-| `BreakEvenCalculator.tsx` | Break-even analysis calculator |
-| `AmortizationSchedule.tsx` | Loan amortization schedule |
-| `MaxPurchasePriceCalculator.tsx` | Maximum purchase price calculator |
-| `OfferPriceSuggester.tsx` | AI offer price suggestion |
-| `AIAdvisorStep.tsx` | AI advisor chat step |
-| `ContextualAIChat.tsx` | Contextual AI chat component |
-| `PropertyChatBot.tsx` | Property-specific chatbot |
-| `StandaloneMarketAdvisor.tsx` | Standalone market advisor |
-| `OpportunityFinderStep.tsx` | Opportunity finder step in flow |
-| `RegulationTrackerStep.tsx` | Regulation tracker step |
-| `LeaseReaderStep.tsx` | Lease reader step |
-| `SubmarketExplorer.tsx` | Submarket browsing component |
-| `MarketInsightsPanel.tsx` | Market insights side panel |
-| `MarketComparison.tsx` | Market comparison component |
-| `HierarchicalLocationSelector.tsx` | Location picker (country → state → city) |
-| `CityAutocomplete.tsx` | City autocomplete input |
-| `MarketAutocomplete.tsx` | Market autocomplete input |
-| `DashboardLayout.tsx` | Admin dashboard sidebar layout |
-| `AuthButton.tsx` | Login/logout button |
-| `LoginGate.tsx` | Requires login to view content |
-| `TermsAcceptanceModal.tsx` | Terms of service acceptance modal |
-| `NotificationBell.tsx` | Notification bell icon with count |
-| `BugReportButton.tsx` | Bug report floating button |
-| `VoiceBugReportButton.tsx` | Voice bug report button |
-| `GlobalAutoTranslator.tsx` | Auto-translation wrapper |
-| `GlobalLanguageSelector.tsx` | Language picker |
-| `LanguageSelector.tsx` | Language selector component |
-| `TranslatableText.tsx` | Text that can be translated |
-| `TranslatePageBanner.tsx` | Banner offering page translation |
-| `ReportTranslateButton.tsx` | Translate report button |
-| `ShareReportButton.tsx` | Share report button |
-| `SharePageButton.tsx` | Share page button |
-| `ShareToolButton.tsx` | Share tool button |
-| `SendToSlack.tsx` | Send report to Slack |
-| `SendToSlackModal.tsx` | Slack send modal |
-| `BuildFullReportButton.tsx` | Generate full report button |
-| `SavedSearches.tsx` | Saved searches list |
-| `SavedItemsPanel.tsx` | Saved items panel |
-| `CompareFavoritesSection.tsx` | Compare favorite properties |
-| `ComparisonDashboard.tsx` | Comparison dashboard |
-| `SaveLoginPrompt.tsx` | Prompt to save/login |
-| `PropertyCard.tsx` | Property listing card |
-| `ImageCarousel.tsx` | Image carousel |
-| `StreetViewPanorama.tsx` | Google Street View |
-| `EbookViewer.tsx` | E-book viewer |
-| `InlineEbook.tsx` | Inline e-book display |
-| `InteractiveTour.tsx` | Interactive product tour |
-| `OnboardingTour.tsx` | New user onboarding |
-| `TourSpotlight.tsx` | Tour spotlight overlay |
-| `TypeformOverlay.tsx` | Typeform survey overlay |
-| `SEOHead.tsx` | SEO meta tags |
-| `ReportDisclaimer.tsx` | Report disclaimer text |
-| `TrustBanner.tsx` | Trust/credibility banner |
-| `DataScopeIndicator.tsx` | Data scope indicator |
-| `UpgradeBanner.tsx` | Upgrade prompt banner |
-| `UsageLimitBadge.tsx` | Usage limit indicator |
-| `MockModeBadge.tsx` | Mock mode indicator (dev) |
-| `ReportModeToggle.tsx` | Toggle between report modes |
-| `ReportModeOnboarding.tsx` | Report mode onboarding |
-| `AnalysisProgress.tsx` | Analysis progress indicator |
-| `LoadingProgress.tsx` | Loading progress bar |
-| `NarrativeSkeleton.tsx` | Loading skeleton for narrative |
-| `PullToRefreshIndicator.tsx` | Pull-to-refresh on mobile |
-| `ScrollToTopButton.tsx` | Scroll to top button |
-| `BackToPropertyButton.tsx` | Back to property button |
-| `PageTracker.tsx` | Page view tracking |
-| `ErrorBoundary.tsx` | React error boundary |
-| `StepErrorBoundary.tsx` | Step-level error boundary |
-| `InfoTooltip.tsx` | Info tooltip component |
-| `HelpSection.tsx` | Help section |
-| `LightMarkdown.tsx` | Lightweight markdown renderer |
-| `ExportListings.tsx` | Export listings to file |
-| `ChapterMarketReport.tsx` | Chapter-style market report |
-| `ChapterPropertyReport.tsx` | Chapter-style property report |
-| `SharedAIAdvisorDisplay.tsx` | Shared AI advisor display |
-| `SharedMarketReport.tsx` | Shared market report display |
-| `SharedRegulationDisplay.tsx` | Shared regulation display |
-| `ManusDialog.tsx` | Manus-branded dialog |
-| `AIChatBox.tsx` | AI chat interface (pre-built) |
+| `AIAdvisorStep.tsx` | AI chat interface for property advice (Step 9). |
+| `RegulationTrackerStep.tsx` | STR regulation checker UI (Step 1). |
+| `OpportunityFinderStep.tsx` | Zillow listing browser (Step 2). |
+| `LeaseReaderStep.tsx` | Lease upload and analysis (Step 10). |
 
-### 5C. Hooks (client/src/hooks/)
+**Map Components:**
+
+| Component | What It Does |
+|-----------|-------------|
+| `CompsMapView.tsx` | Map showing comparable properties with pins. |
+| `MapViewContent.tsx` | Map content with listing pins and filters. |
+| `MapFirstLayoutV2.tsx` | Map-centric layout for Step 7. |
+
+**Sharing and Actions:**
+
+| Component | Lines | What It Does |
+|-----------|-------|-------------|
+| `UniversalShareButton.tsx` | 511 | Creates shareable links for any report. Handles share creation, clipboard copy, SMS/email notification. |
+| `AddressAutocomplete.tsx` | varies | Google Places autocomplete for property addresses. |
+| `MarketAutocomplete.tsx` | varies | AirDNA market search autocomplete. |
+
+**Layout and Navigation:**
+
+| Component | What It Does |
+|-----------|-------------|
+| `DashboardLayout.tsx` | Admin dashboard layout with sidebar navigation. |
+| `AuthButton.tsx` | Login/logout button. |
+| `NotificationBell.tsx` | In-app notification bell with unread count. |
+| `ScrollToTopButton.tsx` | Floating scroll-to-top button. |
+| `TrustBanner.tsx` | Trust/credibility banner shown on public pages. |
+| `SEOHead.tsx` | Dynamic SEO meta tags for shared reports. |
+
+**Utility Components:**
+
+| Component | What It Does |
+|-----------|-------------|
+| `BugReportButton.tsx` | Bug report submission button (screenshot + system info). |
+| `VoiceBugReportButton.tsx` | Voice-based bug reporting (records audio, transcribes, submits). |
+| `InteractiveTour.tsx` | First-time user onboarding tour. |
+| `TermsAcceptanceModal.tsx` | TOS acceptance modal (blocks usage until accepted). |
+| `MockModeBadge.tsx` | Shows "DEMO MODE" badge when mock API is active. |
+| `DataScopeIndicator.tsx` | Shows data source indicator (AirDNA, mock, etc.). |
+| `GlobalLanguageSelector.tsx` | Language selection dropdown. |
+| `GlobalAutoTranslator.tsx` | Auto-translation wrapper component. |
+| `ErrorBoundary.tsx` | React error boundary (catches rendering crashes). |
+
+### 14.3 Contexts (`client/src/contexts/`)
+
+| Context | What It Provides |
+|---------|-----------------|
+| `PropertyContext.tsx` | Global property state — the user's selected property address, bedroom/bathroom counts, global mode (property-centric vs market-centric). Used across all steps so changing the address in one step updates all steps. |
+
+### 14.4 Hooks (`client/src/hooks/`)
 
 | Hook | What It Does |
 |------|-------------|
-| `useAnalysisProgress.ts` | Tracks multi-step analysis progress |
-| `useComposition.ts` | Composition/layout helpers |
-| `useMobile.tsx` | Detects mobile viewport |
-| `usePersistFn.ts` | Persists function reference across renders |
-| `useSavedItems.ts` | Manages saved items state |
-| `useStreamingChat.ts` | Handles streaming AI chat responses |
-| `useStreamingReport.ts` | Handles streaming report generation |
-| `useSwipeGesture.ts` | Mobile swipe gesture detection |
-| `useToolTracking.ts` | Tool usage analytics tracking |
-
-### 5D. Contexts (client/src/contexts/)
-
-| Context | What It Does |
-|---------|-------------|
-| `PropertyContext.tsx` | Global property state (current address, analysis results, step progress) |
-| `ReportModeContext.tsx` | Report mode state (guided vs pro) |
-| `ThemeContext.tsx` | Dark/light theme state |
-| `ToastContext.tsx` | Toast notification state |
-| `TranslationContext.tsx` | Translation/language state |
-
-### 5E. Core Frontend Files
-
-| File | What It Does | Safe to Edit? |
-|------|-------------|---------------|
-| `client/src/App.tsx` | Route definitions and layout. Add new routes here. | YES |
-| `client/src/main.tsx` | React app bootstrap, tRPC client setup, QueryClient | DO NOT EDIT |
-| `client/src/index.css` | Global CSS, Tailwind theme, CSS variables | YES — for theming |
-| `client/src/const.ts` | Frontend constants (login URL, etc.) | YES |
-| `client/src/lib/trpc.ts` | tRPC client type binding | DO NOT EDIT |
-| `client/src/_core/hooks/useAuth.ts` | Auth hook (`useAuth()`) | DO NOT EDIT |
+| `useSavedItems.ts` | Manages saved searches, favorites, and bookmarks across the app. |
+| `useAuth.ts` (in `_core/hooks/`) | Authentication state — current user, loading, isAuthenticated, logout function. |
 
 ---
 
-## 6. Database Tables
+## 15. Admin Portal
 
-The database schema is defined in `drizzle/schema.ts`. There are **56 tables**. Here are the most important ones grouped by feature:
+The admin portal lives at `/admin/dashboard` and is rendered by `UnifiedAdmin.tsx`. It has 13 tabs:
 
-### Core Tables
+| # | Tab | What It Shows | Key tRPC Calls |
+|---|-----|-------------|----------------|
+| 1 | **Overview** | Dashboard stats: total users, reports generated, API calls today, active leads | `admin.getDashboardStats`, `adminTracking.getDashboardSummary` |
+| 2 | **Activity** | Real-time activity feed showing all user actions with names and emails | `admin.getActivityFeed` |
+| 3 | **Users** | User management: search, filter by role, view usage, promote to admin | `admin.listUsers`, `admin.updateUserRole` |
+| 4 | **API Usage** | AirDNA/Rentometer/HasData call counts, daily trends, cost estimates | `admin.getApiUsage`, `admin.getApiUsageTrends` |
+| 5 | **HubSpot** | CRM integration status, contact sync, recent leads | `admin.getHubspotStatus`, `admin.getRecentLeads` |
+| 6 | **Notifications** | Notification delivery analytics, SMS/email success rates | `admin.getNotificationStats` |
+| 7 | **Properties** | All generated property reports, searchable and viewable | `admin.getReports` |
+| 8 | **Newsletter** | Newsletter campaign management, subscriber stats | `newsletter.*` procedures |
+| 9 | **Cache** | API cache management, clear stale entries | `admin.getCacheStats`, `admin.clearCache` |
+| 10 | **Content Studio** | AI content generation for social media | `contentStudio.*` procedures |
+| 11 | **Webinar SMS** | Full WebinarJam SMS/Calendar management (Sections 6-8) | `webinarSms.*` procedures |
+| 12 | **Webinar Env** | Toggle between demo mode and live mode | `webinarEnv.*` procedures |
+| 13 | **Data Policy** | Data retention and privacy settings | `admin.getDataPolicy` |
 
-| Table | Purpose |
-|-------|---------|
-| `users` | User accounts (from Manus OAuth). Has `role` field (admin/user). |
-| `leads` | Lead capture data (name, email, phone, address, status) |
-| `analysisReports` | All property analysis results |
-| `savedSearches` | User's saved market/property searches |
-| `favoriteProperties` | User's saved favorite properties |
-| `favoriteListings` | Saved Zillow/Redfin listings |
-| `favoriteMarkets` | Saved favorite markets |
+Each tab's queries use `enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'tab-name'` so data is only fetched when the tab is active. This prevents unnecessary API calls when the admin first loads the dashboard.
 
-### Sharing Tables
-
-| Table | Purpose |
-|-------|---------|
-| `universalShareableReports` | Shareable report links (the `/share/:code` URLs). Has `revenueOverride` column. |
-| `sharedReports` | Legacy shared reports |
-| `shareableRegulationReports` | Shared regulation reports |
-| `personalizedLinks` | Personalized tracking links |
-| `linkClicks` | Click tracking for personalized links |
-
-### WebinarJam / SMS Tables
-
-| Table | Purpose |
-|-------|---------|
-| `webinarRegistrants` | Imported WebinarJam registrants (name, email, phone, attended, calendarInviteSent) |
-| `webinarSmsTemplates` | SMS message templates |
-| `webinarSmsCampaigns` | SMS campaign records |
-| `webinarSmsDeliveries` | Individual SMS delivery records |
-| `webinarSmsSettings` | Key-value settings (selected webinar, cron config, calendar settings) |
-| `scheduledSmsMessages` | Scheduled SMS messages (sequences) |
-| `webinarCredentials` | WebinarJam API credentials per webinar |
-| `webinarTranscripts` | Webinar transcript storage |
-| `webinarSettings` | General webinar settings |
-| `webinarReminderSchedule` | Reminder scheduling |
-| `emailSendLog` | Email send tracking |
-
-### Other Tables
-
-| Table | Purpose |
-|-------|---------|
-| `emailOptins` | Email opt-in records |
-| `notifications` | In-app notifications |
-| `ownerNotificationLog` | Owner notification history |
-| `bugReports` | User bug reports |
-| `toolUsageEvents` | Tool usage analytics |
-| `marketAlerts` | Market alert subscriptions |
-| `dealAlertCriteria` | Deal alert search criteria |
-| `dealAlertMatches` | Deal alert matches found |
-| `marketEvaluations` | Market evaluation results |
-| `regulationCache` | Cached STR regulations |
-| `savedRegulations` | User-saved regulations |
-| `regulationComments` | Comments on regulations |
-| `commentVotes` | Votes on comments |
-| `aiConversations` | AI chat conversation records |
-| `aiMessages` | Individual AI chat messages |
-| `aiAdvisorCache` | Cached AI advisor responses |
-| `newsletterCities` | Newsletter city list |
-| `newsletterDeals` | Newsletter deal data |
-| `newsletterSends` | Newsletter send records |
-| `newsletterPreferences` | User newsletter preferences |
-| `newsletterJobs` | Newsletter generation jobs |
-| `apiCallLogs` | API call logging |
-| `apiCache` | API response cache |
-| `apiUsageSummary` | API usage summaries |
-| `userUsage` | User usage tracking (free tier) |
-| `usageLimitsConfig` | Usage limit configuration |
-| `promotions` | Promotion campaigns |
-| `promotionRecipients` | Promotion recipients |
-| `notificationAnalytics` | Notification analytics |
-| `slackReportDeliveries` | Slack report delivery records |
-| `translationCache` | Translation cache |
-| `contentScripts` | Content studio scripts |
-| `videoJobs` | Video generation jobs |
-| `tosAcceptances` | Terms of service acceptances |
 
 ---
 
-## 7. External API Integrations
+## 16. Background Jobs and Cron Systems
 
-| Service | Env Variable | What It Does | Files |
-|---------|-------------|-------------|-------|
-| **AirDNA** | `AIRDNA_API_KEY` | Property revenue estimates, market data, comps, trends | `server/airdna.ts` |
-| **Rentometer** | `RENTOMETER_API_KEY` | Long-term rent estimates | `server/rentometer.ts` |
-| **HasData** | `HASDATA_API_KEY` | Zillow/Redfin scraping proxy | `server/hasdata.ts`, `hasdata-zillow.ts`, `hasdata-redfin.ts` |
-| **HubSpot** | `HUBSPOT_API_KEY` | CRM — create contacts, track deals | `server/hubspot.ts`, `hubspot-email.ts` |
-| **SimpleTexting** | `SIMPLETEXTING_API_KEY` | SMS sending | `server/routers/webinar-sms.ts` |
-| **WebinarJam** | `WEBINARJAM_API_KEY` | Webinar registrant import | `server/routers/webinar-sms.ts` |
-| **Google Calendar** | `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` | Calendar invites | `server/google-calendar.ts` |
-| **Gmail** | (same service account) | Reminder emails | `server/gmail-reminders.ts` |
-| **Google Maps** | `VITE_GOOGLE_PLACES_API_KEY` | Address autocomplete, geocoding, maps | `server/_core/map.ts`, `client/src/components/Map.tsx` |
-| **Anthropic Claude** | `ANTHROPIC_API_KEY` | AI analysis, chat | `server/llm-provider.ts` |
-| **Google Gemini** | `GEMINI_API_KEY` | AI analysis (alternative) | `server/gemini-provider.ts` |
-| **Zapier** | `ZAPIER_WEBHOOK_URL` | Webhook automation | `server/routers/webhook.ts` |
-| **Golpo AI** | (via env) | Video generation | `server/video-generation.ts` |
-| **Manus LLM** | `BUILT_IN_FORGE_API_KEY` | Built-in AI (default) | `server/_core/llm.ts` |
+The server runs several background jobs that execute independently of HTTP requests. All are started in `server/_core/index.ts` after the server begins listening.
 
----
+### 16.1 Registrant Import Cron
 
-## 8. Background Jobs (Crons)
+- **Frequency:** Configurable (default 30 minutes), stored in `webinar_sms_settings` as `cron_interval_minutes`
+- **Toggle:** `cron_enabled` setting in `webinar_sms_settings` (also requires `FORCE_CRON=true` env var in dev)
+- **Function:** `startWebinarImportCron()` in `server/routers/webinar-sms.ts`
+- **What it does:** Calls `runWebinarImport()` which fetches registrants from WebinarJam and inserts new ones
+- **After import:** Triggers `autoSendCalendarInvites()` for any registrants with `calendarInviteSent = 0`
+- **Logging:** Writes `last_auto_import_at` and `last_auto_import_result` to `webinar_sms_settings`
+- **Restart:** `restartWebinarImportCron()` clears the old interval and starts a new one. Called when the admin changes the selected webinar.
 
-These run automatically when the server starts. They are defined in `server/routers/webinar-sms.ts`.
+### 16.2 SMS Dispatcher
 
-| Job | Interval | What It Does |
-|-----|----------|-------------|
-| **WebinarJam Import Cron** | Configurable (default 30 min) | Fetches new registrants from WebinarJam API, inserts into `webinarRegistrants` table, auto-sends calendar invites to new registrants with email addresses |
-| **SMS Dispatcher** | Every 30 seconds | Checks `scheduledSmsMessages` table for messages due to send, processes them one at a time (with mutex to prevent duplicates), sends via SimpleTexting |
+- **Frequency:** Every 30 seconds (`setInterval` with 30000ms)
+- **Function:** `startSmsDispatcher()` in `server/routers/webinar-sms.ts`
+- **What it does:** Finds `scheduled_sms_messages` where `status = 'pending'` and `scheduledAt <= now`, sends them via SimpleTexting
+- **Mutex:** `smsDispatcherRunning` boolean prevents concurrent dispatch runs
+- **Startup recovery:** On first tick, resets any messages stuck in `sending` status to `pending` (from previous server crash). This is `await`ed before the first dispatch.
+- **Stale check:** Messages >30 minutes past schedule are auto-cancelled
+- **Attendance sync:** For audience-targeted messages, forces a fresh WebinarJam attendance sync before sending
 
-Other background processes (not crons, but periodic cleanup):
+### 16.3 Video Generation Resume
 
-| Process | File | What It Does |
-|---------|------|-------------|
-| AirDNA rate limiter cleanup | `server/airdna-rate-limiter.ts` | Cleans up expired rate limit entries |
-| API logger flush | `server/api-logger.ts` | Flushes API call logs to DB |
-| Cache cleanup | `server/cache.ts` | Evicts expired cache entries |
-| Rate limiter cleanup | `server/rate-limiter.ts` | Cleans up expired rate limit entries |
+- **Runs:** Once on startup
+- **Function:** `resumeIncompleteJobs()` in `server/video-generation.ts`
+- **What it does:** Finds video generation jobs with status `processing` (interrupted by server restart) and resumes them
+
+### 16.4 Webinar Mode Init
+
+- **Runs:** Once on startup
+- **Function:** `initWebinarMode()` in `server/webinar-cache.ts`
+- **What it does:** Reads the `webinar_mode` setting from DB (`demo` or `live`) and caches it in memory. This controls whether the WebinarJam SMS tab shows demo data or real data.
 
 ---
 
-## 9. Environment Variables
+## 17. Rate Limiting and Access Control
 
-These are set in Manus Secrets (Settings → Secrets in the Management UI). Do NOT hardcode them.
+### 17.1 Report Generation Rate Limit
 
-| Variable | What It's For |
+- **Limit:** 5 reports per day per user
+- **Admins:** Exempt (unlimited)
+- **Implementation:** In-memory counter in `server/rate-limiter.ts`, resets at midnight UTC
+- **Enforcement:** `checkReportRateLimit()` is called at the start of `getPropertyReport` and `getAIPropertyReport`
+- **Error message:** "Daily report limit reached (5/day). Your limit resets at midnight — come back tomorrow!"
+
+### 17.2 AirDNA API Rate Limit
+
+- **Soft limit:** 400 calls/day for non-admin users (configurable in `usage_limits_config` table)
+- **Admins:** Bypass the soft limit entirely
+- **Implementation:** `rateLimitedAirDNARequest()` in `server/routers/advanced.ts`
+- **Admin detection:** Uses `AsyncLocalStorage` via `server/request-context.ts`. The tRPC procedure wraps the call in `runWithRequestContext({ isAdmin: true })`, and deep in the call chain, `isAdminRequest()` checks the context without needing the user object passed through every function.
+
+### 17.3 Google Calendar Rate Limit
+
+- **Limit:** ~60 writes/minute per user (Google's limit)
+- **Implementation:** 1500ms delay between calls + exponential backoff on 429 errors
+- **Backoff strategy:** 5s → 10s → 20s, with 3 retries per invite
+- **Adaptive cooldown:** Base delay increases by 2000ms per consecutive rate limit failure
+
+### 17.4 Role-Based Access
+
+| Role | How Detected | Can Access |
+|------|-------------|-----------|
+| **Anonymous** | No session cookie | Public procedures only (getEstimate, searchMarkets, submitLead, shared reports) |
+| **User** | Valid session cookie, `role === 'user'` | Protected procedures (save favorites, view own reports, account settings) |
+| **Admin** | Valid session cookie, `role === 'admin'` | Everything, including all AirDNA-heavy procedures and the admin portal |
+| **Owner** | `openId === OWNER_OPEN_ID` or `email === 'bryson@stayly.com'` | Admin + revenue override + owner-specific features (e.g., revenue +/- buttons) |
+
+**How to make someone an admin:** Update their `role` field in the `users` table to `'admin'` via the database UI or SQL:
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'someone@example.com';
+```
+
+---
+
+## 18. Environment Variables
+
+Every environment variable and what it does. Variables prefixed with `VITE_` are exposed to the frontend JavaScript bundle — **never put secrets in VITE_ variables**.
+
+### 18.1 Required (App Won't Work Without These)
+
+| Variable | What It Does |
 |----------|-------------|
-| `AIRDNA_API_KEY` | AirDNA property/market data |
-| `ANTHROPIC_API_KEY` | Claude AI |
-| `GEMINI_API_KEY` | Google Gemini AI |
-| `HASDATA_API_KEY` | Zillow/Redfin scraping |
-| `RENTOMETER_API_KEY` | Rent estimates |
-| `SIMPLETEXTING_API_KEY` | SMS sending |
-| `WEBINARJAM_API_KEY` | WebinarJam API |
-| `HUBSPOT_API_KEY` | HubSpot CRM |
-| `ZAPIER_WEBHOOK_URL` | Zapier automation |
-| `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` | Google Calendar service account |
-| `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` | Email to impersonate for calendar |
-| `VITE_GOOGLE_PLACES_API_KEY` | Google Maps (frontend) |
-| `JWT_SECRET` | Session cookie signing |
-| `DATABASE_URL` | MySQL/TiDB connection |
-| `BUILT_IN_FORGE_API_KEY` | Manus built-in AI |
-| `BUILT_IN_FORGE_API_URL` | Manus API URL |
-| `VITE_FRONTEND_FORGE_API_KEY` | Manus API (frontend) |
-| `VITE_FRONTEND_FORGE_API_URL` | Manus API URL (frontend) |
+| `DATABASE_URL` | MySQL/TiDB connection string |
+| `JWT_SECRET` | Signs session cookies for authentication |
 | `VITE_APP_ID` | Manus OAuth app ID |
-| `OAUTH_SERVER_URL` | Manus OAuth server |
-| `VITE_OAUTH_PORTAL_URL` | Manus login portal |
-| `OWNER_OPEN_ID` | Owner's Manus user ID |
+| `OAUTH_SERVER_URL` | Manus OAuth backend URL |
+| `VITE_OAUTH_PORTAL_URL` | Manus login portal URL (frontend redirect) |
+| `OWNER_OPEN_ID` | Owner's Manus OpenID (for owner detection in UI) |
 | `OWNER_NAME` | Owner's display name |
-| `VITE_APP_TITLE` | App title |
+| `BUILT_IN_FORGE_API_URL` | Manus built-in API URL |
+| `BUILT_IN_FORGE_API_KEY` | Manus built-in API key (server-side) |
+| `VITE_FRONTEND_FORGE_API_KEY` | Frontend Manus API key |
+| `VITE_FRONTEND_FORGE_API_URL` | Frontend Manus API URL |
+
+### 18.2 External API Keys (Features Degrade Without These)
+
+| Variable | What It Does | What Breaks Without It |
+|----------|-------------|----------------------|
+| `AIRDNA_API_KEY` | AirDNA API key | All property revenue analysis stops working |
+| `ANTHROPIC_API_KEY` | Claude AI API key | AI analysis, SMS generation, content studio stop working |
+| `GEMINI_API_KEY` | Google Gemini API key | Fallback AI stops working (Claude still works) |
+| `RENTOMETER_API_KEY` | Rentometer API key | Long-term rental data unavailable |
+| `HASDATA_API_KEY` | HasData API key | Zillow/Redfin data unavailable |
+| `SIMPLETEXTING_API_KEY` | SimpleTexting API key | SMS sending stops working |
+| `WEBINARJAM_API_KEY` | WebinarJam global API key | Registrant import stops (unless per-webinar keys exist) |
+| `HUBSPOT_API_KEY` | HubSpot CRM API key | Lead sync and newsletter emails stop working |
+| `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` | Google service account credentials (JSON string) | Calendar invites stop working |
+| `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` | Email to impersonate for Calendar/Gmail | Calendar and Gmail reminders stop working |
+| `ZAPIER_WEBHOOK_URL` | Zapier webhook for lead forwarding | Lead forwarding to external systems stops |
+| `VITE_GOOGLE_PLACES_API_KEY` | Google Places API key | Address autocomplete stops working |
+
+### 18.3 Optional / Development
+
+| Variable | What It Does |
+|----------|-------------|
+| `VITE_APP_TITLE` | App title displayed in browser tab and header |
 | `VITE_APP_LOGO` | App logo URL |
-| `FORCE_CRON` | Force cron jobs to run (even in dev) |
+| `DEV_MOCK_API` | Set to `"true"` to use mock API responses (saves API credits in dev) |
+| `FORCE_CRON` | Set to `"true"` to force cron jobs to run even in dev mode |
+
+### 18.4 Adding a New Environment Variable
+
+1. Add it to `server/_core/env.ts` in the `ENV` object
+2. Add it to Manus secrets via the Settings panel or `webdev_request_secrets`
+3. Access it in server code via `ENV.myNewVar`
+4. If it's a frontend variable, prefix with `VITE_` and access via `import.meta.env.VITE_MY_VAR`
+5. Restart the server after adding
 
 ---
 
-## 10. How tRPC Works (The API Layer)
+## 19. Safe Editing Rules
 
-**tRPC replaces REST APIs.** Instead of `GET /api/reports` and `POST /api/reports`, you define typed procedures.
+### 19.1 Files You Should NEVER Edit
 
-### Backend (defining a procedure)
+| Path | Why |
+|------|-----|
+| `server/_core/*` | Framework plumbing. Editing these can break auth, tRPC, or the entire server. |
+| `drizzle/meta/*` | Migration metadata. Drizzle manages these automatically. |
+| `drizzle/migrations/*` | Auto-generated SQL. Drizzle manages these. |
+| `node_modules/*` | Dependencies. Use `pnpm add` to install packages. |
+| `dist/*` | Build output. Regenerated on every build. |
+| `client/src/lib/trpc.ts` | tRPC client binding. Auto-generated configuration. |
+| `client/src/main.tsx` | App bootstrap with tRPC provider. Only edit if changing global providers. |
+| `client/src/_core/*` | Auth hook. Framework-level. |
+| `shared/_core/*` | Framework-level shared types. |
 
-In `server/routers/some-feature.ts`:
+### 19.2 Files That Are Safe to Edit (With Specific Warnings)
+
+| File | What You Can Change | Danger Zones |
+|------|--------------------|-----------------------|
+| `server/routers/webinar-sms.ts` | SMS templates, message content, audience logic | The cron functions (`startWebinarImportCron`, `startSmsDispatcher`) are sensitive. Any change to the dispatch loop must preserve the mutex lock (`smsDispatcherRunning`) and stale message check (30-min cutoff). |
+| `server/google-calendar.ts` | Event description, reminders, duration | **NEVER add a Z suffix to date strings.** Always use format `"YYYY-MM-DDTHH:mm:ss"` without Z. See Section 8.2 for why. |
+| `server/routers/rental.ts` | Analysis logic, what data is fetched | Adding more AirDNA API calls increases cost per report. Each call costs ~$0.01. A full report already makes 15-30 calls. |
+| `client/src/pages/LeadMagnet.tsx` | Tab content, UI layout, step order | The `ADMIN_ONLY_TABS` and `TAB_ORDER` arrays control access. Changing them affects what non-admin users see. |
+| `client/src/components/TeslaDashboard.tsx` | Revenue display, charts, investment analysis | The revenue override logic is intertwined with the share system. If you change how `revenueOverride` state works, test that shared reports still show the correct number. |
+| `client/src/components/UniversalShareButton.tsx` | Share dialog UI, notification options | The `useEffect` that auto-syncs revenue overrides is critical. Don't remove it or shares will show stale revenue numbers. |
+| `drizzle/schema.ts` | Add new tables or columns | After editing, run `pnpm db:push` to sync. Never delete columns that existing code reads from — this will crash the server. |
+| `server/routers.ts` | Add new routers | Just add a new key-value pair. Don't rename existing router keys (breaks all frontend calls using the old name). |
+
+### 19.3 The Golden Rule for Editing
+
+Before editing any file, search the codebase for every place that imports from it:
+
+```bash
+grep -rn "from.*filename" server/ client/src/
+```
+
+If 10 files import from the file you're editing, you need to understand all 10 call sites before making changes. A change in a service file can cascade through routers, components, and background jobs.
+
+---
+
+## 20. How to Add a New Feature
+
+### 20.1 Adding a New tRPC Procedure
+
+1. **Choose the right router file.** If it's related to webinars/SMS, add it to `server/routers/webinar-sms.ts`. If it's a new feature area, create a new file in `server/routers/`.
+
+2. **Define the procedure:**
 ```typescript
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+// In server/routers/my-feature.ts
 import { z } from "zod";
+import { adminProcedure, publicProcedure, router } from "../_core/trpc";
+import { getDb } from "../db";
 
-export const myRouter = router({
-  // Public — anyone can call this
-  getStuff: publicProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input, ctx }) => {
-      // input.id is typed as number
-      // ctx.user is null or the logged-in user
-      return { data: "hello" };
-    }),
-
-  // Protected — requires login
-  doThing: protectedProcedure
-    .input(z.object({ name: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      // ctx.user is guaranteed to exist
-      return { success: true };
+export const myFeatureRouter = router({
+  getData: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      // ... your logic ...
+      return { data: result };
     }),
 });
 ```
 
-Then register it in `server/routers.ts`:
+3. **Export from barrel** in `server/routers/index.ts`:
 ```typescript
-import { myRouter } from "./routers/my-feature";
+export { myFeatureRouter } from "./my-feature";
+```
 
-export const appRouter = router({
-  // ... existing routers
-  myFeature: myRouter,
+4. **Add to appRouter** in `server/routers.ts`:
+```typescript
+myFeature: myFeatureRouter,
+```
+
+5. **Call from frontend:**
+```typescript
+const { data } = trpc.myFeature.getData.useQuery({ id: "123" });
+```
+
+### 20.2 Adding a New Database Table
+
+1. **Define the table** in `drizzle/schema.ts`:
+```typescript
+export const myTable = mysqlTable("my_table", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 ```
 
-### Frontend (calling a procedure)
-
-```typescript
-// Query (GET-like, auto-fetches)
-const { data, isLoading } = trpc.myFeature.getStuff.useQuery({ id: 123 });
-
-// Mutation (POST-like, manual trigger)
-const mutation = trpc.myFeature.doThing.useMutation();
-mutation.mutate({ name: "test" });
+2. **Push the migration:**
+```bash
+pnpm db:push
 ```
 
-### Key Rules
+3. **Import and use** in your router or service file:
+```typescript
+import { myTable } from "../../drizzle/schema";
+import { getDb } from "../db";
 
-1. **Queries** are for reading data. They auto-fetch and cache.
-2. **Mutations** are for writing data. You call `.mutate()` manually.
-3. **Input validation** uses Zod schemas. If the input doesn't match, tRPC returns an error.
-4. **`publicProcedure`** = anyone can call. **`protectedProcedure`** = must be logged in.
-5. **`ctx.user`** gives you the current user (id, email, role, openId).
+const db = await getDb();
+const rows = await db.select().from(myTable).where(eq(myTable.name, "test"));
+```
 
----
+### 20.3 Adding a New Admin Tab
 
-## 11. Safe Editing Rules
+1. Add a new `TabsTrigger` and `TabsContent` in `client/src/pages/UnifiedAdmin.tsx`
+2. Create a new component for the tab content (can be inline or a separate file)
+3. Add any necessary tRPC queries with `enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'my-tab'` to prevent data fetching when the tab isn't active
+4. If the tab is complex, use `lazy()` import like the existing Content Studio and Webinar SMS tabs
 
-### Files You Can Freely Edit
+### 20.4 Adding a New Step to the Lead Magnet
 
-- Any file in `client/src/pages/` — these are page components
-- Any file in `client/src/components/` (except `ui/` — be careful there)
-- Any file in `server/routers/` — these are API endpoints
-- Any service file in `server/*.ts` (not in `_core/`)
-- `drizzle/schema.ts` — but run `pnpm db:push` after
-- `client/src/App.tsx` — for adding routes
-- `client/src/index.css` — for theming
-- `shared/const.ts` — for shared constants
-- `shared/types.ts` — for shared types
-- `todo.md` — task tracking
-
-### Files You Must NEVER Edit
-
-- Anything in `server/_core/` — this is framework plumbing
-- Anything in `shared/_core/` — framework types
-- `client/src/main.tsx` — tRPC/React bootstrap
-- `client/src/lib/trpc.ts` — tRPC client binding
-- `client/src/_core/` — auth hook
-- `drizzle/migrations/` — auto-generated
-- `vite.config.ts` — build config (unless you really know what you're doing)
-- `tsconfig.json` — TypeScript config
-- `vitest.config.ts` — test config
-
-### Rules for Making Changes
-
-1. **Always edit the schema FIRST.** If your feature needs a new table or column, add it to `drizzle/schema.ts` and run `pnpm db:push`.
-2. **Then write the backend.** Add/edit procedures in `server/routers/*.ts`.
-3. **Then write the frontend.** Add/edit pages in `client/src/pages/*.tsx`.
-4. **Register new routes.** If you made a new page, add the route in `client/src/App.tsx`.
-5. **Register new routers.** If you made a new router file, import it in `server/routers/index.ts` AND wire it in `server/routers.ts`.
+1. Add the new tab type to the `TabType` union in `client/src/pages/LeadMagnet.tsx`
+2. Add it to `ALL_TABS` array (and `ADMIN_ONLY_TABS` if it requires admin access or heavy API usage)
+3. Add the step mapping in `stepMapping` for URL deep linking
+4. Add the tab trigger and content in the JSX
+5. Create the step component in `client/src/components/`
+6. If the step generates shareable data, add a new `reportType` to the `universalShareableReports` enum in `drizzle/schema.ts` and run `pnpm db:push`
 
 ---
 
-## 12. How to Push Changes Without Breaking Anything
+## 21. Bugs That Were Fixed and Why They Happened
 
-### If You're Editing in Google AI Studio / Anti-Gravity
+These are real bugs that were found and fixed. Understanding them helps you avoid similar issues.
 
-1. **Clone the repo** from the GitHub remote
-2. **Make your changes** to the files listed in "Safe to Edit" above
-3. **Push to the `main` branch** on GitHub
-4. **Go to Manus** and tell it to sync from GitHub (or it auto-syncs on checkpoint)
+### 21.1 WebinarJam Import Returning 0 Registrants
 
-### What Happens When You Push to GitHub
+**Symptom:** The cron job reported "imported 0, skipped 0" even though the webinar had 337 registrants.
 
-- Manus pulls from `main` on every `webdev_save_checkpoint`
-- If there's a conflict, Manus will show the conflict and ask how to resolve
-- Your changes on GitHub take priority if there's no conflict
+**Root causes (three bugs stacked on top of each other):**
 
-### Testing Your Changes
+1. **Stale schedule_id:** The DB stored schedule_id 658 but WebinarJam had changed it to 660 when the webinar was recreated. The API returned 0 results for the old schedule_id.
+   - **Fix:** Added fallback logic — if schedule_id returns 0 results, retry without it.
 
-Before pushing, make sure:
-1. **No TypeScript errors:** Run `npx tsc --noEmit` locally
-2. **Tests pass:** Run `npx vitest run` (or at least the tests for files you changed)
-3. **No import errors:** If you added a new file, make sure it's imported correctly
+2. **Stale closure:** `startWebinarImportCron()` captured `webinarId` and `scheduleId` at startup in a closure and never refreshed them. If you changed the selected webinar in the UI, the cron kept importing from the old webinar.
+   - **Fix:** Cron now re-reads all settings from DB on every tick.
 
-### Database Changes
+3. **No cron restart:** `saveWebinarSelection` saved new settings to DB but didn't restart the cron interval. The cron kept running with the old interval timing.
+   - **Fix:** Added `restartWebinarImportCron()` call after saving selection.
 
-If you changed `drizzle/schema.ts`:
-1. Push your code to GitHub
-2. Tell Manus to run `pnpm db:push`
-3. Manus will generate and run the migration
+**Lesson:** Never capture mutable configuration in closures. Always re-read from DB. And when settings change, restart the systems that depend on them.
 
-**NEVER** delete columns or tables without checking if they're used. Always ADD, never REMOVE.
+### 21.2 Calendar Invites Showing Wrong Time (4 Hours Early)
+
+**Symptom:** Calendar events showed at 12:00 PM PDT instead of 7:00 PM ET.
+
+**Root cause:** JavaScript's `new Date("2026-03-11 19:00:00")` parses the string as UTC. Calling `.toISOString()` outputs `"2026-03-11T19:00:00.000Z"`. The Z suffix tells Google Calendar API to treat it as UTC, which means it ignores the `timeZone: "America/New_York"` field entirely. So 19:00 UTC = 3:00 PM ET (or 12:00 PM PDT).
+
+**Fix:** Pass raw date strings without the Z suffix: `"2026-03-11T19:00:00"` (no Z). When there's no Z, Google Calendar respects the `timeZone` field and treats 19:00 as 7:00 PM Eastern.
+
+**Lesson:** Never convert date strings through JavaScript's `Date` object when you need to preserve the original timezone intent. Pass raw strings and let the receiving API handle timezone interpretation.
+
+### 21.3 Duplicate SMS Sends (341 People Got the Same Message Twice)
+
+**Symptom:** 341 recipients each received the same SMS twice.
+
+**Root cause:** Race condition in `startSmsDispatcher()`. The startup recovery code (which resets stuck `sending` messages back to `pending`) ran as a fire-and-forget async IIFE. At the same time, `processScheduledMessages()` ran immediately on the first tick. Both found the same messages and processed them in parallel.
+
+**Fix (two changes):**
+1. Made startup recovery `await`ed — it must complete before the first dispatch tick runs
+2. Added `smsDispatcherRunning` mutex boolean — if a dispatch is already in progress, the next tick skips entirely
+
+**Lesson:** Never fire-and-forget async operations that modify shared state. Use mutexes for concurrent access to shared resources.
+
+### 21.4 Calendar Invite Rate Limiting (All Invites Failing After ~10)
+
+**Symptom:** After sending ~10 calendar invites, all remaining invites failed with "Rate Limit" error.
+
+**Root cause:** The delay between Google Calendar API calls was 200ms, which equals 300 requests/minute. Google's limit is 60 writes/minute per user.
+
+**Fix:** Increased delay to 1500ms (~40/min, safely under the 60/min limit) + added exponential backoff (5s → 10s → 20s on consecutive rate limit errors) + 3 retries per invite.
+
+**Lesson:** Always calculate the actual request rate: `1000ms / delay_ms * 60 = requests_per_minute`. Then compare against the API's documented rate limit.
+
+### 21.5 Shared Report Not Showing Revenue Override
+
+**Symptom:** Admin edited revenue to $57,930, shared the link, but the shared page showed the original AirDNA number ($45,000).
+
+**Root cause (three issues):**
+1. `revenueOverride` wasn't being passed to the share creation mutation
+2. No mechanism to sync override changes made AFTER the share was already created
+3. The viewer component didn't know where to read the override from
+
+**Fix (three changes):**
+1. Added explicit `revenueOverride` parameter to the `create` mutation input
+2. Added a `useEffect` in `UniversalShareButton` that watches for `revenueOverride` prop changes and auto-syncs to DB via `trpc.shareableReports.updateRevenueOverride`
+3. Added fallback chain in viewer: read `revenueOverride` DB column first, fall back to `reportData._revenueOverride` for backwards compatibility
+
+**Lesson:** When data flows through multiple systems (UI → mutation → DB → viewer), test the entire chain end-to-end. A break at any point in the chain causes silent data loss.
+
+### 21.6 Admin Users Being Rate-Limited by AirDNA Soft Limit
+
+**Symptom:** Admin got "rate limit exceeded" errors when running property reports, even though admins should be exempt.
+
+**Root cause:** The `runWithRequestContext()` wrapper was missing from the tRPC procedures that call AirDNA. The rate limiter's `isAdminRequest()` function uses `AsyncLocalStorage` to check if the current request is from an admin. Without the wrapper, the context was never set, so `isAdminRequest()` always returned `false`.
+
+**Fix:** Added `runWithRequestContext({ isAdmin: ctx.user.role === 'admin', userId: ctx.user.id })` wrapper to all procedures that call `rateLimitedAirDNARequest()`.
+
+**Lesson:** `AsyncLocalStorage` context must be explicitly set at the procedure level. It does not propagate automatically from the tRPC middleware. If you add a new procedure that calls rate-limited functions, you must wrap it in `runWithRequestContext()`.
 
 ---
 
-## 13. Common Bugs and How to Fix Them
+## 22. Troubleshooting Playbook
 
-### "Rate Limit" errors on calendar invites
-**Cause:** Google Calendar API has a 60 requests/minute limit. The code now has 1500ms delays + exponential backoff. If you see this, the backoff should handle it automatically.
+### "Registrants aren't importing"
 
-### Shared link shows wrong revenue
-**Cause:** The `revenueOverride` wasn't being saved to the DB when creating shares. Fixed — now passes explicitly to the create mutation AND auto-syncs via useEffect.
+1. Check `webinar_sms_settings` table for `cron_enabled = "true"` and a valid `selected_webinar_id`
+2. Check `last_auto_import_at` and `last_auto_import_result` for the last run status
+3. Check server logs for `[WebinarSMS Cron]` entries
+4. Verify the WebinarJam API key is valid: use `trpc.webinarSms.testWebinarJamConnection`
+5. Check if the `selected_schedule_id` is still valid (WebinarJam may have changed it when recreating the webinar)
+6. In dev mode, check that `FORCE_CRON=true` is set (cron is disabled by default in dev)
 
-### Cron importing 0 registrants
-**Cause:** Wrong `schedule_id` stored in settings. The code now has a fallback — if schedule_id returns 0, it retries without schedule_id.
+### "SMS messages aren't sending"
 
-### SMS sending twice
-**Cause:** Race condition in SMS dispatcher startup. Fixed — startup recovery now awaits before first dispatch, and there's a mutex preventing concurrent runs.
+1. Check `scheduled_sms_messages` table for messages with `status = 'pending'` and `scheduledAt` in the past
+2. Check if messages are being auto-cancelled (status = `cancelled`) — this means they were >30 min past schedule
+3. Check server logs for `[SMS Dispatcher]` entries
+4. Verify SimpleTexting API key: use `trpc.webinarSms.testSimpleTextingConnection`
+5. Check if `smsDispatcherRunning` mutex is stuck (server restart fixes this)
+6. For attendance-targeted messages: check if the WebinarJam attendance sync succeeded (logs show `[Attendance Sync]`)
 
-### Calendar invite shows wrong time
-**Cause:** `new Date()` parsed schedule time as UTC, and `.toISOString()` appended `Z` suffix. Fixed — now passes raw date strings without `Z` so Google respects the timezone field.
+### "Calendar invites failing"
 
-### TypeScript memory crash (TSC)
-**Cause:** The project is very large. The build script already has `NODE_OPTIONS='--max-old-space-size=2048'`. If TSC crashes, it's a memory issue, not a code issue.
+1. Check server logs for `[Calendar Auto]` or `[Calendar]` entries
+2. Verify Google Calendar health: use `trpc.webinarSms.testCalendarConnection`
+3. Check `webinar_registrants` table for `calendarInviteError` column — it stores the specific error
+4. If rate limit errors: wait 1-2 minutes and retry (the exponential backoff handles this automatically)
+5. Check that `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` and `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` are set correctly
+6. Verify the service account has domain-wide delegation enabled in Google Workspace admin
+
+### "Calendar invites showing wrong time"
+
+1. Check the `calendar_invite_time` and `calendar_invite_timezone` settings in `webinar_sms_settings`
+2. Check server logs for the date string being passed to Google Calendar API — it should NOT have a Z suffix
+3. If it has a Z suffix, the timezone fix in `server/google-calendar.ts` is not being applied correctly
+
+### "Shared report shows wrong revenue"
+
+1. Check `universal_shareable_reports` table for the share code
+2. Look at both `revenueOverride` column AND `reportData._revenueOverride` in the JSON blob
+3. If they don't match, the auto-sync `useEffect` may have failed — manually update the `revenueOverride` column
+4. Check that the `UniversalShareButton` component received the `revenueOverride` prop correctly
+
+### "API calls are being rate limited"
+
+1. Check `api_call_logs` table for today's call count: `SELECT COUNT(*) FROM api_call_logs WHERE DATE(createdAt) = CURDATE()`
+2. If admin is being limited: verify `runWithRequestContext({ isAdmin: true })` is wrapping the procedure
+3. If non-admin: they hit the 5 reports/day limit — this is by design
+4. Check `api_usage_summary` for daily totals per API
+5. Check `usage_limits_config` for the current soft limit value
+
+### "Server won't start"
+
+1. Check for port conflicts: `lsof -i :3000`
+2. Check `DATABASE_URL` is valid and the database is reachable: `mysql -h <host> -u <user> -p`
+3. Check server logs for `[FATAL]` entries (unhandled rejections)
+4. Check if `pnpm install` needs to run (missing dependencies)
+5. Try `pnpm dev` and watch the console output for the specific error
+
+### "Frontend shows blank page"
+
+1. Check browser console for JavaScript errors
+2. Check if the tRPC client can reach the server: look for network errors in DevTools
+3. Check if the session cookie is present (Application → Cookies → `__session`)
+4. If after a deploy: clear browser cache or hard refresh (Ctrl+Shift+R)
+
+### "Mock mode is stuck on"
+
+1. Check `DEV_MOCK_API` environment variable — it should be `"false"` or unset in production
+2. Check the `webinar_mode` setting in `webinar_sms_settings` — it should be `"live"` not `"demo"`
+3. The `MockModeBadge` component shows a red "DEMO MODE" badge when mock mode is active
 
 ---
 
-## Quick Reference: Adding a New Feature
-
-1. **Schema:** Add table to `drizzle/schema.ts` → run `pnpm db:push`
-2. **Backend:** Create `server/routers/my-feature.ts` with tRPC procedures
-3. **Register:** Export from `server/routers/index.ts`, wire in `server/routers.ts`
-4. **Frontend:** Create `client/src/pages/MyFeature.tsx`
-5. **Route:** Add `<Route path="/my-feature" component={MyFeature} />` in `App.tsx`
-6. **Test:** Add `server/my-feature.test.ts` with vitest tests
-7. **Todo:** Add to `todo.md`
+*This guide was written based on direct analysis of every file in the codebase as of March 10, 2026. If you find something that doesn't match the actual code, the code is the source of truth — update this guide accordingly.*

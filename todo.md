@@ -12855,3 +12855,6 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Bug: Shared Link Missing Manual Revenue Edits (March 10, 2026)
 - [x] Fix shared link not showing manual revenue edits from Step 5 "Validate the Deal" (revenueOverride not passed to create mutation, no auto-sync for post-creation edits)
 - [x] Ensure manual overrides are persisted and loaded on shared/public view (added explicit revenueOverride to create mutation, useEffect auto-sync, fallback to reportData._revenueOverride)
+
+### Rewrite: Deep Developer Guide (March 10, 2026)
+- [ ] Rewrite DEVELOPER_GUIDE.md with actual business logic, data flows, and deep file-by-file explanations
