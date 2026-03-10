@@ -624,7 +624,7 @@ export default function ShareableReportViewer() {
                 downPaymentPercent={storedDownPaymentPercent}
                 interestRate={storedInterestRate}
                 shareCode={shareCode || undefined}
-                persistedRevenueOverride={report.revenueOverride ?? null}
+                persistedRevenueOverride={report.revenueOverride ?? reportData?._revenueOverride ?? null}
               />
             </div>
           </section>

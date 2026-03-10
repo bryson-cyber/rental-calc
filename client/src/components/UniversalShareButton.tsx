@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Share2, Copy, Check, Link2, Loader2, Mail, Phone, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -133,6 +133,25 @@ export function UniversalShareButton({
 
   const createReport = trpc.shareableReports.create.useMutation();
   const sendNotifications = trpc.shareableReports.sendNotifications.useMutation();
+  const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
+
+  // Auto-sync revenueOverride to DB when it changes AFTER a share was already created
+  const lastSyncedOverride = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (!shareCode) return; // No share yet
+    // Skip initial mount — only sync actual changes
+    if (lastSyncedOverride.current === undefined) {
+      lastSyncedOverride.current = revenueOverride ?? null;
+      return;
+    }
+    const newVal = revenueOverride ?? null;
+    if (newVal === lastSyncedOverride.current) return; // No change
+    lastSyncedOverride.current = newVal;
+    updateOverrideMutation.mutate({
+      shareCode,
+      revenueOverride: newVal,
+    });
+  }, [shareCode, revenueOverride]);
 
   const handleCreateShare = async () => {
     if (shareUrl) return; // Already created
@@ -166,6 +185,7 @@ export function UniversalShareButton({
         averageDailyRate,
         profitMargin,
         verdict,
+        revenueOverride: revenueOverride ?? undefined,
       });
 
       if (result.success && result.shareCode) {

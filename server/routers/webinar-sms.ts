@@ -1036,6 +1036,8 @@ export const webinarSmsRouter = router({
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
       calendarEventDescription: settings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION,
+      calendarInviteTime: settings["calendar_invite_time"] || null, // null = use WebinarJam schedule time
+      calendarInviteTimezone: settings["calendar_invite_timezone"] || null, // null = use WebinarJam timezone
     };
   }),
 
@@ -2134,8 +2136,8 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       // Pass the schedule date string directly — DO NOT convert through new Date()
       // WebinarJam returns "YYYY-MM-DD HH:mm" in the webinar's timezone.
       // new Date() would parse it as UTC, causing a 4-5 hour offset.
-      const timezone = details.timezone || "America/Los_Angeles";
-      const startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
+      let timezone = details.timezone || "America/Los_Angeles";
+      let startTime = scheduleDate; // Keep as string, e.g. "2026-03-11 19:00"
 
       // Use custom settings if configured
       const settingRows = await db.select().from(webinarSmsSettings);
@@ -2143,6 +2145,15 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       for (const row of settingRows) allSettings[row.settingKey] = row.settingValue;
       const eventName = allSettings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
       const eventDescription = allSettings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
+
+      // Apply time override if configured (replaces the HH:mm portion of the schedule date)
+      if (allSettings["calendar_invite_time"]) {
+        const datePart = scheduleDate.split(" ")[0]; // "2026-03-11"
+        startTime = `${datePart} ${allSettings["calendar_invite_time"]}`; // e.g. "2026-03-11 19:00"
+      }
+      if (allSettings["calendar_invite_timezone"]) {
+        timezone = allSettings["calendar_invite_timezone"];
+      }
 
       const result = await sendCalendarInvite({
         attendeeEmail: registrant.email,
@@ -2202,9 +2213,26 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         throw new TRPCError({ code: "BAD_REQUEST", message: "No schedule date found for this webinar" });
       }
 
-      const timezone = details.timezone || "America/Los_Angeles";
+      let timezone = details.timezone || "America/Los_Angeles";
       // Pass raw schedule date string — DO NOT convert through new Date()
-      const startTime = scheduleDate; // e.g. "2026-03-11 19:00"
+      let startTime = scheduleDate; // e.g. "2026-03-11 19:00"
+
+      // Load settings for overrides
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const allSettings: Record<string, string> = {};
+      for (const row of settingRows) allSettings[row.settingKey] = row.settingValue;
+
+      // Apply time override if configured
+      if (allSettings["calendar_invite_time"]) {
+        const datePart = scheduleDate.split(" ")[0];
+        startTime = `${datePart} ${allSettings["calendar_invite_time"]}`;
+      }
+      if (allSettings["calendar_invite_timezone"]) {
+        timezone = allSettings["calendar_invite_timezone"];
+      }
+
+      const eventName = allSettings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+      const eventDescription = allSettings["calendar_event_description"] || DEFAULT_CALENDAR_DESCRIPTION;
 
       // Get eligible registrants
       const conditions = [
@@ -2225,8 +2253,8 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       const attendees = withEmail.map(r => ({ email: r.email!, name: r.name }));
 
       const result = await sendBulkCalendarInvites(attendees, {
-        title: DEFAULT_CALENDAR_EVENT_NAME,
-        description: DEFAULT_CALENDAR_DESCRIPTION,
+        title: eventName,
+        description: eventDescription,
         startTime,
         timezone,
         joinUrl: details.direct_live_room_url || details.registration_url,
@@ -2302,6 +2330,8 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
     .input(z.object({
       calendarEventName: z.string().max(200).optional(),
       calendarEventDescription: z.string().max(2000).optional(),
+      calendarInviteTime: z.string().max(10).optional(), // e.g. "19:00" (HH:mm in 24h format)
+      calendarInviteTimezone: z.string().max(100).optional(), // e.g. "America/New_York"
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -2323,6 +2353,22 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         } else {
           // Delete custom value so DEFAULT_CALENDAR_DESCRIPTION is used
           await db.delete(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "calendar_event_description"));
+        }
+      }
+      // Calendar invite time override (HH:mm format)
+      if (input.calendarInviteTime !== undefined) {
+        if (input.calendarInviteTime.trim()) {
+          upserts.push({ key: "calendar_invite_time", value: input.calendarInviteTime.trim(), desc: "Custom calendar invite time override (HH:mm, 24h)" });
+        } else {
+          await db.delete(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "calendar_invite_time"));
+        }
+      }
+      // Calendar invite timezone override
+      if (input.calendarInviteTimezone !== undefined) {
+        if (input.calendarInviteTimezone.trim()) {
+          upserts.push({ key: "calendar_invite_timezone", value: input.calendarInviteTimezone.trim(), desc: "Custom calendar invite timezone override" });
+        } else {
+          await db.delete(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "calendar_invite_timezone"));
         }
       }
       for (const u of upserts) {

@@ -34,6 +34,8 @@ export const shareableReportsRouter = router({
         averageDailyRate: z.number().optional(),
         profitMargin: z.number().optional(),
         verdict: z.string().optional(),
+        // Admin revenue override
+        revenueOverride: z.number().nullable().optional(),
         // Creator info
         creatorEmail: z.string().optional(),
         creatorPhone: z.string().optional(),

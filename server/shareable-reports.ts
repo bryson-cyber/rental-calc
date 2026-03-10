@@ -52,6 +52,9 @@ export interface CreateShareableReportInput {
   profitMargin?: number;
   verdict?: string;
   
+  // Admin revenue override
+  revenueOverride?: number | null;
+  
   // Creator information
   creatorEmail?: string;
   creatorPhone?: string;
@@ -89,8 +92,8 @@ export async function createShareableReport(
     
     const shareCode = generateShareCode();
     
-    // Extract revenue override from reportData if embedded by admin
-    const revenueOverride = input.reportData?._revenueOverride ?? null;
+    // Use explicit revenueOverride from input first, fallback to embedded _revenueOverride in reportData
+    const revenueOverride = input.revenueOverride ?? input.reportData?._revenueOverride ?? null;
     
     const [result] = await db.insert(universalShareableReports).values({
       shareCode,

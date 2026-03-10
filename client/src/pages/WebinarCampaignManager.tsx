@@ -1653,6 +1653,8 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
   // Local state for settings form
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
+  const [inviteTime, setInviteTime] = useState(""); // HH:mm 24h format, empty = use WebinarJam default
+  const [inviteTimezone, setInviteTimezone] = useState(""); // IANA timezone, empty = use WebinarJam default
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Sync settings from server when loaded
@@ -1660,6 +1662,8 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
     if (settings.data && !settingsLoaded) {
       setEventName(settings.data.calendarEventName ?? "");
       setEventDescription(settings.data.calendarEventDescription ?? "");
+      setInviteTime(settings.data.calendarInviteTime ?? "");
+      setInviteTimezone(settings.data.calendarInviteTimezone ?? "");
       setSettingsLoaded(true);
     }
   }, [settings.data, settingsLoaded]);
@@ -1668,6 +1672,8 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
     saveCalendarSettings.mutate({
       calendarEventName: eventName,
       calendarEventDescription: eventDescription,
+      calendarInviteTime: inviteTime,
+      calendarInviteTimezone: inviteTimezone,
     });
   };
 
@@ -1675,7 +1681,9 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
   const health = calendarStatus.data;
   const hasSettingsChanges = settingsLoaded && (
     eventName !== (settings.data?.calendarEventName ?? "") ||
-    eventDescription !== (settings.data?.calendarEventDescription ?? "")
+    eventDescription !== (settings.data?.calendarEventDescription ?? "") ||
+    inviteTime !== (settings.data?.calendarInviteTime ?? "") ||
+    inviteTimezone !== (settings.data?.calendarInviteTimezone ?? "")
   );
 
   // Show "(Default)" label when using the system default values
@@ -1790,6 +1798,66 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
               />
               <p className="text-xs text-muted-foreground">
                 Clear to reset to the default 5-Step System description.
+              </p>
+            </div>
+
+            {/* Event Time Override */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="calendar-invite-time" className="text-sm font-medium">
+                  Event Time
+                </Label>
+                {settingsLoaded && !inviteTime && (
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">From WebinarJam</span>
+                )}
+                {settingsLoaded && inviteTime && (
+                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-medium">Custom Override</span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Input
+                    id="calendar-invite-time"
+                    type="time"
+                    value={inviteTime}
+                    onChange={(e) => setInviteTime(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+                <div className="flex-[2]">
+                  <select
+                    value={inviteTimezone}
+                    onChange={(e) => setInviteTimezone(e.target.value)}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="">Use WebinarJam timezone</option>
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="America/Anchorage">Alaska Time (AKT)</option>
+                    <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Override the calendar invite time. Leave empty to use the time from your WebinarJam schedule.
+                {inviteTime && inviteTimezone && (
+                  <span className="block mt-1 text-amber-600 font-medium">
+                    Calendar invites will show: {(() => {
+                      const [h, m] = inviteTime.split(':').map(Number);
+                      const ampm = h >= 12 ? 'PM' : 'AM';
+                      const h12 = h % 12 || 12;
+                      const tzLabel: Record<string, string> = {
+                        'America/New_York': 'ET', 'America/Chicago': 'CT',
+                        'America/Denver': 'MT', 'America/Los_Angeles': 'PT',
+                        'America/Anchorage': 'AKT', 'Pacific/Honolulu': 'HT', 'UTC': 'UTC'
+                      };
+                      return `${h12}:${String(m).padStart(2, '0')} ${ampm} ${tzLabel[inviteTimezone] || inviteTimezone}`;
+                    })()}
+                  </span>
+                )}
               </p>
             </div>
 
