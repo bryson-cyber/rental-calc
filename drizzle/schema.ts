@@ -2627,3 +2627,118 @@ export const emailSendLog = mysqlTable("email_send_log", {
 
 export type EmailSendLog = typeof emailSendLog.$inferSelect;
 export type InsertEmailSendLog = typeof emailSendLog.$inferInsert;
+
+
+// ============================================
+// CONTENT HUB — Multi-Layer AI Video Pipeline
+// ============================================
+
+/**
+ * Content Hub Videos — Main pipeline table.
+ * Stores input parameters, intermediate results from each layer,
+ * and final output URLs. Status follows a finite state machine:
+ *   pipeline_queued → researching → scripting → script_review
+ *     → script_only (terminal, no video API)
+ *     → video_generating → video_complete (terminal)
+ *     → video_failed (terminal)
+ *     → pipeline_failed (terminal, any layer)
+ */
+export const contentHubVideos = mysqlTable("content_hub_videos", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+
+  // ── Input parameters ──────────────────────────────────────────────────────
+  topic: text("topic").notNull(),
+  format: varchar("format", { length: 50 }).notNull(),
+  timing: varchar("timing", { length: 10 }).notNull().default("auto"),
+
+  // Configurable dimensions
+  voiceStyle: varchar("voiceStyle", { length: 50 }),
+  contentFocus: varchar("contentFocus", { length: 50 }),
+  contentLength: varchar("contentLength", { length: 50 }),
+  storyFormat: varchar("storyFormat", { length: 50 }),
+  persona: varchar("persona", { length: 50 }).default("coach-inayah"),
+  bgMusic: varchar("bgMusic", { length: 50 }).default("engaging"),
+  ttsStyle: varchar("ttsStyle", { length: 50 }).default("solo-female"),
+
+  // ── Layer 1 output (Research) ─────────────────────────────────────────────
+  realTimeFacts: text("realTimeFacts"),
+  sources: json("sources").$type<Array<{ uri: string; title: string }>>(),
+  searchQueries: json("searchQueries").$type<string[]>(),
+
+  // ── Layer 2 output (Script) ───────────────────────────────────────────────
+  narrationScript: text("narrationScript"),
+  successStoryUsed: text("successStoryUsed"),
+
+  // ── Layer 3 output (Video) ────────────────────────────────────────────────
+  videoUrl: text("videoUrl"),
+  videoId: varchar("videoId", { length: 255 }),
+  golpoJobId: varchar("golpoJobId", { length: 100 }),
+
+  // ── Layer 4 output (Thumbnail) ────────────────────────────────────────────
+  thumbnailUrl: text("thumbnailUrl"),
+
+  // ── Pipeline metadata ─────────────────────────────────────────────────────
+  status: mysqlEnum("status", [
+    "pipeline_queued",
+    "researching",
+    "scripting",
+    "script_review",
+    "script_only",
+    "video_generating",
+    "video_complete",
+    "video_failed",
+    "pipeline_failed",
+  ]).notNull().default("pipeline_queued"),
+
+  /** Human-readable stage description for UI progress display */
+  pipelineStage: varchar("pipelineStage", { length: 200 }),
+  error: text("error"),
+
+  // ── Performance metrics ───────────────────────────────────────────────────
+  layer1DurationMs: int("layer1DurationMs"),
+  layer2DurationMs: int("layer2DurationMs"),
+  layer3DurationMs: int("layer3DurationMs"),
+  totalDurationMs: int("totalDurationMs"),
+  modelsUsed: json("modelsUsed").$type<{ layer1?: string; layer2?: string }>(),
+
+  // ── Timestamps ────────────────────────────────────────────────────────────
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("chv_user_idx").on(table.userId),
+  index("chv_status_idx").on(table.status),
+  index("chv_format_idx").on(table.format),
+  index("chv_created_idx").on(table.createdAt),
+]);
+
+export type ContentHubVideo = typeof contentHubVideos.$inferSelect;
+export type InsertContentHubVideo = typeof contentHubVideos.$inferInsert;
+
+/**
+ * Content Hub Presets — Saved filter configurations.
+ * Each preset stores the complete filter state with individual columns
+ * (not JSON blob) for type-safe queries and future analytics.
+ */
+export const contentHubPresets = mysqlTable("content_hub_presets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  emoji: varchar("emoji", { length: 10 }).default("⚡"),
+
+  // Filter values
+  format: varchar("format", { length: 50 }),
+  voiceStyle: varchar("voiceStyle", { length: 50 }),
+  contentFocus: varchar("contentFocus", { length: 50 }),
+  contentLength: varchar("contentLength", { length: 50 }),
+  storyFormat: varchar("storyFormat", { length: 50 }),
+  persona: varchar("persona", { length: 50 }).default("coach-inayah"),
+  bgMusic: varchar("bgMusic", { length: 50 }).default("engaging"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("chp_user_idx").on(table.userId),
+]);
+
+export type ContentHubPreset = typeof contentHubPresets.$inferSelect;
+export type InsertContentHubPreset = typeof contentHubPresets.$inferInsert;

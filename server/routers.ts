@@ -54,6 +54,7 @@ import {
   voiceBugReportRouter,
   translationRouter,
   contentStudioRouter,
+  contentHubRouter,
   webinarSmsRouter,
   leaseReaderRouter,
   webinarEnvRouter,
@@ -180,8 +181,9 @@ export const appRouter = router({
 
   // Translation
   translation: translationRouter,
-  // Content Studio
+  // Content Studio (legacy) + Content Hub (full pipeline)
   contentStudio: contentStudioRouter,
+  contentHub: contentHubRouter,
 
   // Webinar SMS (isolated module)
   webinarSms: webinarSmsRouter,

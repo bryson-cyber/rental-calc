@@ -32,6 +32,7 @@ describe('FEATURES constants', () => {
     expect(FEATURES.DEAL_VERDICT).toBe('deal-verdict');
     expect(FEATURES.AI_ADVISOR_TOOL_LOOP).toBe('ai-advisor-tool-loop');
     expect(FEATURES.DEAL_ALERT_MEMO).toBe('deal-alert-memo');
+    expect(FEATURES.CONTENT_HUB_SCRIPT).toBe('content-hub-script');
   });
 
   it('has all expected Sonnet features', () => {
@@ -54,9 +55,9 @@ describe('FEATURES constants', () => {
     expect(FEATURES.HEALTH_CHECK).toBe('health-check');
   });
 
-  it('has exactly 24 features', () => {
+  it('has exactly 25 features', () => {
     const featureCount = Object.keys(FEATURES).length;
-    expect(featureCount).toBe(24);
+    expect(featureCount).toBe(25);
   });
 
   it('has no duplicate feature values', () => {
@@ -112,12 +113,13 @@ describe('Provider Assignments', () => {
     expect(geminiFeatures).toContain(FEATURES.ENHANCED_NARRATIVE);
   });
 
-  it('routes exactly 3 features to Opus', () => {
+  it('routes exactly 4 features to Opus', () => {
     const opusFeatures = getFeaturesByProvider('opus');
-    expect(opusFeatures).toHaveLength(3);
+    expect(opusFeatures).toHaveLength(4);
     expect(opusFeatures).toContain(FEATURES.DEAL_VERDICT);
     expect(opusFeatures).toContain(FEATURES.AI_ADVISOR_TOOL_LOOP);
     expect(opusFeatures).toContain(FEATURES.DEAL_ALERT_MEMO);
+    expect(opusFeatures).toContain(FEATURES.CONTENT_HUB_SCRIPT);
   });
 
   it('routes exactly 17 features to Sonnet', () => {
@@ -125,11 +127,11 @@ describe('Provider Assignments', () => {
     expect(sonnetFeatures).toHaveLength(17);
   });
 
-  it('total features across all providers equals 24', () => {
+  it('total features across all providers equals 25', () => {
     const gemini = getFeaturesByProvider('gemini').length;
     const opus = getFeaturesByProvider('opus').length;
     const sonnet = getFeaturesByProvider('sonnet').length;
-    expect(gemini + opus + sonnet).toBe(24);
+    expect(gemini + opus + sonnet).toBe(25);
   });
 });
 

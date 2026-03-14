@@ -1,0 +1,85 @@
+{
+  "query": "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 15;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 15;",
+  "rows": [
+    {
+      "id": "3848222",
+      "hash": "2647a9bb6a9f9e588f6985dc026f3d504c678d69bde66732ddaf176ae62f6fd9",
+      "created_at": "1772704715295"
+    },
+    {
+      "id": "3848221",
+      "hash": "674b2996deed9748403067ba19483ffc1cc618b9ae985ad13dae290e3d7dd12d",
+      "created_at": "1772703782416"
+    },
+    {
+      "id": "3848220",
+      "hash": "805d9080be24dabac3aef939b5b1796ff2039f5a2d9b27f2e52fc7313eb7b619",
+      "created_at": "1772697102923"
+    },
+    {
+      "id": "3848219",
+      "hash": "0006_handy_morg",
+      "created_at": "1772678063000"
+    },
+    {
+      "id": "3818220",
+      "hash": "19935704ee28392ccefc7e190cf605aeffbd77f4d643d0667623412d574a5414",
+      "created_at": "1772574583945"
+    },
+    {
+      "id": "3818219",
+      "hash": "1fc70a5614ffcd00a69a1ba80a87021d39e69af290e30f0dff281ca9c01b40be",
+      "created_at": "1772572078457"
+    },
+    {
+      "id": "3788219",
+      "hash": "0ed3d6304980a00a2d7598305dce92f60f86adbf2b95460cc8a5b0848f77dffe",
+      "created_at": "1772046755000"
+    },
+    {
+      "id": "3758224",
+      "hash": "2ba6c67d7aca0ade239e9bb6f29ef44db547398bc68760e683f474d9ba678c53",
+      "created_at": "1771813967465"
+    },
+    {
+      "id": "3758223",
+      "hash": "803511aea53597fad47c33407de9ffb5c2e3b2269e1c3fd5b536793cc5306174",
+      "created_at": "1771811779465"
+    },
+    {
+      "id": "3758222",
+      "hash": "534897f804939cead1c4c76c590334c05054bd4c99868dc956a8e5a1239bd71e",
+      "created_at": "1771805710415"
+    },
+    {
+      "id": "3758221",
+      "hash": "937b68782a30266ff163af40e0170107a523ac996ac9b9a7c6c8d26993f5af7e",
+      "created_at": "1771799204289"
+    },
+    {
+      "id": "3758220",
+      "hash": "ed1da96fd73dc698d00a9adb9cabb397892614417f0aa4ddf6e75a4344d96b99",
+      "created_at": "1771796134164"
+    },
+    {
+      "id": "3758219",
+      "hash": "17951db8984c9868827b9e41f9c1db6ee92a3196a4099ce78f7cd34abb4fd503",
+      "created_at": "1771794158198"
+    },
+    {
+      "id": "3728222",
+      "hash": "0218ce53e062b908a4399b5062e7d4645c7c78925b61c85484b4fc49d01781bf",
+      "created_at": "1771732376543"
+    },
+    {
+      "id": "3728221",
+      "hash": "616d567da659626c1e4d28a5e1463d7749b886451bde7c285ffed47f7f0e023f",
+      "created_at": "1771731216079"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\thash\tcreated_at\n3848222\t2647a9bb6a9f9e588f6985dc026f3d504c678d69bde66732ddaf176ae62f6fd9\t1772704715295\n3848221\t674b2996deed9748403067ba19483ffc1cc618b9ae985ad13dae290e3d7dd12d\t1772703782416\n3848220\t805d9080be24dabac3aef939b5b1796ff2039f5a2d9b27f2e52fc7313eb7b619\t1772697102923\n3848219\t0006_handy_morg\t1772678063000\n3818220\t19935704ee28392ccefc7e190cf605aeffbd77f4d643d0667623412d574a5414\t1772574583945\n3818219\t1fc70a5614ffcd00a69a1ba80a87021d39e69af290e30f0dff281ca9c01b40be\t1772572078457\n3788219\t0ed3d6304980a00a2d7598305dce92f60f86adbf2b95460cc8a5b0848f77dffe\t1772046755000\n3758224\t2ba6c67d7aca0ade239e9bb6f29ef44db547398bc68760e683f474d9ba678c53\t1771813967465\n3758223\t803511aea53597fad47c33407de9ffb5c2e3b2269e1c3fd5b536793cc5306174\t1771811779465\n3758222\t534897f804939cead1c4c76c590334c05054bd4c99868dc956a8e5a1239bd71e\t1771805710415\n3758221\t937b68782a30266ff163af40e0170107a523ac996ac9b9a7c6c8d26993f5af7e\t1771799204289\n3758220\ted1da96fd73dc698d00a9adb9cabb397892614417f0aa4ddf6e75a4344d96b99\t1771796134164\n3758219\t17951db8984c9868827b9e41f9c1db6ee92a3196a4099ce78f7cd34abb4fd503\t1771794158198\n3728222\t0218ce53e062b908a4399b5062e7d4645c7c78925b61c85484b4fc49d01781bf\t1771732376543\n3728221\t616d567da659626c1e4d28a5e1463d7749b886451bde7c285ffed47f7f0e023f\t1771731216079\n",
+  "stderr": "",
+  "execution_time_ms": 121
+}

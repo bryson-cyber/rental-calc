@@ -12858,3 +12858,21 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ### Rewrite: Deep Developer Guide (March 10, 2026)
 - [ ] Rewrite DEVELOPER_GUIDE.md with actual business logic, data flows, and deep file-by-file explanations
+
+### Feature: Content Hub — Full AI Video Generation Pipeline (March 14, 2026)
+- [x] New DB table: content_hub_videos (multi-layer pipeline with status FSM)
+- [x] New DB table: content_hub_presets (saved filter configurations)
+- [x] Domain context JSON with brand data, success stories, CTAs
+- [x] Layer 1: Research Engine (LLM-powered factual research)
+- [x] Layer 2: Script Generation Engine (PTCF framework, persona, story formats, voice styles)
+- [x] Layer 3: Video Production (Golpo API fire-and-poll with script cleaning + auto-timing)
+- [x] Layer 4: Thumbnail Generation (AI image generation, non-critical)
+- [x] Script Review/Approval Workflow (pipeline pauses at script_review)
+- [x] AI Topic Suggestion Engine (contextual suggestions with filters)
+- [x] Voice/Text Brain Dump Input System (audio transcription + AI optimization)
+- [x] Batch Generation System (queue multiple topics, sequential processing)
+- [x] Preset System (save/load/delete filter configurations)
+- [x] Content Hub tRPC router (all pipeline, management, topic, preset endpoints)
+- [x] Content Hub admin UI (Generate tab + Library tab with polling)
+- [x] Frontend polling architecture (deduplication, tab preservation with forceMount)
+- [x] Vitest tests for Content Hub pipeline (16 tests passing)

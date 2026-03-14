@@ -12,6 +12,7 @@ import { useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 
 const ContentStudioTabLazy = lazy(() => import('./ContentStudioPage').then(m => ({ default: m.ContentStudioTab })));
+const ContentHubTabLazy = lazy(() => import('./ContentHubPage').then(m => ({ default: m.ContentHubTab })));
 const WebinarSmsTabLazy = lazy(() => import('./WebinarSmsTab').then(m => ({ default: m.WebinarSmsTab })));
 const WebinarEnvTabLazy = lazy(() => import('./WebinarEnvTab').then(m => ({ default: m.WebinarEnvTab })));
 import { trpc } from '@/lib/trpc';
@@ -69,7 +70,8 @@ import {
   ChevronRight,
   User,
   BookOpen,
-  Radio
+  Radio,
+  Film
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -423,6 +425,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="cache" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Database className="w-4 h-4 mr-2" />
               Cache
+            </TabsTrigger>
+            <TabsTrigger value="content-hub" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Film className="w-4 h-4 mr-2" />
+              Content Hub
             </TabsTrigger>
             <TabsTrigger value="content-studio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <PenLine className="w-4 h-4 mr-2" />
@@ -1682,6 +1688,12 @@ export default function UnifiedAdmin() {
           {/* ============================================ */}
           {/* CONTENT STUDIO TAB */}
           {/* ============================================ */}
+          <TabsContent value="content-hub" className="space-y-6">
+            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+              <ContentHubTabLazy />
+            </Suspense>
+          </TabsContent>
+
           <TabsContent value="content-studio" className="space-y-6">
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
               <ContentStudioTabLazy />

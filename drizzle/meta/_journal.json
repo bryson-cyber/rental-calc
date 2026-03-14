@@ -71,6 +71,13 @@
       "when": 1772706373673,
       "tag": "0009_complete_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1773523267051,
+      "tag": "0010_confused_the_watchers",
+      "breakpoints": true
     }
   ]
 }

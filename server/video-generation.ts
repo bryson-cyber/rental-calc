@@ -59,7 +59,7 @@ const activePollers = new Set<string>();
 
 // ─── Golpo REST API Config ──────────────────────────────────────────────────
 
-const GOLPO_BASE_URL = 'https://api.golpoai.com';
+const GOLPO_BASE_URL = ENV.golpoBaseUrl || 'https://api.golpoai.com';
 
 function getGolpoApiKey(): string {
   const apiKey = ENV.golpoApiKey;
