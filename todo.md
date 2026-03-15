@@ -12908,3 +12908,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verified fetch returns Golpo status in <1s (vs axios timing out at 30-120s)
 - [x] Video #7 and #14 both confirmed complete with working video URLs
 - [x] Updated vitest tests: 24 tests passing (added checkGolpoStatus procedure test, updated procedure count to 11, added background recovery export checks)
+
+### Bug Fix: Own Script Video Creation Not Working (March 15, 2026)
+- [x] Diagnose why "My Script" mode doesn't produce videos — was pausing at script_review requiring a second approval click
+- [x] Fix own-script pipeline to skip research/scripting and go straight to Golpo — backend now submits directly to Golpo when scriptMode='own_script'
+- [x] Make the flow intuitive: paste script → generate video (no unnecessary steps) — added "Direct to Video" banner, updated button to "Generate Video", added duration selector
+- [x] Test end-to-end: UI verified in browser, all 24 content hub tests pass

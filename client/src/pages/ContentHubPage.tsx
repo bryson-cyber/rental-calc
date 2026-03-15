@@ -10,13 +10,13 @@
  * Right/below: Script preview & video status
  *
  * Script Input Modes:
- *   1. My Script — paste your finished script, review → video
+ *   1. My Script — paste your finished script, goes DIRECTLY to Golpo for video (no review step)
  *   2. AI Enhance — paste rough script, AI polishes (keeps your words), review → video
  *   3. Brain Dump — type rough ideas/bullets, AI builds a full script, review → video
  *   4. AI Generate — enter topic, AI writes from scratch, review → video
  *   5. AI Suggest — platform data suggests topics, pick one → AI Generate flow
  *
- * ALL modes pause at script_review before sending to Golpo for video.
+ * My Script mode skips review. All other modes pause at script_review before sending to Golpo.
  */
 import { useState, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
@@ -120,7 +120,7 @@ type InputMode = 'suggest' | 'braindump' | 'my_script' | 'ai_enhance' | 'ai_gene
 const INPUT_MODES: { id: InputMode; icon: typeof Sparkles; label: string; desc: string }[] = [
   { id: 'suggest', icon: Lightbulb, label: 'AI Topic Suggestions', desc: 'Pick a topic to generate content' },
   { id: 'braindump', icon: Brain, label: 'Brain Dump', desc: 'Speak or type your idea — AI optimizes it into a content prompt' },
-  { id: 'my_script', icon: FileText, label: 'My Script', desc: 'Paste your finished script as-is' },
+  { id: 'my_script', icon: FileText, label: 'My Script', desc: 'Paste your script — goes straight to video generation' },
   { id: 'ai_enhance', icon: Wand2, label: 'AI Enhance', desc: 'AI polishes your draft script' },
   { id: 'ai_generate', icon: Sparkles, label: 'AI Generate', desc: 'Enter a topic — AI writes from scratch' },
 ];
@@ -190,7 +190,14 @@ function ContentHubCore() {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const startPipeline = trpc.contentHub.startPipeline.useMutation({
     onSuccess: (data) => {
-      toast({ title: 'Pipeline started', description: `Video #${data.videoId} is being processed.`, variant: 'default' });
+      const isOwnScript = inputMode === 'my_script';
+      toast({ 
+        title: isOwnScript ? 'Video generating!' : 'Pipeline started', 
+        description: isOwnScript 
+          ? `Your script is being sent to Golpo AI. Video #${data.videoId} will be ready in a few minutes.`
+          : `Video #${data.videoId} is being processed.`, 
+        variant: 'default' 
+      });
       setSelectedVideoId(data.videoId);
       setActiveTab('videos');
       setTopic('');
@@ -359,7 +366,7 @@ function ContentHubCore() {
   }, [inputMode, userScript, brainDump, topic, startPipeline.isPending]);
 
   const actionLabel = useMemo(() => {
-    if (inputMode === 'my_script') return scriptOnly ? 'Save Script' : 'Review & Generate Video';
+    if (inputMode === 'my_script') return scriptOnly ? 'Save Script' : 'Generate Video';
     if (inputMode === 'ai_enhance') return 'Enhance Script';
     if (inputMode === 'braindump') return 'Build Script from Ideas';
     return scriptOnly ? 'Generate Script' : 'Generate Script + Video';
@@ -762,33 +769,64 @@ Example:
               {/* ── MY SCRIPT ── */}
               {inputMode === 'my_script' && (
                 <div className="space-y-4">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800">Direct to Video</p>
+                      <p className="text-xs text-emerald-700">Your script goes straight to Golpo AI for video generation. No review step needed.</p>
+                    </div>
+                  </div>
                   <Input
-                    placeholder="Title (optional)"
+                    placeholder="Title (e.g., How Airbnb Arbitrage Works)"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     className="text-sm"
                   />
                   <div className="relative">
                     <Textarea
-                      placeholder="Paste your full narration script here..."
+                      placeholder={`Paste your narration script here...\n\nExample:\nHey, let me break down exactly how Airbnb arbitrage works. You rent a property long-term — say for $1,500 a month. Then you furnish it, list it on Airbnb, and charge $150 a night. If you book just 20 nights a month, that's $3,000 coming in. Subtract your $1,500 rent, cleaning costs, and supplies — you're keeping $800 to $1,200 every single month from one property...`}
                       value={userScript}
                       onChange={(e) => setUserScript(e.target.value)}
                       rows={14}
-                      className="text-sm font-mono"
+                      className="text-sm"
                     />
                     {wordCount > 0 && (
                       <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                        {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
+                        {wordCount} words · ~{Math.ceil(wordCount / 150)} min video
                       </div>
                     )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Select value={contentLength} onValueChange={setContentLength}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Video Length" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (from word count)</SelectItem>
+                        <SelectItem value="30s">~30 seconds</SelectItem>
+                        <SelectItem value="1min">~1 minute</SelectItem>
+                        <SelectItem value="2-3">2-3 minutes</SelectItem>
+                        <SelectItem value="5-10">5-10 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
+                      <span className="text-sm text-muted-foreground">Script only (no video)</span>
+                    </div>
                   </div>
                   <Button
                     onClick={handleStartPipeline}
                     disabled={!canSubmit}
-                    className="w-full gap-2"
+                    size="lg"
+                    className="w-full gap-2 text-base"
                   >
-                    {startPipeline.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    {actionLabel}
+                    {startPipeline.isPending ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Sending to Golpo AI...</>
+                    ) : scriptOnly ? (
+                      <><Save className="w-5 h-5" /> Save Script</>
+                    ) : (
+                      <><Video className="w-5 h-5" /> Generate Video</>
+                    )}
                   </Button>
                 </div>
               )}

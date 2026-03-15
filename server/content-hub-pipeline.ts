@@ -650,23 +650,65 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
 
     if (scriptMode === 'own_script') {
       // ── OWN SCRIPT: User provides the final script, skip Layer 1 & 2 ──
+      // Go straight to video generation — user wrote the script, no review needed.
       if (!input.userScript) throw new Error('userScript is required for own_script mode');
       narrationScript = input.userScript;
 
-      // Save the script and pause at script_review so user can confirm before video
+      // Save the script and immediately proceed to video generation
       await db.update(contentHubVideos)
         .set({
           narrationScript,
-          status: 'script_review',
+          status: input.scriptOnly ? 'script_only' : 'video_generating',
           layer1DurationMs: 0,
           layer2DurationMs: 0,
-          pipelineStage: 'Your script is ready for review — approve to generate video',
+          pipelineStage: input.scriptOnly ? 'Script saved (no video requested)' : 'Sending your script to Golpo AI for video generation...',
         })
         .where(eq(contentHubVideos.id, videoId));
 
-      console.log(`[ContentHub] Video #${videoId}: Own script saved, paused at script_review`);
+      console.log(`[ContentHub] Video #${videoId}: Own script saved, ${input.scriptOnly ? 'script-only mode' : 'proceeding directly to video generation'}`);
+
+      if (input.scriptOnly) {
+        activePipelines.delete(videoId);
+        return;
+      }
+
+      // Go directly to Layer 3 — no review pause
+      try {
+        const { videoUrl, golpoJobId, durationMs } = await runLayer3VideoProduction(
+          videoId,
+          narrationScript,
+          {
+            timing: input.timing,
+            bgMusic: input.bgMusic,
+            ttsStyle: input.ttsStyle,
+          },
+        );
+
+        const totalMs = durationMs;
+        await db.update(contentHubVideos)
+          .set({
+            status: 'video_complete',
+            videoUrl,
+            videoId: golpoJobId,
+            layer3DurationMs: durationMs,
+            totalDurationMs: totalMs,
+            pipelineStage: 'Pipeline complete — video ready!',
+          })
+          .where(eq(contentHubVideos.id, videoId));
+
+        console.log(`[ContentHub] Video #${videoId}: Own script → video complete in ${Math.round(totalMs / 1000)}s`);
+      } catch (err: any) {
+        await db.update(contentHubVideos)
+          .set({
+            status: 'video_failed',
+            error: err instanceof Error ? err.message : String(err),
+            pipelineStage: 'Video generation failed',
+          })
+          .where(eq(contentHubVideos.id, videoId));
+        throw err;
+      }
       activePipelines.delete(videoId);
-      return; // Pipeline pauses here — user approves via updateScript()
+      return;
 
     } else if (scriptMode === 'ai_enhance') {
       // ── AI ENHANCE: Run research, then enhance user's script (don't rewrite) ──

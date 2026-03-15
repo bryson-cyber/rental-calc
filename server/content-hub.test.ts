@@ -187,7 +187,7 @@ describe('Content Hub Router', () => {
   });
 
   describe('Script mode validation', () => {
-    it('should accept own_script mode with userScript', async () => {
+    it('should accept own_script mode with userScript (direct to video, no review)', async () => {
       const caller = appRouter.createCaller(createAdminContext());
       try {
         await caller.contentHub.startPipeline({
@@ -198,6 +198,7 @@ describe('Content Hub Router', () => {
         });
       } catch (err: any) {
         // Should fail at runtime (DB), not at validation
+        // own_script mode skips script_review and goes directly to video_generating
         expect(err.code).not.toBe('BAD_REQUEST');
       }
     });
