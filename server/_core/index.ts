@@ -1185,10 +1185,12 @@ async function startServer() {
     // (multi-channel reminders fire alongside SMS when sequence names match)
 
     // Resume any incomplete Content Hub video pipelines from before restart
-    import('../content-hub-pipeline').then(({ resumeIncompletePipelines }) => {
+    import('../content-hub-pipeline').then(({ resumeIncompletePipelines, startBackgroundRecovery }) => {
       resumeIncompletePipelines().catch((err) =>
         console.error('[ContentHub] Failed to resume incomplete pipelines:', err),
       );
+      // Start background recovery cron (checks failed videos every 5 min)
+      startBackgroundRecovery();
     }).catch(() => { /* content-hub-pipeline module not critical */ });
   });
 }

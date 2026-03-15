@@ -1,6 +1,14 @@
 /**
  * Content Hub — Full Pipeline Video Generation UI
  *
+ * Redesigned with a "Content Filters" panel at the top (matching the Content Studio reference):
+ *   - Presenter Persona cards
+ *   - Format, Voice Style, Focus dropdowns
+ *   - Length, Story Format, Music dropdowns
+ *
+ * Below filters: Input area (AI Suggest topics, Brain Dump, or direct topic entry)
+ * Right/below: Script preview & video status
+ *
  * Script Input Modes:
  *   1. My Script — paste your finished script, review → video
  *   2. AI Enhance — paste rough script, AI polishes (keeps your words), review → video
@@ -57,6 +65,14 @@ import {
   FileText,
   ArrowLeft,
   RotateCcw,
+  SlidersHorizontal,
+  Mic,
+  Music,
+  User,
+  Target,
+  Video,
+  MessageSquare,
+  Search,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -86,42 +102,71 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-type ScriptInputMode = 'my_script' | 'ai_enhance' | 'braindump' | 'ai_generate' | 'suggest';
+// ── Persona Data ────────────────────────────────────────────────────────────
 
-const MODE_META: Record<ScriptInputMode, { icon: typeof Pencil; label: string; desc: string }> = {
-  my_script: { icon: FileText, label: 'My Script', desc: 'Paste your finished script' },
-  ai_enhance: { icon: Wand2, label: 'AI Enhance', desc: 'AI polishes your script' },
-  braindump: { icon: Brain, label: 'Brain Dump', desc: 'Rough ideas → full script' },
-  ai_generate: { icon: Sparkles, label: 'AI Generate', desc: 'AI writes from scratch' },
-  suggest: { icon: Lightbulb, label: 'AI Suggest', desc: 'Get topic ideas' },
-};
+const PERSONAS = [
+  { id: 'coach-inayah', name: 'Coach Inayah', desc: 'Warm, empowering business credit expert', color: 'bg-orange-500' },
+  { id: 'financial-advisor', name: 'Financial Advisor', desc: 'Calm, authoritative, data-driven', color: 'bg-teal-500' },
+  { id: 'street-smart', name: 'Street-Smart Mentor', desc: 'Real talk, no-BS energy', color: 'bg-green-500' },
+  { id: 'data-analyst', name: 'Data Analyst', desc: 'Numbers-focused, precise', color: 'bg-amber-500' },
+  { id: 'story-narrator', name: 'Story Narrator', desc: 'Brings client journeys to life', color: 'bg-rose-400' },
+  { id: 'hype-man', name: 'Hype Man', desc: 'High-energy motivational speaker', color: 'bg-red-500' },
+] as const;
+
+// ── Input Mode Types ────────────────────────────────────────────────────────
+
+type InputMode = 'suggest' | 'braindump' | 'my_script' | 'ai_enhance' | 'ai_generate';
+
+const INPUT_MODES: { id: InputMode; icon: typeof Sparkles; label: string; desc: string }[] = [
+  { id: 'suggest', icon: Lightbulb, label: 'AI Topic Suggestions', desc: 'Pick a topic to generate content' },
+  { id: 'braindump', icon: Brain, label: 'Brain Dump', desc: 'Speak or type your idea — AI optimizes it into a content prompt' },
+  { id: 'my_script', icon: FileText, label: 'My Script', desc: 'Paste your finished script as-is' },
+  { id: 'ai_enhance', icon: Wand2, label: 'AI Enhance', desc: 'AI polishes your draft script' },
+  { id: 'ai_generate', icon: Sparkles, label: 'AI Generate', desc: 'Enter a topic — AI writes from scratch' },
+];
 
 // ── Main Content Hub Component ──────────────────────────────────────────────
 
 function ContentHubCore() {
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState<'create' | 'videos' | 'presets'>('create');
 
-  // ── Create Section State ──────────────────────────────────────────────────
-  const [mode, setMode] = useState<ScriptInputMode>('my_script');
+  // ── Content Filters State ─────────────────────────────────────────────────
+  const [showFilters, setShowFilters] = useState(true);
+  const [persona, setPersona] = useState('coach-inayah');
+  const [videoFormat, setVideoFormat] = useState('all');
+  const [voiceStyle, setVoiceStyle] = useState('auto');
+  const [contentFocus, setContentFocus] = useState('teaching');
+  const [contentLength, setContentLength] = useState('5-10');
+  const [storyFormat, setStoryFormat] = useState('whiteboard');
+  const [bgMusic, setBgMusic] = useState('engaging');
+
+  // ── Input Mode State ──────────────────────────────────────────────────────
+  const [inputMode, setInputMode] = useState<InputMode>('suggest');
   const [topic, setTopic] = useState('');
-  const [format, setFormat] = useState<'lesson' | 'deep_dive'>('lesson');
   const [userScript, setUserScript] = useState('');
   const [brainDump, setBrainDump] = useState('');
   const [scriptOnly, setScriptOnly] = useState(false);
-  const [bgMusic, setBgMusic] = useState('engaging');
-  const [ttsStyle, setTtsStyle] = useState('solo-female');
-  const [timing, setTiming] = useState('auto');
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // ── Batch State ───────────────────────────────────────────────────────────
-  const [batchTopics, setBatchTopics] = useState<Array<{ topic: string; format: 'lesson' | 'deep_dive' }>>([]);
-  const [showBatch, setShowBatch] = useState(false);
+  // ── Section State ─────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'create' | 'videos'>('create');
 
   // ── Video Detail State ────────────────────────────────────────────────────
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [editingScript, setEditingScript] = useState(false);
   const [editedScript, setEditedScript] = useState('');
+
+  // ── Count active filters ──────────────────────────────────────────────────
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (persona !== 'coach-inayah') count++;
+    if (videoFormat !== 'all') count++;
+    if (voiceStyle !== 'auto') count++;
+    if (contentFocus !== 'teaching') count++;
+    if (contentLength !== '5-10') count++;
+    if (storyFormat !== 'whiteboard') count++;
+    if (bgMusic !== 'engaging') count++;
+    return count;
+  }, [persona, videoFormat, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const videosQuery = trpc.contentHub.listVideos.useQuery(
@@ -142,14 +187,12 @@ function ContentHubCore() {
     },
   );
 
-  const presetsQuery = trpc.contentHub.listPresets.useQuery();
-
   // ── Mutations ─────────────────────────────────────────────────────────────
   const startPipeline = trpc.contentHub.startPipeline.useMutation({
     onSuccess: (data) => {
       toast({ title: 'Pipeline started', description: `Video #${data.videoId} is being processed.`, variant: 'default' });
       setSelectedVideoId(data.videoId);
-      setActiveSection('videos');
+      setActiveTab('videos');
       setTopic('');
       setUserScript('');
       setBrainDump('');
@@ -189,55 +232,43 @@ function ContentHubCore() {
     },
   });
 
-  const startBatchMut = trpc.contentHub.startBatch.useMutation({
+  const checkGolpoMut = trpc.contentHub.checkGolpoStatus.useMutation({
     onSuccess: (data) => {
-      toast({ title: 'Batch started', description: `${data.results.length} pipelines queued.`, variant: 'default' });
-      setBatchTopics([]);
-      setShowBatch(false);
-      setActiveSection('videos');
+      if (data.videoUrl) {
+        toast({ title: 'Video recovered!', description: 'The video was already complete on Golpo.', variant: 'default' });
+      } else {
+        toast({ title: `Status: ${data.status}`, description: data.message || 'Checked Golpo status.', variant: 'default' });
+      }
+      videoDetailQuery.refetch();
       videosQuery.refetch();
     },
     onError: (err) => {
-      toast({ title: 'Batch failed', description: err.message, variant: 'destructive' });
-    },
-  });
-
-  const savePresetMut = trpc.contentHub.savePreset.useMutation({
-    onSuccess: () => {
-      toast({ title: 'Preset saved', variant: 'default' });
-      presetsQuery.refetch();
-    },
-  });
-
-  const deletePresetMut = trpc.contentHub.deletePreset.useMutation({
-    onSuccess: () => {
-      presetsQuery.refetch();
+      toast({ title: 'Check failed', description: err.message, variant: 'destructive' });
     },
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleStartPipeline = useCallback(() => {
-    // Determine scriptMode based on the current input mode
     let scriptMode: 'own_script' | 'ai_enhance' | 'ai_generate' = 'ai_generate';
     let scriptText: string | undefined;
     let brainDumpText: string | undefined;
 
-    if (mode === 'my_script') {
+    if (inputMode === 'my_script') {
       if (!userScript.trim()) {
         toast({ title: 'Paste your script', description: 'The script field is required in My Script mode.', variant: 'destructive' });
         return;
       }
       scriptMode = 'own_script';
       scriptText = userScript.trim();
-    } else if (mode === 'ai_enhance') {
+    } else if (inputMode === 'ai_enhance') {
       if (!userScript.trim()) {
         toast({ title: 'Paste your script', description: 'Paste the script you want AI to enhance.', variant: 'destructive' });
         return;
       }
       scriptMode = 'ai_enhance';
       scriptText = userScript.trim();
-    } else if (mode === 'braindump') {
+    } else if (inputMode === 'braindump') {
       if (!brainDump.trim()) {
         toast({ title: 'Enter your brain dump', description: 'Type your rough ideas so AI can build a script.', variant: 'destructive' });
         return;
@@ -245,14 +276,16 @@ function ContentHubCore() {
       scriptMode = 'ai_generate';
       brainDumpText = brainDump.trim();
     } else {
-      // ai_generate or suggest
       scriptMode = 'ai_generate';
     }
 
-    if (!topic.trim() && mode !== 'my_script') {
+    if (!topic.trim() && inputMode !== 'my_script') {
       toast({ title: 'Enter a topic', variant: 'destructive' });
       return;
     }
+
+    // Map contentLength to format for backward compatibility
+    const format = contentLength === '5-10' ? 'deep_dive' as const : 'lesson' as const;
 
     startPipeline.mutate({
       topic: topic.trim() || 'Untitled Script',
@@ -261,51 +294,29 @@ function ContentHubCore() {
       scriptMode,
       userScript: scriptText,
       brainDump: brainDumpText,
+      persona,
+      voiceStyle,
+      contentFocus,
+      contentLength,
+      storyFormat,
       bgMusic,
-      ttsStyle,
-      timing,
     });
-  }, [mode, topic, format, userScript, brainDump, scriptOnly, bgMusic, ttsStyle, timing, startPipeline, toast]);
+  }, [inputMode, topic, userScript, brainDump, scriptOnly, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, startPipeline, toast]);
 
   const handleUseSuggestion = (suggestion: { topic: string; format: string }) => {
     setTopic(suggestion.topic);
-    setFormat(suggestion.format as 'lesson' | 'deep_dive');
-    setMode('ai_generate');
+    setInputMode('ai_generate');
     toast({ title: 'Topic loaded', description: 'Review and start the pipeline.', variant: 'default' });
   };
 
-  const handleAddToBatch = () => {
-    if (!topic.trim()) return;
-    setBatchTopics((prev) => [...prev, { topic: topic.trim(), format }]);
-    setTopic('');
-  };
-
-  const handleStartBatch = () => {
-    if (batchTopics.length === 0) return;
-    startBatchMut.mutate({
-      topics: batchTopics,
-      scriptOnly,
-      bgMusic,
-      ttsStyle,
-      timing,
-    });
-  };
-
-  const handleSavePreset = () => {
-    const name = prompt('Preset name:');
-    if (!name) return;
-    savePresetMut.mutate({
-      name,
-      format,
-      bgMusic,
-      persona: 'coach-inayah',
-    });
-  };
-
-  const handleApplyPreset = (preset: any) => {
-    if (preset.format) setFormat(preset.format);
-    if (preset.bgMusic) setBgMusic(preset.bgMusic);
-    toast({ title: `Preset "${preset.name}" applied`, variant: 'default' });
+  const handleClearFilters = () => {
+    setPersona('coach-inayah');
+    setVideoFormat('all');
+    setVoiceStyle('auto');
+    setContentFocus('teaching');
+    setContentLength('5-10');
+    setStoryFormat('whiteboard');
+    setBgMusic('engaging');
   };
 
   const copyToClipboard = (text: string) => {
@@ -328,33 +339,31 @@ function ContentHubCore() {
   const videoDetail = videoDetailQuery.data;
 
   const wordCount = useMemo(() => {
-    if (mode === 'my_script' || mode === 'ai_enhance') {
+    if (inputMode === 'my_script' || inputMode === 'ai_enhance') {
       return userScript.trim().split(/\s+/).filter(Boolean).length;
     }
-    if (mode === 'braindump') {
+    if (inputMode === 'braindump') {
       return brainDump.trim().split(/\s+/).filter(Boolean).length;
     }
     return 0;
-  }, [mode, userScript, brainDump]);
+  }, [inputMode, userScript, brainDump]);
 
-  // Determine if the main action button should be enabled
   const canSubmit = useMemo(() => {
     if (startPipeline.isPending) return false;
-    if (mode === 'my_script') return userScript.trim().length > 50;
-    if (mode === 'ai_enhance') return userScript.trim().length > 50 && topic.trim().length > 0;
-    if (mode === 'braindump') return brainDump.trim().length > 20 && topic.trim().length > 0;
-    if (mode === 'ai_generate') return topic.trim().length > 0;
-    if (mode === 'suggest') return topic.trim().length > 0;
+    if (inputMode === 'my_script') return userScript.trim().length > 50;
+    if (inputMode === 'ai_enhance') return userScript.trim().length > 50 && topic.trim().length > 0;
+    if (inputMode === 'braindump') return brainDump.trim().length > 20 && topic.trim().length > 0;
+    if (inputMode === 'ai_generate') return topic.trim().length > 0;
+    if (inputMode === 'suggest') return topic.trim().length > 0;
     return false;
-  }, [mode, userScript, brainDump, topic, startPipeline.isPending]);
+  }, [inputMode, userScript, brainDump, topic, startPipeline.isPending]);
 
-  // Action button label
   const actionLabel = useMemo(() => {
-    if (mode === 'my_script') return scriptOnly ? 'Save Script' : 'Review & Generate Video';
-    if (mode === 'ai_enhance') return 'Enhance Script';
-    if (mode === 'braindump') return 'Build Script from Ideas';
+    if (inputMode === 'my_script') return scriptOnly ? 'Save Script' : 'Review & Generate Video';
+    if (inputMode === 'ai_enhance') return 'Enhance Script';
+    if (inputMode === 'braindump') return 'Build Script from Ideas';
     return scriptOnly ? 'Generate Script' : 'Generate Script + Video';
-  }, [mode, scriptOnly]);
+  }, [inputMode, scriptOnly]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -365,19 +374,17 @@ function ContentHubCore() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold font-serif text-foreground">Content Hub</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Write scripts, enhance them with AI, or generate from scratch — then produce videos with Golpo AI
-          </p>
+          <h2 className="text-2xl font-bold font-serif text-foreground">Content Studio</h2>
+          <p className="text-sm text-muted-foreground mt-1">AI Video Pipeline</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {reviewVideos.length > 0 && (
             <Badge
               variant="outline"
               className="bg-amber-50 text-amber-700 border-amber-200 gap-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
               onClick={() => {
                 setSelectedVideoId(reviewVideos[0].id);
-                setActiveSection('videos');
+                setActiveTab('videos');
               }}
             >
               <Pencil className="w-3 h-3" />
@@ -390,489 +397,471 @@ function ContentHubCore() {
               {activeVideos.length} active
             </Badge>
           )}
+          {/* Tab-like navigation */}
+          <div className="flex border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === 'create' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+            >
+              Create
+            </button>
+            <button
+              onClick={() => setActiveTab('videos')}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors border-l ${activeTab === 'videos' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+            >
+              Videos ({videosQuery.data?.total || 0})
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Section Tabs */}
-      <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as any)}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="create" className="gap-2">
-            <Wand2 className="w-4 h-4" />
-            Create
-          </TabsTrigger>
-          <TabsTrigger value="videos" className="gap-2">
-            <Film className="w-4 h-4" />
-            Videos ({videosQuery.data?.total || 0})
-          </TabsTrigger>
-          <TabsTrigger value="presets" className="gap-2">
-            <Save className="w-4 h-4" />
-            Presets
-          </TabsTrigger>
-        </TabsList>
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* CREATE TAB */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'create' && (
+        <div className="space-y-5">
+          {/* ── Content Filters Panel ──────────────────────────────────────── */}
+          <div className="border rounded-xl bg-card">
+            {/* Filter Header */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full flex items-center justify-between px-5 py-3 hover:bg-accent/30 transition-colors rounded-t-xl"
+            >
+              <div className="flex items-center gap-3">
+                <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Content Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="bg-emerald-500 text-white text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleClearFilters(); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+                {showFilters ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </div>
+            </button>
 
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* CREATE TAB */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        <TabsContent value="create" className="space-y-4 mt-4">
-          {/* Mode Selector — 5 modes */}
-          <div className="flex flex-wrap gap-2">
-            {(Object.entries(MODE_META) as [ScriptInputMode, typeof MODE_META[ScriptInputMode]][]).map(([key, meta]) => {
-              const Icon = meta.icon;
-              return (
-                <Button
-                  key={key}
-                  variant={mode === key ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setMode(key);
-                    if (key === 'suggest' && !suggestTopicsMut.data) {
-                      suggestTopicsMut.mutate({ count: 5 });
-                    }
-                  }}
-                  className="gap-1.5"
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {meta.label}
-                </Button>
-              );
-            })}
+            {/* Filter Content */}
+            {showFilters && (
+              <div className="px-5 pb-5 space-y-5 border-t">
+                {/* Presenter Persona */}
+                <div className="pt-4">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    <User className="w-3.5 h-3.5" />
+                    Presenter Persona
+                  </label>
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    {PERSONAS.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setPersona(p.id)}
+                        className={`flex-shrink-0 w-[160px] border rounded-xl p-3 text-left transition-all duration-200 ${
+                          persona === p.id
+                            ? 'border-[#C9A962] bg-[#C9A962]/5 ring-1 ring-[#C9A962]/30'
+                            : 'border-border hover:border-muted-foreground/30 hover:bg-accent/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className={`w-8 h-8 rounded-lg ${p.color} flex items-center justify-center`}>
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+                          {persona === p.id && (
+                            <CheckCircle className="w-4 h-4 text-[#C9A962]" />
+                          )}
+                        </div>
+                        <p className="text-sm font-medium leading-tight">{p.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{p.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Row 1: Format, Voice Style, Focus */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Film className="w-3.5 h-3.5" />
+                      Format
+                    </label>
+                    <Select value={videoFormat} onValueChange={setVideoFormat}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Formats</SelectItem>
+                        <SelectItem value="instagram-reel">Instagram Reel</SelectItem>
+                        <SelectItem value="youtube-short">YouTube Short</SelectItem>
+                        <SelectItem value="tiktok-reel">TikTok Reel</SelectItem>
+                        <SelectItem value="youtube-lesson">YouTube Lesson</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Mic className="w-3.5 h-3.5" />
+                      Voice Style
+                    </label>
+                    <Select value={voiceStyle} onValueChange={setVoiceStyle}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (from Persona)</SelectItem>
+                        <SelectItem value="solo-female">Solo Female (Coach Inayah)</SelectItem>
+                        <SelectItem value="solo-male">Solo Male</SelectItem>
+                        <SelectItem value="conversational">Conversational</SelectItem>
+                        <SelectItem value="authoritative">Authoritative</SelectItem>
+                        <SelectItem value="motivational">Motivational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Target className="w-3.5 h-3.5" />
+                      Focus
+                    </label>
+                    <Select value={contentFocus} onValueChange={setContentFocus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="teaching">Teaching / Coaching</SelectItem>
+                        <SelectItem value="marketing">Marketing / Promo</SelectItem>
+                        <SelectItem value="case-study">Case Study</SelectItem>
+                        <SelectItem value="motivational">Motivational</SelectItem>
+                        <SelectItem value="strategy">Strategy / Tips</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 2: Length, Story Format, Music */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Timer className="w-3.5 h-3.5" />
+                      Length
+                    </label>
+                    <Select value={contentLength} onValueChange={setContentLength}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        <SelectItem value="30s">30 seconds — Quick hook + one insight</SelectItem>
+                        <SelectItem value="1min">1 minute — Hook + lesson + CTA</SelectItem>
+                        <SelectItem value="2-3">2-3 minutes — Full lesson with examples</SelectItem>
+                        <SelectItem value="5-10">5-10 minutes — Deep dive / full course</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Story Format
+                    </label>
+                    <Select value={storyFormat} onValueChange={setStoryFormat}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        <SelectItem value="step-by-step">Step-by-Step Tutorial</SelectItem>
+                        <SelectItem value="before-after">Before / After</SelectItem>
+                        <SelectItem value="myth-reality">Myth vs Reality</SelectItem>
+                        <SelectItem value="whiteboard">Whiteboard Breakdown</SelectItem>
+                        <SelectItem value="common-mistakes">Common Mistakes</SelectItem>
+                        <SelectItem value="client-profile">Client Profile Breakdown</SelectItem>
+                        <SelectItem value="qa-faq">Q&A / FAQ</SelectItem>
+                        <SelectItem value="challenge-response">Challenge / Response</SelectItem>
+                        <SelectItem value="top-x">Top X List</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Music className="w-3.5 h-3.5" />
+                      Music
+                    </label>
+                    <Select value={bgMusic} onValueChange={setBgMusic}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="engaging">Engaging — Upbeat background</SelectItem>
+                        <SelectItem value="lofi">Lo-Fi — Chill, relaxed</SelectItem>
+                        <SelectItem value="none">No Music — Voice only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* ── MY SCRIPT MODE ── */}
-          {mode === 'my_script' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  My Script
-                </CardTitle>
-                <CardDescription>
-                  Paste your finished script. It goes straight to review — AI won't change a word.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Title (e.g., Why Denver is the best market for beginners)"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="text-sm"
-                />
-                <div className="relative">
-                  <Textarea
-                    placeholder="Paste your full narration script here..."
-                    value={userScript}
-                    onChange={(e) => setUserScript(e.target.value)}
-                    rows={14}
-                    className="text-sm font-mono"
-                  />
-                  {wordCount > 0 && (
-                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                      {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 items-center">
-                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
-                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── AI ENHANCE MODE ── */}
-          {mode === 'ai_enhance' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Wand2 className="w-4 h-4 text-violet-600" />
-                  AI Enhance
-                </CardTitle>
-                <CardDescription>
-                  Paste your script — AI will polish the delivery, add transitions, and inject data points.
-                  Your words and ideas stay intact.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Topic title (e.g., 5 mistakes new Airbnb hosts make)"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="text-sm"
-                />
-                <div className="relative">
-                  <Textarea
-                    placeholder="Paste your rough script here. AI will enhance it — fix flow, add transitions, inject real data — but keep YOUR voice and ideas..."
-                    value={userScript}
-                    onChange={(e) => setUserScript(e.target.value)}
-                    rows={14}
-                    className="text-sm font-mono"
-                  />
-                  {wordCount > 0 && (
-                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                      {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 items-center">
-                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
-                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── BRAIN DUMP MODE ── */}
-          {mode === 'braindump' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-purple-600" />
-                  Brain Dump
-                </CardTitle>
-                <CardDescription>
-                  Type your rough ideas, bullet points, key stats, the angle you're going for.
-                  Opus 4.6 will transform it into a complete narration script.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Topic title (e.g., Why Denver is the best market for beginners)"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="text-sm"
-                />
-                <div className="relative">
-                  <Textarea
-                    placeholder={`Dump your rough thoughts here...
-
-Example:
-- want to talk about how people overthink their first deal
-- mention the student who found a deal in Columbia SC making $2k/mo
-- the key is just running the numbers — use the free tool
-- mention that 67% occupancy is actually good for a beginner
-- end with CTA to the tool`}
-                    value={brainDump}
-                    onChange={(e) => setBrainDump(e.target.value)}
-                    rows={10}
-                    className="text-sm"
-                  />
-                  {wordCount > 0 && (
-                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                      {wordCount} words in dump
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 items-center">
-                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
-                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
-                    <span className="text-sm text-muted-foreground">Script only</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── AI GENERATE MODE ── */}
-          {mode === 'ai_generate' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  AI Generate
-                </CardTitle>
-                <CardDescription>
-                  Enter a topic — Opus 4.6 writes the full script from scratch using live platform data
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="e.g., How to find your first Airbnb arbitrage deal in Denver for under $3,000"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="text-sm"
-                />
-                <div className="flex gap-3 items-center">
-                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
-                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
-                    <span className="text-sm text-muted-foreground">Script only</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── AI SUGGEST MODE ── */}
-          {mode === 'suggest' && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-amber-500" />
-                  AI Topic Suggestions
-                </CardTitle>
-                <CardDescription>
-                  Topics generated from your live platform data — click one to start
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {suggestTopicsMut.isPending ? (
-                  <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analyzing platform data and generating topics...
-                  </div>
-                ) : suggestTopicsMut.data?.topics?.length ? (
-                  <div className="space-y-3">
-                    {suggestTopicsMut.data.topics.map((suggestion: any, i: number) => (
-                      <div
-                        key={i}
-                        className="border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer group"
-                        onClick={() => handleUseSuggestion(suggestion)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs">
-                                {suggestion.format === 'deep_dive' ? 'Deep Dive' : 'Lesson'}
-                              </Badge>
-                              {suggestion.estimatedEngagement === 'high' && (
-                                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                                  High Engagement
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="font-medium text-sm">{suggestion.topic}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{suggestion.angle}</p>
-                          </div>
-                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-                            <Zap className="w-3 h-3" />
-                            Use
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => suggestTopicsMut.mutate({ count: 5 })}
-                      className="w-full gap-1.5"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Regenerate Suggestions
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No suggestions yet.</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => suggestTopicsMut.mutate({ count: 5 })}
-                      className="mt-2 gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Generate Topics
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Advanced Options */}
-          {mode !== 'suggest' && (
-            <div>
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                Advanced Options
-              </button>
-              {showAdvanced && (
-                <Card className="mt-2">
-                  <CardContent className="pt-4 space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Background Music</label>
-                        <Select value={bgMusic} onValueChange={setBgMusic}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="engaging">Engaging</SelectItem>
-                            <SelectItem value="calm">Calm</SelectItem>
-                            <SelectItem value="upbeat">Upbeat</SelectItem>
-                            <SelectItem value="inspiring">Inspiring</SelectItem>
-                            <SelectItem value="none">None</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Voice Style</label>
-                        <Select value={ttsStyle} onValueChange={setTtsStyle}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="solo-female">Solo Female</SelectItem>
-                            <SelectItem value="solo-male">Solo Male</SelectItem>
-                            <SelectItem value="duo">Duo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Timing</label>
-                        <Select value={timing} onValueChange={setTiming}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto (from word count)</SelectItem>
-                            <SelectItem value="8">8s/scene (Fast)</SelectItem>
-                            <SelectItem value="10">10s/scene (Normal)</SelectItem>
-                            <SelectItem value="12">12s/scene (Slow)</SelectItem>
-                            <SelectItem value="15">15s/scene (Very Slow)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button variant="outline" size="sm" onClick={handleSavePreset} className="gap-1.5">
-                        <Save className="w-3.5 h-3.5" />
-                        Save as Preset
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          {mode !== 'suggest' && (
-            <div className="flex gap-3">
+          {/* ── Hint below filters ─────────────────────────────────────────── */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Topics are generated based on your filter selections
+            </p>
+            {inputMode === 'suggest' && (
               <Button
-                onClick={handleStartPipeline}
-                disabled={!canSubmit}
-                className="gap-2 flex-1"
+                variant="outline"
+                size="sm"
+                onClick={() => suggestTopicsMut.mutate({ count: 5 })}
+                disabled={suggestTopicsMut.isPending}
+                className="gap-1.5 h-7 text-xs"
               >
-                {startPipeline.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : mode === 'my_script' ? (
-                  <Send className="w-4 h-4" />
-                ) : mode === 'ai_enhance' ? (
-                  <Wand2 className="w-4 h-4" />
-                ) : (
-                  <Zap className="w-4 h-4" />
-                )}
-                {actionLabel}
+                <RefreshCw className={`w-3 h-3 ${suggestTopicsMut.isPending ? 'animate-spin' : ''}`} />
+                Refresh Topics
               </Button>
-              {mode === 'ai_generate' && !showBatch && (
-                <Button variant="outline" onClick={() => setShowBatch(true)} className="gap-1.5">
-                  <Layers className="w-4 h-4" />
-                  Batch
-                </Button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Batch Panel (only in AI Generate mode) */}
-          {mode === 'ai_generate' && showBatch && (
-            <Card className="border-dashed">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Layers className="w-4 h-4" />
-                  Batch Generation
-                </CardTitle>
-                <CardDescription>Queue multiple topics at once (all use AI Generate)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
+          {/* ── Input Mode Cards (left column layout) ──────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5">
+            {/* Left: Input Mode Selector + Input Area */}
+            <div className="space-y-3">
+              {INPUT_MODES.map((m) => {
+                const Icon = m.icon;
+                const isActive = inputMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      setInputMode(m.id);
+                      if (m.id === 'suggest' && !suggestTopicsMut.data) {
+                        suggestTopicsMut.mutate({ count: 5 });
+                      }
+                    }}
+                    className={`w-full text-left border rounded-xl p-4 transition-all duration-200 ${
+                      isActive
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border hover:border-muted-foreground/30 hover:bg-accent/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isActive ? 'bg-primary/10' : 'bg-accent'}`}>
+                        <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>{m.label}</p>
+                        <p className="text-xs text-muted-foreground truncate">{m.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right: Active Input Content */}
+            <div className="space-y-4">
+              {/* ── AI SUGGEST ── */}
+              {inputMode === 'suggest' && (
+                <div className="space-y-3">
+                  {suggestTopicsMut.isPending ? (
+                    <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground border rounded-xl">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating topics with AI...
+                    </div>
+                  ) : suggestTopicsMut.data?.topics?.length ? (
+                    <div className="space-y-2">
+                      {suggestTopicsMut.data.topics.map((suggestion: any, i: number) => (
+                        <div
+                          key={i}
+                          className="border rounded-xl p-4 hover:bg-accent/50 transition-colors cursor-pointer group"
+                          onClick={() => handleUseSuggestion(suggestion)}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {suggestion.format === 'deep_dive' ? 'Deep Dive' : 'Lesson'}
+                                </Badge>
+                                {suggestion.estimatedEngagement === 'high' && (
+                                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                                    High Engagement
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="font-medium text-sm">{suggestion.topic}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{suggestion.angle}</p>
+                            </div>
+                            <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                              <Play className="w-3 h-3" />
+                              Use
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground border rounded-xl">
+                      <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Click "Refresh Topics" to generate AI topic suggestions</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── BRAIN DUMP ── */}
+              {inputMode === 'braindump' && (
+                <div className="space-y-4">
                   <Input
-                    placeholder="Add a topic..."
+                    placeholder="Topic title (e.g., How Airbnb arbitrage works)"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddToBatch()}
-                    className="text-sm flex-1"
+                    className="text-sm"
                   />
-                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lesson">Lesson</SelectItem>
-                      <SelectItem value="deep_dive">Deep Dive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={handleAddToBatch} disabled={!topic.trim()}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                {batchTopics.length > 0 && (
-                  <div className="space-y-2">
-                    {batchTopics.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm bg-accent/50 rounded-md px-3 py-2">
-                        <Badge variant="outline" className="text-xs">{item.format === 'deep_dive' ? 'Deep Dive' : 'Lesson'}</Badge>
-                        <span className="flex-1 truncate">{item.topic}</span>
-                        <button
-                          onClick={() => setBatchTopics((prev) => prev.filter((_, j) => j !== i))}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                  <div className="relative">
+                    <Textarea
+                      placeholder={`Dump your rough thoughts here...
+
+Example:
+- explaining to a client how Airbnb arbitrage works
+- use the framing of making an extra $4K/month
+- the math has to work out with real numbers
+- mention startup costs, monthly rent vs Airbnb revenue
+- end with CTA to the free calculator tool`}
+                      value={brainDump}
+                      onChange={(e) => setBrainDump(e.target.value)}
+                      rows={10}
+                      className="text-sm"
+                    />
+                    {wordCount > 0 && (
+                      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                        {wordCount} words in dump
                       </div>
-                    ))}
-                    <div className="flex gap-2">
-                      <Button onClick={handleStartBatch} disabled={startBatchMut.isPending} className="gap-1.5 flex-1">
-                        {startBatchMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        Start Batch ({batchTopics.length} videos)
-                      </Button>
-                      <Button variant="outline" onClick={() => { setBatchTopics([]); setShowBatch(false); }}>
-                        Cancel
-                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
+                      <span className="text-sm text-muted-foreground">Script only (no video)</span>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+                  <Button
+                    onClick={handleStartPipeline}
+                    disabled={!canSubmit}
+                    className="w-full gap-2"
+                  >
+                    {startPipeline.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                    Build Script from Ideas
+                  </Button>
+                </div>
+              )}
 
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* VIDEOS TAB */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        <TabsContent value="videos" className="space-y-4 mt-4">
+              {/* ── MY SCRIPT ── */}
+              {inputMode === 'my_script' && (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Title (optional)"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="text-sm"
+                  />
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Paste your full narration script here..."
+                      value={userScript}
+                      onChange={(e) => setUserScript(e.target.value)}
+                      rows={14}
+                      className="text-sm font-mono"
+                    />
+                    {wordCount > 0 && (
+                      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                        {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleStartPipeline}
+                    disabled={!canSubmit}
+                    className="w-full gap-2"
+                  >
+                    {startPipeline.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {actionLabel}
+                  </Button>
+                </div>
+              )}
+
+              {/* ── AI ENHANCE ── */}
+              {inputMode === 'ai_enhance' && (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Topic title (e.g., 5 mistakes new Airbnb hosts make)"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="text-sm"
+                  />
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Paste your rough script here. AI will enhance it — fix flow, add transitions, inject real data — but keep YOUR voice and ideas..."
+                      value={userScript}
+                      onChange={(e) => setUserScript(e.target.value)}
+                      rows={14}
+                      className="text-sm font-mono"
+                    />
+                    {wordCount > 0 && (
+                      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                        {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleStartPipeline}
+                    disabled={!canSubmit}
+                    className="w-full gap-2"
+                  >
+                    {startPipeline.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    Enhance Script
+                  </Button>
+                </div>
+              )}
+
+              {/* ── AI GENERATE ── */}
+              {inputMode === 'ai_generate' && (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="e.g., How to find your first Airbnb arbitrage deal in Denver for under $3,000"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="text-sm"
+                  />
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
+                      <span className="text-sm text-muted-foreground">Script only (no video)</span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleStartPipeline}
+                    disabled={!canSubmit}
+                    className="w-full gap-2"
+                  >
+                    {startPipeline.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    {actionLabel}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* VIDEOS TAB */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'videos' && (
+        <div className="space-y-4">
           {/* Video Detail View */}
           {selectedVideoId && videoDetail ? (
             <div className="space-y-4">
@@ -908,6 +897,19 @@ Example:
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      {/* Check Golpo Status button for stuck videos */}
+                      {['video_generating', 'video_failed'].includes(videoDetail.status) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => checkGolpoMut.mutate({ videoId: videoDetail.id })}
+                          disabled={checkGolpoMut.isPending}
+                          className="gap-1.5"
+                        >
+                          {checkGolpoMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                          Check Status
+                        </Button>
+                      )}
                       {videoDetail.videoUrl && (
                         <Button size="sm" variant="outline" asChild>
                           <a href={videoDetail.videoUrl} target="_blank" rel="noopener noreferrer" className="gap-1.5">
@@ -1131,22 +1133,36 @@ Example:
                       <div className="flex-1">
                         <p className="font-medium text-red-700 text-sm">Error</p>
                         <p className="text-sm text-red-600 mt-1">{videoDetail.error}</p>
-                        {['video_failed', 'pipeline_failed'].includes(videoDetail.status) && videoDetail.narrationScript && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-2 gap-1.5"
-                            onClick={() => updateScriptMut.mutate({
-                              videoId: videoDetail.id,
-                              script: videoDetail.narrationScript || '',
-                              continueToVideo: true,
-                            })}
-                            disabled={updateScriptMut.isPending}
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            Retry Video Generation
-                          </Button>
-                        )}
+                        <div className="flex gap-2 mt-2">
+                          {['video_failed', 'pipeline_failed'].includes(videoDetail.status) && videoDetail.narrationScript && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() => updateScriptMut.mutate({
+                                videoId: videoDetail.id,
+                                script: videoDetail.narrationScript || '',
+                                continueToVideo: true,
+                              })}
+                              disabled={updateScriptMut.isPending}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              Retry Video Generation
+                            </Button>
+                          )}
+                          {['video_failed', 'video_generating'].includes(videoDetail.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() => checkGolpoMut.mutate({ videoId: videoDetail.id })}
+                              disabled={checkGolpoMut.isPending}
+                            >
+                              {checkGolpoMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                              Check Golpo Status
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1232,65 +1248,8 @@ Example:
               )}
             </div>
           )}
-        </TabsContent>
-
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        {/* PRESETS TAB */}
-        {/* ════════════════════════════════════════════════════════════════════ */}
-        <TabsContent value="presets" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Saved Presets</CardTitle>
-              <CardDescription>Quick-apply your favorite configurations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {presetsQuery.isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : (presetsQuery.data || []).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Save className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No presets saved yet.</p>
-                  <p className="text-xs mt-1">Open Advanced Options in Create tab to save a preset.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {(presetsQuery.data || []).map((preset: any) => (
-                    <div
-                      key={preset.id}
-                      className="flex items-center gap-3 border rounded-lg p-3 hover:bg-accent/30 transition-colors"
-                    >
-                      <span className="text-lg">{preset.emoji || '⚡'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{preset.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {preset.format === 'deep_dive' ? 'Deep Dive' : preset.format === 'lesson' ? 'Lesson' : 'Any format'}
-                          {preset.bgMusic ? ` · ${preset.bgMusic} music` : ''}
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApplyPreset(preset)}
-                        className="gap-1 h-7 text-xs"
-                      >
-                        Apply
-                      </Button>
-                      <button
-                        onClick={() => deletePresetMut.mutate({ id: preset.id })}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }

@@ -63,10 +63,15 @@ describe('Content Hub Router', () => {
       expect(procedureKeys).toContain('contentHub.deletePreset');
     });
 
-    it('should have exactly 10 procedures in the contentHub namespace', () => {
+    it('should have exactly 11 procedures in the contentHub namespace', () => {
       const procedureKeys = Object.keys(appRouter._def.procedures);
       const contentHubProcedures = procedureKeys.filter(k => k.startsWith('contentHub.'));
-      expect(contentHubProcedures).toHaveLength(10);
+      expect(contentHubProcedures).toHaveLength(11);
+    });
+
+    it('should have checkGolpoStatus procedure for video recovery', () => {
+      const procedureKeys = Object.keys(appRouter._def.procedures);
+      expect(procedureKeys).toContain('contentHub.checkGolpoStatus');
     });
   });
 
@@ -278,6 +283,9 @@ describe('Content Hub Pipeline Module', () => {
     expect(typeof pipeline.listPresets).toBe('function');
     expect(typeof pipeline.deletePreset).toBe('function');
     expect(typeof pipeline.resumeIncompletePipelines).toBe('function');
+    expect(typeof pipeline.checkGolpoStatus).toBe('function');
+    expect(typeof pipeline.startBackgroundRecovery).toBe('function');
+    expect(typeof pipeline.stopBackgroundRecovery).toBe('function');
   });
 
   it('should export VideoStatus type-compatible values', async () => {

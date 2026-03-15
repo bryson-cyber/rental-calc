@@ -12878,7 +12878,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Vitest tests for Content Hub pipeline (16 tests passing)
 
 ### Feature: Content Hub — Script Editing Workflow & Golpo Fix (March 14, 2026)
-- [ ] Fix Golpo API connection bug (timeouts on status polling)
+- [x] Fix Golpo API connection bug (timeouts on status polling) — migrated all Golpo API calls from axios to native fetch
 - [x] Add 5 script input modes: My Script (no AI), AI Enhance (polish user's script), Brain Dump (text-based rough ideas → full script), AI Generate (full AI from scratch), AI Suggest (AI picks topics)
 - [x] Pipeline pauses at script_review stage — user must approve/edit before video generation
 - [x] Script editor UI with edit capability before sending to Golpo
@@ -12886,3 +12886,25 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update frontend Content Hub page with new script input modes and review workflow
 - [x] Brain Dump text mode (type rough ideas without voice-to-speech)
 - [x] Updated vitest tests for all script modes (23 tests passing)
+- [ ] Add user-selectable video timing/duration control to Content Hub create form
+- [x] Fix Golpo polling timeout — replaced axios with native fetch (axios had connection pooling issues causing 30-120s timeouts, fetch returns in <1s)
+- [x] Add manual "Check Status" button for videos stuck in generating state
+- [x] Recover video #14 — Golpo job completed, video URL retrieved successfully
+- [x] Redesign Content Hub with Content Filters panel (matching reference UI from other Content Studio)
+  - [x] Presenter Persona cards (Coach Inayah, Financial Advisor, Street-Smart Mentor, Data Analyst, Story Narrator, Hype Man)
+  - [x] Format dropdown (All Formats, Instagram Reel, YouTube Short, TikTok Reel, YouTube Lesson)
+  - [x] Voice Style dropdown (Auto, Solo Female, Solo Male, Conversational, Authoritative, Motivational)
+  - [x] Focus dropdown (Teaching/Coaching, Marketing/Promo, Case Study, Motivational, Strategy/Tips)
+  - [x] Length dropdown (Auto, 30 seconds, 1 minute, 2-3 minutes, 5-10 minutes)
+  - [x] Story Format rich dropdown with descriptions
+  - [x] Music dropdown (Engaging, Lo-Fi, No Music)
+  - [x] Remove hidden Advanced Options — all filters visible upfront
+
+### Feature: Background Video Recovery & Fetch Migration (March 15, 2026)
+- [x] Replace axios with native fetch for all Golpo API calls (submitToGolpo, pollGolpoUntilDone, checkGolpoStatus)
+- [x] Remove unused axios import from content-hub-pipeline.ts
+- [x] Background recovery cron (every 5 minutes) — auto-checks failed videos with Golpo job IDs
+- [x] Resume incomplete pipelines on server restart
+- [x] Verified fetch returns Golpo status in <1s (vs axios timing out at 30-120s)
+- [x] Video #7 and #14 both confirmed complete with working video URLs
+- [x] Updated vitest tests: 24 tests passing (added checkGolpoStatus procedure test, updated procedure count to 11, added background recovery export checks)

@@ -1,0 +1,109 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'content_hub_videos' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'content_hub_videos' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "userId"
+    },
+    {
+      "COLUMN_NAME": "topic"
+    },
+    {
+      "COLUMN_NAME": "format"
+    },
+    {
+      "COLUMN_NAME": "timing"
+    },
+    {
+      "COLUMN_NAME": "voiceStyle"
+    },
+    {
+      "COLUMN_NAME": "contentFocus"
+    },
+    {
+      "COLUMN_NAME": "contentLength"
+    },
+    {
+      "COLUMN_NAME": "storyFormat"
+    },
+    {
+      "COLUMN_NAME": "persona"
+    },
+    {
+      "COLUMN_NAME": "bgMusic"
+    },
+    {
+      "COLUMN_NAME": "ttsStyle"
+    },
+    {
+      "COLUMN_NAME": "realTimeFacts"
+    },
+    {
+      "COLUMN_NAME": "sources"
+    },
+    {
+      "COLUMN_NAME": "searchQueries"
+    },
+    {
+      "COLUMN_NAME": "narrationScript"
+    },
+    {
+      "COLUMN_NAME": "successStoryUsed"
+    },
+    {
+      "COLUMN_NAME": "videoUrl"
+    },
+    {
+      "COLUMN_NAME": "videoId"
+    },
+    {
+      "COLUMN_NAME": "golpoJobId"
+    },
+    {
+      "COLUMN_NAME": "thumbnailUrl"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "pipelineStage"
+    },
+    {
+      "COLUMN_NAME": "error"
+    },
+    {
+      "COLUMN_NAME": "layer1DurationMs"
+    },
+    {
+      "COLUMN_NAME": "layer2DurationMs"
+    },
+    {
+      "COLUMN_NAME": "layer3DurationMs"
+    },
+    {
+      "COLUMN_NAME": "totalDurationMs"
+    },
+    {
+      "COLUMN_NAME": "modelsUsed"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "scriptMode"
+    },
+    {
+      "COLUMN_NAME": "userScript"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nuserId\ntopic\nformat\ntiming\nvoiceStyle\ncontentFocus\ncontentLength\nstoryFormat\npersona\nbgMusic\nttsStyle\nrealTimeFacts\nsources\nsearchQueries\nnarrationScript\nsuccessStoryUsed\nvideoUrl\nvideoId\ngolpoJobId\nthumbnailUrl\nstatus\npipelineStage\nerror\nlayer1DurationMs\nlayer2DurationMs\nlayer3DurationMs\ntotalDurationMs\nmodelsUsed\ncreatedAt\nupdatedAt\nscriptMode\nuserScript\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

@@ -1,0 +1,150 @@
+{
+  "query": "SELECT id, topic, status, videoId, videoUrl, error, pipelineStage, createdAt FROM content_hub_videos ORDER BY id DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, topic, status, videoId, videoUrl, error, pipelineStage, createdAt FROM content_hub_videos ORDER BY id DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "14",
+      "topic": "How Airbnb arbitrage works and how to make an extra 4K per month",
+      "status": "video_complete",
+      "videoId": "NULL",
+      "videoUrl": "https://golpo-podcast-inputs.s3.us-east-2.amazonaws.com/files/0ef00bae-231d-4af1-88d5-8a1d355a846b.mp4",
+      "error": "NULL",
+      "pipelineStage": "Completed",
+      "createdAt": "2026-03-15 00:15:48"
+    },
+    {
+      "id": "13",
+      "topic": "Topic without explicit scriptMode",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "12",
+      "topic": "Brain dump topic about getting started",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Research complete",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "11",
+      "topic": "AI should generate this script from scratch",
+      "status": "scripting",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 2: Generating script with Opus 4.6...",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "10",
+      "topic": "Enhance my script about markets",
+      "status": "scripting",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 2: AI is enhancing your script...",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "9",
+      "topic": "My custom script topic",
+      "status": "script_review",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Your script is ready for review — approve to generate video",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "8",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "scripting",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 2: Generating script with Opus 4.6...",
+      "createdAt": "2026-03-15 00:04:06"
+    },
+    {
+      "id": "7",
+      "topic": "How to get your first Airbnb arbitrage deal for under 3000 dollars",
+      "status": "video_complete",
+      "videoId": "NULL",
+      "videoUrl": "https://golpo-podcast-inputs.s3.us-east-2.amazonaws.com/files/049521da-3d5b-4a2b-985e-548a00d7b6b6.mp4",
+      "error": "NULL",
+      "pipelineStage": "Pipeline complete (recovered via manual check)",
+      "createdAt": "2026-03-14 23:04:56"
+    },
+    {
+      "id": "6",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-14 23:04:09"
+    },
+    {
+      "id": "5",
+      "topic": "5 signs a rental property will make money on Airbnb before you sign the lease",
+      "status": "pipeline_failed",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "Client network socket disconnected before secure TLS connection was established",
+      "pipelineStage": "Pipeline failed",
+      "createdAt": "2026-03-14 22:56:14"
+    },
+    {
+      "id": "4",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-14 21:42:06"
+    },
+    {
+      "id": "3",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-14 21:41:11"
+    },
+    {
+      "id": "2",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-14 21:40:31"
+    },
+    {
+      "id": "1",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "status": "researching",
+      "videoId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL",
+      "pipelineStage": "Layer 1: Gathering platform data...",
+      "createdAt": "2026-03-14 21:39:16"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttopic\tstatus\tvideoId\tvideoUrl\terror\tpipelineStage\tcreatedAt\n14\tHow Airbnb arbitrage works and how to make an extra 4K per month\tvideo_complete\tNULL\thttps://golpo-podcast-inputs.s3.us-east-2.amazonaws.com/files/0ef00bae-231d-4af1-88d5-8a1d355a846b.mp4\tNULL\tCompleted\t2026-03-15 00:15:48\n13\tTopic without explicit scriptMode\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-15 00:04:06\n12\tBrain dump topic about getting started\tresearching\tNULL\tNULL\tNULL\tLayer 1: Research complete\t2026-03-15 00:04:06\n11\tAI should generate this script from scratch\tscripting\tNULL\tNULL\tNULL\tLayer 2: Generating script with Opus 4.6...\t2026-03-15 00:04:06\n10\tEnhance my script about markets\tscripting\tNULL\tNULL\tNULL\tLayer 2: AI is enhancing your script...\t2026-03-15 00:04:06\n9\tMy custom script topic\tscript_review\tNULL\tNULL\tNULL\tYour script is ready for review — approve to generate video\t2026-03-15 00:04:06\n8\tHow to find profitable Airbnb markets in 2025\tscripting\tNULL\tNULL\tNULL\tLayer 2: Generating script with Opus 4.6...\t2026-03-15 00:04:06\n7\tHow to get your first Airbnb arbitrage deal for under 3000 dollars\tvideo_complete\tNULL\thttps://golpo-podcast-inputs.s3.us-east-2.amazonaws.com/files/049521da-3d5b-4a2b-985e-548a00d7b6b6.mp4\tNULL\tPipeline complete (recovered via manual check)\t2026-03-14 23:04:56\n6\tHow to find profitable Airbnb markets in 2025\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-14 23:04:09\n5\t5 signs a rental property will make money on Airbnb before you sign the lease\tpipeline_failed\tNULL\tNULL\tClient network socket disconnected before secure TLS connection was established\tPipeline failed\t2026-03-14 22:56:14\n4\tHow to find profitable Airbnb markets in 2025\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-14 21:42:06\n3\tHow to find profitable Airbnb markets in 2025\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-14 21:41:11\n2\tHow to find profitable Airbnb markets in 2025\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-14 21:40:31\n1\tHow to find profitable Airbnb markets in 2025\tresearching\tNULL\tNULL\tNULL\tLayer 1: Gathering platform data...\t2026-03-14 21:39:16\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

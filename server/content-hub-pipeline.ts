@@ -24,7 +24,6 @@ import {
   formatDataForPrompt,
   type ContentDataBundle,
 } from './content-data-pipeline';
-import axios from 'axios';
 import qs from 'qs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -413,14 +412,62 @@ async function runLayer3VideoProduction(
   console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, auto-timing=${autoTiming} min`);
 
   // Submit to Golpo using url-encoded form data (matching SDK behavior)
-  const response = await axios.post(`${GOLPO_BASE_URL}/generate`, qs.stringify(fields), {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'x-api-key': apiKey,
-    },
-    timeout: 240_000,
-    maxBodyLength: Infinity,
-  });
+  // Retry up to 3 times with exponential backoff for TLS/network errors
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
+  let response: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[ContentHub] Video #${videoId}: Golpo submit attempt ${attempt}/${MAX_RETRIES}...`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 240_000);
+      try {
+        const fetchResp = await fetch(`${GOLPO_BASE_URL}/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'x-api-key': apiKey,
+          },
+          body: qs.stringify(fields),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!fetchResp.ok) throw new Error(`HTTP ${fetchResp.status}: ${await fetchResp.text()}`);
+        response = { data: await fetchResp.json() };
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        throw fetchErr;
+      }
+      lastError = null;
+      break; // Success — exit retry loop
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || String(err);
+      console.error(`[ContentHub] Video #${videoId}: Golpo submit attempt ${attempt} failed: ${errMsg}`);
+
+      // Only retry on network/TLS errors, not on 4xx client errors
+      const isRetryable = errMsg.includes('socket') || errMsg.includes('TLS') || errMsg.includes('ECONNRESET') ||
+        errMsg.includes('ETIMEDOUT') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network') ||
+        err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNREFUSED';
+
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        throw new Error(`Golpo API submission failed after ${attempt} attempt(s): ${errMsg}`);
+      }
+
+      // Exponential backoff: 5s, 15s, 45s
+      const backoffMs = 5000 * Math.pow(3, attempt - 1);
+      console.log(`[ContentHub] Video #${videoId}: Retrying in ${backoffMs / 1000}s...`);
+      await db.update(contentHubVideos)
+        .set({ pipelineStage: `Layer 3: Retry ${attempt}/${MAX_RETRIES} — waiting ${backoffMs / 1000}s...` })
+        .where(eq(contentHubVideos.id, videoId));
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+
+  if (!response) {
+    throw lastError || new Error('Golpo API submission failed — no response received');
+  }
 
   const golpoJobId = response.data.job_id;
   if (!golpoJobId) {
@@ -446,24 +493,46 @@ async function runLayer3VideoProduction(
   return { videoUrl, golpoJobId, durationMs };
 }
 
+/**
+ * Poll Golpo status endpoint until video is complete.
+ * Matches the Golpo Python SDK behavior:
+ *   - 30s timeout per request (not 120s — keeps connections from hanging)
+ *   - 5s poll interval (aggressive, like the SDK's default of 2s)
+ *   - Silent error handling: network errors are logged and retried, never thrown
+ *   - 60-minute max wait (generous for long scripts)
+ *   - Only throws on definitive Golpo failure (status === 'failed')
+ */
 async function pollGolpoUntilDone(
   videoId: number,
   golpoJobId: string,
-  pollIntervalMs = 15000,
-  maxWaitMs = 1_800_000, // 30 minutes (long scripts need more time)
+  pollIntervalMs = 5_000,   // 5 seconds between polls (SDK uses 2s)
+  maxWaitMs = 3_600_000,    // 60 minutes max (generous for long scripts)
 ): Promise<string> {
   const apiKey = getGolpoApiKey();
   const db = await getDb();
   const startTime = Date.now();
+  let consecutiveErrors = 0;
+  let lastLogTime = 0;
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
-      const response = await axios.get(`${GOLPO_BASE_URL}/status/${golpoJobId}`, {
-        headers: { 'x-api-key': apiKey },
-        timeout: 30_000,
-      });
+      // Use native fetch instead of axios — axios has connection pooling issues with Golpo
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+      try {
+        const response = await fetch(`${GOLPO_BASE_URL}/status/${golpoJobId}`, {
+          headers: { 'x-api-key': apiKey },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        var data = await response.json() as any;
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        throw fetchErr;
+      }
 
-      const data = response.data;
+      consecutiveErrors = 0; // Reset on successful response
 
       if (data.status === 'completed') {
         const videoUrl = data.podcast_url || data.video_url || '';
@@ -475,24 +544,43 @@ async function pollGolpoUntilDone(
         throw new Error(`Golpo job failed: ${data.error || JSON.stringify(data)}`);
       }
 
-      // Update progress
+      // Update progress (throttle DB updates to every 30s to reduce load)
       const elapsed = Math.round((Date.now() - startTime) / 1000);
-      if (db) {
+      if (db && Date.now() - lastLogTime > 30_000) {
+        lastLogTime = Date.now();
         await db.update(contentHubVideos)
           .set({ pipelineStage: `Layer 3: Generating video... (${elapsed}s elapsed)` })
           .where(eq(contentHubVideos.id, videoId));
+        console.log(`[ContentHub] Video #${videoId}: Still generating... (${elapsed}s)`);
+      }
+    } catch (err: any) {
+      // Only re-throw if it's a definitive Golpo failure, not a network glitch
+      if (err.message?.includes('Golpo job failed')) throw err;
+
+      // Silent retry on network errors (matching SDK behavior)
+      consecutiveErrors++;
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+
+      // Only log every 10th consecutive error to avoid log spam
+      if (consecutiveErrors % 10 === 1) {
+        console.warn(`[ContentHub] Video #${videoId}: Polling error #${consecutiveErrors} at ${elapsed}s (will keep retrying): ${err.message}`);
       }
 
-      console.log(`[ContentHub] Video #${videoId}: Still generating... (${elapsed}s)`);
-    } catch (err: any) {
-      if (err.message?.includes('failed')) throw err;
-      console.warn(`[ContentHub] Video #${videoId}: Polling error, retrying:`, err.message);
+      // Update DB with error count periodically
+      if (db && consecutiveErrors % 20 === 1) {
+        await db.update(contentHubVideos)
+          .set({ pipelineStage: `Layer 3: Generating video... (${elapsed}s, ${consecutiveErrors} poll retries)` })
+          .where(eq(contentHubVideos.id, videoId));
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
 
-  throw new Error(`Golpo job ${golpoJobId} timed out after ${maxWaitMs / 1000}s`);
+  // Instead of throwing immediately, save the state so manual recovery is possible
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  console.error(`[ContentHub] Video #${videoId}: Polling timed out after ${elapsed}s — video may still be rendering on Golpo. Use Check Status to recover.`);
+  throw new Error(`Golpo job ${golpoJobId} timed out after ${elapsed}s. The video may still be rendering — use Check Status to recover.`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -987,6 +1075,93 @@ export async function deletePreset(presetId: number, userId: number) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MANUAL STATUS CHECK (recover videos whose polling timed out)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Manually check Golpo status for a video that may have completed but whose
+ * polling timed out. This prevents wasted credits by recovering finished videos.
+ */
+export async function checkGolpoStatus(videoId: number): Promise<{ status: string; videoUrl?: string; error?: string }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [video] = await db.select()
+    .from(contentHubVideos)
+    .where(eq(contentHubVideos.id, videoId))
+    .limit(1);
+
+  if (!video) throw new Error('Video not found');
+  if (!video.golpoJobId) throw new Error('No Golpo job ID — this video was never submitted to Golpo');
+
+  // If already complete, just return
+  if (video.status === 'video_complete') {
+    return { status: 'video_complete', videoUrl: video.videoUrl || undefined };
+  }
+
+  const apiKey = getGolpoApiKey();
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120_000);
+    let data: any;
+    try {
+      const fetchResp = await fetch(`${GOLPO_BASE_URL}/status/${video.golpoJobId}`, {
+        headers: { 'x-api-key': apiKey },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!fetchResp.ok) throw new Error(`HTTP ${fetchResp.status}`);
+      data = await fetchResp.json();
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutId);
+      throw fetchErr;
+    }
+    console.log(`[ContentHub] Manual status check for video #${videoId}:`, JSON.stringify(data));
+
+    if (data.status === 'completed') {
+      const videoUrl = data.podcast_url || data.video_url || '';
+      await db.update(contentHubVideos)
+        .set({
+          status: 'video_complete',
+          videoUrl,
+          pipelineStage: 'Pipeline complete (recovered via manual check)',
+          error: null,
+        })
+        .where(eq(contentHubVideos.id, videoId));
+      return { status: 'video_complete', videoUrl };
+    }
+
+    if (data.status === 'failed' || data.status === 'error') {
+      const errorMsg = data.error || 'Golpo reported failure';
+      await db.update(contentHubVideos)
+        .set({
+          status: 'video_failed',
+          error: errorMsg,
+          pipelineStage: 'Failed (confirmed via manual check)',
+        })
+        .where(eq(contentHubVideos.id, videoId));
+      return { status: 'video_failed', error: errorMsg };
+    }
+
+    // Still processing — update DB status back to video_generating if it was marked as failed
+    if (video.status === 'video_failed') {
+      await db.update(contentHubVideos)
+        .set({
+          status: 'video_generating',
+          pipelineStage: 'Layer 3: Still generating on Golpo (recovered via manual check)',
+          error: null,
+        })
+        .where(eq(contentHubVideos.id, videoId));
+      console.log(`[ContentHub] Video #${videoId} recovered from failed → video_generating (Golpo still processing)`);
+    }
+    return { status: 'still_generating' };
+  } catch (err: any) {
+    return { status: 'check_failed', error: err.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RESUME INCOMPLETE PIPELINES (on server restart)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -995,10 +1170,11 @@ export async function resumeIncompletePipelines(): Promise<void> {
     const db = await getDb();
     if (!db) return;
 
+    // Check both video_generating (interrupted) and video_failed with golpoJobId (may still be rendering)
     const incomplete = await db.select()
       .from(contentHubVideos)
       .where(
-        inArray(contentHubVideos.status, ['video_generating'] as any)
+        inArray(contentHubVideos.status, ['video_generating', 'video_failed'] as any)
       );
 
     if (incomplete.length === 0) {
@@ -1011,16 +1187,23 @@ export async function resumeIncompletePipelines(): Promise<void> {
     for (const video of incomplete) {
       const ageMs = Date.now() - video.createdAt.getTime();
 
-      // If older than 30 minutes, mark as failed
-      if (ageMs > 30 * 60 * 1000) {
-        console.log(`[ContentHub] Video #${video.id} is ${Math.round(ageMs / 60000)} min old — marking as timed out.`);
-        await db.update(contentHubVideos)
-          .set({
-            status: 'video_failed',
-            error: 'Pipeline timed out after 30 minutes (server restart).',
-            pipelineStage: 'Timed out',
-          })
-          .where(eq(contentHubVideos.id, video.id));
+      // Skip videos older than 2 hours — they're truly dead
+      if (ageMs > 2 * 60 * 60 * 1000) {
+        if (video.status !== 'video_failed') {
+          console.log(`[ContentHub] Video #${video.id} is ${Math.round(ageMs / 60000)} min old — marking as timed out.`);
+          await db.update(contentHubVideos)
+            .set({
+              status: 'video_failed',
+              error: 'Pipeline timed out after 2 hours (server restart).',
+              pipelineStage: 'Timed out',
+            })
+            .where(eq(contentHubVideos.id, video.id));
+        }
+        continue;
+      }
+
+      // Skip video_failed entries without a golpoJobId — nothing to recover
+      if (video.status === 'video_failed' && !video.golpoJobId) {
         continue;
       }
 
@@ -1057,5 +1240,69 @@ export async function resumeIncompletePipelines(): Promise<void> {
     }
   } catch (err) {
     console.error('[ContentHub] Error resuming pipelines:', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND RECOVERY CRON
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Periodically check all video_failed videos that have a Golpo job ID.
+ * If Golpo has finished rendering, recover the video URL automatically.
+ * This runs every 5 minutes and handles the case where polling timed out
+ * but Golpo actually completed the video.
+ */
+let recoveryInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startBackgroundRecovery(): void {
+  if (recoveryInterval) return; // Already running
+
+  console.log('[ContentHub] Starting background recovery cron (every 5 minutes)');
+
+  recoveryInterval = setInterval(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      // Find all failed videos with Golpo job IDs from the last 24 hours
+      const failedWithJobs = await db.select()
+        .from(contentHubVideos)
+        .where(
+          and(
+            eq(contentHubVideos.status, 'video_failed' as any),
+            sql`${contentHubVideos.golpoJobId} IS NOT NULL AND ${contentHubVideos.golpoJobId} != ''`,
+            sql`${contentHubVideos.createdAt} > DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+          )
+        );
+
+      if (failedWithJobs.length === 0) return;
+
+      console.log(`[ContentHub] Background recovery: checking ${failedWithJobs.length} failed video(s)...`);
+
+      for (const video of failedWithJobs) {
+        try {
+          const result = await checkGolpoStatus(video.id);
+          if (result.status === 'completed') {
+            console.log(`[ContentHub] Background recovery: Video #${video.id} recovered! URL: ${result.videoUrl}`);
+          } else if (result.status === 'still_generating') {
+            console.log(`[ContentHub] Background recovery: Video #${video.id} still generating on Golpo`);
+          }
+        } catch (err: any) {
+          // Silent — don't let one video's check crash the whole loop
+          console.warn(`[ContentHub] Background recovery: Error checking video #${video.id}: ${err.message}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('[ContentHub] Background recovery error:', err.message);
+    }
+  }, 5 * 60 * 1000); // Every 5 minutes
+}
+
+export function stopBackgroundRecovery(): void {
+  if (recoveryInterval) {
+    clearInterval(recoveryInterval);
+    recoveryInterval = null;
+    console.log('[ContentHub] Background recovery cron stopped');
   }
 }

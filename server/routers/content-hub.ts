@@ -34,6 +34,7 @@ import {
   savePreset,
   listPresets,
   deletePreset,
+  checkGolpoStatus,
 } from '../content-hub-pipeline';
 
 // ── Input Schemas ────────────────────────────────────────────────────────────
@@ -228,5 +229,15 @@ export const contentHubRouter = router({
     .mutation(async ({ input, ctx }) => {
       await deletePreset(input.id, ctx.user.id);
       return { success: true };
+    }),
+
+  /**
+   * Manually check Golpo status for a video (recover videos whose polling timed out).
+   * Prevents wasted credits by retrieving completed videos that our polling missed.
+   */
+  checkGolpoStatus: protectedProcedure
+    .input(z.object({ videoId: z.number() }))
+    .mutation(async ({ input }) => {
+      return checkGolpoStatus(input.videoId);
     }),
 });
