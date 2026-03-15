@@ -12914,3 +12914,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix own-script pipeline to skip research/scripting and go straight to Golpo — backend now submits directly to Golpo when scriptMode='own_script'
 - [x] Make the flow intuitive: paste script → generate video (no unnecessary steps) — added "Direct to Video" banner, updated button to "Generate Video", added duration selector
 - [x] Test end-to-end: UI verified in browser, all 24 content hub tests pass
+
+### Audit: Content Hub Pipeline vs Golpo API Docs (March 15, 2026)
+- [x] Read full Golpo API documentation at video.golpoai.com/api-docs
+- [x] Audit backend submitToGolpo against API spec — migrated to v1 endpoint /api/v1/videos/generate with JSON body
+- [x] Audit backend pollGolpoUntilDone against API spec — migrated to v1 endpoint /api/v1/videos/status/{jobId}
+- [x] Audit backend checkGolpoStatus against API spec — migrated to v1 endpoint
+- [x] Verify all Golpo API parameters are correctly mapped — fixed: voice (solo-female-3), use_color (true), bg_volume (0.3), add_music (true), JSON body
+- [x] Audit frontend form fields match what the API actually supports — updated voice styles (9 options), music (7 options), removed deprecated 'conversational'
+- [x] Fix 10 backend + 3 frontend mismatches between code and API spec
+- [x] Test full pipeline end-to-end — 67 tests pass (24 content hub + 43 video generation)

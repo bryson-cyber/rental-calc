@@ -24,7 +24,7 @@ import {
   formatDataForPrompt,
   type ContentDataBundle,
 } from './content-data-pipeline';
-import qs from 'qs';
+// qs removed — Golpo API v1 uses JSON, not form-encoded data
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -384,34 +384,54 @@ async function runLayer3VideoProduction(
 
   const apiKey = getGolpoApiKey();
 
-  // Build form fields matching the Golpo Python SDK format (url-encoded, NOT multipart)
-  const fields: Record<string, string> = {
+  // Build JSON payload per Golpo API v1 spec (application/json)
+  const bgMusicTrack = options.bgMusic || 'engaging';
+  const hasBgMusic = bgMusicTrack !== 'none';
+
+  // Map voice style: frontend sends 'solo-female'/'solo-male' but API v1 uses 'solo-female-3'/'solo-male-3'
+  let voiceStyle = options.ttsStyle || 'solo-female-3';
+  const voiceMap: Record<string, string> = {
+    'solo-female': 'solo-female-3',
+    'solo-male': 'solo-male-3',
+    'auto': 'solo-female-3',
+    'authoritative': 'solo-male-3',
+    'motivational': 'solo-female-4',
+  };
+  if (voiceMap[voiceStyle]) voiceStyle = voiceMap[voiceStyle];
+
+  // Calculate timing from word count (in minutes as a string, per API spec)
+  const wordCount = narrationScript.split(/\s+/).length;
+  const estimatedMinutes = wordCount / 150;
+  // Use user-provided timing if set, otherwise auto-calculate
+  const timing = options.timing || String(Math.max(1, Math.round(estimatedMinutes * 2) / 2));
+  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, timing=${timing} min, voice=${voiceStyle}`);
+
+  const payload: Record<string, any> = {
     prompt: 'Create an educational Airbnb investing whiteboard explainer video using the provided script.',
     new_script: narrationScript,
-    style: options.ttsStyle || 'solo-female',
+    style: voiceStyle,
     tts_model: 'accurate',
     video_type: 'long',
     language: 'en',
-    use_color: 'false',
+    use_color: true,
+    white_bg: true,
     video_instructions: VIDEO_INSTRUCTIONS,
     voice_instructions: VOICE_INSTRUCTIONS,
     personality_1: PERSONALITY,
-    bg_music: options.bgMusic || 'engaging',
-    bg_volume: '1.4',
-    output_volume: '1.0',
-    timing: options.timing || '10',
-    include_watermark: 'false',
-    do_research: 'false',
+    add_music: hasBgMusic,
+    bg_music: hasBgMusic ? bgMusicTrack : undefined,
+    bg_volume: hasBgMusic ? 0.3 : undefined,
+    output_volume: 1.0,
+    timing,
+    include_watermark: false,
+    do_research: false,
+    no_voice_chunking: true,
   };
 
-  // Auto-calculate timing from word count (matching Golpo SDK behavior)
-  const wordCount = narrationScript.split(/\s+/).length;
-  const estimatedMinutes = wordCount / 150;
-  const autoTiming = String(Math.round(estimatedMinutes * 2) / 2); // Round to nearest 0.5
-  fields.timing = autoTiming; // Override with calculated timing
-  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, auto-timing=${autoTiming} min`);
+  // Remove undefined keys
+  Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
-  // Submit to Golpo using url-encoded form data (matching SDK behavior)
+  // Submit to Golpo API v1 with JSON body
   // Retry up to 3 times with exponential backoff for TLS/network errors
   const MAX_RETRIES = 3;
   let lastError: Error | null = null;
@@ -423,13 +443,13 @@ async function runLayer3VideoProduction(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 240_000);
       try {
-        const fetchResp = await fetch(`${GOLPO_BASE_URL}/generate`, {
+        const fetchResp = await fetch(`${GOLPO_BASE_URL}/api/v1/videos/generate`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
             'x-api-key': apiKey,
           },
-          body: qs.stringify(fields),
+          body: JSON.stringify(payload),
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
@@ -520,7 +540,7 @@ async function pollGolpoUntilDone(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30_000);
       try {
-        const response = await fetch(`${GOLPO_BASE_URL}/status/${golpoJobId}`, {
+        const response = await fetch(`${GOLPO_BASE_URL}/api/v1/videos/status/${golpoJobId}`, {
           headers: { 'x-api-key': apiKey },
           signal: controller.signal,
         });
@@ -611,7 +631,7 @@ export async function startPipeline(input: PipelineInput): Promise<PipelineResul
     storyFormat: input.storyFormat,
     persona: input.persona || 'coach-inayah',
     bgMusic: input.bgMusic || 'engaging',
-    ttsStyle: input.ttsStyle || 'solo-female',
+    ttsStyle: input.voiceStyle || input.ttsStyle || 'solo-female-3',
     status: 'pipeline_queued',
     pipelineStage: 'Queued — starting pipeline...',
   });
@@ -680,7 +700,7 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
           {
             timing: input.timing,
             bgMusic: input.bgMusic,
-            ttsStyle: input.ttsStyle,
+            ttsStyle: input.voiceStyle || input.ttsStyle,
           },
         );
 
@@ -1148,7 +1168,7 @@ export async function checkGolpoStatus(videoId: number): Promise<{ status: strin
     const timeoutId = setTimeout(() => controller.abort(), 120_000);
     let data: any;
     try {
-      const fetchResp = await fetch(`${GOLPO_BASE_URL}/status/${video.golpoJobId}`, {
+      const fetchResp = await fetch(`${GOLPO_BASE_URL}/api/v1/videos/status/${video.golpoJobId}`, {
         headers: { 'x-api-key': apiKey },
         signal: controller.signal,
       });

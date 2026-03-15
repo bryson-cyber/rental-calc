@@ -134,7 +134,7 @@ function ContentHubCore() {
   const [showFilters, setShowFilters] = useState(true);
   const [persona, setPersona] = useState('coach-inayah');
   const [videoFormat, setVideoFormat] = useState('all');
-  const [voiceStyle, setVoiceStyle] = useState('auto');
+  const [voiceStyle, setVoiceStyle] = useState('solo-female-3');
   const [contentFocus, setContentFocus] = useState('teaching');
   const [contentLength, setContentLength] = useState('5-10');
   const [storyFormat, setStoryFormat] = useState('whiteboard');
@@ -160,7 +160,7 @@ function ContentHubCore() {
     let count = 0;
     if (persona !== 'coach-inayah') count++;
     if (videoFormat !== 'all') count++;
-    if (voiceStyle !== 'auto') count++;
+    if (voiceStyle !== 'solo-female-3') count++;
     if (contentFocus !== 'teaching') count++;
     if (contentLength !== '5-10') count++;
     if (storyFormat !== 'whiteboard') count++;
@@ -291,8 +291,16 @@ function ContentHubCore() {
       return;
     }
 
-    // Map contentLength to format for backward compatibility
+    // Map contentLength to format and timing
     const format = contentLength === '5-10' ? 'deep_dive' as const : 'lesson' as const;
+    // Map contentLength to Golpo timing (in minutes)
+    const timingMap: Record<string, string> = {
+      '30s': '0.5',
+      '1min': '1',
+      '2-3': '3',
+      '5-10': '8',
+    };
+    const timing = timingMap[contentLength] || undefined;
 
     startPipeline.mutate({
       topic: topic.trim() || 'Untitled Script',
@@ -307,6 +315,7 @@ function ContentHubCore() {
       contentLength,
       storyFormat,
       bgMusic,
+      timing,
     });
   }, [inputMode, topic, userScript, brainDump, scriptOnly, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, startPipeline, toast]);
 
@@ -319,7 +328,7 @@ function ContentHubCore() {
   const handleClearFilters = () => {
     setPersona('coach-inayah');
     setVideoFormat('all');
-    setVoiceStyle('auto');
+    setVoiceStyle('solo-female-3');
     setContentFocus('teaching');
     setContentLength('5-10');
     setStoryFormat('whiteboard');
@@ -521,12 +530,10 @@ function ContentHubCore() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">Auto (from Persona)</SelectItem>
-                        <SelectItem value="solo-female">Solo Female (Coach Inayah)</SelectItem>
-                        <SelectItem value="solo-male">Solo Male</SelectItem>
-                        <SelectItem value="conversational">Conversational</SelectItem>
-                        <SelectItem value="authoritative">Authoritative</SelectItem>
-                        <SelectItem value="motivational">Motivational</SelectItem>
+                        <SelectItem value="solo-female-3">Female 1 (Coach Inayah)</SelectItem>
+                        <SelectItem value="solo-female-4">Female 2</SelectItem>
+                        <SelectItem value="solo-male-3">Male 1</SelectItem>
+                        <SelectItem value="solo-male-4">Male 2</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -603,8 +610,13 @@ function ContentHubCore() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="engaging">Engaging — Upbeat background</SelectItem>
-                        <SelectItem value="lofi">Lo-Fi — Chill, relaxed</SelectItem>
+                        <SelectItem value="engaging">Engaging — Subtle corporate pulse</SelectItem>
+                        <SelectItem value="lofi">Lo-Fi — Calm, study vibes</SelectItem>
+                        <SelectItem value="jazz">Jazz — Warm, neutral bed</SelectItem>
+                        <SelectItem value="inspirational">Inspirational — Uplifting orchestral</SelectItem>
+                        <SelectItem value="dramatic">Dramatic — Cinematic tension</SelectItem>
+                        <SelectItem value="whimsical">Whimsical — Playful, upbeat</SelectItem>
+                        <SelectItem value="hyper">Hyper — High-energy electronic</SelectItem>
                         <SelectItem value="none">No Music — Voice only</SelectItem>
                       </SelectContent>
                     </Select>

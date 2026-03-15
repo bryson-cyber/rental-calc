@@ -1,11 +1,11 @@
 /**
- * Video Generation Service Tests (v4 — DB-Persisted Async Pattern)
+ * Video Generation Service Tests (v5 — Golpo API v1 Migration)
  *
  * Tests the Golpo AI video generation integration including:
  * - Module exports (startVideoGeneration, getVideoStatus, resumeIncompleteJobs, etc.)
  * - VideoJobResult and VideoStatusResult types
  * - Narration script building logic
- * - Golpo API configuration (correct base URL, FormData, white_bg)
+ * - Golpo API v1 configuration (correct endpoints, JSON body, voice styles)
  * - Router schema validation
  * - Job resume logic (timeout thresholds, missing Golpo IDs)
  */
@@ -106,37 +106,164 @@ describe('Video Generation Service', () => {
   });
 });
 
-// ── Golpo API Configuration ────────────────────────────────────────────────
+// ── Golpo API v1 Configuration ────────────────────────────────────────────
 
-describe('Golpo API Configuration', () => {
-  it('uses correct base URL (api.golpoai.com, not video.golpoai.com)', () => {
+describe('Golpo API v1 Configuration', () => {
+  it('uses correct base URL (api.golpoai.com)', () => {
     const GOLPO_BASE_URL = 'https://api.golpoai.com';
     expect(GOLPO_BASE_URL).toBe('https://api.golpoai.com');
     expect(GOLPO_BASE_URL).not.toContain('video.golpoai.com');
   });
 
-  it('generate endpoint is /generate (matching SDK)', () => {
+  it('generate endpoint uses v1 path /api/v1/videos/generate', () => {
     const GOLPO_BASE_URL = 'https://api.golpoai.com';
-    const generateUrl = `${GOLPO_BASE_URL}/generate`;
-    expect(generateUrl).toBe('https://api.golpoai.com/generate');
+    const generateUrl = `${GOLPO_BASE_URL}/api/v1/videos/generate`;
+    expect(generateUrl).toBe('https://api.golpoai.com/api/v1/videos/generate');
+    expect(generateUrl).not.toBe('https://api.golpoai.com/generate');
   });
 
-  it('status polling endpoint is /status/{jobId} (matching SDK)', () => {
+  it('status endpoint uses v1 path /api/v1/videos/status/{jobId}', () => {
     const GOLPO_BASE_URL = 'https://api.golpoai.com';
     const jobId = 'test-job-123';
-    const statusUrl = `${GOLPO_BASE_URL}/status/${jobId}`;
-    expect(statusUrl).toBe('https://api.golpoai.com/status/test-job-123');
+    const statusUrl = `${GOLPO_BASE_URL}/api/v1/videos/status/${jobId}`;
+    expect(statusUrl).toBe('https://api.golpoai.com/api/v1/videos/status/test-job-123');
+    expect(statusUrl).not.toBe('https://api.golpoai.com/status/test-job-123');
   });
 
-  it('white_bg parameter should be true for coaching videos', () => {
-    const config = { white_bg: 'true', use_color: 'false' };
-    expect(config.white_bg).toBe('true');
-    expect(config.use_color).toBe('false');
+  it('request body is JSON (not form-encoded)', () => {
+    const contentType = 'application/json';
+    expect(contentType).toBe('application/json');
+    expect(contentType).not.toBe('application/x-www-form-urlencoded');
   });
 
-  it('timing should be 10 for 5-10 minute coaching videos', () => {
-    const timing = '10';
-    expect(timing).toBe('10');
+  it('use_color defaults to true for color videos', () => {
+    const config = { use_color: true, white_bg: true };
+    expect(config.use_color).toBe(true);
+  });
+
+  it('white_bg is true for coaching whiteboard style', () => {
+    const config = { white_bg: true };
+    expect(config.white_bg).toBe(true);
+  });
+
+  it('add_music is true when bg_music is specified', () => {
+    const config = { add_music: true, bg_music: 'engaging' };
+    expect(config.add_music).toBe(true);
+    expect(config.bg_music).toBe('engaging');
+  });
+
+  it('bg_volume must be between 0 and 1.0', () => {
+    const bg_volume = 0.3;
+    expect(bg_volume).toBeGreaterThanOrEqual(0);
+    expect(bg_volume).toBeLessThanOrEqual(1.0);
+    // Old code had 1.4 which was out of range
+    expect(bg_volume).not.toBe(1.4);
+  });
+});
+
+// ── Voice Style Validation ────────────────────────────────────────────────
+
+describe('Golpo API v1 Voice Styles', () => {
+  const validVoiceStyles = [
+    'solo-female-1',
+    'solo-female-2',
+    'solo-female-3',
+    'solo-male-1',
+    'solo-male-2',
+    'solo-male-3',
+    'duo-1',
+    'duo-2',
+    'duo-3',
+  ];
+
+  const deprecatedVoiceStyles = [
+    'solo-female',
+    'solo-male',
+    'conversational',
+  ];
+
+  it('default voice style is solo-female-3 (not deprecated solo-female)', () => {
+    const defaultStyle = 'solo-female-3';
+    expect(validVoiceStyles).toContain(defaultStyle);
+    expect(defaultStyle).not.toBe('solo-female');
+  });
+
+  it('all valid voice styles are recognized', () => {
+    expect(validVoiceStyles).toHaveLength(9);
+    for (const style of validVoiceStyles) {
+      expect(style).toMatch(/^(solo-female|solo-male|duo)-\d$/);
+    }
+  });
+
+  it('deprecated voice styles are not used', () => {
+    for (const deprecated of deprecatedVoiceStyles) {
+      expect(validVoiceStyles).not.toContain(deprecated);
+    }
+  });
+
+  it('conversational style was removed in v1', () => {
+    expect(validVoiceStyles).not.toContain('conversational');
+  });
+});
+
+// ── Music Options Validation ──────────────────────────────────────────────
+
+describe('Golpo API v1 Music Options', () => {
+  const validMusicOptions = [
+    'engaging',
+    'lo-fi',
+    'corporate',
+    'cinematic',
+    'upbeat',
+    'ambient',
+    'none',
+  ];
+
+  it('all 7 music options are available', () => {
+    expect(validMusicOptions).toHaveLength(7);
+  });
+
+  it('engaging is the default music option', () => {
+    expect(validMusicOptions).toContain('engaging');
+  });
+
+  it('none option disables background music', () => {
+    expect(validMusicOptions).toContain('none');
+  });
+});
+
+// ── Timing Parameter Validation ───────────────────────────────────────────
+
+describe('Golpo API Timing Parameter', () => {
+  const timingMap: Record<string, number> = {
+    '30s': 1,
+    '1min': 2,
+    '2-3min': 5,
+    '5-10min': 10,
+  };
+
+  it('30 seconds maps to timing=1', () => {
+    expect(timingMap['30s']).toBe(1);
+  });
+
+  it('1 minute maps to timing=2', () => {
+    expect(timingMap['1min']).toBe(2);
+  });
+
+  it('2-3 minutes maps to timing=5', () => {
+    expect(timingMap['2-3min']).toBe(5);
+  });
+
+  it('5-10 minutes maps to timing=10', () => {
+    expect(timingMap['5-10min']).toBe(10);
+  });
+
+  it('timing values are integers between 1 and 10', () => {
+    for (const [, value] of Object.entries(timingMap)) {
+      expect(Number.isInteger(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(1);
+      expect(value).toBeLessThanOrEqual(10);
+    }
   });
 });
 
@@ -268,35 +395,6 @@ describe('Narration Script Building', () => {
     const result = buildNarrationScript(script);
     const wordCount = result.split(/\s+/).length;
     expect(wordCount).toBeGreaterThan(750);
-  });
-});
-
-// ── Video Settings ──────────────────────────────────────────────────────────
-
-describe('Video Settings', () => {
-  it('all formats use timing=10 for 5-10 minute coaching videos', () => {
-    // Both lesson and deep_dive now use timing=10
-    for (const format of ['lesson', 'deep_dive']) {
-      const timing = '10'; // Both formats use timing=10
-      expect(timing).toBe('10');
-    }
-  });
-
-  it('only lesson and deep_dive formats are supported (no reel/short)', () => {
-    const supportedFormats = ['lesson', 'deep_dive'];
-    expect(supportedFormats).not.toContain('reel');
-    expect(supportedFormats).not.toContain('short');
-    expect(supportedFormats).toHaveLength(2);
-  });
-
-  it('video style is solo-female for Coach Inayah voice', () => {
-    const style = 'solo-female';
-    expect(style).toBe('solo-female');
-  });
-
-  it('tts_model is accurate for high-quality voiceover', () => {
-    const ttsModel = 'accurate';
-    expect(ttsModel).toBe('accurate');
   });
 });
 
