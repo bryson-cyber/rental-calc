@@ -41,6 +41,10 @@ import {
 const startPipelineInput = z.object({
   topic: z.string().min(3).max(500),
   format: z.enum(['lesson', 'deep_dive']),
+  /** Script input mode */
+  scriptMode: z.enum(['own_script', 'ai_enhance', 'ai_generate']).optional().default('ai_generate'),
+  /** User-provided script (required for own_script and ai_enhance modes) */
+  userScript: z.string().max(50000).optional(),
   scriptOnly: z.boolean().optional().default(false),
   brainDump: z.string().max(5000).optional(),
   voiceStyle: z.string().optional(),
@@ -164,7 +168,9 @@ export const contentHubRouter = router({
     .input(updateScriptInput)
     .mutation(async ({ input }) => {
       await updateScript(input.videoId, input.script, input.continueToVideo);
-      return { success: true };
+      // Return the current status so the frontend knows if video generation started
+      const video = await getVideoById(input.videoId);
+      return { success: true, status: video.status };
     }),
 
   /**

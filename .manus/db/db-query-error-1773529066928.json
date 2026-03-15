@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, topic, status, format, golpo_video_id, error_message, SUBSTRING(generated_script, 1, 200) as script_preview, created_at, updated_at FROM content_hub_videos ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, topic, status, format, golpo_video_id, error_message, SUBSTRING(generated_script, 1, 200) as script_preview, created_at, updated_at FROM content_hub_videos ORDER BY id DESC LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'golpo_video_id' in 'field list'"
+  ]
+}

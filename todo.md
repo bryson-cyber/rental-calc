@@ -12876,3 +12876,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Content Hub admin UI (Generate tab + Library tab with polling)
 - [x] Frontend polling architecture (deduplication, tab preservation with forceMount)
 - [x] Vitest tests for Content Hub pipeline (16 tests passing)
+
+### Feature: Content Hub — Script Editing Workflow & Golpo Fix (March 14, 2026)
+- [ ] Fix Golpo API connection bug (timeouts on status polling)
+- [x] Add 5 script input modes: My Script (no AI), AI Enhance (polish user's script), Brain Dump (text-based rough ideas → full script), AI Generate (full AI from scratch), AI Suggest (AI picks topics)
+- [x] Pipeline pauses at script_review stage — user must approve/edit before video generation
+- [x] Script editor UI with edit capability before sending to Golpo
+- [x] Approve button to send reviewed script to Golpo for video generation
+- [x] Update frontend Content Hub page with new script input modes and review workflow
+- [x] Brain Dump text mode (type rough ideas without voice-to-speech)
+- [x] Updated vitest tests for all script modes (23 tests passing)

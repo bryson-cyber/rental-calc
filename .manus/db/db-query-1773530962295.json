@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, status, pipelineStage, golpoJobId, TIMESTAMPDIFF(MINUTE, createdAt, NOW()) as age_minutes FROM content_hub_videos WHERE id = 7;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, status, pipelineStage, golpoJobId, TIMESTAMPDIFF(MINUTE, createdAt, NOW()) as age_minutes FROM content_hub_videos WHERE id = 7;",
+  "rows": [
+    {
+      "id": "7",
+      "status": "video_generating",
+      "pipelineStage": "Layer 3: Generating video... (218s elapsed)",
+      "golpoJobId": "c495375e-aa99-4b24-8463-0a70abb5a9c1",
+      "age_minutes": "24"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstatus\tpipelineStage\tgolpoJobId\tage_minutes\n7\tvideo_generating\tLayer 3: Generating video... (218s elapsed)\tc495375e-aa99-4b24-8463-0a70abb5a9c1\t24\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

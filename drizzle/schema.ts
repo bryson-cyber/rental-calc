@@ -2652,6 +2652,11 @@ export const contentHubVideos = mysqlTable("content_hub_videos", {
   format: varchar("format", { length: 50 }).notNull(),
   timing: varchar("timing", { length: 10 }).notNull().default("auto"),
 
+  /** Script input mode: own_script (user provides final script), ai_enhance (AI polishes user script), ai_generate (AI writes from scratch) */
+  scriptMode: mysqlEnum("scriptMode", ["own_script", "ai_enhance", "ai_generate"]).notNull().default("ai_generate"),
+  /** User-provided script text (used in own_script and ai_enhance modes) */
+  userScript: text("userScript"),
+
   // Configurable dimensions
   voiceStyle: varchar("voiceStyle", { length: 50 }),
   contentFocus: varchar("contentFocus", { length: 50 }),

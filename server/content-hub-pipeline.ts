@@ -25,7 +25,7 @@ import {
   type ContentDataBundle,
 } from './content-data-pipeline';
 import axios from 'axios';
-import FormData from 'form-data';
+import qs from 'qs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,10 +40,16 @@ export type VideoStatus =
   | 'video_failed'
   | 'pipeline_failed';
 
+export type ScriptMode = 'own_script' | 'ai_enhance' | 'ai_generate';
+
 export interface PipelineInput {
   topic: string;
   format: 'lesson' | 'deep_dive';
   userId: number;
+  /** Script input mode */
+  scriptMode?: ScriptMode;
+  /** User-provided script (required for own_script and ai_enhance modes) */
+  userScript?: string;
   /** Optional overrides */
   voiceStyle?: string;
   contentFocus?: string;
@@ -379,36 +385,41 @@ async function runLayer3VideoProduction(
 
   const apiKey = getGolpoApiKey();
 
-  // Build FormData for Golpo API
-  const formData = new FormData();
-  formData.append('prompt', 'Create an educational Airbnb investing whiteboard explainer video using the provided script.');
-  formData.append('new_script', narrationScript);
-  formData.append('style', options.ttsStyle || 'solo-female');
-  formData.append('tts_model', 'accurate');
-  formData.append('video_type', 'long');
-  formData.append('language', 'en');
-  formData.append('white_bg', 'true');
-  formData.append('use_color', 'false');
-  formData.append('video_instructions', VIDEO_INSTRUCTIONS);
-  formData.append('voice_instructions', VOICE_INSTRUCTIONS);
-  formData.append('personality_1', PERSONALITY);
-  formData.append('bg_music', options.bgMusic || 'engaging');
-  formData.append('bg_volume', '1.4');
-  formData.append('output_volume', '1.0');
-  formData.append('timing', options.timing || '10');
-  formData.append('include_watermark', 'false');
-  formData.append('do_research', 'false');
+  // Build form fields matching the Golpo Python SDK format (url-encoded, NOT multipart)
+  const fields: Record<string, string> = {
+    prompt: 'Create an educational Airbnb investing whiteboard explainer video using the provided script.',
+    new_script: narrationScript,
+    style: options.ttsStyle || 'solo-female',
+    tts_model: 'accurate',
+    video_type: 'long',
+    language: 'en',
+    use_color: 'false',
+    video_instructions: VIDEO_INSTRUCTIONS,
+    voice_instructions: VOICE_INSTRUCTIONS,
+    personality_1: PERSONALITY,
+    bg_music: options.bgMusic || 'engaging',
+    bg_volume: '1.4',
+    output_volume: '1.0',
+    timing: options.timing || '10',
+    include_watermark: 'false',
+    do_research: 'false',
+  };
 
+  // Auto-calculate timing from word count (matching Golpo SDK behavior)
   const wordCount = narrationScript.split(/\s+/).length;
-  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, timing=${options.timing || '10'}`);
+  const estimatedMinutes = wordCount / 150;
+  const autoTiming = String(Math.round(estimatedMinutes * 2) / 2); // Round to nearest 0.5
+  fields.timing = autoTiming; // Override with calculated timing
+  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, auto-timing=${autoTiming} min`);
 
-  // Submit to Golpo
-  const response = await axios.post(`${GOLPO_BASE_URL}/generate`, formData, {
+  // Submit to Golpo using url-encoded form data (matching SDK behavior)
+  const response = await axios.post(`${GOLPO_BASE_URL}/generate`, qs.stringify(fields), {
     headers: {
-      ...formData.getHeaders(),
+      'Content-Type': 'application/x-www-form-urlencoded',
       'x-api-key': apiKey,
     },
     timeout: 240_000,
+    maxBodyLength: Infinity,
   });
 
   const golpoJobId = response.data.job_id;
@@ -439,7 +450,7 @@ async function pollGolpoUntilDone(
   videoId: number,
   golpoJobId: string,
   pollIntervalMs = 15000,
-  maxWaitMs = 1_200_000, // 20 minutes
+  maxWaitMs = 1_800_000, // 30 minutes (long scripts need more time)
 ): Promise<string> {
   const apiKey = getGolpoApiKey();
   const db = await getDb();
@@ -496,12 +507,16 @@ export async function startPipeline(input: PipelineInput): Promise<PipelineResul
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const scriptMode = input.scriptMode || 'ai_generate';
+
   // Create the video row
   const [inserted] = await db.insert(contentHubVideos).values({
     userId: input.userId,
     topic: input.topic,
     format: input.format,
     timing: input.timing || 'auto',
+    scriptMode,
+    userScript: input.userScript || null,
     voiceStyle: input.voiceStyle,
     contentFocus: input.contentFocus,
     contentLength: input.contentLength,
@@ -540,63 +555,164 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
   if (!db) throw new Error('Database not available');
 
   const pipelineStart = Date.now();
+  const scriptMode = input.scriptMode || 'ai_generate';
 
   try {
-    // Layer 1: Research
-    const { formattedData } = await runLayer1Research(videoId);
+    let narrationScript: string;
 
-    // Layer 2: Script Generation
-    const { narrationScript } = await runLayer2ScriptGeneration(
-      videoId,
-      input.topic,
-      input.format,
-      formattedData,
-      input.brainDump,
-    );
+    if (scriptMode === 'own_script') {
+      // ── OWN SCRIPT: User provides the final script, skip Layer 1 & 2 ──
+      if (!input.userScript) throw new Error('userScript is required for own_script mode');
+      narrationScript = input.userScript;
 
-    // If script-only mode, stop here
-    if (input.scriptOnly) {
-      const totalMs = Date.now() - pipelineStart;
+      // Save the script and pause at script_review so user can confirm before video
       await db.update(contentHubVideos)
         .set({
-          status: 'script_only',
-          totalDurationMs: totalMs,
-          pipelineStage: 'Complete — script only (no video)',
+          narrationScript,
+          status: 'script_review',
+          layer1DurationMs: 0,
+          layer2DurationMs: 0,
+          pipelineStage: 'Your script is ready for review — approve to generate video',
         })
         .where(eq(contentHubVideos.id, videoId));
-      console.log(`[ContentHub] Video #${videoId}: Script-only pipeline complete in ${totalMs}ms`);
+
+      console.log(`[ContentHub] Video #${videoId}: Own script saved, paused at script_review`);
       activePipelines.delete(videoId);
-      return;
+      return; // Pipeline pauses here — user approves via updateScript()
+
+    } else if (scriptMode === 'ai_enhance') {
+      // ── AI ENHANCE: Run research, then enhance user's script (don't rewrite) ──
+      if (!input.userScript) throw new Error('userScript is required for ai_enhance mode');
+
+      // Layer 1: Research (for data enrichment)
+      const { formattedData } = await runLayer1Research(videoId);
+
+      // Layer 2: Enhance the user's script with AI
+      const { narrationScript: enhanced } = await runLayer2EnhanceScript(
+        videoId,
+        input.topic,
+        input.format,
+        input.userScript,
+        formattedData,
+      );
+      narrationScript = enhanced;
+
+      // Pause at script_review so user can see what AI changed
+      await db.update(contentHubVideos)
+        .set({
+          narrationScript,
+          status: 'script_review',
+          pipelineStage: 'AI-enhanced script ready for review — approve to generate video',
+        })
+        .where(eq(contentHubVideos.id, videoId));
+
+      console.log(`[ContentHub] Video #${videoId}: AI-enhanced script ready, paused at script_review`);
+      activePipelines.delete(videoId);
+      return; // Pipeline pauses here — user approves via updateScript()
+
+    } else {
+      // ── AI GENERATE: Full pipeline — research + AI writes from scratch ──
+      // Layer 1: Research
+      const { formattedData } = await runLayer1Research(videoId);
+
+      // Layer 2: Script Generation
+      const result = await runLayer2ScriptGeneration(
+        videoId,
+        input.topic,
+        input.format,
+        formattedData,
+        input.brainDump,
+      );
+      narrationScript = result.narrationScript;
+
+      // Pause at script_review so user can review AI-generated script
+      await db.update(contentHubVideos)
+        .set({
+          narrationScript,
+          status: 'script_review',
+          pipelineStage: 'AI-generated script ready for review — approve to generate video',
+        })
+        .where(eq(contentHubVideos.id, videoId));
+
+      console.log(`[ContentHub] Video #${videoId}: AI-generated script ready, paused at script_review`);
+      activePipelines.delete(videoId);
+      return; // Pipeline pauses here — user approves via updateScript()
     }
-
-    // Layer 3: Video Production
-    const { videoUrl, golpoJobId, durationMs: layer3Ms } = await runLayer3VideoProduction(
-      videoId,
-      narrationScript,
-      {
-        timing: input.timing,
-        bgMusic: input.bgMusic,
-        ttsStyle: input.ttsStyle,
-      },
-    );
-
-    // Pipeline complete
-    const totalMs = Date.now() - pipelineStart;
-    await db.update(contentHubVideos)
-      .set({
-        status: 'video_complete',
-        videoUrl,
-        videoId: golpoJobId,
-        layer3DurationMs: layer3Ms,
-        totalDurationMs: totalMs,
-        pipelineStage: 'Pipeline complete',
-      })
-      .where(eq(contentHubVideos.id, videoId));
-
-    console.log(`[ContentHub] Video #${videoId}: Full pipeline complete in ${Math.round(totalMs / 1000)}s`);
   } finally {
     activePipelines.delete(videoId);
   }
+}
+
+/**
+ * Layer 2 variant: Enhance (don't rewrite) the user's script.
+ * Keeps the user's words and ideas intact, but polishes delivery,
+ * adds transitions, improves flow, and injects data points.
+ */
+async function runLayer2EnhanceScript(
+  videoId: number,
+  topic: string,
+  format: string,
+  userScript: string,
+  researchData: string,
+): Promise<{ narrationScript: string }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.update(contentHubVideos)
+    .set({ status: 'scripting', pipelineStage: 'Layer 2: AI is enhancing your script...' })
+    .where(eq(contentHubVideos.id, videoId));
+
+  const startMs = Date.now();
+
+  const enhancePrompt = `You are a professional script editor for Coach Inayah's YouTube channel about Airbnb arbitrage.
+
+Your job is to ENHANCE the user's script — NOT rewrite it. Follow these rules:
+
+1. KEEP the user's exact words, phrasing, and ideas as much as possible
+2. KEEP the user's voice and personality — don't make it sound generic
+3. You MAY:
+   - Fix grammar and awkward phrasing (minor polish only)
+   - Add smooth transitions between sections
+   - Insert 1-2 real data points from the research data below (naturally, not forced)
+   - Suggest a stronger hook if the opening is weak
+   - Add a clear call-to-action at the end if missing
+   - Improve the flow and pacing for video narration
+4. You MUST NOT:
+   - Change the core message or argument
+   - Add entire new sections the user didn't write about
+   - Remove sections the user wrote
+   - Change the user's examples or stories to different ones
+   - Make it sound like a different person wrote it
+
+Format: ${format === 'deep_dive' ? '8-12 minute deep dive' : '5-8 minute lesson'}
+Topic: ${topic}
+
+LIVE PLATFORM DATA (use sparingly to enrich, not to rewrite):
+${researchData}
+
+USER'S ORIGINAL SCRIPT:
+${userScript}
+
+Return ONLY the enhanced narration script. No headers, no notes, no commentary.`;
+
+  const enhanced = await routedLLMCall(
+    FEATURES.CONTENT_HUB_SCRIPT,
+    [
+      { role: 'system', content: 'You are a script editor. Enhance, do not rewrite. Preserve the author\'s voice.' },
+      { role: 'user', content: enhancePrompt },
+    ],
+    { effort: 'high', maxTokens: 16384 },
+  );
+  if (!enhanced) throw new Error('AI returned empty enhanced script');
+
+  const durationMs = Date.now() - startMs;
+  console.log(`[ContentHub] Video #${videoId}: Layer 2 (enhance) complete in ${Math.round(durationMs / 1000)}s — ${enhanced.split(/\s+/).length} words`);
+
+  await db.update(contentHubVideos)
+    .set({ layer2DurationMs: durationMs })
+    .where(eq(contentHubVideos.id, videoId));
+
+  return { narrationScript: enhanced };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

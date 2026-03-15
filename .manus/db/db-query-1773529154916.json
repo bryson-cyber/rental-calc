@@ -1,0 +1,258 @@
+{
+  "query": "SHOW COLUMNS FROM content_hub_videos;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SHOW COLUMNS FROM content_hub_videos;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "userId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "topic",
+      "Type": "text",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "format",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "timing",
+      "Type": "varchar(10)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "auto",
+      "Extra": ""
+    },
+    {
+      "Field": "voiceStyle",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "contentFocus",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "contentLength",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "storyFormat",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "persona",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "coach-inayah",
+      "Extra": ""
+    },
+    {
+      "Field": "bgMusic",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "engaging",
+      "Extra": ""
+    },
+    {
+      "Field": "ttsStyle",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "solo-female",
+      "Extra": ""
+    },
+    {
+      "Field": "realTimeFacts",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sources",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "searchQueries",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "narrationScript",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "successStoryUsed",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "videoUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "videoId",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "golpoJobId",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "thumbnailUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('pipeline_queued','researching','scripting','script_review','script_only','video_generating','video_complete','video_failed','pipeline_failed')",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "pipeline_queued",
+      "Extra": ""
+    },
+    {
+      "Field": "pipelineStage",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "error",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "layer1DurationMs",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "layer2DurationMs",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "layer3DurationMs",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "totalDurationMs",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "modelsUsed",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nuserId\tint\tNO\tMUL\tNULL\t\ntopic\ttext\tNO\t\tNULL\t\nformat\tvarchar(50)\tNO\tMUL\tNULL\t\ntiming\tvarchar(10)\tNO\t\tauto\t\nvoiceStyle\tvarchar(50)\tYES\t\tNULL\t\ncontentFocus\tvarchar(50)\tYES\t\tNULL\t\ncontentLength\tvarchar(50)\tYES\t\tNULL\t\nstoryFormat\tvarchar(50)\tYES\t\tNULL\t\npersona\tvarchar(50)\tYES\t\tcoach-inayah\t\nbgMusic\tvarchar(50)\tYES\t\tengaging\t\nttsStyle\tvarchar(50)\tYES\t\tsolo-female\t\nrealTimeFacts\ttext\tYES\t\tNULL\t\nsources\tjson\tYES\t\tNULL\t\nsearchQueries\tjson\tYES\t\tNULL\t\nnarrationScript\ttext\tYES\t\tNULL\t\nsuccessStoryUsed\ttext\tYES\t\tNULL\t\nvideoUrl\ttext\tYES\t\tNULL\t\nvideoId\tvarchar(255)\tYES\t\tNULL\t\ngolpoJobId\tvarchar(100)\tYES\t\tNULL\t\nthumbnailUrl\ttext\tYES\t\tNULL\t\nstatus\tenum('pipeline_queued','researching','scripting','script_review','script_only','video_generating','video_complete','video_failed','pipeline_failed')\tNO\tMUL\tpipeline_queued\t\npipelineStage\tvarchar(200)\tYES\t\tNULL\t\nerror\ttext\tYES\t\tNULL\t\nlayer1DurationMs\tint\tYES\t\tNULL\t\nlayer2DurationMs\tint\tYES\t\tNULL\t\nlayer3DurationMs\tint\tYES\t\tNULL\t\ntotalDurationMs\tint\tYES\t\tNULL\t\nmodelsUsed\tjson\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\tMUL\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 48
+}

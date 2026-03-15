@@ -1,21 +1,16 @@
 /**
  * Content Hub — Full Pipeline Video Generation UI
  *
- * Features:
- *   - Topic suggestion engine (AI picks topics from platform data)
- *   - Brain dump input (paste rough idea → Opus enhances it)
- *   - Manual topic entry with format selection
- *   - Script review workflow (edit before sending to video)
- *   - Batch generation (multiple topics at once)
- *   - Presets (save favorite configurations)
- *   - Video status polling with progress indicators
- *   - Video list with filters
+ * Script Input Modes:
+ *   1. My Script — paste your finished script, review → video
+ *   2. AI Enhance — paste rough script, AI polishes (keeps your words), review → video
+ *   3. Brain Dump — type rough ideas/bullets, AI builds a full script, review → video
+ *   4. AI Generate — enter topic, AI writes from scratch, review → video
+ *   5. AI Suggest — platform data suggests topics, pick one → AI Generate flow
  *
- * Exports:
- *   - ContentHubTab: Embeddable component for the admin dashboard
- *   - ContentHubPage: Standalone page wrapper
+ * ALL modes pause at script_review before sending to Golpo for video.
  */
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,24 +32,19 @@ import {
   Copy,
   Check,
   Clock,
-  TrendingUp,
   ChevronDown,
   ChevronUp,
   Trash2,
-  Eye,
   Film,
   Zap,
   RefreshCw,
   AlertCircle,
-  Video,
   Play,
-  Download,
   ExternalLink,
   BookOpen,
   GraduationCap,
   Brain,
   Layers,
-  ListChecks,
   Save,
   Lightbulb,
   Send,
@@ -64,6 +54,9 @@ import {
   Timer,
   Plus,
   Wand2,
+  FileText,
+  ArrowLeft,
+  RotateCcw,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -73,11 +66,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   pipeline_queued: { label: 'Queued', color: 'bg-slate-100 text-slate-700 border-slate-200', icon: Clock },
   researching: { label: 'Researching...', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Loader2 },
   scripting: { label: 'Writing Script...', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: Loader2 },
-  script_review: { label: 'Script Review', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Pencil },
+  script_review: { label: 'Ready for Review', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Pencil },
   script_only: { label: 'Script Only', color: 'bg-teal-100 text-teal-700 border-teal-200', icon: CheckCircle },
   video_generating: { label: 'Generating Video...', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: Loader2 },
   video_complete: { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
-  video_failed: { label: 'Failed', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  video_failed: { label: 'Video Failed', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
   pipeline_failed: { label: 'Failed', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
 };
 
@@ -93,9 +86,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const FORMAT_META: Record<string, { icon: typeof BookOpen; label: string; desc: string }> = {
-  lesson: { icon: BookOpen, label: 'Lesson', desc: '5-8 min coaching video' },
-  deep_dive: { icon: GraduationCap, label: 'Deep Dive', desc: '8-12 min masterclass' },
+type ScriptInputMode = 'my_script' | 'ai_enhance' | 'braindump' | 'ai_generate' | 'suggest';
+
+const MODE_META: Record<ScriptInputMode, { icon: typeof Pencil; label: string; desc: string }> = {
+  my_script: { icon: FileText, label: 'My Script', desc: 'Paste your finished script' },
+  ai_enhance: { icon: Wand2, label: 'AI Enhance', desc: 'AI polishes your script' },
+  braindump: { icon: Brain, label: 'Brain Dump', desc: 'Rough ideas → full script' },
+  ai_generate: { icon: Sparkles, label: 'AI Generate', desc: 'AI writes from scratch' },
+  suggest: { icon: Lightbulb, label: 'AI Suggest', desc: 'Get topic ideas' },
 };
 
 // ── Main Content Hub Component ──────────────────────────────────────────────
@@ -105,14 +103,15 @@ function ContentHubCore() {
   const [activeSection, setActiveSection] = useState<'create' | 'videos' | 'presets'>('create');
 
   // ── Create Section State ──────────────────────────────────────────────────
-  const [mode, setMode] = useState<'topic' | 'braindump' | 'suggest'>('topic');
+  const [mode, setMode] = useState<ScriptInputMode>('my_script');
   const [topic, setTopic] = useState('');
   const [format, setFormat] = useState<'lesson' | 'deep_dive'>('lesson');
+  const [userScript, setUserScript] = useState('');
   const [brainDump, setBrainDump] = useState('');
   const [scriptOnly, setScriptOnly] = useState(false);
   const [bgMusic, setBgMusic] = useState('engaging');
   const [ttsStyle, setTtsStyle] = useState('solo-female');
-  const [timing, setTiming] = useState('10');
+  const [timing, setTiming] = useState('auto');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // ── Batch State ───────────────────────────────────────────────────────────
@@ -148,10 +147,11 @@ function ContentHubCore() {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const startPipeline = trpc.contentHub.startPipeline.useMutation({
     onSuccess: (data) => {
-      toast({ title: 'Pipeline started', description: `Video #${data.videoId} is being generated.`, variant: 'default' });
+      toast({ title: 'Pipeline started', description: `Video #${data.videoId} is being processed.`, variant: 'default' });
       setSelectedVideoId(data.videoId);
       setActiveSection('videos');
       setTopic('');
+      setUserScript('');
       setBrainDump('');
       videosQuery.refetch();
     },
@@ -167,10 +167,11 @@ function ContentHubCore() {
   });
 
   const updateScriptMut = trpc.contentHub.updateScript.useMutation({
-    onSuccess: () => {
-      toast({ title: 'Script updated', variant: 'default' });
+    onSuccess: (data) => {
+      toast({ title: data.status === 'video_generating' ? 'Script approved — generating video' : 'Script saved', variant: 'default' });
       setEditingScript(false);
       videoDetailQuery.refetch();
+      videosQuery.refetch();
     },
     onError: (err) => {
       toast({ title: 'Update failed', description: err.message, variant: 'destructive' });
@@ -216,26 +217,60 @@ function ContentHubCore() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleStartPipeline = () => {
-    if (!topic.trim()) {
+  const handleStartPipeline = useCallback(() => {
+    // Determine scriptMode based on the current input mode
+    let scriptMode: 'own_script' | 'ai_enhance' | 'ai_generate' = 'ai_generate';
+    let scriptText: string | undefined;
+    let brainDumpText: string | undefined;
+
+    if (mode === 'my_script') {
+      if (!userScript.trim()) {
+        toast({ title: 'Paste your script', description: 'The script field is required in My Script mode.', variant: 'destructive' });
+        return;
+      }
+      scriptMode = 'own_script';
+      scriptText = userScript.trim();
+    } else if (mode === 'ai_enhance') {
+      if (!userScript.trim()) {
+        toast({ title: 'Paste your script', description: 'Paste the script you want AI to enhance.', variant: 'destructive' });
+        return;
+      }
+      scriptMode = 'ai_enhance';
+      scriptText = userScript.trim();
+    } else if (mode === 'braindump') {
+      if (!brainDump.trim()) {
+        toast({ title: 'Enter your brain dump', description: 'Type your rough ideas so AI can build a script.', variant: 'destructive' });
+        return;
+      }
+      scriptMode = 'ai_generate';
+      brainDumpText = brainDump.trim();
+    } else {
+      // ai_generate or suggest
+      scriptMode = 'ai_generate';
+    }
+
+    if (!topic.trim() && mode !== 'my_script') {
       toast({ title: 'Enter a topic', variant: 'destructive' });
       return;
     }
+
     startPipeline.mutate({
-      topic: topic.trim(),
+      topic: topic.trim() || 'Untitled Script',
       format,
       scriptOnly,
-      brainDump: mode === 'braindump' && brainDump.trim() ? brainDump.trim() : undefined,
+      scriptMode,
+      userScript: scriptText,
+      brainDump: brainDumpText,
       bgMusic,
       ttsStyle,
       timing,
     });
-  };
+  }, [mode, topic, format, userScript, brainDump, scriptOnly, bgMusic, ttsStyle, timing, startPipeline, toast]);
 
   const handleUseSuggestion = (suggestion: { topic: string; format: string }) => {
     setTopic(suggestion.topic);
     setFormat(suggestion.format as 'lesson' | 'deep_dive');
-    setMode('topic');
+    setMode('ai_generate');
     toast({ title: 'Topic loaded', description: 'Review and start the pipeline.', variant: 'default' });
   };
 
@@ -286,7 +321,40 @@ function ContentHubCore() {
     );
   }, [videosQuery.data]);
 
+  const reviewVideos = useMemo(() => {
+    return (videosQuery.data?.videos || []).filter((v: any) => v.status === 'script_review');
+  }, [videosQuery.data]);
+
   const videoDetail = videoDetailQuery.data;
+
+  const wordCount = useMemo(() => {
+    if (mode === 'my_script' || mode === 'ai_enhance') {
+      return userScript.trim().split(/\s+/).filter(Boolean).length;
+    }
+    if (mode === 'braindump') {
+      return brainDump.trim().split(/\s+/).filter(Boolean).length;
+    }
+    return 0;
+  }, [mode, userScript, brainDump]);
+
+  // Determine if the main action button should be enabled
+  const canSubmit = useMemo(() => {
+    if (startPipeline.isPending) return false;
+    if (mode === 'my_script') return userScript.trim().length > 50;
+    if (mode === 'ai_enhance') return userScript.trim().length > 50 && topic.trim().length > 0;
+    if (mode === 'braindump') return brainDump.trim().length > 20 && topic.trim().length > 0;
+    if (mode === 'ai_generate') return topic.trim().length > 0;
+    if (mode === 'suggest') return topic.trim().length > 0;
+    return false;
+  }, [mode, userScript, brainDump, topic, startPipeline.isPending]);
+
+  // Action button label
+  const actionLabel = useMemo(() => {
+    if (mode === 'my_script') return scriptOnly ? 'Save Script' : 'Review & Generate Video';
+    if (mode === 'ai_enhance') return 'Enhance Script';
+    if (mode === 'braindump') return 'Build Script from Ideas';
+    return scriptOnly ? 'Generate Script' : 'Generate Script + Video';
+  }, [mode, scriptOnly]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -299,15 +367,30 @@ function ContentHubCore() {
         <div>
           <h2 className="text-2xl font-bold font-serif text-foreground">Content Hub</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            AI-powered video pipeline: Topic → Script (Opus 4.6) → Video (Golpo AI)
+            Write scripts, enhance them with AI, or generate from scratch — then produce videos with Golpo AI
           </p>
         </div>
-        {activeVideos.length > 0 && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1.5">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            {activeVideos.length} active pipeline{activeVideos.length !== 1 ? 's' : ''}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {reviewVideos.length > 0 && (
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-700 border-amber-200 gap-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
+              onClick={() => {
+                setSelectedVideoId(reviewVideos[0].id);
+                setActiveSection('videos');
+              }}
+            >
+              <Pencil className="w-3 h-3" />
+              {reviewVideos.length} script{reviewVideos.length !== 1 ? 's' : ''} to review
+            </Badge>
+          )}
+          {activeVideos.length > 0 && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {activeVideos.length} active
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Section Tabs */}
@@ -331,57 +414,64 @@ function ContentHubCore() {
         {/* CREATE TAB */}
         {/* ════════════════════════════════════════════════════════════════════ */}
         <TabsContent value="create" className="space-y-4 mt-4">
-          {/* Mode Selector */}
-          <div className="flex gap-2">
-            <Button
-              variant={mode === 'topic' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setMode('topic')}
-              className="gap-1.5"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Enter Topic
-            </Button>
-            <Button
-              variant={mode === 'braindump' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setMode('braindump')}
-              className="gap-1.5"
-            >
-              <Brain className="w-3.5 h-3.5" />
-              Brain Dump
-            </Button>
-            <Button
-              variant={mode === 'suggest' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setMode('suggest');
-                if (!suggestTopicsMut.data) {
-                  suggestTopicsMut.mutate({ count: 5 });
-                }
-              }}
-              className="gap-1.5"
-            >
-              <Lightbulb className="w-3.5 h-3.5" />
-              AI Suggest
-            </Button>
+          {/* Mode Selector — 5 modes */}
+          <div className="flex flex-wrap gap-2">
+            {(Object.entries(MODE_META) as [ScriptInputMode, typeof MODE_META[ScriptInputMode]][]).map(([key, meta]) => {
+              const Icon = meta.icon;
+              return (
+                <Button
+                  key={key}
+                  variant={mode === key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setMode(key);
+                    if (key === 'suggest' && !suggestTopicsMut.data) {
+                      suggestTopicsMut.mutate({ count: 5 });
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {meta.label}
+                </Button>
+              );
+            })}
           </div>
 
-          {/* Topic Input Mode */}
-          {mode === 'topic' && (
+          {/* ── MY SCRIPT MODE ── */}
+          {mode === 'my_script' && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Enter Topic</CardTitle>
-                <CardDescription>Type a specific topic for the video script</CardDescription>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  My Script
+                </CardTitle>
+                <CardDescription>
+                  Paste your finished script. It goes straight to review — AI won't change a word.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input
-                  placeholder="e.g., How to find your first Airbnb arbitrage deal in Denver for under $3,000"
+                  placeholder="Title (e.g., Why Denver is the best market for beginners)"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   className="text-sm"
                 />
-                <div className="flex gap-3">
+                <div className="relative">
+                  <Textarea
+                    placeholder="Paste your full narration script here..."
+                    value={userScript}
+                    onChange={(e) => setUserScript(e.target.value)}
+                    rows={14}
+                    className="text-sm font-mono"
+                  />
+                  {wordCount > 0 && (
+                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                      {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 items-center">
                   <Select value={format} onValueChange={(v) => setFormat(v as any)}>
                     <SelectTrigger className="w-[200px]">
                       <SelectValue />
@@ -391,16 +481,61 @@ function ContentHubCore() {
                       <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
-                    <span className="text-sm text-muted-foreground">Script only (no video)</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Brain Dump Mode */}
+          {/* ── AI ENHANCE MODE ── */}
+          {mode === 'ai_enhance' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-violet-600" />
+                  AI Enhance
+                </CardTitle>
+                <CardDescription>
+                  Paste your script — AI will polish the delivery, add transitions, and inject data points.
+                  Your words and ideas stay intact.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  placeholder="Topic title (e.g., 5 mistakes new Airbnb hosts make)"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="text-sm"
+                />
+                <div className="relative">
+                  <Textarea
+                    placeholder="Paste your rough script here. AI will enhance it — fix flow, add transitions, inject real data — but keep YOUR voice and ideas..."
+                    value={userScript}
+                    onChange={(e) => setUserScript(e.target.value)}
+                    rows={14}
+                    className="text-sm font-mono"
+                  />
+                  {wordCount > 0 && (
+                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                      {wordCount} words · ~{Math.ceil(wordCount / 150)} min narration
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 items-center">
+                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
+                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── BRAIN DUMP MODE ── */}
           {mode === 'braindump' && (
             <Card>
               <CardHeader className="pb-3">
@@ -409,7 +544,8 @@ function ContentHubCore() {
                   Brain Dump
                 </CardTitle>
                 <CardDescription>
-                  Paste your rough idea — Opus 4.6 will enhance it into a polished script
+                  Type your rough ideas, bullet points, key stats, the angle you're going for.
+                  Opus 4.6 will transform it into a complete narration script.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -419,14 +555,28 @@ function ContentHubCore() {
                   onChange={(e) => setTopic(e.target.value)}
                   className="text-sm"
                 />
-                <Textarea
-                  placeholder="Dump your rough thoughts here... bullet points, half-formed ideas, key stats you want to mention, the angle you're going for. Opus will transform this into a complete narration script."
-                  value={brainDump}
-                  onChange={(e) => setBrainDump(e.target.value)}
-                  rows={8}
-                  className="text-sm"
-                />
-                <div className="flex gap-3">
+                <div className="relative">
+                  <Textarea
+                    placeholder={`Dump your rough thoughts here...
+
+Example:
+- want to talk about how people overthink their first deal
+- mention the student who found a deal in Columbia SC making $2k/mo
+- the key is just running the numbers — use the free tool
+- mention that 67% occupancy is actually good for a beginner
+- end with CTA to the tool`}
+                    value={brainDump}
+                    onChange={(e) => setBrainDump(e.target.value)}
+                    rows={10}
+                    className="text-sm"
+                  />
+                  {wordCount > 0 && (
+                    <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                      {wordCount} words in dump
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 items-center">
                   <Select value={format} onValueChange={(v) => setFormat(v as any)}>
                     <SelectTrigger className="w-[200px]">
                       <SelectValue />
@@ -445,7 +595,45 @@ function ContentHubCore() {
             </Card>
           )}
 
-          {/* AI Suggest Mode */}
+          {/* ── AI GENERATE MODE ── */}
+          {mode === 'ai_generate' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  AI Generate
+                </CardTitle>
+                <CardDescription>
+                  Enter a topic — Opus 4.6 writes the full script from scratch using live platform data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  placeholder="e.g., How to find your first Airbnb arbitrage deal in Denver for under $3,000"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="text-sm"
+                />
+                <div className="flex gap-3 items-center">
+                  <Select value={format} onValueChange={(v) => setFormat(v as any)}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lesson">Lesson (5-8 min)</SelectItem>
+                      <SelectItem value="deep_dive">Deep Dive (8-12 min)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={scriptOnly} onCheckedChange={setScriptOnly} />
+                    <span className="text-sm text-muted-foreground">Script only</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── AI SUGGEST MODE ── */}
           {mode === 'suggest' && (
             <Card>
               <CardHeader className="pb-3">
@@ -454,7 +642,7 @@ function ContentHubCore() {
                   AI Topic Suggestions
                 </CardTitle>
                 <CardDescription>
-                  Topics generated from your live platform data
+                  Topics generated from your live platform data — click one to start
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -486,7 +674,8 @@ function ContentHubCore() {
                             <p className="font-medium text-sm">{suggestion.topic}</p>
                             <p className="text-xs text-muted-foreground mt-1">{suggestion.angle}</p>
                           </div>
-                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                            <Zap className="w-3 h-3" />
                             Use
                           </Button>
                         </div>
@@ -521,103 +710,112 @@ function ContentHubCore() {
           )}
 
           {/* Advanced Options */}
-          <div>
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              Advanced Options
-            </button>
-            {showAdvanced && (
-              <Card className="mt-2">
-                <CardContent className="pt-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Background Music</label>
-                      <Select value={bgMusic} onValueChange={setBgMusic}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="engaging">Engaging</SelectItem>
-                          <SelectItem value="calm">Calm</SelectItem>
-                          <SelectItem value="upbeat">Upbeat</SelectItem>
-                          <SelectItem value="inspiring">Inspiring</SelectItem>
-                          <SelectItem value="none">None</SelectItem>
-                        </SelectContent>
-                      </Select>
+          {mode !== 'suggest' && (
+            <div>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                Advanced Options
+              </button>
+              {showAdvanced && (
+                <Card className="mt-2">
+                  <CardContent className="pt-4 space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Background Music</label>
+                        <Select value={bgMusic} onValueChange={setBgMusic}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="engaging">Engaging</SelectItem>
+                            <SelectItem value="calm">Calm</SelectItem>
+                            <SelectItem value="upbeat">Upbeat</SelectItem>
+                            <SelectItem value="inspiring">Inspiring</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Voice Style</label>
+                        <Select value={ttsStyle} onValueChange={setTtsStyle}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="solo-female">Solo Female</SelectItem>
+                            <SelectItem value="solo-male">Solo Male</SelectItem>
+                            <SelectItem value="duo">Duo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Timing</label>
+                        <Select value={timing} onValueChange={setTiming}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="auto">Auto (from word count)</SelectItem>
+                            <SelectItem value="8">8s/scene (Fast)</SelectItem>
+                            <SelectItem value="10">10s/scene (Normal)</SelectItem>
+                            <SelectItem value="12">12s/scene (Slow)</SelectItem>
+                            <SelectItem value="15">15s/scene (Very Slow)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Voice Style</label>
-                      <Select value={ttsStyle} onValueChange={setTtsStyle}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="solo-female">Solo Female</SelectItem>
-                          <SelectItem value="solo-male">Solo Male</SelectItem>
-                          <SelectItem value="duo">Duo</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="flex justify-end">
+                      <Button variant="outline" size="sm" onClick={handleSavePreset} className="gap-1.5">
+                        <Save className="w-3.5 h-3.5" />
+                        Save as Preset
+                      </Button>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Timing (sec/scene)</label>
-                      <Select value={timing} onValueChange={setTiming}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="8">8s (Fast)</SelectItem>
-                          <SelectItem value="10">10s (Normal)</SelectItem>
-                          <SelectItem value="12">12s (Slow)</SelectItem>
-                          <SelectItem value="15">15s (Very Slow)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={handleSavePreset} className="gap-1.5">
-                      <Save className="w-3.5 h-3.5" />
-                      Save as Preset
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              onClick={handleStartPipeline}
-              disabled={!topic.trim() || startPipeline.isPending}
-              className="gap-2 flex-1"
-            >
-              {startPipeline.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Zap className="w-4 h-4" />
-              )}
-              {scriptOnly ? 'Generate Script' : 'Generate Script + Video'}
-            </Button>
-            {!showBatch && (
-              <Button variant="outline" onClick={() => setShowBatch(true)} className="gap-1.5">
-                <Layers className="w-4 h-4" />
-                Batch
+          {mode !== 'suggest' && (
+            <div className="flex gap-3">
+              <Button
+                onClick={handleStartPipeline}
+                disabled={!canSubmit}
+                className="gap-2 flex-1"
+              >
+                {startPipeline.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === 'my_script' ? (
+                  <Send className="w-4 h-4" />
+                ) : mode === 'ai_enhance' ? (
+                  <Wand2 className="w-4 h-4" />
+                ) : (
+                  <Zap className="w-4 h-4" />
+                )}
+                {actionLabel}
               </Button>
-            )}
-          </div>
+              {mode === 'ai_generate' && !showBatch && (
+                <Button variant="outline" onClick={() => setShowBatch(true)} className="gap-1.5">
+                  <Layers className="w-4 h-4" />
+                  Batch
+                </Button>
+              )}
+            </div>
+          )}
 
-          {/* Batch Panel */}
-          {showBatch && (
+          {/* Batch Panel (only in AI Generate mode) */}
+          {mode === 'ai_generate' && showBatch && (
             <Card className="border-dashed">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Layers className="w-4 h-4" />
                   Batch Generation
                 </CardTitle>
-                <CardDescription>Queue multiple topics at once</CardDescription>
+                <CardDescription>Queue multiple topics at once (all use AI Generate)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex gap-2">
@@ -684,7 +882,7 @@ function ContentHubCore() {
                 onClick={() => { setSelectedVideoId(null); setEditingScript(false); }}
                 className="gap-1.5 -ml-2"
               >
-                <ChevronUp className="w-4 h-4 rotate-[-90deg]" />
+                <ArrowLeft className="w-4 h-4" />
                 Back to list
               </Button>
 
@@ -693,9 +891,14 @@ function ContentHubCore() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">{videoDetail.topic}</CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <StatusBadge status={videoDetail.status} />
                         <Badge variant="outline">{videoDetail.format === 'deep_dive' ? 'Deep Dive' : 'Lesson'}</Badge>
+                        {videoDetail.scriptMode && (
+                          <Badge variant="outline" className="text-xs bg-slate-50">
+                            {videoDetail.scriptMode === 'own_script' ? 'My Script' : videoDetail.scriptMode === 'ai_enhance' ? 'AI Enhanced' : 'AI Generated'}
+                          </Badge>
+                        )}
                         {videoDetail.totalDurationMs && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Timer className="w-3 h-3" />
@@ -735,22 +938,64 @@ function ContentHubCore() {
                     </div>
                   )}
 
+                  {/* Script Review Call-to-Action */}
+                  {videoDetail.status === 'script_review' && !editingScript && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Pencil className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-medium text-amber-800 text-sm">Script ready for your review</p>
+                          <p className="text-sm text-amber-700 mt-1">
+                            Read the script below. You can edit it, then approve to generate the video.
+                          </p>
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setEditingScript(true);
+                                setEditedScript(videoDetail.narrationScript || '');
+                              }}
+                              className="gap-1.5"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Edit Script
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateScriptMut.mutate({
+                                videoId: videoDetail.id,
+                                script: videoDetail.narrationScript || '',
+                                continueToVideo: true,
+                              })}
+                              disabled={updateScriptMut.isPending}
+                              className="gap-1.5"
+                            >
+                              {updateScriptMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                              Approve & Generate Video
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Layer Timings */}
                   {(videoDetail.layer1DurationMs || videoDetail.layer2DurationMs || videoDetail.layer3DurationMs) && (
                     <div className="grid grid-cols-3 gap-3">
-                      {videoDetail.layer1DurationMs && (
+                      {videoDetail.layer1DurationMs != null && (
                         <div className="text-center p-3 bg-blue-50 rounded-lg">
                           <p className="text-xs text-blue-600 font-medium">Layer 1: Research</p>
                           <p className="text-lg font-bold text-blue-700">{(videoDetail.layer1DurationMs / 1000).toFixed(1)}s</p>
                         </div>
                       )}
-                      {videoDetail.layer2DurationMs && (
+                      {videoDetail.layer2DurationMs != null && (
                         <div className="text-center p-3 bg-purple-50 rounded-lg">
                           <p className="text-xs text-purple-600 font-medium">Layer 2: Script</p>
                           <p className="text-lg font-bold text-purple-700">{(videoDetail.layer2DurationMs / 1000).toFixed(1)}s</p>
                         </div>
                       )}
-                      {videoDetail.layer3DurationMs && (
+                      {videoDetail.layer3DurationMs != null && (
                         <div className="text-center p-3 bg-indigo-50 rounded-lg">
                           <p className="text-xs text-indigo-600 font-medium">Layer 3: Video</p>
                           <p className="text-lg font-bold text-indigo-700">{(videoDetail.layer3DurationMs / 1000).toFixed(0)}s</p>
@@ -759,11 +1004,16 @@ function ContentHubCore() {
                     </div>
                   )}
 
-                  {/* Script */}
+                  {/* Script Display / Edit */}
                   {videoDetail.narrationScript && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm">Narration Script</h4>
+                        <h4 className="font-medium text-sm">
+                          Narration Script
+                          <span className="text-xs text-muted-foreground font-normal ml-2">
+                            ({videoDetail.narrationScript.split(/\s+/).length} words)
+                          </span>
+                        </h4>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -774,7 +1024,7 @@ function ContentHubCore() {
                             <Copy className="w-3 h-3" />
                             Copy
                           </Button>
-                          {['script_review', 'script_only', 'pipeline_failed', 'video_failed'].includes(videoDetail.status) && (
+                          {!editingScript && ['script_review', 'script_only', 'pipeline_failed', 'video_failed'].includes(videoDetail.status) && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -798,41 +1048,46 @@ function ContentHubCore() {
                             rows={20}
                             className="text-sm font-mono"
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => updateScriptMut.mutate({
-                                videoId: videoDetail.id,
-                                script: editedScript,
-                                continueToVideo: false,
-                              })}
-                              disabled={updateScriptMut.isPending}
-                              className="gap-1.5"
-                            >
-                              <Save className="w-3.5 h-3.5" />
-                              Save Script
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateScriptMut.mutate({
-                                videoId: videoDetail.id,
-                                script: editedScript,
-                                continueToVideo: true,
-                              })}
-                              disabled={updateScriptMut.isPending}
-                              className="gap-1.5"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              Save & Generate Video
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setEditingScript(false)}
-                            >
-                              Cancel
-                            </Button>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              {editedScript.split(/\s+/).filter(Boolean).length} words · ~{Math.ceil(editedScript.split(/\s+/).filter(Boolean).length / 150)} min narration
+                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => updateScriptMut.mutate({
+                                  videoId: videoDetail.id,
+                                  script: editedScript,
+                                  continueToVideo: false,
+                                })}
+                                disabled={updateScriptMut.isPending}
+                                className="gap-1.5"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                Save Script
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateScriptMut.mutate({
+                                  videoId: videoDetail.id,
+                                  script: editedScript,
+                                  continueToVideo: true,
+                                })}
+                                disabled={updateScriptMut.isPending}
+                                className="gap-1.5"
+                              >
+                                {updateScriptMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                Save & Generate Video
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingScript(false)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -843,13 +1098,55 @@ function ContentHubCore() {
                     </div>
                   )}
 
+                  {/* User's Original Script (for AI Enhance mode) */}
+                  {videoDetail.userScript && videoDetail.scriptMode === 'ai_enhance' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-sm text-muted-foreground">
+                          Your Original Script
+                          <span className="text-xs font-normal ml-2">
+                            ({videoDetail.userScript.split(/\s+/).length} words)
+                          </span>
+                        </h4>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(videoDetail.userScript || '')}
+                          className="gap-1 h-7 text-xs"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copy Original
+                        </Button>
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-4 max-h-[200px] overflow-y-auto border border-slate-200">
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-600">{videoDetail.userScript}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Error */}
                   {videoDetail.error && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-red-700 text-sm">Error</p>
                         <p className="text-sm text-red-600 mt-1">{videoDetail.error}</p>
+                        {['video_failed', 'pipeline_failed'].includes(videoDetail.status) && videoDetail.narrationScript && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 gap-1.5"
+                            onClick={() => updateScriptMut.mutate({
+                              videoId: videoDetail.id,
+                              script: videoDetail.narrationScript || '',
+                              continueToVideo: true,
+                            })}
+                            disabled={updateScriptMut.isPending}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Retry Video Generation
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -890,14 +1187,14 @@ function ContentHubCore() {
                   {(videosQuery.data?.videos || []).map((video: any) => (
                     <Card
                       key={video.id}
-                      className="cursor-pointer hover:bg-accent/30 transition-colors"
+                      className={`cursor-pointer hover:bg-accent/30 transition-colors ${video.status === 'script_review' ? 'border-amber-300 bg-amber-50/30' : ''}`}
                       onClick={() => setSelectedVideoId(video.id)}
                     >
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">{video.topic}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <StatusBadge status={video.status} />
                               <Badge variant="outline" className="text-xs">
                                 {video.format === 'deep_dive' ? 'Deep Dive' : 'Lesson'}
@@ -907,6 +1204,12 @@ function ContentHubCore() {
                               </span>
                             </div>
                           </div>
+                          {video.status === 'script_review' && (
+                            <Badge className="bg-amber-500 text-white gap-1 text-xs">
+                              <Pencil className="w-3 h-3" />
+                              Review
+                            </Badge>
+                          )}
                           {video.videoUrl && (
                             <Button
                               size="sm"
@@ -921,7 +1224,6 @@ function ContentHubCore() {
                               Watch
                             </Button>
                           )}
-                          <ChevronDown className="w-4 h-4 text-muted-foreground rotate-[-90deg]" />
                         </div>
                       </CardContent>
                     </Card>

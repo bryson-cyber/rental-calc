@@ -1,0 +1,13 @@
+{
+  "query": "SELECT golpoJobId FROM content_hub_videos WHERE id = 7 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT golpoJobId FROM content_hub_videos WHERE id = 7 LIMIT 1;",
+  "rows": [
+    {
+      "golpoJobId": "c495375e-aa99-4b24-8463-0a70abb5a9c1"
+    }
+  ],
+  "messages": [],
+  "stdout": "golpoJobId\nc495375e-aa99-4b24-8463-0a70abb5a9c1\n",
+  "stderr": "",
+  "execution_time_ms": 80
+}

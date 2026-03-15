@@ -1,0 +1,2 @@
+ALTER TABLE `content_hub_videos` ADD `scriptMode` enum('own_script','ai_enhance','ai_generate') DEFAULT 'ai_generate' NOT NULL;--> statement-breakpoint
+ALTER TABLE `content_hub_videos` ADD `userScript` text;

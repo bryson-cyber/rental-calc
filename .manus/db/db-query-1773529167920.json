@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, status, pipelineStage, golpoJobId, videoUrl, error FROM content_hub_videos WHERE id = 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, status, pipelineStage, golpoJobId, videoUrl, error FROM content_hub_videos WHERE id = 5;",
+  "rows": [
+    {
+      "id": "5",
+      "status": "video_generating",
+      "pipelineStage": "Layer 3: Submitting to Golpo AI...",
+      "golpoJobId": "NULL",
+      "videoUrl": "NULL",
+      "error": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstatus\tpipelineStage\tgolpoJobId\tvideoUrl\terror\n5\tvideo_generating\tLayer 3: Submitting to Golpo AI...\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

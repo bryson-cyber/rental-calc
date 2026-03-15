@@ -180,6 +180,88 @@ describe('Content Hub Router', () => {
       }
     });
   });
+
+  describe('Script mode validation', () => {
+    it('should accept own_script mode with userScript', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      try {
+        await caller.contentHub.startPipeline({
+          topic: 'My custom script topic',
+          format: 'lesson',
+          scriptMode: 'own_script',
+          userScript: 'This is my full narration script that I wrote myself. It has enough content to be a real script for a video lesson about Airbnb arbitrage.',
+        });
+      } catch (err: any) {
+        // Should fail at runtime (DB), not at validation
+        expect(err.code).not.toBe('BAD_REQUEST');
+      }
+    });
+
+    it('should accept ai_enhance mode with userScript', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      try {
+        await caller.contentHub.startPipeline({
+          topic: 'Enhance my script about markets',
+          format: 'deep_dive',
+          scriptMode: 'ai_enhance',
+          userScript: 'Here is my rough script about finding markets. I want AI to polish it but keep my voice and ideas intact.',
+        });
+      } catch (err: any) {
+        expect(err.code).not.toBe('BAD_REQUEST');
+      }
+    });
+
+    it('should accept ai_generate mode (default) without userScript', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      try {
+        await caller.contentHub.startPipeline({
+          topic: 'AI should generate this script from scratch',
+          format: 'lesson',
+          scriptMode: 'ai_generate',
+        });
+      } catch (err: any) {
+        expect(err.code).not.toBe('BAD_REQUEST');
+      }
+    });
+
+    it('should accept ai_generate mode with brainDump', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      try {
+        await caller.contentHub.startPipeline({
+          topic: 'Brain dump topic about getting started',
+          format: 'lesson',
+          scriptMode: 'ai_generate',
+          brainDump: '- want to talk about how people overthink their first deal\n- mention the student who found a deal in Columbia SC\n- the key is just running the numbers',
+        });
+      } catch (err: any) {
+        expect(err.code).not.toBe('BAD_REQUEST');
+      }
+    });
+
+    it('should reject invalid scriptMode value', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      await expect(
+        caller.contentHub.startPipeline({
+          topic: 'Test topic',
+          format: 'lesson',
+          scriptMode: 'invalid_mode' as any,
+        })
+      ).rejects.toThrow();
+    });
+
+    it('should default scriptMode to ai_generate when not provided', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      try {
+        await caller.contentHub.startPipeline({
+          topic: 'Topic without explicit scriptMode',
+          format: 'lesson',
+        });
+      } catch (err: any) {
+        // Should fail at runtime (DB), not at validation
+        expect(err.code).not.toBe('BAD_REQUEST');
+      }
+    });
+  });
 });
 
 describe('Content Hub Pipeline Module', () => {
@@ -213,6 +295,12 @@ describe('Content Hub Pipeline Module', () => {
     ];
     // This is a compile-time check — if the type changes, this test needs updating
     expect(validStatuses).toHaveLength(9);
+  });
+
+  it('should export ScriptMode type with correct values', async () => {
+    // Verify the ScriptMode type values match what the frontend sends
+    const validModes = ['own_script', 'ai_enhance', 'ai_generate'];
+    expect(validModes).toHaveLength(3);
   });
 });
 

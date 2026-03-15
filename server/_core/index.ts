@@ -1183,6 +1183,13 @@ async function startServer() {
 
     // Calendar + Gmail reminders are now synced to the SMS dispatcher schedule
     // (multi-channel reminders fire alongside SMS when sequence names match)
+
+    // Resume any incomplete Content Hub video pipelines from before restart
+    import('../content-hub-pipeline').then(({ resumeIncompletePipelines }) => {
+      resumeIncompletePipelines().catch((err) =>
+        console.error('[ContentHub] Failed to resume incomplete pipelines:', err),
+      );
+    }).catch(() => { /* content-hub-pipeline module not critical */ });
   });
 }
 
