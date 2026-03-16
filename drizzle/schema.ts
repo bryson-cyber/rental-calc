@@ -2664,7 +2664,29 @@ export const contentHubVideos = mysqlTable("content_hub_videos", {
   storyFormat: varchar("storyFormat", { length: 50 }),
   persona: varchar("persona", { length: 50 }).default("coach-inayah"),
   bgMusic: varchar("bgMusic", { length: 50 }).default("engaging"),
-  ttsStyle: varchar("ttsStyle", { length: 50 }).default("solo-female"),
+  ttsStyle: varchar("ttsStyle", { length: 50 }).default("solo-female-3"),
+
+  // ── Golpo API v1 options ──────────────────────────────────────────────────
+  /** Video orientation: "long" (16:9 landscape) or "short" (9:16 vertical for Reels/Shorts) */
+  videoType: varchar("videoType", { length: 10 }).default("long"),
+  /** TTS model: "accurate" (highest quality) or "flash" (faster/cheaper) */
+  ttsModel: varchar("ttsModel", { length: 20 }).default("accurate"),
+  /** White background (true) or dark background (false) */
+  whiteBg: tinyint("whiteBg").default(1),
+  /** Output audio volume 0.0-1.0 */
+  outputVolume: varchar("outputVolume", { length: 10 }).default("1.0"),
+  /** Background music volume 0.0-1.0 */
+  bgVolume: varchar("bgVolume", { length: 10 }).default("0.3"),
+  /** Visual style: "default" (standard whiteboard), "sketch" (Golpo Sketch), "sketch-advanced" (advanced sketch), "canvas" (Golpo Canvas) */
+  visualStyle: varchar("visualStyle", { length: 30 }).default("default"),
+  /** Canvas image style (only when visualStyle=canvas): neon, whiteboard, modern_minimal, playful, technical, editorial */
+  canvasImageStyle: varchar("canvasImageStyle", { length: 30 }),
+  /** Canvas pen style (only when visualStyle=canvas): stylus, marker, pen */
+  canvasPenStyle: varchar("canvasPenStyle", { length: 20 }),
+  /** Logo URL for brand overlay */
+  logoUrl: text("logoUrl"),
+  /** Logo placement: tl (top-left), tr (top-right), bl (bottom-left), br (bottom-right) */
+  logoPlacement: varchar("logoPlacement", { length: 5 }).default("tl"),
 
   // ── Layer 1 output (Research) ─────────────────────────────────────────────
   realTimeFacts: text("realTimeFacts"),
@@ -2739,6 +2761,18 @@ export const contentHubPresets = mysqlTable("content_hub_presets", {
   storyFormat: varchar("storyFormat", { length: 50 }),
   persona: varchar("persona", { length: 50 }).default("coach-inayah"),
   bgMusic: varchar("bgMusic", { length: 50 }).default("engaging"),
+
+  // Golpo API v1 options
+  videoType: varchar("videoType", { length: 10 }).default("long"),
+  ttsModel: varchar("ttsModel", { length: 20 }).default("accurate"),
+  whiteBg: tinyint("whiteBg").default(1),
+  outputVolume: varchar("outputVolume", { length: 10 }).default("1.0"),
+  bgVolume: varchar("bgVolume", { length: 10 }).default("0.3"),
+  visualStyle: varchar("visualStyle", { length: 30 }).default("default"),
+  canvasImageStyle: varchar("canvasImageStyle", { length: 30 }),
+  canvasPenStyle: varchar("canvasPenStyle", { length: 20 }),
+  logoUrl: text("logoUrl"),
+  logoPlacement: varchar("logoPlacement", { length: 5 }).default("tl"),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [

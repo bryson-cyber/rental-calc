@@ -12941,3 +12941,50 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Test error messages — toast notifications for success/error are clear
 - [x] Document all bugs: BUG-1 (scroll) FIXED, BUG-2 (stuck test videos) enhancement, BUG-3 (no filter) enhancement
 - [x] Fix critical bugs — BUG-1 scroll fixed with max-h overflow-y-auto
+
+### Feature: Wire All Golpo API Options + Presets (March 15, 2026)
+
+#### DB Schema Updates
+- [x] Add videoType column (short/long) to content_hub_videos
+- [x] Add ttsModel column (accurate/flash) to content_hub_videos
+- [x] Add whiteBg column (tinyint) to content_hub_videos
+- [x] Add outputVolume column to content_hub_videos
+- [x] Add bgVolume column to content_hub_videos
+- [x] Add visualStyle column (default/sketch/sketch-advanced/canvas) to content_hub_videos
+- [x] Add canvasImageStyle column (neon/whiteboard/modern_minimal/playful/technical/editorial) to content_hub_videos
+- [x] Add canvasPenStyle column (stylus/marker/pen) to content_hub_videos
+- [x] Add logoUrl column to content_hub_videos
+- [x] Add logoPlacement column (tl/tr/bl/br) to content_hub_videos
+- [x] Add same columns to content_hub_presets table
+- [x] Run pnpm db:push — migration 0012 applied successfully
+
+#### Backend Pipeline Updates
+- [x] Add all new fields to PipelineInput interface
+- [x] Pass videoType to Golpo payload (short/long)
+- [x] Pass ttsModel to Golpo payload (accurate/flash)
+- [x] Pass whiteBg to Golpo payload
+- [x] Pass outputVolume to Golpo payload
+- [x] Pass visualStyle → use_lineart_2_style or use_2_0_style to Golpo
+- [x] Pass canvasImageStyle → image_style to Golpo
+- [x] Pass canvasPenStyle → pen_style to Golpo
+- [x] Pass logoUrl → logo to Golpo
+- [x] Pass logoPlacement → logo_placement to Golpo
+
+#### Router Updates
+- [x] Add all new fields to startPipelineInput schema (+ startBatchInput + savePresetInput)
+- [x] Pass all new fields through to pipeline (spread via ...input)
+
+#### Frontend UI Updates
+- [x] Wire Format dropdown to actually set video_type (short for Reels/Shorts, long for YouTube)
+- [x] Add Visual Style selector (Default Whiteboard / Golpo Sketch / Golpo Sketch Advanced / Golpo Canvas)
+- [x] Add Canvas sub-options (image_style, pen_style) — conditional, only when Canvas selected
+- [x] Add TTS Model dropdown (Accurate / Flash)
+- [x] Add Background dropdown (White / Dark)
+- [x] Add Output Volume dropdown (Advanced Options)
+- [x] Add Music Volume dropdown (Advanced Options)
+- [x] Add Logo URL input and placement dropdown (Advanced Options)
+
+#### Preset System
+- [x] Update preset save to include all new options
+- [x] Update preset load to restore all new options
+- [x] Preset queries and mutations wired in frontend

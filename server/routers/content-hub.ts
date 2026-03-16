@@ -56,6 +56,17 @@ const startPipelineInput = z.object({
   bgMusic: z.string().optional(),
   ttsStyle: z.string().optional(),
   timing: z.string().optional(),
+  // Golpo API v1 options
+  videoType: z.enum(['long', 'short']).optional().default('long'),
+  ttsModel: z.enum(['accurate', 'flash']).optional().default('accurate'),
+  whiteBg: z.boolean().optional().default(true),
+  outputVolume: z.string().optional().default('1.0'),
+  bgVolume: z.string().optional().default('0.3'),
+  visualStyle: z.enum(['default', 'sketch', 'sketch-advanced', 'canvas']).optional().default('default'),
+  canvasImageStyle: z.enum(['neon', 'whiteboard', 'modern_minimal', 'playful', 'technical', 'editorial']).optional(),
+  canvasPenStyle: z.enum(['stylus', 'marker', 'pen']).optional(),
+  logoUrl: z.string().url().optional(),
+  logoPlacement: z.enum(['tl', 'tr', 'bl', 'br']).optional().default('tl'),
 });
 
 const getVideoInput = z.object({
@@ -93,6 +104,17 @@ const startBatchInput = z.object({
   bgMusic: z.string().optional(),
   ttsStyle: z.string().optional(),
   timing: z.string().optional(),
+  // Golpo API v1 options
+  videoType: z.enum(['long', 'short']).optional().default('long'),
+  ttsModel: z.enum(['accurate', 'flash']).optional().default('accurate'),
+  whiteBg: z.boolean().optional().default(true),
+  outputVolume: z.string().optional().default('1.0'),
+  bgVolume: z.string().optional().default('0.3'),
+  visualStyle: z.enum(['default', 'sketch', 'sketch-advanced', 'canvas']).optional().default('default'),
+  canvasImageStyle: z.enum(['neon', 'whiteboard', 'modern_minimal', 'playful', 'technical', 'editorial']).optional(),
+  canvasPenStyle: z.enum(['stylus', 'marker', 'pen']).optional(),
+  logoUrl: z.string().url().optional(),
+  logoPlacement: z.enum(['tl', 'tr', 'bl', 'br']).optional().default('tl'),
 });
 
 const savePresetInput = z.object({
@@ -105,6 +127,17 @@ const savePresetInput = z.object({
   storyFormat: z.string().optional(),
   persona: z.string().optional(),
   bgMusic: z.string().optional(),
+  // Golpo API v1 options
+  videoType: z.string().optional(),
+  ttsModel: z.string().optional(),
+  whiteBg: z.boolean().optional(),
+  outputVolume: z.string().optional(),
+  bgVolume: z.string().optional(),
+  visualStyle: z.string().optional(),
+  canvasImageStyle: z.string().optional(),
+  canvasPenStyle: z.string().optional(),
+  logoUrl: z.string().optional(),
+  logoPlacement: z.string().optional(),
 });
 
 const deletePresetInput = z.object({
@@ -190,16 +223,11 @@ export const contentHubRouter = router({
   startBatch: protectedProcedure
     .input(startBatchInput)
     .mutation(async ({ input, ctx }) => {
+      const { topics, ...opts } = input;
       const results = await startBatch(
-        input.topics,
+        topics,
         ctx.user.id,
-        {
-          scriptOnly: input.scriptOnly,
-          voiceStyle: input.voiceStyle,
-          bgMusic: input.bgMusic,
-          ttsStyle: input.ttsStyle,
-          timing: input.timing,
-        },
+        opts,
       );
       return { results };
     }),

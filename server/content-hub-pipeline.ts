@@ -62,6 +62,28 @@ export interface PipelineInput {
   scriptOnly?: boolean;
   /** Brain dump: rough idea that Opus will enhance */
   brainDump?: string;
+
+  // ── Golpo API v1 options ──────────────────────────────────────────────────
+  /** Video orientation: "long" (16:9 landscape) or "short" (9:16 vertical) */
+  videoType?: string;
+  /** TTS model: "accurate" (highest quality) or "flash" (faster) */
+  ttsModel?: string;
+  /** White background (true) or dark background (false) */
+  whiteBg?: boolean;
+  /** Output audio volume 0.0-1.0 */
+  outputVolume?: string;
+  /** Background music volume 0.0-1.0 */
+  bgVolume?: string;
+  /** Visual style: "default", "sketch", "sketch-advanced", "canvas" */
+  visualStyle?: string;
+  /** Canvas image style (only when visualStyle=canvas) */
+  canvasImageStyle?: string;
+  /** Canvas pen style (only when visualStyle=canvas) */
+  canvasPenStyle?: string;
+  /** Logo URL for brand overlay */
+  logoUrl?: string;
+  /** Logo placement: tl, tr, bl, br */
+  logoPlacement?: string;
 }
 
 export interface PipelineResult {
@@ -366,6 +388,17 @@ async function runLayer3VideoProduction(
     timing?: string;
     bgMusic?: string;
     ttsStyle?: string;
+    // Golpo API v1 options
+    videoType?: string;
+    ttsModel?: string;
+    whiteBg?: boolean;
+    outputVolume?: string;
+    bgVolume?: string;
+    visualStyle?: string;
+    canvasImageStyle?: string;
+    canvasPenStyle?: string;
+    logoUrl?: string;
+    logoPlacement?: string;
   } = {},
 ): Promise<{
   videoUrl: string;
@@ -399,33 +432,56 @@ async function runLayer3VideoProduction(
   };
   if (voiceMap[voiceStyle]) voiceStyle = voiceMap[voiceStyle];
 
+  // Resolve all Golpo API v1 options with defaults
+  const videoType = options.videoType || 'long';
+  const ttsModel = options.ttsModel || 'accurate';
+  const whiteBg = options.whiteBg !== false; // default true
+  const outputVolume = parseFloat(options.outputVolume || '1.0');
+  const bgVolume = parseFloat(options.bgVolume || '0.3');
+  const visualStyle = options.visualStyle || 'default';
+
   // Calculate timing from word count (in minutes as a string, per API spec)
   const wordCount = narrationScript.split(/\s+/).length;
   const estimatedMinutes = wordCount / 150;
   // Use user-provided timing if set, otherwise auto-calculate
   const timing = options.timing || String(Math.max(1, Math.round(estimatedMinutes * 2) / 2));
-  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, timing=${timing} min, voice=${voiceStyle}`);
+  console.log(`[ContentHub] Video #${videoId}: Script ${wordCount} words, timing=${timing} min, voice=${voiceStyle}, type=${videoType}, tts=${ttsModel}, style=${visualStyle}`);
 
   const payload: Record<string, any> = {
     prompt: 'Create an educational Airbnb investing whiteboard explainer video using the provided script.',
     new_script: narrationScript,
     style: voiceStyle,
-    tts_model: 'accurate',
-    video_type: 'long',
+    tts_model: ttsModel,
+    video_type: videoType,
     language: 'en',
     use_color: true,
-    white_bg: true,
+    white_bg: whiteBg,
     video_instructions: VIDEO_INSTRUCTIONS,
     voice_instructions: VOICE_INSTRUCTIONS,
     personality_1: PERSONALITY,
     add_music: hasBgMusic,
     bg_music: hasBgMusic ? bgMusicTrack : undefined,
-    bg_volume: hasBgMusic ? 0.3 : undefined,
-    output_volume: 1.0,
+    bg_volume: hasBgMusic ? bgVolume : undefined,
+    output_volume: outputVolume,
     timing,
     include_watermark: false,
     do_research: false,
     no_voice_chunking: true,
+
+    // Visual style options
+    ...(visualStyle === 'sketch' ? { use_lineart_2_style: 'true' } : {}),
+    ...(visualStyle === 'sketch-advanced' ? { use_lineart_2_style: 'advanced' } : {}),
+    ...(visualStyle === 'canvas' ? {
+      use_2_0_style: true,
+      image_style: options.canvasImageStyle || 'whiteboard',
+      pen_style: options.canvasPenStyle || 'stylus',
+    } : {}),
+
+    // Logo options
+    ...(options.logoUrl ? {
+      logo: options.logoUrl,
+      logo_placement: options.logoPlacement || 'tl',
+    } : {}),
   };
 
   // Remove undefined keys
@@ -632,6 +688,17 @@ export async function startPipeline(input: PipelineInput): Promise<PipelineResul
     persona: input.persona || 'coach-inayah',
     bgMusic: input.bgMusic || 'engaging',
     ttsStyle: input.voiceStyle || input.ttsStyle || 'solo-female-3',
+    // Golpo API v1 options
+    videoType: input.videoType || 'long',
+    ttsModel: input.ttsModel || 'accurate',
+    whiteBg: (input.whiteBg !== false) ? 1 : 0,
+    outputVolume: input.outputVolume || '1.0',
+    bgVolume: input.bgVolume || '0.3',
+    visualStyle: input.visualStyle || 'default',
+    canvasImageStyle: input.canvasImageStyle || null,
+    canvasPenStyle: input.canvasPenStyle || null,
+    logoUrl: input.logoUrl || null,
+    logoPlacement: input.logoPlacement || 'tl',
     status: 'pipeline_queued',
     pipelineStage: 'Queued — starting pipeline...',
   });
@@ -701,6 +768,16 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
             timing: input.timing,
             bgMusic: input.bgMusic,
             ttsStyle: input.voiceStyle || input.ttsStyle,
+            videoType: input.videoType,
+            ttsModel: input.ttsModel,
+            whiteBg: input.whiteBg,
+            outputVolume: input.outputVolume,
+            bgVolume: input.bgVolume,
+            visualStyle: input.visualStyle,
+            canvasImageStyle: input.canvasImageStyle,
+            canvasPenStyle: input.canvasPenStyle,
+            logoUrl: input.logoUrl,
+            logoPlacement: input.logoPlacement,
           },
         );
 
@@ -958,6 +1035,16 @@ export async function updateScript(
       timing: video.timing || undefined,
       bgMusic: video.bgMusic || undefined,
       ttsStyle: video.ttsStyle || undefined,
+      videoType: video.videoType || undefined,
+      ttsModel: video.ttsModel || undefined,
+      whiteBg: video.whiteBg === 0 ? false : true,
+      outputVolume: video.outputVolume || undefined,
+      bgVolume: video.bgVolume || undefined,
+      visualStyle: video.visualStyle || undefined,
+      canvasImageStyle: video.canvasImageStyle || undefined,
+      canvasPenStyle: video.canvasPenStyle || undefined,
+      logoUrl: video.logoUrl || undefined,
+      logoPlacement: video.logoPlacement || undefined,
     }).then(async ({ videoUrl, golpoJobId, durationMs }) => {
       const totalMs = (video.layer1DurationMs || 0) + (video.layer2DurationMs || 0) + durationMs;
       await db.update(contentHubVideos)
@@ -1094,6 +1181,17 @@ export async function savePreset(
     storyFormat?: string;
     persona?: string;
     bgMusic?: string;
+    // Golpo API v1 options
+    videoType?: string;
+    ttsModel?: string;
+    whiteBg?: boolean;
+    outputVolume?: string;
+    bgVolume?: string;
+    visualStyle?: string;
+    canvasImageStyle?: string;
+    canvasPenStyle?: string;
+    logoUrl?: string;
+    logoPlacement?: string;
   },
 ) {
   const db = await getDb();
@@ -1110,6 +1208,16 @@ export async function savePreset(
     storyFormat: preset.storyFormat,
     persona: preset.persona,
     bgMusic: preset.bgMusic,
+    videoType: preset.videoType,
+    ttsModel: preset.ttsModel,
+    whiteBg: preset.whiteBg === false ? 0 : preset.whiteBg === true ? 1 : undefined,
+    outputVolume: preset.outputVolume,
+    bgVolume: preset.bgVolume,
+    visualStyle: preset.visualStyle,
+    canvasImageStyle: preset.canvasImageStyle,
+    canvasPenStyle: preset.canvasPenStyle,
+    logoUrl: preset.logoUrl,
+    logoPlacement: preset.logoPlacement,
   });
 
   return { id: inserted.insertId };

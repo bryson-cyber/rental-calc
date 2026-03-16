@@ -1,0 +1,58 @@
+{
+  "query": "SHOW COLUMNS FROM content_hub_videos WHERE Field IN ('videoType', 'ttsModel', 'whiteBg', 'outputVolume', 'bgVolume', 'visualStyle');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SHOW COLUMNS FROM content_hub_videos WHERE Field IN ('videoType', 'ttsModel', 'whiteBg', 'outputVolume', 'bgVolume', 'visualStyle');",
+  "rows": [
+    {
+      "Field": "videoType",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "long",
+      "Extra": ""
+    },
+    {
+      "Field": "ttsModel",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "accurate",
+      "Extra": ""
+    },
+    {
+      "Field": "whiteBg",
+      "Type": "tinyint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "outputVolume",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1.0",
+      "Extra": ""
+    },
+    {
+      "Field": "bgVolume",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0.3",
+      "Extra": ""
+    },
+    {
+      "Field": "visualStyle",
+      "Type": "varchar(30)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "default",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nvideoType\tvarchar(10)\tYES\t\tlong\t\nttsModel\tvarchar(20)\tYES\t\taccurate\t\nwhiteBg\ttinyint\tYES\t\t1\t\noutputVolume\tvarchar(10)\tYES\t\t1.0\t\nbgVolume\tvarchar(10)\tYES\t\t0.3\t\nvisualStyle\tvarchar(30)\tYES\t\tdefault\t\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

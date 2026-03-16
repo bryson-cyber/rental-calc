@@ -73,6 +73,13 @@ import {
   Video,
   MessageSquare,
   Search,
+  Palette,
+  PenTool,
+  Volume2,
+  Image,
+  Monitor,
+  Bookmark,
+  BookmarkPlus,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -140,6 +147,18 @@ function ContentHubCore() {
   const [storyFormat, setStoryFormat] = useState('whiteboard');
   const [bgMusic, setBgMusic] = useState('engaging');
 
+  // ── Golpo API v1 Options State ───────────────────────────────────────────
+  const [visualStyle, setVisualStyle] = useState<'default' | 'sketch' | 'sketch-advanced' | 'canvas'>('default');
+  const [canvasImageStyle, setCanvasImageStyle] = useState('whiteboard');
+  const [canvasPenStyle, setCanvasPenStyle] = useState('stylus');
+  const [ttsModel, setTtsModel] = useState<'accurate' | 'flash'>('accurate');
+  const [whiteBg, setWhiteBg] = useState(true);
+  const [outputVolume, setOutputVolume] = useState('1.0');
+  const [bgVolume, setBgVolume] = useState('0.3');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoPlacement, setLogoPlacement] = useState('tl');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   // ── Input Mode State ──────────────────────────────────────────────────────
   const [inputMode, setInputMode] = useState<InputMode>('suggest');
   const [topic, setTopic] = useState('');
@@ -165,10 +184,17 @@ function ContentHubCore() {
     if (contentLength !== '5-10') count++;
     if (storyFormat !== 'whiteboard') count++;
     if (bgMusic !== 'engaging') count++;
+    if (visualStyle !== 'default') count++;
+    if (ttsModel !== 'accurate') count++;
+    if (!whiteBg) count++;
+    if (logoUrl) count++;
     return count;
-  }, [persona, videoFormat, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic]);
+  }, [persona, videoFormat, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, visualStyle, ttsModel, whiteBg, logoUrl]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
+  const presetsQuery = trpc.contentHub.listPresets.useQuery();
+  const utils = trpc.useUtils();
+
   const videosQuery = trpc.contentHub.listVideos.useQuery(
     { limit: 50, offset: 0 },
     { refetchInterval: 10000 },
@@ -254,6 +280,78 @@ function ContentHubCore() {
     },
   });
 
+  // ── Preset Mutations ─────────────────────────────────────────────────────
+  const [presetName, setPresetName] = useState('');
+  const [showPresetSave, setShowPresetSave] = useState(false);
+
+  const savePresetMut = trpc.contentHub.savePreset.useMutation({
+    onSuccess: () => {
+      toast({ title: 'Preset saved', variant: 'default' });
+      setPresetName('');
+      setShowPresetSave(false);
+      utils.contentHub.listPresets.invalidate();
+    },
+    onError: (err) => {
+      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const deletePresetMut = trpc.contentHub.deletePreset.useMutation({
+    onSuccess: () => {
+      toast({ title: 'Preset deleted', variant: 'default' });
+      utils.contentHub.listPresets.invalidate();
+    },
+    onError: (err) => {
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const handleSavePreset = () => {
+    if (!presetName.trim()) return;
+    savePresetMut.mutate({
+      name: presetName.trim(),
+      format: videoFormat === 'all' ? undefined : videoFormat,
+      voiceStyle,
+      contentFocus,
+      contentLength,
+      storyFormat,
+      persona,
+      bgMusic,
+      videoType: (videoFormat === 'reel' || videoFormat === 'short' || videoFormat === 'tiktok') ? 'short' : 'long',
+      ttsModel,
+      whiteBg,
+      outputVolume,
+      bgVolume,
+      visualStyle,
+      canvasImageStyle: visualStyle === 'canvas' ? canvasImageStyle : undefined,
+      canvasPenStyle: visualStyle === 'canvas' ? canvasPenStyle : undefined,
+      logoUrl: logoUrl || undefined,
+      logoPlacement: logoUrl ? logoPlacement : undefined,
+    });
+  };
+
+  const handleLoadPreset = (preset: any) => {
+    if (preset.voiceStyle) setVoiceStyle(preset.voiceStyle);
+    if (preset.contentFocus) setContentFocus(preset.contentFocus);
+    if (preset.contentLength) setContentLength(preset.contentLength);
+    if (preset.storyFormat) setStoryFormat(preset.storyFormat);
+    if (preset.persona) setPersona(preset.persona);
+    if (preset.bgMusic) setBgMusic(preset.bgMusic);
+    if (preset.format) setVideoFormat(preset.format);
+    // Golpo API v1 options
+    if (preset.videoType === 'short') setVideoFormat('reel');
+    if (preset.ttsModel) setTtsModel(preset.ttsModel);
+    if (preset.whiteBg !== null && preset.whiteBg !== undefined) setWhiteBg(preset.whiteBg === 1 || preset.whiteBg === true);
+    if (preset.outputVolume) setOutputVolume(preset.outputVolume);
+    if (preset.bgVolume) setBgVolume(preset.bgVolume);
+    if (preset.visualStyle) setVisualStyle(preset.visualStyle as any);
+    if (preset.canvasImageStyle) setCanvasImageStyle(preset.canvasImageStyle);
+    if (preset.canvasPenStyle) setCanvasPenStyle(preset.canvasPenStyle);
+    if (preset.logoUrl) setLogoUrl(preset.logoUrl);
+    if (preset.logoPlacement) setLogoPlacement(preset.logoPlacement);
+    toast({ title: `Preset "${preset.name}" loaded`, variant: 'default' });
+  };
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleStartPipeline = useCallback(() => {
@@ -302,6 +400,9 @@ function ContentHubCore() {
     };
     const timing = timingMap[contentLength] || undefined;
 
+    // Map videoFormat to Golpo video_type
+    const videoType = (videoFormat === 'reel' || videoFormat === 'short' || videoFormat === 'tiktok') ? 'short' as const : 'long' as const;
+
     startPipeline.mutate({
       topic: topic.trim() || 'Untitled Script',
       format,
@@ -316,8 +417,19 @@ function ContentHubCore() {
       storyFormat,
       bgMusic,
       timing,
+      // Golpo API v1 options
+      videoType,
+      ttsModel,
+      whiteBg,
+      outputVolume,
+      bgVolume,
+      visualStyle,
+      canvasImageStyle: visualStyle === 'canvas' ? canvasImageStyle : undefined,
+      canvasPenStyle: visualStyle === 'canvas' ? canvasPenStyle : undefined,
+      logoUrl: logoUrl || undefined,
+      logoPlacement: logoUrl ? logoPlacement : undefined,
     });
-  }, [inputMode, topic, userScript, brainDump, scriptOnly, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, startPipeline, toast]);
+  }, [inputMode, topic, userScript, brainDump, scriptOnly, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, videoFormat, visualStyle, canvasImageStyle, canvasPenStyle, ttsModel, whiteBg, outputVolume, bgVolume, logoUrl, logoPlacement, startPipeline, toast]);
 
   const handleUseSuggestion = (suggestion: { topic: string; format: string }) => {
     setTopic(suggestion.topic);
@@ -333,6 +445,17 @@ function ContentHubCore() {
     setContentLength('5-10');
     setStoryFormat('whiteboard');
     setBgMusic('engaging');
+    // Reset Golpo API v1 options
+    setVisualStyle('default');
+    setCanvasImageStyle('whiteboard');
+    setCanvasPenStyle('stylus');
+    setTtsModel('accurate');
+    setWhiteBg(true);
+    setOutputVolume('1.0');
+    setBgVolume('0.3');
+    setLogoUrl('');
+    setLogoPlacement('tl');
+    setShowAdvanced(false);
   };
 
   const copyToClipboard = (text: string) => {
@@ -468,6 +591,70 @@ function ContentHubCore() {
             {/* Filter Content */}
             {showFilters && (
               <div className="px-5 pb-5 space-y-5 border-t">
+                {/* Presets */}
+                <div className="pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <Bookmark className="w-3.5 h-3.5" />
+                      Presets
+                    </label>
+                    <button
+                      onClick={() => setShowPresetSave(!showPresetSave)}
+                      className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      <BookmarkPlus className="w-3.5 h-3.5" />
+                      Save Current
+                    </button>
+                  </div>
+
+                  {/* Save Preset Form */}
+                  {showPresetSave && (
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        placeholder="Preset name..."
+                        className="flex-1 px-3 py-1.5 text-sm rounded-md border border-input bg-background focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSavePreset}
+                        disabled={!presetName.trim() || savePresetMut.isPending}
+                        className="h-8 gap-1"
+                      >
+                        {savePresetMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                        Save
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Preset List */}
+                  {presetsQuery.data && presetsQuery.data.length > 0 ? (
+                    <div className="flex gap-2 flex-wrap">
+                      {presetsQuery.data.map((preset: any) => (
+                        <div key={preset.id} className="group relative">
+                          <button
+                            onClick={() => handleLoadPreset(preset)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-muted/50 hover:bg-accent hover:border-accent transition-colors"
+                          >
+                            {preset.emoji || '⚡'} {preset.name}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deletePresetMut.mutate({ id: preset.id }); }}
+                            className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <XCircle className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No presets saved yet. Configure your filters and save them for quick access.</p>
+                  )}
+                </div>
+
                 {/* Presenter Persona */}
                 <div className="pt-4">
                   <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -622,11 +809,192 @@ function ContentHubCore() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Row 3: Visual Style, TTS Model, Background */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Palette className="w-3.5 h-3.5" />
+                      Visual Style
+                    </label>
+                    <Select value={visualStyle} onValueChange={(v: any) => setVisualStyle(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default Whiteboard</SelectItem>
+                        <SelectItem value="sketch">Golpo Sketch</SelectItem>
+                        <SelectItem value="sketch-advanced">Golpo Sketch (Advanced)</SelectItem>
+                        <SelectItem value="canvas">Golpo Canvas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Zap className="w-3.5 h-3.5" />
+                      TTS Quality
+                    </label>
+                    <Select value={ttsModel} onValueChange={(v: any) => setTtsModel(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="accurate">Accurate — Best quality</SelectItem>
+                        <SelectItem value="flash">Flash — Faster, lower cost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Monitor className="w-3.5 h-3.5" />
+                      Background
+                    </label>
+                    <Select value={whiteBg ? 'white' : 'dark'} onValueChange={(v) => setWhiteBg(v === 'white')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="white">White Background</SelectItem>
+                        <SelectItem value="dark">Dark Background</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Canvas sub-options (conditional) */}
+                {visualStyle === 'canvas' && (
+                  <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/50 border border-border">
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        <Image className="w-3.5 h-3.5" />
+                        Canvas Image Style
+                      </label>
+                      <Select value={canvasImageStyle} onValueChange={setCanvasImageStyle}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="whiteboard">Whiteboard</SelectItem>
+                          <SelectItem value="neon">Neon</SelectItem>
+                          <SelectItem value="modern_minimal">Modern Minimal</SelectItem>
+                          <SelectItem value="playful">Playful</SelectItem>
+                          <SelectItem value="technical">Technical</SelectItem>
+                          <SelectItem value="editorial">Editorial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        <PenTool className="w-3.5 h-3.5" />
+                        Canvas Pen Style
+                      </label>
+                      <Select value={canvasPenStyle} onValueChange={setCanvasPenStyle}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="stylus">Stylus</SelectItem>
+                          <SelectItem value="marker">Marker</SelectItem>
+                          <SelectItem value="pen">Pen</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Advanced Options Toggle */}
+                <button
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {showAdvanced ? 'Hide' : 'Show'} Advanced Options
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-4 p-3 rounded-lg bg-muted/30 border border-border">
+                    {/* Volume Controls */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          <Volume2 className="w-3.5 h-3.5" />
+                          Output Volume
+                        </label>
+                        <Select value={outputVolume} onValueChange={setOutputVolume}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0.5">50%</SelectItem>
+                            <SelectItem value="0.7">70%</SelectItem>
+                            <SelectItem value="0.8">80%</SelectItem>
+                            <SelectItem value="0.9">90%</SelectItem>
+                            <SelectItem value="1.0">100% (Default)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          <Music className="w-3.5 h-3.5" />
+                          Music Volume
+                        </label>
+                        <Select value={bgVolume} onValueChange={setBgVolume}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0.1">10% — Very subtle</SelectItem>
+                            <SelectItem value="0.2">20%</SelectItem>
+                            <SelectItem value="0.3">30% (Default)</SelectItem>
+                            <SelectItem value="0.5">50%</SelectItem>
+                            <SelectItem value="0.7">70%</SelectItem>
+                            <SelectItem value="1.0">100% — Full</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Logo */}
+                    <div className="grid grid-cols-[1fr_120px] gap-4">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          <Image className="w-3.5 h-3.5" />
+                          Logo URL
+                        </label>
+                        <input
+                          type="url"
+                          value={logoUrl}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          Placement
+                        </label>
+                        <Select value={logoPlacement} onValueChange={setLogoPlacement} disabled={!logoUrl}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tl">Top Left</SelectItem>
+                            <SelectItem value="tr">Top Right</SelectItem>
+                            <SelectItem value="bl">Bottom Left</SelectItem>
+                            <SelectItem value="br">Bottom Right</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* ── Hint below filters ─────────────────────────────────────────── */}
+          {/* ── Hint below filters ───────────────────────────────────────────── */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
               Topics are generated based on your filter selections
