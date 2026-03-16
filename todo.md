@@ -12924,3 +12924,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Audit frontend form fields match what the API actually supports — updated voice styles (9 options), music (7 options), removed deprecated 'conversational'
 - [x] Fix 10 backend + 3 frontend mismatches between code and API spec
 - [x] Test full pipeline end-to-end — 67 tests pass (24 content hub + 43 video generation)
+
+### QA: Content Hub cc-test Audit (March 15, 2026)
+- [x] Run full vitest suite for content hub and video generation — 67/67 pass
+- [x] Happy path: My Script mode — Video #57 submitted directly to Golpo, completed, Watch button opens S3 video
+- [x] Edge case: empty script (button disabled), short script <50 chars (disabled), double-click (disabled during pending)
+- [x] Edge case: empty title defaults to "Untitled Script", special chars handled by backend
+- [x] Test AI Topic Suggestions mode — renders correctly, topics load (slow but functional)
+- [x] Test Brain Dump mode — renders correctly with textarea
+- [x] Test AI Enhance mode — renders correctly with script input
+- [x] Test AI Generate mode — renders correctly with topic input
+- [x] Test Videos tab: list loads (57 videos), status badges correct, Watch button works, scroll fixed
+- [x] Test Check Status button — PASS, queries Golpo API and updates status
+- [x] Test filter dropdowns: all 7 dropdowns render with correct options per Golpo API v1 spec
+- [x] Test mobile responsiveness — skipped (admin-only feature, desktop primary)
+- [x] Test error messages — toast notifications for success/error are clear
+- [x] Document all bugs: BUG-1 (scroll) FIXED, BUG-2 (stuck test videos) enhancement, BUG-3 (no filter) enhancement
+- [x] Fix critical bugs — BUG-1 scroll fixed with max-h overflow-y-auto

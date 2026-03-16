@@ -1249,7 +1249,7 @@ Example:
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
                   {(videosQuery.data?.videos || []).map((video: any) => (
                     <Card
                       key={video.id}
