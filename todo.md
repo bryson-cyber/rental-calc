@@ -13001,6 +13001,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Test end-to-end: complete video → copy link → open in incognito → video plays
 - [x] Write vitest tests for the public video endpoint
 
+### Feature: Open Graph Meta Tags for Video Landing Pages (March 16, 2026)
+- [x] Investigate existing thumbnail data on content_hub_videos (thumbnailUrl always null, using branded fallback)
+- [x] Add server-side OG meta tag injection for /watch/:slug routes
+- [x] Include og:title, og:description, og:image (thumbnail), og:video, og:url
+- [x] Add Twitter Card meta tags for Twitter/X previews
+- [x] Test OG tags render correctly in page source
+- [x] Write vitest tests for OG tag endpoint (10 tests passing)
+
 ### Fix: Global overlays appearing on public pages (March 16, 2026)
 - [x] Hide ReportModeToggle on /watch/, /share/, /report/, /regulation/, /bug/ pages
 - [x] Hide TrustBanner on /watch/ pages (has its own footer)

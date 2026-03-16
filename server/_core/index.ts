@@ -1128,6 +1128,10 @@ async function startServer() {
   });
 
 
+  // OG meta tag injection for /watch/:slug (must be before Vite/static catch-all)
+  const { createOgMetaHandler } = await import('../og-meta-middleware');
+  app.use(createOgMetaHandler());
+
   // tRPC API
   app.use(
     "/api/trpc",
