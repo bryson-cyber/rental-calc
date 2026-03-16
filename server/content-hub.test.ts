@@ -61,12 +61,14 @@ describe('Content Hub Router', () => {
       expect(procedureKeys).toContain('contentHub.savePreset');
       expect(procedureKeys).toContain('contentHub.listPresets');
       expect(procedureKeys).toContain('contentHub.deletePreset');
+      expect(procedureKeys).toContain('contentHub.bulkDeleteVideos');
+      expect(procedureKeys).toContain('contentHub.getVideoBySlug');
     });
 
-    it('should have exactly 11 procedures in the contentHub namespace', () => {
+    it('should have exactly 13 procedures in the contentHub namespace', () => {
       const procedureKeys = Object.keys(appRouter._def.procedures);
       const contentHubProcedures = procedureKeys.filter(k => k.startsWith('contentHub.'));
-      expect(contentHubProcedures).toHaveLength(11);
+      expect(contentHubProcedures).toHaveLength(13);
     });
 
     it('should have checkGolpoStatus procedure for video recovery', () => {
@@ -79,6 +81,22 @@ describe('Content Hub Router', () => {
     it('should reject unauthenticated calls to listVideos', async () => {
       const caller = appRouter.createCaller(createUnauthContext());
       await expect(caller.contentHub.listVideos()).rejects.toThrow();
+    });
+
+    it('should reject unauthenticated calls to bulkDeleteVideos', async () => {
+      const caller = appRouter.createCaller(createUnauthContext());
+      await expect(caller.contentHub.bulkDeleteVideos({ ids: [1, 2] })).rejects.toThrow();
+    });
+
+    it('should allow unauthenticated calls to getVideoBySlug (public endpoint)', async () => {
+      const caller = appRouter.createCaller(createUnauthContext());
+      // Should fail at runtime (DB), not at auth
+      try {
+        await caller.contentHub.getVideoBySlug({ slug: 'test-slug' });
+      } catch (err: any) {
+        // Should NOT be an auth error
+        expect(err.message).not.toContain('login');
+      }
     });
 
     it('should reject unauthenticated calls to startPipeline', async () => {
@@ -159,6 +177,28 @@ describe('Content Hub Router', () => {
         caller.contentHub.savePreset({
           name: '', // min 1
         })
+      ).rejects.toThrow();
+    });
+
+    it('should reject bulkDeleteVideos with empty ids array', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      await expect(
+        caller.contentHub.bulkDeleteVideos({ ids: [] })
+      ).rejects.toThrow();
+    });
+
+    it('should reject bulkDeleteVideos with more than 200 ids', async () => {
+      const caller = appRouter.createCaller(createAdminContext());
+      const ids = Array.from({ length: 201 }, (_, i) => i + 1);
+      await expect(
+        caller.contentHub.bulkDeleteVideos({ ids })
+      ).rejects.toThrow();
+    });
+
+    it('should reject getVideoBySlug with empty slug', async () => {
+      const caller = appRouter.createCaller(createUnauthContext());
+      await expect(
+        caller.contentHub.getVideoBySlug({ slug: '' })
       ).rejects.toThrow();
     });
 
@@ -287,6 +327,8 @@ describe('Content Hub Pipeline Module', () => {
     expect(typeof pipeline.checkGolpoStatus).toBe('function');
     expect(typeof pipeline.startBackgroundRecovery).toBe('function');
     expect(typeof pipeline.stopBackgroundRecovery).toBe('function');
+    expect(typeof pipeline.bulkDeleteVideos).toBe('function');
+    expect(typeof pipeline.getVideoBySlug).toBe('function');
   });
 
   it('should export VideoStatus type-compatible values', async () => {

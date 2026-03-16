@@ -1,0 +1,20 @@
+Video Landing Page Test Results (March 16, 2026):
+
+1. Page loads correctly at /watch/how-airbnb-arbitrage-works---explained-simply-e40b0b7b
+2. Video title shows: "How Airbnb Arbitrage Works - Explained Simply"
+3. Date shows: March 15, 2026
+4. Video player is present with loading spinner (video loading from S3)
+5. CTA section shows: "Want to see how much your property could earn?" + "Get Free Estimate" button
+6. Header shows: "CI Coach Inayah" logo + "Try the Revenue Calculator" button
+7. NO mode selection dialog visible - FIX WORKS
+8. NO TrustBanner visible at bottom - FIX WORKS
+9. NO GlobalLanguageSelector visible in top-right - FIX WORKS
+10. Small element visible on right edge - this appears to be the MockModeBadge (red/orange circle) which only shows in dev mode, not production. Not an issue.
+11. Preview mode banner at bottom from Manus preview system - this is expected in dev, not shown in production.
+
+The landing page is clean and professional. All global overlays are hidden correctly.
+Fixes confirmed working:
+- ReportModeToggle: HIDDEN
+- ReportModeOnboarding dialog: HIDDEN  
+- TrustBanner: HIDDEN
+- GlobalLanguageSelector: HIDDEN

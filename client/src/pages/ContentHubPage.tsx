@@ -174,6 +174,10 @@ function ContentHubCore() {
   const [editingScript, setEditingScript] = useState(false);
   const [editedScript, setEditedScript] = useState('');
 
+  // ── Bulk Selection State ──────────────────────────────────────────────────
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   // ── Count active filters ──────────────────────────────────────────────────
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -262,6 +266,22 @@ function ContentHubCore() {
     },
     onError: (err) => {
       toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const bulkDeleteMut = trpc.contentHub.bulkDeleteVideos.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: `${data.deleted} video${data.deleted !== 1 ? 's' : ''} deleted`,
+        description: data.skipped > 0 ? `${data.skipped} skipped (active pipeline)` : undefined,
+        variant: 'default',
+      });
+      setSelectedIds(new Set());
+      setBulkMode(false);
+      videosQuery.refetch();
+    },
+    onError: (err) => {
+      toast({ title: 'Bulk delete failed', description: err.message, variant: 'destructive' });
     },
   });
 
@@ -461,6 +481,24 @@ function ContentHubCore() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied to clipboard', variant: 'default' });
+  };
+
+  const toggleVideoSelection = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVideos = () => {
+    const allIds = (videosQuery.data?.videos || []).map((v: any) => v.id);
+    setSelectedIds(new Set(allIds));
+  };
+
+  const deselectAllVideos = () => {
+    setSelectedIds(new Set());
   };
 
   // ── Computed ──────────────────────────────────────────────────────────────
@@ -1336,6 +1374,21 @@ Example:
                           </a>
                         </Button>
                       )}
+                      {videoDetail.slug && videoDetail.status === 'video_complete' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-[#C9A962] border-[#C9A962]/30 hover:bg-[#C9A962]/10"
+                          onClick={() => {
+                            const url = `${window.location.origin}/watch/${videoDetail.slug}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success('Share link copied!', { description: url });
+                          }}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Share Link
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -1591,18 +1644,73 @@ Example:
             /* Video List */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm text-muted-foreground">
-                  {videosQuery.data?.total || 0} video{(videosQuery.data?.total || 0) !== 1 ? 's' : ''}
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => videosQuery.refetch()}
-                  className="gap-1.5 h-7"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-medium text-sm text-muted-foreground">
+                    {videosQuery.data?.total || 0} video{(videosQuery.data?.total || 0) !== 1 ? 's' : ''}
+                  </h3>
+                  {bulkMode && selectedIds.size > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {selectedIds.size} selected
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {bulkMode ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectedIds.size === (videosQuery.data?.videos || []).length ? deselectAllVideos : selectAllVideos}
+                        className="gap-1.5 h-7 text-xs"
+                      >
+                        {selectedIds.size === (videosQuery.data?.videos || []).length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={selectedIds.size === 0 || bulkDeleteMut.isPending}
+                        onClick={() => {
+                          if (confirm(`Delete ${selectedIds.size} video${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`)) {
+                            bulkDeleteMut.mutate({ ids: Array.from(selectedIds) });
+                          }
+                        }}
+                        className="gap-1.5 h-7 text-xs"
+                      >
+                        {bulkDeleteMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        Delete ({selectedIds.size})
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setBulkMode(false); setSelectedIds(new Set()); }}
+                        className="h-7 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setBulkMode(true)}
+                        className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Bulk Delete
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => videosQuery.refetch()}
+                        className="gap-1.5 h-7"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Refresh
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {videosQuery.isLoading ? (
@@ -1621,11 +1729,22 @@ Example:
                   {(videosQuery.data?.videos || []).map((video: any) => (
                     <Card
                       key={video.id}
-                      className={`cursor-pointer hover:bg-accent/30 transition-colors ${video.status === 'script_review' ? 'border-amber-300 bg-amber-50/30' : ''}`}
-                      onClick={() => setSelectedVideoId(video.id)}
+                      className={`cursor-pointer hover:bg-accent/30 transition-colors ${video.status === 'script_review' ? 'border-amber-300 bg-amber-50/30' : ''} ${bulkMode && selectedIds.has(video.id) ? 'ring-2 ring-destructive/50 bg-destructive/5' : ''}`}
+                      onClick={() => bulkMode ? toggleVideoSelection(video.id) : setSelectedVideoId(video.id)}
                     >
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-3">
+                          {bulkMode && (
+                            <div className="flex-shrink-0">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(video.id)}
+                                onChange={() => toggleVideoSelection(video.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 rounded border-gray-300 text-destructive focus:ring-destructive cursor-pointer"
+                              />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">{video.topic}</p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -1656,6 +1775,22 @@ Example:
                             >
                               <Play className="w-3 h-3" />
                               Watch
+                            </Button>
+                          )}
+                          {video.slug && video.status === 'video_complete' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = `${window.location.origin}/watch/${video.slug}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success('Share link copied!');
+                              }}
+                              className="gap-1 h-7 text-xs text-[#C9A962]"
+                            >
+                              <Copy className="w-3 h-3" />
+                              Share
                             </Button>
                           )}
                         </div>

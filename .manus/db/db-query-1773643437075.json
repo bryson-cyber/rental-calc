@@ -1,0 +1,30 @@
+{
+  "query": "SELECT status, COUNT(*) as cnt FROM content_hub_videos GROUP BY status ORDER BY cnt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT status, COUNT(*) as cnt FROM content_hub_videos GROUP BY status ORDER BY cnt DESC;",
+  "rows": [
+    {
+      "status": "scripting",
+      "cnt": "28"
+    },
+    {
+      "status": "researching",
+      "cnt": "27"
+    },
+    {
+      "status": "pipeline_failed",
+      "cnt": "6"
+    },
+    {
+      "status": "script_review",
+      "cnt": "5"
+    },
+    {
+      "status": "video_complete",
+      "cnt": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\tcnt\nscripting\t28\nresearching\t27\npipeline_failed\t6\nscript_review\t5\nvideo_complete\t3\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

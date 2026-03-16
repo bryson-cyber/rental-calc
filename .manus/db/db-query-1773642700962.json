@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id, topic, slug FROM content_hub_videos WHERE status = 'video_complete'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, topic, slug FROM content_hub_videos WHERE status = 'video_complete'",
+  "rows": [
+    {
+      "id": "7",
+      "topic": "How to get your first Airbnb arbitrage deal for under 3000 dollars",
+      "slug": "how-to-get-your-first-airbnb-arbitrage-deal-for-under-3000-d-bebcb6b2"
+    },
+    {
+      "id": "14",
+      "topic": "How Airbnb arbitrage works and how to make an extra 4K per month",
+      "slug": "how-airbnb-arbitrage-works-and-how-to-make-an-extra-4k-per-m-efd2ff86"
+    },
+    {
+      "id": "30043",
+      "topic": "How Airbnb Arbitrage Works - Explained Simply",
+      "slug": "how-airbnb-arbitrage-works---explained-simply-e40b0b7b"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttopic\tslug\n7\tHow to get your first Airbnb arbitrage deal for under 3000 dollars\thow-to-get-your-first-airbnb-arbitrage-deal-for-under-3000-d-bebcb6b2\n14\tHow Airbnb arbitrage works and how to make an extra 4K per month\thow-airbnb-arbitrage-works-and-how-to-make-an-extra-4k-per-m-efd2ff86\n30043\tHow Airbnb Arbitrage Works - Explained Simply\thow-airbnb-arbitrage-works---explained-simply-e40b0b7b\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

@@ -17,6 +17,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Globe, Check, ChevronDown, Loader2, X } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { useLocation } from 'wouter';
+import { isPublicPage } from '@/lib/publicPages';
 
 // Group languages by region for easier browsing
 const LANGUAGE_GROUPS: Record<string, string[]> = {
@@ -64,7 +65,8 @@ export default function GlobalLanguageSelector() {
   }, [location]);
 
   // Hide on homepage — LeadMagnet already has its own LanguageSelector in the fixed header
-  if (location === '/') return null;
+  // Hide on public-facing pages (video landing pages, shared reports) which have their own UI
+  if (location === '/' || isPublicPage(location)) return null;
 
   const filteredLanguages = search
     ? supportedLanguages.filter(l =>

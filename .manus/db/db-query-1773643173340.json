@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, topic, slug, status FROM content_hub_videos ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, topic, slug, status FROM content_hub_videos ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "30055",
+      "topic": "Topic without explicit scriptMode",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30054",
+      "topic": "Brain dump topic about getting started",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30053",
+      "topic": "AI should generate this script from scratch",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30052",
+      "topic": "Enhance my script about markets",
+      "slug": "NULL",
+      "status": "scripting"
+    },
+    {
+      "id": "30051",
+      "topic": "My custom script topic",
+      "slug": "NULL",
+      "status": "pipeline_failed"
+    },
+    {
+      "id": "30050",
+      "topic": "How to find profitable Airbnb markets in 2025",
+      "slug": "NULL",
+      "status": "scripting"
+    },
+    {
+      "id": "30049",
+      "topic": "Topic without explicit scriptMode",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30048",
+      "topic": "Brain dump topic about getting started",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30047",
+      "topic": "AI should generate this script from scratch",
+      "slug": "NULL",
+      "status": "researching"
+    },
+    {
+      "id": "30046",
+      "topic": "Enhance my script about markets",
+      "slug": "NULL",
+      "status": "scripting"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttopic\tslug\tstatus\n30055\tTopic without explicit scriptMode\tNULL\tresearching\n30054\tBrain dump topic about getting started\tNULL\tresearching\n30053\tAI should generate this script from scratch\tNULL\tresearching\n30052\tEnhance my script about markets\tNULL\tscripting\n30051\tMy custom script topic\tNULL\tpipeline_failed\n30050\tHow to find profitable Airbnb markets in 2025\tNULL\tscripting\n30049\tTopic without explicit scriptMode\tNULL\tresearching\n30048\tBrain dump topic about getting started\tNULL\tresearching\n30047\tAI should generate this script from scratch\tNULL\tresearching\n30046\tEnhance my script about markets\tNULL\tscripting\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

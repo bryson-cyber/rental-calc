@@ -2688,6 +2688,10 @@ export const contentHubVideos = mysqlTable("content_hub_videos", {
   /** Logo placement: tl (top-left), tr (top-right), bl (bottom-left), br (bottom-right) */
   logoPlacement: varchar("logoPlacement", { length: 5 }).default("tl"),
 
+  // ── Shareable landing page ────────────────────────────────────────────────
+  /** URL-safe slug for public landing page (auto-generated from title) */
+  slug: varchar("slug", { length: 200 }),
+
   // ── Layer 1 output (Research) ─────────────────────────────────────────────
   realTimeFacts: text("realTimeFacts"),
   sources: json("sources").$type<Array<{ uri: string; title: string }>>(),
@@ -2737,6 +2741,7 @@ export const contentHubVideos = mysqlTable("content_hub_videos", {
   index("chv_status_idx").on(table.status),
   index("chv_format_idx").on(table.format),
   index("chv_created_idx").on(table.createdAt),
+  uniqueIndex("chv_slug_idx").on(table.slug),
 ]);
 
 export type ContentHubVideo = typeof contentHubVideos.$inferSelect;

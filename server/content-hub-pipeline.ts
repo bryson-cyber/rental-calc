@@ -26,6 +26,21 @@ import {
 } from './content-data-pipeline';
 // qs removed — Golpo API v1 uses JSON, not form-encoded data
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Generate a URL-safe slug from a title, with a short random suffix for uniqueness */
+function generateSlug(title: string): string {
+  const base = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // remove non-alphanumeric
+    .replace(/\s+/g, '-')          // spaces to hyphens
+    .replace(/-+/g, '-')           // collapse multiple hyphens
+    .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
+    .slice(0, 150);                // max length
+  const suffix = Math.random().toString(36).slice(2, 8); // 6-char random
+  return `${base}-${suffix}`;
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type VideoStatus =
@@ -699,6 +714,7 @@ export async function startPipeline(input: PipelineInput): Promise<PipelineResul
     canvasPenStyle: input.canvasPenStyle || null,
     logoUrl: input.logoUrl || null,
     logoPlacement: input.logoPlacement || 'tl',
+    slug: generateSlug(input.topic),
     status: 'pipeline_queued',
     pipelineStage: 'Queued — starting pipeline...',
   });
@@ -1086,6 +1102,32 @@ export async function getVideoById(videoId: number) {
   return video;
 }
 
+/** Public: fetch a completed video by its URL slug (no auth required) */
+export async function getVideoBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [video] = await db.select({
+    id: contentHubVideos.id,
+    topic: contentHubVideos.topic,
+    format: contentHubVideos.format,
+    videoUrl: contentHubVideos.videoUrl,
+    thumbnailUrl: contentHubVideos.thumbnailUrl,
+    narrationScript: contentHubVideos.narrationScript,
+    status: contentHubVideos.status,
+    createdAt: contentHubVideos.createdAt,
+    slug: contentHubVideos.slug,
+  })
+    .from(contentHubVideos)
+    .where(eq(contentHubVideos.slug, slug))
+    .limit(1);
+
+  if (!video) throw new Error('Video not found');
+  // Only expose completed videos publicly
+  if (video.status !== 'video_complete') throw new Error('Video not available yet');
+  return video;
+}
+
 export async function listVideos(options: {
   userId?: number;
   status?: VideoStatus;
@@ -1132,6 +1174,27 @@ export async function deleteVideo(videoId: number): Promise<void> {
   }
 
   await db.delete(contentHubVideos).where(eq(contentHubVideos.id, videoId));
+}
+
+/**
+ * Bulk delete multiple videos at once.
+ * Skips any videos that have active pipelines running.
+ * Returns count of deleted and skipped videos.
+ */
+export async function bulkDeleteVideos(videoIds: number[]): Promise<{ deleted: number; skipped: number }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Filter out videos with active pipelines
+  const activeIds = videoIds.filter(id => activePipelines.has(id));
+  const deletableIds = videoIds.filter(id => !activePipelines.has(id));
+
+  if (deletableIds.length === 0) {
+    return { deleted: 0, skipped: activeIds.length };
+  }
+
+  await db.delete(contentHubVideos).where(inArray(contentHubVideos.id, deletableIds));
+  return { deleted: deletableIds.length, skipped: activeIds.length };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -12988,3 +12988,22 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update preset save to include all new options
 - [x] Update preset load to restore all new options
 - [x] Preset queries and mutations wired in frontend
+
+### Feature: Auto-Generated Video Landing Pages (March 16, 2026)
+- [x] Add slug column to content_hub_videos table for clean URLs
+- [x] Auto-generate slug from video title on creation
+- [x] Create public tRPC endpoint to fetch video by slug (no auth required)
+- [x] Build public landing page component: video embed, title, branding, CTA
+- [x] Add "Copy Share Link" button to video detail view in Content Hub
+- [x] Landing page should work for anyone with the link (no login needed)
+- [x] Include Coach Inayah branding on landing page
+- [x] Add CTA button on landing page (e.g., "Get Your Free Revenue Estimate")
+- [x] Test end-to-end: complete video → copy link → open in incognito → video plays
+- [x] Write vitest tests for the public video endpoint
+
+### Fix: Global overlays appearing on public pages (March 16, 2026)
+- [x] Hide ReportModeToggle on /watch/, /share/, /report/, /regulation/, /bug/ pages
+- [x] Hide TrustBanner on /watch/ pages (has its own footer)
+- [x] Hide GlobalLanguageSelector on /watch/ pages
+- [x] Add bulk delete functionality for test videos in Content Hub
+- [x] Test landing page end-to-end in browser

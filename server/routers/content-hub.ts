@@ -28,6 +28,7 @@ import {
   getVideoById,
   listVideos,
   deleteVideo,
+  bulkDeleteVideos,
   updateScript,
   suggestTopics,
   startBatch,
@@ -35,6 +36,7 @@ import {
   listPresets,
   deletePreset,
   checkGolpoStatus,
+  getVideoBySlug,
 } from '../content-hub-pipeline';
 
 // ── Input Schemas ────────────────────────────────────────────────────────────
@@ -260,6 +262,16 @@ export const contentHubRouter = router({
     }),
 
   /**
+   * Bulk delete multiple videos at once.
+   * Useful for cleaning up test videos.
+   */
+  bulkDeleteVideos: protectedProcedure
+    .input(z.object({ ids: z.array(z.number()).min(1).max(200) }))
+    .mutation(async ({ input }) => {
+      return bulkDeleteVideos(input.ids);
+    }),
+
+  /**
    * Manually check Golpo status for a video (recover videos whose polling timed out).
    * Prevents wasted credits by retrieving completed videos that our polling missed.
    */
@@ -267,5 +279,15 @@ export const contentHubRouter = router({
     .input(z.object({ videoId: z.number() }))
     .mutation(async ({ input }) => {
       return checkGolpoStatus(input.videoId);
+    }),
+
+  /**
+   * Public: Get a completed video by its URL slug for the shareable landing page.
+   * No authentication required — only exposes completed videos with limited fields.
+   */
+  getVideoBySlug: publicProcedure
+    .input(z.object({ slug: z.string().min(1).max(200) }))
+    .query(async ({ input }) => {
+      return getVideoBySlug(input.slug);
     }),
 });

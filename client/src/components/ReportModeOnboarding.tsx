@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useReportMode, ReportMode } from '@/contexts/ReportModeContext';
 import { BarChart3, BookOpen, Check, Sparkles, TrendingUp, MessageCircle } from 'lucide-react';
+import { isPublicPage } from '@/lib/publicPages';
 
 /**
  * First-time onboarding modal for report mode selection.
@@ -19,15 +20,7 @@ export function ReportModeOnboarding() {
   const [hoveredMode, setHoveredMode] = useState<ReportMode | null>(null);
 
   // Don't show onboarding modal on shared/public report pages
-  const isSharedPage = typeof window !== 'undefined' && (
-    window.location.pathname.startsWith('/report/') ||
-    window.location.pathname.startsWith('/share/') ||
-    window.location.pathname.startsWith('/view-report/') ||
-    window.location.pathname.startsWith('/regulation/') ||
-    window.location.pathname.startsWith('/bug/')
-  );
-
-  if (!needsOnboarding || isSharedPage) return null;
+  if (!needsOnboarding || isPublicPage()) return null;
 
   const handleContinue = () => {
     if (selected) {
