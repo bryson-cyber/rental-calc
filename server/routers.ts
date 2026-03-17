@@ -59,6 +59,7 @@ import {
   leaseReaderRouter,
   webinarEnvRouter,
   tosRouter,
+  publicExploreRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -196,6 +197,9 @@ export const appRouter = router({
 
   // Terms of Service acceptance tracking
   tos: tosRouter,
+
+  // Public explore page (no auth required)
+  publicExplore: publicExploreRouter,
 });
 
 export type AppRouter = typeof appRouter;

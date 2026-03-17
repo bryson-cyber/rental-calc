@@ -149,7 +149,7 @@ function ContentHubCore() {
   const [bgMusic, setBgMusic] = useState('engaging');
 
   // ── Golpo API v1 Options State ───────────────────────────────────────────
-  const [visualStyle, setVisualStyle] = useState<'default' | 'sketch' | 'sketch-advanced' | 'canvas'>('default');
+  const [visualStyle, setVisualStyle] = useState<'default' | 'sketch' | 'canvas'>('default');
   const [canvasImageStyle, setCanvasImageStyle] = useState('whiteboard');
   const [canvasPenStyle, setCanvasPenStyle] = useState('stylus');
   const [ttsModel, setTtsModel] = useState<'accurate' | 'flash'>('accurate');
@@ -893,7 +893,6 @@ function ContentHubCore() {
                       <SelectContent>
                         <SelectItem value="default">Default Whiteboard</SelectItem>
                         <SelectItem value="sketch">Golpo Sketch</SelectItem>
-                        <SelectItem value="sketch-advanced">Golpo Sketch (Advanced)</SelectItem>
                         <SelectItem value="canvas">Golpo Canvas</SelectItem>
                       </SelectContent>
                     </Select>

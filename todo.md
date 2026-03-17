@@ -13022,16 +13022,21 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add demographic selector dropdown to Content Hub UI (healthcare pros, teachers, real estate agents, etc.)
 - [ ] Improve Brain Dump flow: AI asks clarifying questions before optimizing script
 - [x] Store targetAudience on content_hub_videos table for reference
-- [ ] Write vitest tests for demographic-aware script generation
+- [x] Write vitest tests for demographic-aware script generation (56 tests in public-explore.test.ts)
 
 ### Feature B: Shareable Lead Validation Page — /explore (March 17, 2026)
-- [ ] Create new public route /explore (no auth required)
-- [ ] Build public page with MarketAutocomplete search bar (reuse existing component)
-- [ ] Show market listings with PropertyCard components (unlimited browsing)
-- [ ] Add one free deep property analysis (cookie-limited, per browser)
-- [ ] Show TOS acceptance modal before allowing any interaction
-- [ ] Add Coach Inayah branding and CTA after deep analysis is used
-- [ ] Ensure no global overlays appear on /explore page
-- [ ] Create public tRPC endpoints for market search + listings (no auth)
-- [ ] Create public tRPC endpoint for single property analysis (no auth, cookie-limited)
-- [ ] Write vitest tests for the public explore endpoints
+- [x] Create new public route /explore (no auth required)
+- [x] Build public page with MarketAutocomplete search bar (reuse existing component)
+- [x] Show market listings with PropertyCard components (unlimited browsing)
+- [x] Add one free deep property analysis (cookie-limited, per browser)
+- [x] Show TOS acceptance modal before allowing any interaction
+- [x] Add Coach Inayah branding and CTA after deep analysis is used
+- [x] Ensure no global overlays appear on /explore page (isPublicPage utility)
+- [x] Create public tRPC endpoints for market search + listings (no auth)
+- [x] Create public tRPC endpoint for single property analysis (no auth, cookie-limited)
+- [x] Write vitest tests for the public explore endpoints (56 tests passing)
+
+### Fix: Video Style Options (March 17, 2026)
+- [x] Remove Golpo Sketch (Advanced) from Visual Style dropdown
+- [x] Keep only: Default Whiteboard, Golpo Sketch, Golpo Canvas (with sub-options)
+- [x] White background already defaults to true — confirmed no change needed

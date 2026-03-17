@@ -13,6 +13,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/view-report/', // Shared reports (legacy)
   '/regulation/',  // Shared regulation reports
   '/bug/',         // Bug report pages
+  '/explore',      // Public lead validation page
 ];
 
 /**

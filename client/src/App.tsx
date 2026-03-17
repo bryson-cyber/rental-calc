@@ -60,6 +60,7 @@ const ContentStudioPage = lazy(() => import("./pages/ContentStudioPage"));
 const WebinarCampaignManager = lazy(() => import('./pages/WebinarCampaignManager'));
 const AdminViewReport = lazy(() => import('./pages/AdminViewReport'));
 const VideoLandingPage = lazy(() => import('./pages/VideoLandingPage'));
+const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -134,6 +135,9 @@ function Router() {
         
         {/* Public Video Landing Pages */}
         <Route path="/watch/:slug" component={VideoLandingPage} />
+        
+        {/* Public Explore Page - shareable lead validation */}
+        <Route path="/explore" component={ExplorePage} />
         
         {/* Bug Reports */}
         <Route path="/bug/:shareCode" component={BugReportPage} />
