@@ -50,6 +50,7 @@ const startPipelineInput = z.object({
   userScript: z.string().max(50000).optional(),
   scriptOnly: z.boolean().optional().default(false),
   brainDump: z.string().max(5000).optional(),
+  targetAudience: z.string().max(100).optional(),
   voiceStyle: z.string().optional(),
   contentFocus: z.string().optional(),
   contentLength: z.string().optional(),

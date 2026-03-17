@@ -13015,3 +13015,23 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Hide GlobalLanguageSelector on /watch/ pages
 - [x] Add bulk delete functionality for test videos in Content Hub
 - [x] Test landing page end-to-end in browser
+
+### Feature A: Video Script Editor — Demographic Targeting (March 17, 2026)
+- [x] Add targetAudience field to startPipeline input schema (router + pipeline)
+- [x] Update script generation prompt to adapt language/framing for target demographic
+- [x] Add demographic selector dropdown to Content Hub UI (healthcare pros, teachers, real estate agents, etc.)
+- [ ] Improve Brain Dump flow: AI asks clarifying questions before optimizing script
+- [x] Store targetAudience on content_hub_videos table for reference
+- [ ] Write vitest tests for demographic-aware script generation
+
+### Feature B: Shareable Lead Validation Page — /explore (March 17, 2026)
+- [ ] Create new public route /explore (no auth required)
+- [ ] Build public page with MarketAutocomplete search bar (reuse existing component)
+- [ ] Show market listings with PropertyCard components (unlimited browsing)
+- [ ] Add one free deep property analysis (cookie-limited, per browser)
+- [ ] Show TOS acceptance modal before allowing any interaction
+- [ ] Add Coach Inayah branding and CTA after deep analysis is used
+- [ ] Ensure no global overlays appear on /explore page
+- [ ] Create public tRPC endpoints for market search + listings (no auth)
+- [ ] Create public tRPC endpoint for single property analysis (no auth, cookie-limited)
+- [ ] Write vitest tests for the public explore endpoints

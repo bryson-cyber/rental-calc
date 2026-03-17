@@ -1,0 +1,1 @@
+ALTER TABLE `content_hub_videos` ADD `targetAudience` varchar(100);

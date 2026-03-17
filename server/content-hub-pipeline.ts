@@ -77,6 +77,8 @@ export interface PipelineInput {
   scriptOnly?: boolean;
   /** Brain dump: rough idea that Opus will enhance */
   brainDump?: string;
+  /** Target audience/demographic for script personalization */
+  targetAudience?: string;
 
   // ── Golpo API v1 options ──────────────────────────────────────────────────
   /** Video orientation: "long" (16:9 landscape) or "short" (9:16 vertical) */
@@ -304,6 +306,7 @@ async function runLayer2ScriptGeneration(
   format: string,
   formattedData: string,
   brainDump?: string,
+  targetAudience?: string,
 ): Promise<{
   narrationScript: string;
   durationMs: number;
@@ -329,6 +332,35 @@ Word count target: ${spec.wordRange}
 Structure: ${spec.structure}
 
 `;
+
+  if (targetAudience && targetAudience !== 'general') {
+    const audienceLabels: Record<string, string> = {
+      healthcare_pros: 'healthcare professionals (doctors, nurses, therapists, pharmacists)',
+      teachers: 'teachers and educators (K-12, college professors, administrators)',
+      real_estate_agents: 'real estate agents and brokers',
+      corporate_professionals: 'corporate professionals (9-to-5 workers looking for side income)',
+      military_veterans: 'military veterans and active-duty service members',
+      single_parents: 'single parents looking to build additional income',
+      retirees: 'retirees and pre-retirees looking to supplement retirement income',
+      college_students: 'college students and recent graduates',
+      small_business_owners: 'small business owners and entrepreneurs',
+      first_responders: 'first responders (police, firefighters, EMTs)',
+    };
+    const audienceLabel = audienceLabels[targetAudience] || targetAudience;
+    userPrompt += `## TARGET AUDIENCE
+This script is specifically for ${audienceLabel}.
+
+ADAPT THE SCRIPT for this audience:
+- Use examples and scenarios that resonate with their daily life and career
+- Reference their typical income range, schedule, and financial goals
+- Address their specific concerns and objections about starting STR investing
+- Use analogies from their profession to explain STR concepts
+- Frame the opportunity in terms of how it fits their lifestyle
+- If they work long hours, emphasize passive income and systems
+- If they have specialized knowledge, show how it transfers to STR success
+
+`;
+  }
 
   if (brainDump) {
     userPrompt += `## BRAIN DUMP (User's rough idea — enhance this into a full script)
@@ -714,6 +746,7 @@ export async function startPipeline(input: PipelineInput): Promise<PipelineResul
     canvasPenStyle: input.canvasPenStyle || null,
     logoUrl: input.logoUrl || null,
     logoPlacement: input.logoPlacement || 'tl',
+    targetAudience: input.targetAudience || null,
     slug: generateSlug(input.topic),
     status: 'pipeline_queued',
     pipelineStage: 'Queued — starting pipeline...',
@@ -837,6 +870,7 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
         input.format,
         input.userScript,
         formattedData,
+        input.targetAudience,
       );
       narrationScript = enhanced;
 
@@ -865,6 +899,7 @@ async function runPipelineBackground(videoId: number, input: PipelineInput): Pro
         input.format,
         formattedData,
         input.brainDump,
+        input.targetAudience,
       );
       narrationScript = result.narrationScript;
 
@@ -897,6 +932,7 @@ async function runLayer2EnhanceScript(
   format: string,
   userScript: string,
   researchData: string,
+  targetAudience?: string,
 ): Promise<{ narrationScript: string }> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -929,7 +965,10 @@ Your job is to ENHANCE the user's script — NOT rewrite it. Follow these rules:
 
 Format: ${format === 'deep_dive' ? '8-12 minute deep dive' : '5-8 minute lesson'}
 Topic: ${topic}
+${targetAudience && targetAudience !== 'general' ? `Target Audience: ${targetAudience}
 
+When enhancing, subtly adapt examples and framing to resonate with this specific audience. Don't change the core content, but adjust analogies and scenarios to be relevant to their profession/lifestyle.
+` : ''}
 LIVE PLATFORM DATA (use sparingly to enrich, not to rewrite):
 ${researchData}
 

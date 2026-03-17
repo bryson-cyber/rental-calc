@@ -80,6 +80,7 @@ import {
   Monitor,
   Bookmark,
   BookmarkPlus,
+  Users,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -165,6 +166,7 @@ function ContentHubCore() {
   const [userScript, setUserScript] = useState('');
   const [brainDump, setBrainDump] = useState('');
   const [scriptOnly, setScriptOnly] = useState(false);
+  const [targetAudience, setTargetAudience] = useState('general');
 
   // ── Section State ─────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'create' | 'videos'>('create');
@@ -191,9 +193,10 @@ function ContentHubCore() {
     if (visualStyle !== 'default') count++;
     if (ttsModel !== 'accurate') count++;
     if (!whiteBg) count++;
+    if (targetAudience !== 'general') count++;
     if (logoUrl) count++;
     return count;
-  }, [persona, videoFormat, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, visualStyle, ttsModel, whiteBg, logoUrl]);
+  }, [persona, videoFormat, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, visualStyle, ttsModel, whiteBg, targetAudience, logoUrl]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const presetsQuery = trpc.contentHub.listPresets.useQuery();
@@ -430,6 +433,7 @@ function ContentHubCore() {
       scriptMode,
       userScript: scriptText,
       brainDump: brainDumpText,
+      targetAudience: targetAudience !== 'general' ? targetAudience : undefined,
       persona,
       voiceStyle,
       contentFocus,
@@ -449,7 +453,7 @@ function ContentHubCore() {
       logoUrl: logoUrl || undefined,
       logoPlacement: logoUrl ? logoPlacement : undefined,
     });
-  }, [inputMode, topic, userScript, brainDump, scriptOnly, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, videoFormat, visualStyle, canvasImageStyle, canvasPenStyle, ttsModel, whiteBg, outputVolume, bgVolume, logoUrl, logoPlacement, startPipeline, toast]);
+  }, [inputMode, topic, userScript, brainDump, scriptOnly, targetAudience, persona, voiceStyle, contentFocus, contentLength, storyFormat, bgMusic, videoFormat, visualStyle, canvasImageStyle, canvasPenStyle, ttsModel, whiteBg, outputVolume, bgVolume, logoUrl, logoPlacement, startPipeline, toast]);
 
   const handleUseSuggestion = (suggestion: { topic: string; format: string }) => {
     setTopic(suggestion.topic);
@@ -465,6 +469,7 @@ function ContentHubCore() {
     setContentLength('5-10');
     setStoryFormat('whiteboard');
     setBgMusic('engaging');
+    setTargetAudience('general');
     // Reset Golpo API v1 options
     setVisualStyle('default');
     setCanvasImageStyle('whiteboard');
@@ -848,7 +853,33 @@ function ContentHubCore() {
                   </div>
                 </div>
 
-                {/* Row 3: Visual Style, TTS Model, Background */}
+                {/* Row 3: Target Audience */}
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    <Users className="w-3.5 h-3.5" />
+                    Target Audience
+                  </label>
+                  <Select value={targetAudience} onValueChange={setTargetAudience}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General (No specific demographic)</SelectItem>
+                      <SelectItem value="healthcare_pros">Healthcare Professionals</SelectItem>
+                      <SelectItem value="teachers">Teachers &amp; Educators</SelectItem>
+                      <SelectItem value="real_estate_agents">Real Estate Agents</SelectItem>
+                      <SelectItem value="corporate_professionals">Corporate Professionals (9-to-5)</SelectItem>
+                      <SelectItem value="military_veterans">Military Veterans</SelectItem>
+                      <SelectItem value="single_parents">Single Parents</SelectItem>
+                      <SelectItem value="retirees">Retirees &amp; Pre-Retirees</SelectItem>
+                      <SelectItem value="college_students">College Students &amp; Grads</SelectItem>
+                      <SelectItem value="small_business_owners">Small Business Owners</SelectItem>
+                      <SelectItem value="first_responders">First Responders</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Row 4: Visual Style, TTS Model, Background */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -1342,6 +1373,12 @@ Example:
                         {videoDetail.scriptMode && (
                           <Badge variant="outline" className="text-xs bg-slate-50">
                             {videoDetail.scriptMode === 'own_script' ? 'My Script' : videoDetail.scriptMode === 'ai_enhance' ? 'AI Enhanced' : 'AI Generated'}
+                          </Badge>
+                        )}
+                        {videoDetail.targetAudience && videoDetail.targetAudience !== 'general' && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            <Users className="w-3 h-3 mr-1" />
+                            {videoDetail.targetAudience.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                           </Badge>
                         )}
                         {videoDetail.totalDurationMs && (

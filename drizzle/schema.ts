@@ -2657,6 +2657,9 @@ export const contentHubVideos = mysqlTable("content_hub_videos", {
   /** User-provided script text (used in own_script and ai_enhance modes) */
   userScript: text("userScript"),
 
+  /** Target audience/demographic for script personalization (e.g., 'healthcare_pros', 'teachers', 'real_estate_agents') */
+  targetAudience: varchar("targetAudience", { length: 100 }),
+
   // Configurable dimensions
   voiceStyle: varchar("voiceStyle", { length: 50 }),
   contentFocus: varchar("contentFocus", { length: 50 }),
