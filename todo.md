@@ -13046,3 +13046,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Remove "Data Powered by Airbnb" attribution from /explore page
 - [x] Remove "Get Your Free Revenue Estimate" CTA from /explore page
 - [x] Make /explore page just the Explore Area tool (tool #2 from home page) — no extras, no upsells
+
+### Fix: /explore page should be Step 2 (OpportunityFinderStep) (March 18, 2026)
+- [x] Replace custom ExplorePage with OpportunityFinderStep component (the actual Step 2 from home page)
+- [x] Keep TOS gate before showing the tool
+- [x] No extra CTAs, headers, or upsells — just the tool with minimal wrapper
