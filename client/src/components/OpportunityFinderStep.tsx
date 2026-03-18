@@ -16,7 +16,7 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -359,6 +359,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20); // 20, 50, or 100 per page
+  const pendingDisplayAdvance = useRef(false);
   
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('price_asc');
@@ -648,6 +649,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   
   // Load more results
   const handleLoadMore = () => {
+    pendingDisplayAdvance.current = true;
     handleSearch(currentPage + 1, true);
   };
   
@@ -1103,6 +1105,19 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   
   // Client-side pagination state for viewing loaded results
   const [displayPage, setDisplayPage] = useState(1);
+
+  // Auto-advance displayPage after Load More completes
+  useEffect(() => {
+    if (!isLoadingMore && pendingDisplayAdvance.current) {
+      pendingDisplayAdvance.current = false;
+      // Advance to the next display page (new data is now loaded)
+      // Use sortedProperties here since filteredProperties may not be defined yet
+      const newTotalPages = Math.ceil(sortedProperties.length / pageSize);
+      if (newTotalPages > displayPage) {
+        setDisplayPage(displayPage + 1);
+      }
+    }
+  }, [isLoadingMore]);
   
   // Calculate pagination values
   // Use totalResults to show actual total pages available (not just loaded properties)

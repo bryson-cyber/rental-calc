@@ -13051,3 +13051,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Replace custom ExplorePage with OpportunityFinderStep component (the actual Step 2 from home page)
 - [x] Keep TOS gate before showing the tool
 - [x] No extra CTAs, headers, or upsells — just the tool with minimal wrapper
+
+### Bug: Pagination broken in OpportunityFinderStep (March 18, 2026)
+- [x] Shows total count (e.g. 3000 properties) but only renders one page with no way to load more
+- [x] Fix pagination: added pendingDisplayAdvance ref to auto-advance displayPage after Load More completes
