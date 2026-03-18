@@ -1129,11 +1129,11 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4" style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.15)' }}>
           <Search className="w-7 h-7" style={{ color: 'oklch(0.55 0.14 75)' }} />
         </div>
-        <h2 className="text-2xl font-semibold mb-2" style={{ color: 'oklch(0.15 0 0)' }}>
-          Find Your Next Opportunity
+        <h2 className="text-2xl md:text-3xl font-semibold mb-2" style={{ color: 'oklch(0.15 0 0)' }}>
+          See What's Making Money in Your City
         </h2>
         <p className="text-base max-w-xl mx-auto" style={{ color: 'oklch(0.45 0 0)' }}>
-          Browse rentals and validate STR potential instantly. Click "Analyze" to get revenue projections right here.
+          Search any city, browse real properties, and instantly see how much they could earn as short-term rentals.
         </p>
       </div>
       

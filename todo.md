@@ -13063,3 +13063,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Show 6 skeleton cards while fetching next batch
 - [x] Keep "Showing X properties (Y in market)" counter
 - [x] Keep sort dropdown, removed per-page selector (not needed with infinite scroll)
+
+### UX: Update /explore page headline for lead magnet (March 18, 2026)
+- [x] Replace headline: "See What's Making Money in Your City"
+- [x] Replace subtitle: "Search any city, browse real properties, and instantly see how much they could earn as short-term rentals."
+- [x] Target audience: people who just booked a call, excited to see what's in their city
