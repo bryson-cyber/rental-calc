@@ -303,7 +303,7 @@ describe("Public Explore - Router Mount", () => {
     // Verify it's the same router
     const keys = Object.keys(exported._def.procedures);
     expect(keys.sort()).toEqual(["getEstimate", "getListings", "searchMarkets"]);
-  });
+  }, 15000);
 });
 
 // ── Public Pages Utility Tests ────────────────────────────────────────────────

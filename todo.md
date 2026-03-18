@@ -13040,3 +13040,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Remove Golpo Sketch (Advanced) from Visual Style dropdown
 - [x] Keep only: Default Whiteboard, Golpo Sketch, Golpo Canvas (with sub-options)
 - [x] White background already defaults to true — confirmed no change needed
+
+### Fix: /explore page violations (March 17, 2026)
+- [x] Remove "Get More Access" button from /explore page
+- [x] Remove "Data Powered by Airbnb" attribution from /explore page
+- [x] Remove "Get Your Free Revenue Estimate" CTA from /explore page
+- [x] Make /explore page just the Explore Area tool (tool #2 from home page) — no extras, no upsells
