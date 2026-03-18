@@ -13055,3 +13055,11 @@ Files fixed (operating costs now based on revenue, not rent):
 ### Bug: Pagination broken in OpportunityFinderStep (March 18, 2026)
 - [x] Shows total count (e.g. 3000 properties) but only renders one page with no way to load more
 - [x] Fix pagination: added pendingDisplayAdvance ref to auto-advance displayPage after Load More completes
+
+### UX: Replace pagination with infinite scroll in OpportunityFinderStep (March 18, 2026)
+- [x] Remove pagination controls (page numbers, prev/next buttons, per-page selector)
+- [x] Add IntersectionObserver sentinel at bottom of property list (400px rootMargin)
+- [x] Auto-load next batch when user scrolls near bottom
+- [x] Show 6 skeleton cards while fetching next batch
+- [x] Keep "Showing X properties (Y in market)" counter
+- [x] Keep sort dropdown, removed per-page selector (not needed with infinite scroll)

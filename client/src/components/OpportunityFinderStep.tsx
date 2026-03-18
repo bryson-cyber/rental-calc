@@ -16,7 +16,7 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -358,8 +358,9 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [pageSize, setPageSize] = useState<number>(20); // 20, 50, or 100 per page
-  const pendingDisplayAdvance = useRef(false);
+  
+  // Infinite scroll sentinel ref
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('price_asc');
@@ -649,7 +650,6 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   
   // Load more results
   const handleLoadMore = () => {
-    pendingDisplayAdvance.current = true;
     handleSearch(currentPage + 1, true);
   };
   
@@ -671,7 +671,6 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     setHasMore(false);
     setHasSearched(false);
     setCurrentPage(1);
-    setDisplayPage(1);
     setValidationResults({});
     
     // Clear all filters
@@ -941,8 +940,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       }
       
       // Step 2: Auto-navigate to the last page to show new properties
-      const newTotalPages = Math.ceil(allProperties.length / pageSize);
-      setDisplayPage(newTotalPages);
+      // Properties are auto-displayed via infinite scroll, no page navigation needed
       
       // Step 3: Auto-run batch analysis on the newly loaded properties
       toast.info(`Loaded ${newProperties.length} new properties. Running analysis...`);
@@ -1103,75 +1101,26 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     });
   }, [sortedProperties, showBatchResults, batchResults, validationResults, profitThreshold]);
   
-  // Client-side pagination state for viewing loaded results
-  const [displayPage, setDisplayPage] = useState(1);
-
-  // Auto-advance displayPage after Load More completes
+  // Infinite scroll: show all loaded & filtered properties (no client-side pagination)
+  const displayedProperties = filteredProperties;
+  
+  // Infinite scroll: IntersectionObserver to auto-load more when sentinel is visible
   useEffect(() => {
-    if (!isLoadingMore && pendingDisplayAdvance.current) {
-      pendingDisplayAdvance.current = false;
-      // Advance to the next display page (new data is now loaded)
-      // Use sortedProperties here since filteredProperties may not be defined yet
-      const newTotalPages = Math.ceil(sortedProperties.length / pageSize);
-      if (newTotalPages > displayPage) {
-        setDisplayPage(displayPage + 1);
-      }
-    }
-  }, [isLoadingMore]);
-  
-  // Calculate pagination values
-  // Use totalResults to show actual total pages available (not just loaded properties)
-  const loadedPages = Math.ceil(filteredProperties.length / pageSize);
-  const estimatedTotalPages = totalResults > 0 ? Math.ceil(totalResults / pageSize) : loadedPages;
-  // Show loaded pages for navigation, but indicate more are available
-  const totalPages = loadedPages;
-  const startIndex = (displayPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const displayedProperties = filteredProperties.slice(startIndex, endIndex);
-  
-  // Reset display page when properties change significantly
-  useEffect(() => {
-    if (displayPage > totalPages && totalPages > 0) {
-      setDisplayPage(totalPages);
-    }
-  }, [sortedProperties.length, pageSize, displayPage, totalPages]);
-  
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pages: (number | 'ellipsis')[] = [];
-    const maxVisiblePages = 5;
+    if (!sentinelRef.current) return;
     
-    if (totalPages <= maxVisiblePages + 2) {
-      // Show all pages if total is small
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-      
-      if (displayPage > 3) {
-        pages.push('ellipsis');
-      }
-      
-      // Show pages around current page
-      const start = Math.max(2, displayPage - 1);
-      const end = Math.min(totalPages - 1, displayPage + 1);
-      
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      
-      if (displayPage < totalPages - 2) {
-        pages.push('ellipsis');
-      }
-      
-      // Always show last page
-      pages.push(totalPages);
-    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMore && !isLoadingMore && !isSearching) {
+          handleLoadMore();
+        }
+      },
+      { rootMargin: '400px' } // Start loading 400px before user reaches bottom
+    );
     
-    return pages;
-  };
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, isSearching, currentPage]);
   
   return (
     <div className="space-y-6">
@@ -1409,7 +1358,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       {/* Results */}
       {hasSearched && (
         <div className="space-y-4">
-          {/* Results Header with Sorting, Per-Page Selector, and Pagination */}
+          {/* Results Header with Sorting */}
           <div className="flex flex-col gap-4">
             {/* Top Row: Count and Controls */}
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1418,116 +1367,28 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                   'Searching...'
                 ) : (
                   <>
-                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{filteredProperties.length > 0 ? `${startIndex + 1}-${Math.min(endIndex, filteredProperties.length)}` : '0'}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{filteredProperties.length}</span> properties{showBatchResults && filteredProperties.length < sortedProperties.length && <span style={{ color: 'oklch(0.55 0.12 85)' }}> ({sortedProperties.length - filteredProperties.length} hidden below ${profitThreshold.toLocaleString()}/mo)</span>}{totalResults > sortedProperties.length && <span style={{ color: 'oklch(0.55 0 0)' }}> ({totalResults.toLocaleString()} in market)</span>}
+                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{filteredProperties.length}</span> properties{showBatchResults && filteredProperties.length < sortedProperties.length && <span style={{ color: 'oklch(0.55 0.12 85)' }}> ({sortedProperties.length - filteredProperties.length} hidden below ${profitThreshold.toLocaleString()}/mo)</span>}{totalResults > sortedProperties.length && <span style={{ color: 'oklch(0.55 0 0)' }}> ({totalResults.toLocaleString()} in market)</span>}
                   </>
                 )}
               </p>
               
-              {/* Controls Row */}
+              {/* Sorting Dropdown */}
               {sortedProperties.length > 0 && (
-                <div className="flex items-center gap-4 flex-wrap">
-                  {/* Per-Page Selector */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Show:</span>
-                    <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setDisplayPage(1); }}>
-                      <SelectTrigger className="w-[80px] h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="20">20</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Sorting Dropdown */}
-                  <div className="flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-[180px] h-9 text-sm">
-                        <SelectValue placeholder="Sort by..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SORT_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SORT_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
-            
-            {/* Pagination Controls - At Top */}
-            {sortedProperties.length > 0 && (totalPages > 1 || hasMore) && (
-              <div className="flex items-center justify-center gap-3 py-2 px-4 rounded-xl" style={{ backgroundColor: 'oklch(0.97 0 0)', border: '1px solid oklch(0.92 0 0)' }}>
-                {/* Previous Button */}
-                <Button
-                  onClick={() => setDisplayPage(Math.max(1, displayPage - 1))}
-                  disabled={displayPage === 1}
-                  variant="outline"
-                  size="sm"
-                  className="px-3"
-                  style={{ borderRadius: '8px' }}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                
-                {/* Page Numbers */}
-                <div className="flex items-center gap-1">
-                  {getPageNumbers().map((page, index) => (
-                    page === 'ellipsis' ? (
-                      <span key={`ellipsis-${index}`} className="px-2 text-sm" style={{ color: 'oklch(0.55 0 0)' }}>...</span>
-                    ) : (
-                      <Button
-                        key={page}
-                        onClick={() => setDisplayPage(page)}
-                        variant={displayPage === page ? 'default' : 'outline'}
-                        size="sm"
-                        className="w-9 h-9 p-0"
-                        style={{ 
-                          borderRadius: '8px',
-                          backgroundColor: displayPage === page ? 'oklch(0.55 0.14 75)' : undefined,
-                        }}
-                      >
-                        {page}
-                      </Button>
-                    )
-                  ))}
-                </div>
-                
-                {/* Next Button - Auto-loads more when at end of loaded results */}
-                <Button
-                  onClick={() => {
-                    const nextDisplayPage = displayPage + 1;
-                    if (nextDisplayPage > totalPages && hasMore) {
-                      // Need to load more data from API
-                      handleLoadMore();
-                      // After loading, we'll be on the new page
-                    } else if (nextDisplayPage <= totalPages) {
-                      setDisplayPage(nextDisplayPage);
-                    }
-                  }}
-                  disabled={displayPage === totalPages && !hasMore}
-                  variant="outline"
-                  size="sm"
-                  className="px-3"
-                  style={{ borderRadius: '8px' }}
-                >
-                  {isLoadingMore ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
-                </Button>
-                
-                {/* Page Info */}
-                <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0 0)' }}>
-                  Page {displayPage} of {totalPages}{hasMore && ` · ${(totalResults - sortedProperties.length).toLocaleString()} more available`}
-                </span>
-              </div>
-            )}
           </div>
           
           {/* Batch Analyze All Button - Admin Only */}
@@ -2696,61 +2557,66 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                 })}
               </div>
               
-              {/* Load More Buttons - Prominent display when more properties available */}
-              {hasMore && (
-                <div className="mt-8 text-center">
-                  <div className="mb-3">
-                    <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
-                      Showing {sortedProperties.length} of {totalResults} properties
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <Button
-                      onClick={handleLoadMore}
-                      disabled={isLoadingMore || isBatchAnalyzing}
-                      className="px-8 py-3 text-base font-semibold"
-                      style={{
-                        backgroundColor: 'oklch(0.55 0.14 75)',
-                        borderRadius: '980px',
-                      }}
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                          Loading More Properties...
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-5 h-5 mr-2" />
-                          Load More ({totalResults - sortedProperties.length} remaining)
-                        </>
-                      )}
-                    </Button>
-                    {isAdmin && (
-                    <Button
-                      onClick={handleLoadMoreAndAnalyze}
-                      disabled={isLoadingMore || isBatchAnalyzing}
-                      className="px-8 py-3 text-base font-semibold"
-                      style={{
-                        background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.55 0.14 75))',
-                        borderRadius: '980px',
-                        color: 'white',
-                      }}
-                    >
-                      {isBatchAnalyzing ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-5 h-5 mr-2" />
-                          Load More & Auto-Analyze
-                        </>
-                      )}
-                    </Button>
+              {/* Infinite scroll: loading skeleton cards */}
+              {isLoadingMore && (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={`skeleton-${i}`} className="overflow-hidden animate-pulse" style={{ borderRadius: '1.25rem' }}>
+                      <div className="h-48 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                      <CardContent className="p-4 space-y-3">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-3 bg-gray-100 rounded w-1/2" />
+                        <div className="flex gap-2">
+                          <div className="h-6 bg-gray-200 rounded w-16" />
+                          <div className="h-6 bg-gray-200 rounded w-16" />
+                          <div className="h-6 bg-gray-200 rounded w-16" />
+                        </div>
+                        <div className="h-10 bg-gray-100 rounded w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              {/* Infinite scroll sentinel — triggers auto-load when visible */}
+              {hasMore && !isLoadingMore && (
+                <div ref={sentinelRef} className="h-4" />
+              )}
+              
+              {/* Admin: Load More & Auto-Analyze button */}
+              {isAdmin && hasMore && !isLoadingMore && (
+                <div className="mt-4 text-center">
+                  <Button
+                    onClick={handleLoadMoreAndAnalyze}
+                    disabled={isLoadingMore || isBatchAnalyzing}
+                    className="px-8 py-3 text-base font-semibold"
+                    style={{
+                      background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.55 0.14 75))',
+                      borderRadius: '980px',
+                      color: 'white',
+                    }}
+                  >
+                    {isBatchAnalyzing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 mr-2" />
+                        Load More & Auto-Analyze
+                      </>
                     )}
-                  </div>
+                  </Button>
+                </div>
+              )}
+              
+              {/* End of results indicator */}
+              {!hasMore && sortedProperties.length > 0 && (
+                <div className="mt-6 text-center py-4">
+                  <p className="text-sm" style={{ color: 'oklch(0.55 0 0)' }}>
+                    All {sortedProperties.length} loaded properties shown{totalResults > sortedProperties.length && ` of ${totalResults.toLocaleString()} in market`}
+                  </p>
                 </div>
               )}
             </>
