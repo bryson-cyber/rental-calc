@@ -13068,3 +13068,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Replace headline: "See What's Making Money in Your City"
 - [x] Replace subtitle: "Search any city, browse real properties, and instantly see how much they could earn as short-term rentals."
 - [x] Target audience: people who just booked a call, excited to see what's in their city
+
+### Bug: Step 5 profit projections don't update when revenue is manually edited (March 18, 2026)
+- [x] When user manually edits revenue in Step 5, the 3 profit projection cards (Conservative, Target, Optimistic) now recalculate
+- [x] Monthly revenue, monthly profit, and annual profit update proportionally based on the edited revenue value
+- [x] Also updated ArbitrageCalculator and shared report data to use adjusted scenarios

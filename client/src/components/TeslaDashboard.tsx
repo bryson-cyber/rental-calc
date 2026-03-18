@@ -3469,6 +3469,21 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   const [revenueOverride, setRevenueOverride] = useState<number | null>(persistedRevenueOverride ?? null);
   const headlineRevenue = revenueOverride ?? baseHeadlineRevenue;
   
+  // Scale revenue scenarios proportionally when admin overrides revenue
+  // e.g. if target was $37k and admin sets $30k (~19% decrease), conservative & optimistic decrease by same ratio
+  const adjustedScenarios = useMemo(() => {
+    if (!effectiveScenarios || revenueOverride === null) return effectiveScenarios;
+    const originalTarget = effectiveScenarios.target;
+    if (!originalTarget || originalTarget === 0) return effectiveScenarios;
+    const ratio = revenueOverride / originalTarget;
+    return {
+      ...effectiveScenarios,
+      conservative: Math.round(effectiveScenarios.conservative * ratio),
+      target: revenueOverride,
+      optimistic: Math.round(effectiveScenarios.optimistic * ratio),
+    };
+  }, [effectiveScenarios, revenueOverride]);
+  
   // Persist revenue override to DB when admin changes it (debounced)
   const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
   
@@ -3571,7 +3586,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         expensePercent={expensePercent}
         mode={mode}
         monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
-        revenueScenarios={effectiveScenarios}
+        revenueScenarios={adjustedScenarios}
         isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
@@ -3831,7 +3846,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           adr={result.metrics.adr}
           furnitureCost={furnitureCost}
           expensePercent={expensePercent}
-          revenueScenarios={revenueScenarios || result.revenueScenarios}
+          revenueScenarios={adjustedScenarios || result.revenueScenarios}
         />
       )}
       
@@ -3893,11 +3908,11 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           occupancyRate: result.metrics.occupancy,
           monthlyRevenue: result.cashFlow.monthlyRevenue,
           monthlyProfit: result.cashFlow.monthlyProfit,
-          revenueScenarios: effectiveScenarios ? {
-            conservative: effectiveScenarios.conservative,
-            target: effectiveScenarios.target,
-            optimistic: effectiveScenarios.optimistic,
-            compCount: effectiveScenarios.compCount,
+          revenueScenarios: adjustedScenarios ? {
+            conservative: adjustedScenarios.conservative,
+            target: adjustedScenarios.target,
+            optimistic: adjustedScenarios.optimistic,
+            compCount: adjustedScenarios.compCount,
           } : undefined,
           forecast: result.forecast?.map(f => ({
             month: f.month,
