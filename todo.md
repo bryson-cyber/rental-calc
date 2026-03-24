@@ -13073,3 +13073,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] When user manually edits revenue in Step 5, the 3 profit projection cards (Conservative, Target, Optimistic) now recalculate
 - [x] Monthly revenue, monthly profit, and annual profit update proportionally based on the edited revenue value
 - [x] Also updated ArbitrageCalculator and shared report data to use adjusted scenarios
+
+### Technical SEO Improvements (March 23, 2026)
+- [x] Add robots.txt to client/public/
+- [x] Add sitemap.xml to client/public/
+- [x] Add SEOHead to /explore page with proper meta tags and schema
+- [x] Update homepage title to include "Coach Inayah" brand name (index.html + Home.tsx)
+- [x] Add Person schema for Coach Inayah to SEOHead component
+- [x] Create /about page with brand-optimized content and Person schema
+- [x] Update Organization schema sameAs URLs to be accurate (Instagram, TikTok, YouTube, LinkedIn, Stayly, Trustpilot)

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /explore
+Allow: /about
+Allow: /share/
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://coachinayahturnkeytool.com/sitemap.xml

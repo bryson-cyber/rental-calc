@@ -45,7 +45,7 @@ import ChapterPropertyReport from '@/components/ChapterPropertyReport';
 import AnalysisProgress from '@/components/AnalysisProgress';
 import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/EnhancedInsights';
 import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
-import { SEOHead, calculatorSchema, organizationSchema } from '@/components/SEOHead';
+import { SEOHead, calculatorSchema, organizationSchema, personSchema } from '@/components/SEOHead';
 import { UsageLimitBadge } from '@/components/UsageLimitBadge';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { useReportMode } from '@/contexts/ReportModeContext';
@@ -544,11 +544,11 @@ export default function RentalEstimator() {
     return (
       <>
         <SEOHead
-          title="Free Airbnb Calculator"
-          description="Discover how much your property could earn on Airbnb & VRBO. Free rental revenue calculator with market data, comparable properties, and investment analysis."
+          title="Free Rental Revenue Calculator by Coach Inayah"
+          description="Free rental revenue calculator by Coach Inayah. Discover how much your property could earn on Airbnb & VRBO with market data, comparable properties, and investment analysis."
           canonicalPath="/"
-          keywords={['Airbnb calculator', 'rental arbitrage', 'short-term rental revenue', 'vacation rental profit', 'STR analysis', 'rental income estimator']}
-          structuredData={[calculatorSchema, organizationSchema]}
+          keywords={['Coach Inayah', 'Airbnb calculator', 'rental arbitrage', 'short-term rental revenue', 'vacation rental profit', 'STR analysis', 'rental income estimator', 'Coach Inayah turnkey tool']}
+          structuredData={[calculatorSchema, organizationSchema, personSchema]}
         />
         <div className="min-h-screen relative overflow-hidden">
         {/* Background Image with Overlay */}

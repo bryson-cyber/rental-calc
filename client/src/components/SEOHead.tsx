@@ -174,19 +174,60 @@ export const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Coach Inayah',
+  alternateName: 'Stayly',
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
   description: 'Helping investors make informed rental property decisions with data-driven tools and expert guidance.',
   sameAs: [
-    'https://twitter.com/CoachInayah',
     'https://www.instagram.com/coachinayah/',
-    'https://www.youtube.com/@CoachInayah'
+    'https://www.instagram.com/inayahmcmillan/',
+    'https://www.tiktok.com/@coachinayah',
+    'https://www.youtube.com/@CoachInayah',
+    'https://www.linkedin.com/in/inayah-mcmillan/',
+    'https://stayly.com',
+    'https://www.trustpilot.com/review/coachinayah.com'
   ],
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer service',
     url: `${SITE_URL}/contact`
   }
+};
+
+/**
+ * Person schema for Coach Inayah (Inayah McMillan)
+ * Helps Google build a Knowledge Panel for the brand
+ */
+export const personSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Inayah McMillan',
+  alternateName: 'Coach Inayah',
+  url: SITE_URL,
+  image: `${SITE_URL}/logo.png`,
+  jobTitle: 'Short-Term Rental Coach & Entrepreneur',
+  description: 'Coach Inayah (Inayah McMillan) helps aspiring investors build profitable short-term rental businesses through data-driven tools, coaching, and the TurnKey program.',
+  worksFor: {
+    '@type': 'Organization',
+    name: 'Coach Inayah',
+    url: SITE_URL
+  },
+  sameAs: [
+    'https://www.instagram.com/coachinayah/',
+    'https://www.instagram.com/inayahmcmillan/',
+    'https://www.tiktok.com/@coachinayah',
+    'https://www.youtube.com/@CoachInayah',
+    'https://www.linkedin.com/in/inayah-mcmillan/',
+    'https://stayly.com'
+  ],
+  knowsAbout: [
+    'Short-term rentals',
+    'Rental arbitrage',
+    'Airbnb hosting',
+    'Real estate investing',
+    'Business funding',
+    'Property management'
+  ]
 };
 
 /**

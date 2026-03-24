@@ -8,9 +8,16 @@
 
 import { useState, Suspense, lazy } from 'react';
 import { TermsAcceptanceModal, hasTosBeenAccepted } from '@/components/TermsAcceptanceModal';
+import { SEOHead, organizationSchema, createWebPageSchema } from '@/components/SEOHead';
 import { Loader2 } from 'lucide-react';
 
 const OpportunityFinderStep = lazy(() => import('@/components/OpportunityFinderStep'));
+
+const explorePageSchema = createWebPageSchema({
+  name: 'Explore Rental Properties | Coach Inayah',
+  description: 'Search any city and browse real short-term rental properties. See revenue estimates, occupancy rates, and nightly rates for Airbnb and VRBO listings.',
+  url: '/explore',
+});
 
 export default function ExplorePage() {
   const [showTos, setShowTos] = useState(!hasTosBeenAccepted());
@@ -18,15 +25,31 @@ export default function ExplorePage() {
   // TOS gate
   if (showTos) {
     return (
-      <TermsAcceptanceModal
-        isOpen={true}
-        onAccept={() => setShowTos(false)}
-      />
+      <>
+        <SEOHead
+          title="Explore Rental Properties"
+          description="Search any city and browse real short-term rental properties. See revenue estimates, occupancy rates, and nightly rates for Airbnb and VRBO listings. Free tool by Coach Inayah."
+          canonicalPath="/explore"
+          keywords={['rental property search', 'Airbnb revenue estimator', 'short-term rental analysis', 'Coach Inayah', 'rental arbitrage tool', 'VRBO calculator']}
+          structuredData={[explorePageSchema, organizationSchema]}
+        />
+        <TermsAcceptanceModal
+          isOpen={true}
+          onAccept={() => setShowTos(false)}
+        />
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_75/0.3)]">
+      <SEOHead
+        title="Explore Rental Properties"
+        description="Search any city and browse real short-term rental properties. See revenue estimates, occupancy rates, and nightly rates for Airbnb and VRBO listings. Free tool by Coach Inayah."
+        canonicalPath="/explore"
+        keywords={['rental property search', 'Airbnb revenue estimator', 'short-term rental analysis', 'Coach Inayah', 'rental arbitrage tool', 'VRBO calculator']}
+        structuredData={[explorePageSchema, organizationSchema]}
+      />
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Suspense
           fallback={
