@@ -13100,3 +13100,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Draft LinkedIn optimization copy
 - [x] Draft Crunchbase profile content
 - [x] Create master reputation fix checklist with step-by-step instructions
+
+### Bug: No save button in Step 5 property analysis (March 24, 2026)
+- [x] Users can't find a way to save properties they've researched in Step 5 (Validate the Deal)
+- [x] Added visible "Save" button next to Share button in Step 5 results header
+- [x] Uses existing saveProperty/promptSave flow — saves to localStorage Saved Items
+- [x] Button shows green "Saved" state with BookmarkCheck icon after saving

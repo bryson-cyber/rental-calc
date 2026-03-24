@@ -6072,6 +6072,49 @@ export default function LeadMagnet() {
                 <h2 className="text-2xl font-bold text-slate-900">Property Analysis Results</h2>
                 <p className="text-slate-500">{address}</p>
               </div>
+              <div className="flex items-center gap-2">
+                {/* Save Property Button */}
+                <button
+                  onClick={() => {
+                    const annualRev = (result as any)?.revenue_estimate?.annual || (result as any)?.revenue?.projected || (result as any)?.estimates?.annual_revenue || 0;
+                    const occ = (result as any)?.revenue_estimate?.occupancy || (result as any)?.metrics?.occupancy || (result as any)?.estimates?.occupancy_rate || 0;
+                    const adrVal = (result as any)?.revenue_estimate?.nightly || (result as any)?.metrics?.adr || (result as any)?.estimates?.average_daily_rate || 0;
+                    
+                    if (isPropertySaved(address)) {
+                      toast.info('This property is already saved!');
+                      return;
+                    }
+                    
+                    promptSave('property', address, () => {
+                      saveProperty({
+                        title: address,
+                        address: address,
+                        bedrooms: parseInt(bedrooms) || 0,
+                        bathrooms: parseFloat(bathrooms) || 0,
+                        revenue: annualRev,
+                        adr: adrVal,
+                        occupancy: occ,
+                        mode: globalMode,
+                        purchasePrice: myProperty?.purchasePrice,
+                        loanType: myProperty?.loanType as 'conventional' | 'dscr' | 'fha' | 'cash' | undefined,
+                        downPaymentPercent: myProperty?.downPaymentPercent,
+                        interestRate: myProperty?.interestRate,
+                      });
+                      toast.success('Property saved! Find it in your Saved Items.');
+                    });
+                  }}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isPropertySaved(address)
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  {isPropertySaved(address) ? (
+                    <><BookmarkCheck className="w-4 h-4" /> Saved</>
+                  ) : (
+                    <><Bookmark className="w-4 h-4" /> Save</>
+                  )}
+                </button>
               <UniversalShareButton
                 reportType="validator"
                 reportData={{ ...result, _rentometerData: rentometerData || undefined, _expensePercent: expensePercent, _furnitureCost: parseFloat(furnitureCost) || 0, _mode: globalMode, _purchasePrice: myProperty?.purchasePrice, _loanType: myProperty?.loanType, _downPaymentPercent: myProperty?.downPaymentPercent, _interestRate: myProperty?.interestRate }}
@@ -6088,6 +6131,7 @@ export default function LeadMagnet() {
                 onShareCreated={(code) => setValidatorShareCode(code)}
                 revenueOverride={currentRevenueOverride}
               />
+              </div>
             </div>
             <StepErrorBoundary stepName="Revenue Dashboard">
               <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
