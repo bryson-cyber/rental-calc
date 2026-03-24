@@ -15,6 +15,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/bug/',         // Bug report pages
   '/explore',      // Public lead validation page
   '/about',         // Public brand/SEO page
+  '/blog',          // Public blog pages
 ];
 
 /**

@@ -13082,3 +13082,21 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add Person schema for Coach Inayah to SEOHead component
 - [x] Create /about page with brand-optimized content and Person schema
 - [x] Update Organization schema sameAs URLs to be accurate (Instagram, TikTok, YouTube, LinkedIn, Stayly, Trustpilot)
+
+### SEO: Build comprehensive Coach Inayah personal brand page (March 23, 2026)
+- [x] Research Coach Inayah's social profiles, content, and brand positioning
+- [x] Expand /about page into a full brand page optimized for "Coach Inayah" search queries
+- [x] Include rich Person + Organization schema markup
+- [x] Add testimonials/reviews section with Trustpilot data
+- [x] Add FAQ section targeting common search queries
+- [x] Add media/press mentions section (Business Insider)
+- [x] Ensure all social links are accurate and complete
+- [x] Internal links to /explore and / for SEO juice
+- [x] Add /blog section with first article (rental arbitrage guide)
+- [x] Add /blog to sitemap.xml and publicPages
+- [x] Write 4 Medium articles for user to publish
+- [x] Write BrandPush PR article for user to submit
+- [x] Draft Wikidata entry with exact properties
+- [x] Draft LinkedIn optimization copy
+- [x] Draft Crunchbase profile content
+- [x] Create master reputation fix checklist with step-by-step instructions

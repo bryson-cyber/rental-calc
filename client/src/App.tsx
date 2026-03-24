@@ -62,6 +62,7 @@ const AdminViewReport = lazy(() => import('./pages/AdminViewReport'));
 const VideoLandingPage = lazy(() => import('./pages/VideoLandingPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const BlogPage = lazy(() => import('./pages/BlogPage'));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -142,6 +143,10 @@ function Router() {
         
         {/* About Page - SEO brand page */}
         <Route path="/about" component={AboutPage} />
+        
+        {/* Blog - SEO content */}
+        <Route path="/blog/:slug">{(params: { slug: string }) => <BlogPage slug={params.slug} />}</Route>
+        <Route path="/blog" component={BlogPage} />
         
         {/* Bug Reports */}
         <Route path="/bug/:shareCode" component={BugReportPage} />
