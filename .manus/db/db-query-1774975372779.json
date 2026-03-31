@@ -1,0 +1,78 @@
+{
+  "query": "SELECT email, role FROM users WHERE email LIKE '%@coachinayah.com' ORDER BY role, email;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT email, role FROM users WHERE email LIKE '%@coachinayah.com' ORDER BY role, email;",
+  "rows": [
+    {
+      "email": "aaliyah@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "allen@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "ayoub@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "bilaal@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "bryson@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "caroline@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "dfy@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "isa@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "ismail@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "mario@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "purwanti@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "rizza@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "ronald@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "ronald@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "shatahr@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "sheila@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "email": "sheila@coachinayah.com",
+      "role": "admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "email\trole\naaliyah@coachinayah.com\tadmin\nallen@coachinayah.com\tadmin\nayoub@coachinayah.com\tadmin\nbilaal@coachinayah.com\tadmin\nbryson@coachinayah.com\tadmin\ncaroline@coachinayah.com\tadmin\ndfy@coachinayah.com\tadmin\nisa@coachinayah.com\tadmin\nismail@coachinayah.com\tadmin\nmario@coachinayah.com\tadmin\npurwanti@coachinayah.com\tadmin\nrizza@coachinayah.com\tadmin\nronald@coachinayah.com\tadmin\nronald@coachinayah.com\tadmin\nshatahr@coachinayah.com\tadmin\nsheila@coachinayah.com\tadmin\nsheila@coachinayah.com\tadmin\n",
+  "stderr": "",
+  "execution_time_ms": 365
+}

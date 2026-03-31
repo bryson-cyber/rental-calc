@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, shareCode, JSON_EXTRACT(reportData, '$.comparables') as comps_raw FROM universal_shareable_reports WHERE reportType = 'validator' ORDER BY id DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, JSON_EXTRACT(reportData, '$.comparables') as comps_raw FROM universal_shareable_reports WHERE reportType = 'validator' ORDER BY id DESC LIMIT 1;",
+  "rows": [
+    {
+      "id": "1140001",
+      "shareCode": "TNjXMaRKxA",
+      "comps_raw": "[]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\tcomps_raw\n1140001\tTNjXMaRKxA\t[]\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}

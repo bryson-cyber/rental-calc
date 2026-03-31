@@ -1,0 +1,8 @@
+{
+  "query": "SELECT usr.id, usr.shareCode, usr.reportType, usr.createdByUserId, usr.createdByName, usr.address,\n  JSON_LENGTH(usr.reportData, '$.comparables') as comp_count,\n  JSON_EXTRACT(usr.reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(usr.reportData, '$.marketInsights') IS NOT NULL as has_market_insights,\n  JSON_EXTRACT(usr.reportData, '$.revenueScenarios') IS NOT NULL as has_scenarios,\n  JSON_EXTRACT(usr.reportData, '$.rawMarketData') IS NOT NULL as has_raw_market\nFROM universal_shareable_reports usr\nWHERE usr.reportType = 'validator' \nORDER BY usr.id DESC \nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT usr.id, usr.shareCode, usr.reportType, usr.createdByUserId, usr.createdByName, usr.address,\n  JSON_LENGTH(usr.reportData, '$.comparables') as comp_count,\n  JSON_EXTRACT(usr.reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(usr.reportData, '$.marketInsights') IS NOT NULL as has_market_insights,\n  JSON_EXTRACT(usr.reportData, '$.revenueScenarios') IS NOT NULL as has_scenarios,\n  JSON_EXTRACT(usr.reportData, '$.rawMarketData') IS NOT NULL as has_raw_market\nFROM universal_shareable_reports usr\nWHERE usr.reportType = 'validator' \nORDER BY usr.id DESC \nLIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'usr.createdbyuserid' in 'field list'"
+  ]
+}

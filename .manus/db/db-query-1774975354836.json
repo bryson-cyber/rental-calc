@@ -1,0 +1,112 @@
+{
+  "query": "SELECT id, name, email, role FROM users WHERE email LIKE '%@coachinayah.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, email, role FROM users WHERE email LIKE '%@coachinayah.com';",
+  "rows": [
+    {
+      "id": "6330915",
+      "name": "Ronald Pedrosa",
+      "email": "ronald@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "6570422",
+      "name": "Allen Gito",
+      "email": "allen@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "6721231",
+      "name": "Mario Carmona",
+      "email": "mario@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "7620890",
+      "name": "DFY Team",
+      "email": "dfy@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "7650007",
+      "name": "Sheila Figueroa",
+      "email": "sheila@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "11130055",
+      "name": "Ronald Pedrosa",
+      "email": "ronald@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "12240087",
+      "name": "Ayoub Toumi",
+      "email": "ayoub@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "13260334",
+      "name": "Sheila Figueroa",
+      "email": "sheila@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "13620515",
+      "name": "Bilaal Toms",
+      "email": "bilaal@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "13620892",
+      "name": "Shatahr levin",
+      "email": "shatahr@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "14310001",
+      "name": "Aaliyah Galindo",
+      "email": "aaliyah@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "14492183",
+      "name": "Ismail McMillan",
+      "email": "ismail@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "14732317",
+      "name": "bryson blocker",
+      "email": "bryson@coachinayah.com",
+      "role": "admin"
+    },
+    {
+      "id": "14790413",
+      "name": "caroline bovet",
+      "email": "caroline@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "14821454",
+      "name": "Rizza Lacerona",
+      "email": "rizza@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "15450263",
+      "name": "Pur Wanti",
+      "email": "purwanti@coachinayah.com",
+      "role": "user"
+    },
+    {
+      "id": "18660195",
+      "name": "Isa McMillan",
+      "email": "isa@coachinayah.com",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n6330915\tRonald Pedrosa\tronald@coachinayah.com\tuser\n6570422\tAllen Gito\tallen@coachinayah.com\tuser\n6721231\tMario Carmona\tmario@coachinayah.com\tuser\n7620890\tDFY Team\tdfy@coachinayah.com\tadmin\n7650007\tSheila Figueroa\tsheila@coachinayah.com\tadmin\n11130055\tRonald Pedrosa\tronald@coachinayah.com\tuser\n12240087\tAyoub Toumi\tayoub@coachinayah.com\tuser\n13260334\tSheila Figueroa\tsheila@coachinayah.com\tuser\n13620515\tBilaal Toms\tbilaal@coachinayah.com\tuser\n13620892\tShatahr levin\tshatahr@coachinayah.com\tadmin\n14310001\tAaliyah Galindo\taaliyah@coachinayah.com\tadmin\n14492183\tIsmail McMillan\tismail@coachinayah.com\tadmin\n14732317\tbryson blocker\tbryson@coachinayah.com\tadmin\n14790413\tcaroline bovet\tcaroline@coachinayah.com\tuser\n14821454\tRizza Lacerona\trizza@coachinayah.com\tuser\n15450263\tPur Wanti\tpurwanti@coachinayah.com\tuser\n18660195\tIsa McMillan\tisa@coachinayah.com\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 426
+}

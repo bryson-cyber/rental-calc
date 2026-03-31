@@ -1,0 +1,18 @@
+{
+  "query": "SELECT \n  JSON_EXTRACT(reportData, '$.comparables[0].title') as first_comp_title,\n  JSON_EXTRACT(reportData, '$.comparables[0].revenue') as first_comp_revenue,\n  JSON_EXTRACT(reportData, '$.comparables[0].id') as first_comp_id,\n  JSON_EXTRACT(reportData, '$.comparables[0].imageUrl') as first_comp_image,\n  JSON_EXTRACT(reportData, '$.selectedAmenities') as selected_amenities,\n  JSON_EXTRACT(reportData, '$.amenityFilter') as amenity_filter\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT \n  JSON_EXTRACT(reportData, '$.comparables[0].title') as first_comp_title,\n  JSON_EXTRACT(reportData, '$.comparables[0].revenue') as first_comp_revenue,\n  JSON_EXTRACT(reportData, '$.comparables[0].id') as first_comp_id,\n  JSON_EXTRACT(reportData, '$.comparables[0].imageUrl') as first_comp_image,\n  JSON_EXTRACT(reportData, '$.selectedAmenities') as selected_amenities,\n  JSON_EXTRACT(reportData, '$.amenityFilter') as amenity_filter\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "rows": [
+    {
+      "first_comp_title": "\"Heated Pool • 85\\\"TV • Mini-Golf • Sauna • Grill\"",
+      "first_comp_revenue": "138904",
+      "first_comp_id": "\"abnb_1205809359382002642\"",
+      "first_comp_image": "\"https://a0.muscache.com/im/pictures/hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6MTIwNTgwOTM1OTM4MjAwMjY0Mg%3D%3D/original/0eb28cf1-6e58-49c5-ad7c-2e28bb12f999.jpeg\"",
+      "selected_amenities": "NULL",
+      "amenity_filter": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "first_comp_title\tfirst_comp_revenue\tfirst_comp_id\tfirst_comp_image\tselected_amenities\tamenity_filter\n\"Heated Pool • 85\\\"TV • Mini-Golf • Sauna • Grill\"\t138904\t\"abnb_1205809359382002642\"\t\"https://a0.muscache.com/im/pictures/hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6MTIwNTgwOTM1OTM4MjAwMjY0Mg%3D%3D/original/0eb28cf1-6e58-49c5-ad7c-2e28bb12f999.jpeg\"\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}

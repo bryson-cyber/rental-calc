@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, shareCode, reportType, \n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_LENGTH(reportData) as total_keys,\n  JSON_KEYS(reportData) as top_keys,\n  LENGTH(JSON_EXTRACT(reportData, '$.comparables')) as comps_data_size\nFROM universal_shareable_reports \nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, reportType, \n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_LENGTH(reportData) as total_keys,\n  JSON_KEYS(reportData) as top_keys,\n  LENGTH(JSON_EXTRACT(reportData, '$.comparables')) as comps_data_size\nFROM universal_shareable_reports \nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 5;",
+  "rows": [
+    {
+      "id": "1140001",
+      "shareCode": "TNjXMaRKxA",
+      "reportType": "validator",
+      "comp_count": "0",
+      "total_keys": "8",
+      "top_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]",
+      "comps_data_size": "2"
+    },
+    {
+      "id": "1110005",
+      "shareCode": "j8dkUSF5NZ",
+      "reportType": "validator",
+      "comp_count": "0",
+      "total_keys": "8",
+      "top_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]",
+      "comps_data_size": "2"
+    },
+    {
+      "id": "1110004",
+      "shareCode": "MQtxnTaN83",
+      "reportType": "validator",
+      "comp_count": "0",
+      "total_keys": "8",
+      "top_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]",
+      "comps_data_size": "2"
+    },
+    {
+      "id": "1110003",
+      "shareCode": "7erCsQKsSQ",
+      "reportType": "validator",
+      "comp_count": "0",
+      "total_keys": "8",
+      "top_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]",
+      "comps_data_size": "2"
+    },
+    {
+      "id": "1110002",
+      "shareCode": "Z9xMYwTXhy",
+      "reportType": "validator",
+      "comp_count": "0",
+      "total_keys": "8",
+      "top_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]",
+      "comps_data_size": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\treportType\tcomp_count\ttotal_keys\ttop_keys\tcomps_data_size\n1140001\tTNjXMaRKxA\tvalidator\t0\t8\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\t2\n1110005\tj8dkUSF5NZ\tvalidator\t0\t8\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\t2\n1110004\tMQtxnTaN83\tvalidator\t0\t8\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\t2\n1110003\t7erCsQKsSQ\tvalidator\t0\t8\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\t2\n1110002\tZ9xMYwTXhy\tvalidator\t0\t8\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\t2\n",
+  "stderr": "",
+  "execution_time_ms": 450
+}

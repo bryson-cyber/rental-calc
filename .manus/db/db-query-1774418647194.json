@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, shareCode, LENGTH(reportData) as data_size, \n  SUBSTRING(CAST(reportData AS CHAR), 1, 500) as data_preview\nFROM universal_shareable_reports \nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, LENGTH(reportData) as data_size, \n  SUBSTRING(CAST(reportData AS CHAR), 1, 500) as data_preview\nFROM universal_shareable_reports \nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 3;",
+  "rows": [
+    {
+      "id": "1140001",
+      "shareCode": "TNjXMaRKxA",
+      "data_size": "1151",
+      "data_preview": "{\"_expensePercent\": 20, \"_furnitureCost\": 0, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 408.6, \"monthlyRent\": 1900, \"monthlyRevenue\": 2885.75}, \"comparables\": [], \"forecast\": [{\"adr\": 150.33, \"month\": \"2026-03\", \"occupancy\": 68, \"revenue\": 3162}, {\"adr\": 146.19, \"month\": \"2026-04\", \"occupancy\": 64, \"revenue\": 2803}, {\"adr\": 180.34, \"month\": \"2026-05\", \"occupancy\": 49, \"revenue\": 2731}, {\"adr\": 165.26, \"month\": \"2026-06\", \"occupancy\": 62, \"revenue\": 3082}, {\"adr\": 152.25, \"month\": \"2026-07\", "
+    },
+    {
+      "id": "1110005",
+      "shareCode": "j8dkUSF5NZ",
+      "data_size": "1141",
+      "data_preview": "{\"_expensePercent\": 20, \"_furnitureCost\": 15000, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 76.39999999999998, \"monthlyRent\": 1875, \"monthlyRevenue\": 2439.25}, \"comparables\": [], \"forecast\": [{\"adr\": 64.57, \"month\": \"2026-03\", \"occupancy\": 87, \"revenue\": 1750}, {\"adr\": 67.92, \"month\": \"2026-04\", \"occupancy\": 98, \"revenue\": 2485}, {\"adr\": 71.34, \"month\": \"2026-05\", \"occupancy\": 98, \"revenue\": 2671}, {\"adr\": 68.41, \"month\": \"2026-06\", \"occupancy\": 98, \"revenue\": 2615}, {\"adr\": 96.75, \"month\": "
+    },
+    {
+      "id": "1110004",
+      "shareCode": "MQtxnTaN83",
+      "data_size": "1137",
+      "data_preview": "{\"_expensePercent\": 20, \"_furnitureCost\": 15000, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 932.6, \"monthlyRent\": 1365, \"monthlyRevenue\": 2872}, \"comparables\": [], \"forecast\": [{\"adr\": 131.98, \"month\": \"2026-03\", \"occupancy\": 64, \"revenue\": 2609}, {\"adr\": 121.51, \"month\": \"2026-04\", \"occupancy\": 71, \"revenue\": 2570}, {\"adr\": 135.67, \"month\": \"2026-05\", \"occupancy\": 77, \"revenue\": 3237}, {\"adr\": 135.17, \"month\": \"2026-06\", \"occupancy\": 81, \"revenue\": 3287}, {\"adr\": 130.48, \"month\": \"2026-07\","
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\tdata_size\tdata_preview\n1140001\tTNjXMaRKxA\t1151\t{\"_expensePercent\": 20, \"_furnitureCost\": 0, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 408.6, \"monthlyRent\": 1900, \"monthlyRevenue\": 2885.75}, \"comparables\": [], \"forecast\": [{\"adr\": 150.33, \"month\": \"2026-03\", \"occupancy\": 68, \"revenue\": 3162}, {\"adr\": 146.19, \"month\": \"2026-04\", \"occupancy\": 64, \"revenue\": 2803}, {\"adr\": 180.34, \"month\": \"2026-05\", \"occupancy\": 49, \"revenue\": 2731}, {\"adr\": 165.26, \"month\": \"2026-06\", \"occupancy\": 62, \"revenue\": 3082}, {\"adr\": 152.25, \"month\": \"2026-07\", \n1110005\tj8dkUSF5NZ\t1141\t{\"_expensePercent\": 20, \"_furnitureCost\": 15000, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 76.39999999999998, \"monthlyRent\": 1875, \"monthlyRevenue\": 2439.25}, \"comparables\": [], \"forecast\": [{\"adr\": 64.57, \"month\": \"2026-03\", \"occupancy\": 87, \"revenue\": 1750}, {\"adr\": 67.92, \"month\": \"2026-04\", \"occupancy\": 98, \"revenue\": 2485}, {\"adr\": 71.34, \"month\": \"2026-05\", \"occupancy\": 98, \"revenue\": 2671}, {\"adr\": 68.41, \"month\": \"2026-06\", \"occupancy\": 98, \"revenue\": 2615}, {\"adr\": 96.75, \"month\": \n1110004\tMQtxnTaN83\t1137\t{\"_expensePercent\": 20, \"_furnitureCost\": 15000, \"_mode\": \"rent\", \"cashFlow\": {\"monthlyProfit\": 932.6, \"monthlyRent\": 1365, \"monthlyRevenue\": 2872}, \"comparables\": [], \"forecast\": [{\"adr\": 131.98, \"month\": \"2026-03\", \"occupancy\": 64, \"revenue\": 2609}, {\"adr\": 121.51, \"month\": \"2026-04\", \"occupancy\": 71, \"revenue\": 2570}, {\"adr\": 135.67, \"month\": \"2026-05\", \"occupancy\": 77, \"revenue\": 3237}, {\"adr\": 135.17, \"month\": \"2026-06\", \"occupancy\": 81, \"revenue\": 3287}, {\"adr\": 130.48, \"month\": \"2026-07\",\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}

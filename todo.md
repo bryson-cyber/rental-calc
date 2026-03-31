@@ -13106,3 +13106,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Added visible "Save" button next to Share button in Step 5 results header
 - [x] Uses existing saveProperty/promptSave flow — saves to localStorage Saved Items
 - [x] Button shows green "Saved" state with BookmarkCheck icon after saving
+- [x] Grant admin access to all users with @coachinayah.com email

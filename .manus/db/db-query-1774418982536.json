@@ -1,0 +1,18 @@
+{
+  "query": "SELECT \n  JSON_KEYS(JSON_EXTRACT(reportData, '$.comparables[0]')) as comp_keys,\n  JSON_EXTRACT(reportData, '$.comparables[0].rating') as rating,\n  JSON_EXTRACT(reportData, '$.comparables[0].occupancy') as occupancy,\n  JSON_EXTRACT(reportData, '$.comparables[0].adr') as adr,\n  JSON_EXTRACT(reportData, '$.comparables[0].bedrooms') as bedrooms,\n  JSON_EXTRACT(reportData, '$.comparables[0].bathrooms') as bathrooms\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT \n  JSON_KEYS(JSON_EXTRACT(reportData, '$.comparables[0]')) as comp_keys,\n  JSON_EXTRACT(reportData, '$.comparables[0].rating') as rating,\n  JSON_EXTRACT(reportData, '$.comparables[0].occupancy') as occupancy,\n  JSON_EXTRACT(reportData, '$.comparables[0].adr') as adr,\n  JSON_EXTRACT(reportData, '$.comparables[0].bedrooms') as bedrooms,\n  JSON_EXTRACT(reportData, '$.comparables[0].bathrooms') as bathrooms\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "rows": [
+    {
+      "comp_keys": "[\"accommodates\", \"adr\", \"airbnbUrl\", \"amenities\", \"bathrooms\", \"bedrooms\", \"distanceMeters\", \"id\", \"imageUrl\", \"images\", \"latitude\", \"longitude\", \"occupancy\", \"rating\", \"revenue\", \"reviews\", \"title\"]",
+      "rating": "4.8",
+      "occupancy": "82",
+      "adr": "474.07507",
+      "bedrooms": "4",
+      "bathrooms": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "comp_keys\trating\toccupancy\tadr\tbedrooms\tbathrooms\n[\"accommodates\", \"adr\", \"airbnbUrl\", \"amenities\", \"bathrooms\", \"bedrooms\", \"distanceMeters\", \"id\", \"imageUrl\", \"images\", \"latitude\", \"longitude\", \"occupancy\", \"rating\", \"revenue\", \"reviews\", \"title\"]\t4.8\t82\t474.07507\t4\t2\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}

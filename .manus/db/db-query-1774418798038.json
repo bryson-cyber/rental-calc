@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, shareCode, address, reportType,\n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_KEYS(reportData) as all_keys,\n  LENGTH(reportData) as data_size,\n  JSON_EXTRACT(reportData, '$.marketId') as marketId,\n  JSON_EXTRACT(reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(reportData, '$.marketInsights') IS NOT NULL as has_market_insights\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, address, reportType,\n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_KEYS(reportData) as all_keys,\n  LENGTH(reportData) as data_size,\n  JSON_EXTRACT(reportData, '$.marketId') as marketId,\n  JSON_EXTRACT(reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(reportData, '$.marketInsights') IS NOT NULL as has_market_insights\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "rows": [
+    {
+      "id": "1170001",
+      "shareCode": "2v9cjmVa9k",
+      "address": "6901 Travis Blvd, Tampa, FL 33610",
+      "reportType": "validator",
+      "comp_count": "30",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]",
+      "data_size": "27046",
+      "marketId": "\"airdna-196\"",
+      "has_historical": "1",
+      "has_market_insights": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\taddress\treportType\tcomp_count\tall_keys\tdata_size\tmarketId\thas_historical\thas_market_insights\n1170001\t2v9cjmVa9k\t6901 Travis Blvd, Tampa, FL 33610\tvalidator\t30\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]\t27046\t\"airdna-196\"\t1\t1\n",
+  "stderr": "",
+  "execution_time_ms": 364
+}

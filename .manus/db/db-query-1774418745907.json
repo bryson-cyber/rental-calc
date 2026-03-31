@@ -1,0 +1,130 @@
+{
+  "query": "SELECT id, shareCode, address,\n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_EXTRACT(reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(reportData, '$.marketInsights') IS NOT NULL as has_market_insights,\n  JSON_EXTRACT(reportData, '$.revenueScenarios') IS NOT NULL as has_scenarios,\n  JSON_EXTRACT(reportData, '$.rawMarketData') IS NOT NULL as has_raw_market,\n  JSON_EXTRACT(reportData, '$.marketId') as marketId,\n  JSON_KEYS(reportData) as all_keys\nFROM universal_shareable_reports\nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, address,\n  JSON_LENGTH(reportData, '$.comparables') as comp_count,\n  JSON_EXTRACT(reportData, '$.historicalData') IS NOT NULL as has_historical,\n  JSON_EXTRACT(reportData, '$.marketInsights') IS NOT NULL as has_market_insights,\n  JSON_EXTRACT(reportData, '$.revenueScenarios') IS NOT NULL as has_scenarios,\n  JSON_EXTRACT(reportData, '$.rawMarketData') IS NOT NULL as has_raw_market,\n  JSON_EXTRACT(reportData, '$.marketId') as marketId,\n  JSON_KEYS(reportData) as all_keys\nFROM universal_shareable_reports\nWHERE reportType = 'validator' \nORDER BY id DESC \nLIMIT 10;",
+  "rows": [
+    {
+      "id": "1140001",
+      "shareCode": "TNjXMaRKxA",
+      "address": "7618 Cascade Oak Dr, San Antonio, TX 78249, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1110005",
+      "shareCode": "j8dkUSF5NZ",
+      "address": "618 North New Ballas Road, Creve Coeur, MO, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1110004",
+      "shareCode": "MQtxnTaN83",
+      "address": "1300 Sun Lake Dr, Saint Charles, MO, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1110003",
+      "shareCode": "7erCsQKsSQ",
+      "address": "9089 West Swan Circle, St. Louis, MO, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1110002",
+      "shareCode": "Z9xMYwTXhy",
+      "address": "2913 Hickory Field Drive #226, Raleigh, NC 27616, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1110001",
+      "shareCode": "k8Kc3FdcxM",
+      "address": "804 13th Ave S, Nashville, TN 37203",
+      "comp_count": "20",
+      "has_historical": "1",
+      "has_market_insights": "1",
+      "has_scenarios": "1",
+      "has_raw_market": "1",
+      "marketId": "\"airdna-336\"",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]"
+    },
+    {
+      "id": "1080002",
+      "shareCode": "hpCPQyq2nh",
+      "address": "3810 Hiford Dr Unit B, Houston, TX 77047",
+      "comp_count": "30",
+      "has_historical": "1",
+      "has_market_insights": "1",
+      "has_scenarios": "1",
+      "has_raw_market": "1",
+      "marketId": "\"airdna-2\"",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]"
+    },
+    {
+      "id": "1080001",
+      "shareCode": "WhW2P3H8CZ",
+      "address": "1509 Glenwood Dr, San Diego, CA 92103, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1050001",
+      "shareCode": "uBzpftyYfr",
+      "address": "905 Ann Ave, Saint Louis, MO 63104, USA",
+      "comp_count": "0",
+      "has_historical": "0",
+      "has_market_insights": "0",
+      "has_scenarios": "0",
+      "has_raw_market": "0",
+      "marketId": "NULL",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    },
+    {
+      "id": "1020002",
+      "shareCode": "cYg2mPNPXV",
+      "address": "3810 Hiford Dr Unit B, Houston, TX 77047",
+      "comp_count": "30",
+      "has_historical": "1",
+      "has_market_insights": "1",
+      "has_scenarios": "1",
+      "has_raw_market": "1",
+      "marketId": "\"airdna-2\"",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"_revenueOverride\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\taddress\tcomp_count\thas_historical\thas_market_insights\thas_scenarios\thas_raw_market\tmarketId\tall_keys\n1140001\tTNjXMaRKxA\t7618 Cascade Oak Dr, San Antonio, TX 78249, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1110005\tj8dkUSF5NZ\t618 North New Ballas Road, Creve Coeur, MO, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1110004\tMQtxnTaN83\t1300 Sun Lake Dr, Saint Charles, MO, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1110003\t7erCsQKsSQ\t9089 West Swan Circle, St. Louis, MO, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1110002\tZ9xMYwTXhy\t2913 Hickory Field Drive #226, Raleigh, NC 27616, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1110001\tk8Kc3FdcxM\t804 13th Ave S, Nashville, TN 37203\t20\t1\t1\t1\t1\t\"airdna-336\"\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]\n1080002\thpCPQyq2nh\t3810 Hiford Dr Unit B, Houston, TX 77047\t30\t1\t1\t1\t1\t\"airdna-2\"\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]\n1080001\tWhW2P3H8CZ\t1509 Glenwood Dr, San Diego, CA 92103, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1050001\tuBzpftyYfr\t905 Ann Ave, Saint Louis, MO 63104, USA\t0\t0\t0\t0\t0\tNULL\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n1020002\tcYg2mPNPXV\t3810 Hiford Dr Unit B, Houston, TX 77047\t30\t1\t1\t1\t1\t\"airdna-2\"\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"_rentometerData\", \"_revenueOverride\", \"bedroomPerformance\", \"cashFlow\", \"comparables\", \"forecast\", \"historicalData\", \"marketId\", \"marketInsights\", \"metrics\", \"rawMarketData\", \"revenue\", \"revenuePercentiles\", \"revenueScenarios\"]\n",
+  "stderr": "",
+  "execution_time_ms": 353
+}

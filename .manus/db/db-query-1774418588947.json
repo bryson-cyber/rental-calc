@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, shareCode, \n  JSON_EXTRACT(reportData, '$.revenue') as revenue,\n  JSON_EXTRACT(reportData, '$.metrics') as metrics,\n  JSON_EXTRACT(reportData, '$.forecast') as forecast_sample,\n  JSON_EXTRACT(reportData, '$.cashFlow') as cashflow,\n  JSON_LENGTH(reportData, '$.forecast') as forecast_count,\n  JSON_KEYS(reportData) as all_keys\nFROM universal_shareable_reports \nWHERE reportType = 'validator' AND id = 1140001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareCode, \n  JSON_EXTRACT(reportData, '$.revenue') as revenue,\n  JSON_EXTRACT(reportData, '$.metrics') as metrics,\n  JSON_EXTRACT(reportData, '$.forecast') as forecast_sample,\n  JSON_EXTRACT(reportData, '$.cashFlow') as cashflow,\n  JSON_LENGTH(reportData, '$.forecast') as forecast_count,\n  JSON_KEYS(reportData) as all_keys\nFROM universal_shareable_reports \nWHERE reportType = 'validator' AND id = 1140001;",
+  "rows": [
+    {
+      "id": "1140001",
+      "shareCode": "TNjXMaRKxA",
+      "revenue": "{\"high\": 36159, \"low\": 33098, \"projected\": 34629}",
+      "metrics": "{\"adr\": 176, \"occupancy\": 54}",
+      "forecast_sample": "[{\"adr\": 150.33, \"month\": \"2026-03\", \"occupancy\": 68, \"revenue\": 3162}, {\"adr\": 146.19, \"month\": \"2026-04\", \"occupancy\": 64, \"revenue\": 2803}, {\"adr\": 180.34, \"month\": \"2026-05\", \"occupancy\": 49, \"revenue\": 2731}, {\"adr\": 165.26, \"month\": \"2026-06\", \"occupancy\": 62, \"revenue\": 3082}, {\"adr\": 152.25, \"month\": \"2026-07\", \"occupancy\": 71, \"revenue\": 3348}, {\"adr\": 158.59, \"month\": \"2026-08\", \"occupancy\": 41, \"revenue\": 2028}, {\"adr\": 241.07, \"month\": \"2026-09\", \"occupancy\": 43, \"revenue\": 3114}, {\"adr\": 180.71, \"month\": \"2026-10\", \"occupancy\": 61, \"revenue\": 3424}, {\"adr\": 206.42, \"month\": \"2026-11\", \"occupancy\": 57.99999999999999, \"revenue\": 3587}, {\"adr\": 189.25, \"month\": \"2026-12\", \"occupancy\": 49, \"revenue\": 2883}, {\"adr\": 150.67, \"month\": \"2027-01\", \"occupancy\": 44, \"revenue\": 2064}, {\"adr\": 189.76, \"month\": \"2027-02\", \"occupancy\": 45, \"revenue\": 2403}]",
+      "cashflow": "{\"monthlyProfit\": 408.6, \"monthlyRent\": 1900, \"monthlyRevenue\": 2885.75}",
+      "forecast_count": "12",
+      "all_keys": "[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareCode\trevenue\tmetrics\tforecast_sample\tcashflow\tforecast_count\tall_keys\n1140001\tTNjXMaRKxA\t{\"high\": 36159, \"low\": 33098, \"projected\": 34629}\t{\"adr\": 176, \"occupancy\": 54}\t[{\"adr\": 150.33, \"month\": \"2026-03\", \"occupancy\": 68, \"revenue\": 3162}, {\"adr\": 146.19, \"month\": \"2026-04\", \"occupancy\": 64, \"revenue\": 2803}, {\"adr\": 180.34, \"month\": \"2026-05\", \"occupancy\": 49, \"revenue\": 2731}, {\"adr\": 165.26, \"month\": \"2026-06\", \"occupancy\": 62, \"revenue\": 3082}, {\"adr\": 152.25, \"month\": \"2026-07\", \"occupancy\": 71, \"revenue\": 3348}, {\"adr\": 158.59, \"month\": \"2026-08\", \"occupancy\": 41, \"revenue\": 2028}, {\"adr\": 241.07, \"month\": \"2026-09\", \"occupancy\": 43, \"revenue\": 3114}, {\"adr\": 180.71, \"month\": \"2026-10\", \"occupancy\": 61, \"revenue\": 3424}, {\"adr\": 206.42, \"month\": \"2026-11\", \"occupancy\": 57.99999999999999, \"revenue\": 3587}, {\"adr\": 189.25, \"month\": \"2026-12\", \"occupancy\": 49, \"revenue\": 2883}, {\"adr\": 150.67, \"month\": \"2027-01\", \"occupancy\": 44, \"revenue\": 2064}, {\"adr\": 189.76, \"month\": \"2027-02\", \"occupancy\": 45, \"revenue\": 2403}]\t{\"monthlyProfit\": 408.6, \"monthlyRent\": 1900, \"monthlyRevenue\": 2885.75}\t12\t[\"_expensePercent\", \"_furnitureCost\", \"_mode\", \"cashFlow\", \"comparables\", \"forecast\", \"metrics\", \"revenue\"]\n",
+  "stderr": "",
+  "execution_time_ms": 364
+}

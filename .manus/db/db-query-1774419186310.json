@@ -1,0 +1,22 @@
+{
+  "query": "SELECT \n  JSON_EXTRACT(reportData, '$.comparables[0].rating') as r0,\n  JSON_EXTRACT(reportData, '$.comparables[1].rating') as r1,\n  JSON_EXTRACT(reportData, '$.comparables[2].rating') as r2,\n  JSON_EXTRACT(reportData, '$.comparables[3].rating') as r3,\n  JSON_EXTRACT(reportData, '$.comparables[4].rating') as r4,\n  JSON_EXTRACT(reportData, '$.comparables[5].rating') as r5,\n  JSON_EXTRACT(reportData, '$.comparables[0].occupancy') as o0,\n  JSON_EXTRACT(reportData, '$.comparables[1].occupancy') as o1,\n  JSON_EXTRACT(reportData, '$.comparables[0].adr') as a0,\n  JSON_EXTRACT(reportData, '$.comparables[0].revenue') as rev0\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT \n  JSON_EXTRACT(reportData, '$.comparables[0].rating') as r0,\n  JSON_EXTRACT(reportData, '$.comparables[1].rating') as r1,\n  JSON_EXTRACT(reportData, '$.comparables[2].rating') as r2,\n  JSON_EXTRACT(reportData, '$.comparables[3].rating') as r3,\n  JSON_EXTRACT(reportData, '$.comparables[4].rating') as r4,\n  JSON_EXTRACT(reportData, '$.comparables[5].rating') as r5,\n  JSON_EXTRACT(reportData, '$.comparables[0].occupancy') as o0,\n  JSON_EXTRACT(reportData, '$.comparables[1].occupancy') as o1,\n  JSON_EXTRACT(reportData, '$.comparables[0].adr') as a0,\n  JSON_EXTRACT(reportData, '$.comparables[0].revenue') as rev0\nFROM universal_shareable_reports\nWHERE shareCode = '2v9cjmVa9k';",
+  "rows": [
+    {
+      "r0": "4.8",
+      "r1": "4.8",
+      "r2": "4.9",
+      "r3": "4.8",
+      "r4": "4.6",
+      "r5": "5",
+      "o0": "82",
+      "o1": "74",
+      "a0": "474.07507",
+      "rev0": "138904"
+    }
+  ],
+  "messages": [],
+  "stdout": "r0\tr1\tr2\tr3\tr4\tr5\to0\to1\ta0\trev0\n4.8\t4.8\t4.9\t4.8\t4.6\t5\t82\t74\t474.07507\t138904\n",
+  "stderr": "",
+  "execution_time_ms": 379
+}
