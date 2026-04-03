@@ -13114,3 +13114,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add comp list sidebar in map modal with click-to-pan/zoom
 - [x] Color-code comp markers by revenue performance (green/yellow/red)
 - [x] Add distance radius circle on map centered on subject property
+- [x] Fix property search in For Sale mode to only show for-sale listings, not rental listings

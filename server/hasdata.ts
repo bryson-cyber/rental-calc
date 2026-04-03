@@ -127,10 +127,18 @@ export async function searchZillowListings(
     
     // Parse the response into our format
     // HasData returns address as an object: { street, city, state, zipcode }
+    const isForSaleSearch = params.type === 'forSale' || params.type === 'sold' || params.type === 'recentlySold';
     const properties: ZillowProperty[] = (data.properties || data.results || []).map((prop: any) => {
       // Handle address as object or string
       const addressObj = typeof prop.address === 'object' ? prop.address : null;
       const addressStr = typeof prop.address === 'string' ? prop.address : prop.addressRaw || '';
+      
+      // For sale searches: NEVER use rentZestimate as price — it's a monthly rent estimate,
+      // not a sale price. Only use actual sale price fields.
+      // For rental searches: rentZestimate is a valid fallback.
+      const price = isForSaleSearch
+        ? (prop.price || prop.unformattedPrice || prop.minPrice || 0)
+        : (prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0);
       
       return {
         id: prop.zpid || prop.id || String(Math.random()),
@@ -141,7 +149,7 @@ export async function searchZillowListings(
         city: addressObj?.city || prop.city || extractCity(addressStr) || "",
         state: addressObj?.state || prop.state || extractState(addressStr) || "",
         zipCode: addressObj?.zipcode || prop.zipcode || prop.zipCode || extractZipCode(addressStr) || "",
-        price: prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0,
+        price,
         bedrooms: prop.bedrooms || prop.beds || 0,
         bathrooms: prop.bathrooms || prop.baths || 0,
         squareFeet: prop.livingArea || prop.area || prop.sqft || undefined,
@@ -156,7 +164,18 @@ export async function searchZillowListings(
     });
 
     // Filter out properties without price - they're not useful for analysis
-    const propertiesWithPrice = properties.filter(p => p.price > 0);
+    let propertiesWithPrice = properties.filter(p => p.price > 0);
+    
+    // For sale searches: filter out properties with suspiciously low prices (under $15,000)
+    // These are almost certainly rental prices that leaked through the API, not sale prices.
+    if (isForSaleSearch) {
+      const beforeCount = propertiesWithPrice.length;
+      propertiesWithPrice = propertiesWithPrice.filter(p => p.price >= 15000);
+      const removedCount = beforeCount - propertiesWithPrice.length;
+      if (removedCount > 0) {
+        console.log(`[HasData] Removed ${removedCount} properties with price < $15,000 from for-sale results (likely rental prices)`);
+      }
+    }
     
     // Filter by zip code if:
     // 1. The search keyword IS a zip code (direct zip search), OR
@@ -247,9 +266,14 @@ export async function searchZillowListings(
         
         if (retryResponse.ok) {
           const data = await retryResponse.json();
+          const retryIsForSale = params.type === 'forSale' || params.type === 'sold' || params.type === 'recentlySold';
           const properties: ZillowProperty[] = (data.properties || data.results || []).map((prop: any) => {
             const addressObj = typeof prop.address === 'object' ? prop.address : null;
             const addressStr = typeof prop.address === 'string' ? prop.address : prop.addressRaw || '';
+            // For sale searches: NEVER use rentZestimate as price
+            const price = retryIsForSale
+              ? (prop.price || prop.unformattedPrice || prop.minPrice || 0)
+              : (prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0);
             return {
               id: prop.zpid || prop.id || String(Math.random()),
               url: prop.detailUrl || prop.url || `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
@@ -259,7 +283,7 @@ export async function searchZillowListings(
               city: addressObj?.city || prop.city || extractCity(addressStr) || "",
               state: addressObj?.state || prop.state || extractState(addressStr) || "",
               zipCode: addressObj?.zipcode || prop.zipcode || prop.zipCode || extractZipCode(addressStr) || "",
-              price: prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0,
+              price,
               bedrooms: prop.bedrooms || prop.beds || 0,
               bathrooms: prop.bathrooms || prop.baths || 0,
               squareFeet: prop.livingArea || prop.area || prop.sqft || undefined,
@@ -272,7 +296,11 @@ export async function searchZillowListings(
               longitude: prop.longitude || prop.lng || undefined
             };
           });
-          const propertiesWithPrice = properties.filter(p => p.price > 0);
+          let propertiesWithPrice = properties.filter(p => p.price > 0);
+          // For sale searches: filter out rental-priced properties
+          if (retryIsForSale) {
+            propertiesWithPrice = propertiesWithPrice.filter(p => p.price >= 15000);
+          }
           const totalResults = data.searchInformation?.totalResults || data.totalResultCount || properties.length;
           console.log(`[HasData] Retry succeeded: ${propertiesWithPrice.length} properties`);
           return {
