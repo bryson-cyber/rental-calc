@@ -13123,4 +13123,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix Cap Rate and Cash-on-Cash calculations to use realistic total expenses
 - [x] Fix batch analysis to support purchase mode properly (not treat purchase price as monthly rent)
 - [x] Remove 20-property batch analysis cap for admin
-- [ ] Improve purchase analysis card design/layout in OpportunityFinderStep
+- [x] Improve purchase analysis card design/layout in OpportunityFinderStep

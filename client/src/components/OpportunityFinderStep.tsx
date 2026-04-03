@@ -1977,177 +1977,207 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 
                                 // Annual expenses
                                 const annualMortgage = monthlyMortgage * 12;
-                                const propertyTax = purchasePrice * 0.012; // ~1.2% of purchase price
-                                const insurance = purchasePrice * 0.005; // ~0.5% of purchase price
-                                const managementFee = validation.projection.annualRevenue * 0.20; // 20% management
-                                const maintenance = validation.projection.annualRevenue * 0.05; // 5% maintenance reserve
-                                const utilities = 200 * 12; // $200/month utilities estimate
+                                const propertyTax = purchasePrice * 0.012;
+                                const insurance = purchasePrice * 0.006;
+                                const managementFee = validation.projection.annualRevenue * 0.20;
+                                const maintenance = validation.projection.annualRevenue * 0.05;
+                                const utilities = 250 * 12;
                                 
                                 // Cash flow calculation
                                 const totalExpenses = annualMortgage + propertyTax + insurance + managementFee + maintenance + utilities;
                                 const annualCashFlow = validation.projection.annualRevenue - totalExpenses;
                                 const monthlyCashFlow = annualCashFlow / 12;
+                                const monthlyTotalExpenses = totalExpenses / 12;
+                                const monthlyRevenue = validation.projection.monthlyRevenue;
                                 
                                 // NOI (Net Operating Income) - before debt service
                                 const operatingExpenses = propertyTax + insurance + managementFee + maintenance + utilities;
                                 const noi = validation.projection.annualRevenue - operatingExpenses;
                                 
                                 // Investment metrics
-                                const closingCosts = purchasePrice * 0.03; // ~3% closing costs
-                                const startupCosts = 8000 + (property.bedrooms * 4000); // Furnishing
-                                const totalCashInvested = downPayment + closingCosts + startupCosts;
+                                const closingCosts = purchasePrice * 0.03;
+                                const startupFurnishing = 8000 + ((property.bedrooms || 2) * 4000);
+                                const totalCashInvested = downPayment + closingCosts + startupFurnishing;
                                 const cashOnCashReturn = (annualCashFlow / totalCashInvested) * 100;
                                 const capRate = (noi / purchasePrice) * 100;
                                 
-                                // Tax benefits (simplified - assumes 25% tax bracket)
+                                // Tax benefits
                                 const taxBracket = 0.25;
-                                const annualDepreciation = (purchasePrice * 0.85) / 27.5; // Building value / 27.5 years
-                                const mortgageInterestYear1 = loanAmount * (interestRate / 100) * 0.95; // Approximate first year interest
-                                const taxDeductions = annualDepreciation + mortgageInterestYear1 + operatingExpenses;
-                                const taxSavings = taxDeductions * taxBracket;
-                                
-                                // Equity buildup (first year principal paydown)
+                                const annualDepreciation = (purchasePrice * 0.85) / 27.5;
+                                const mortgageInterestYear1 = loanAmount * (interestRate / 100) * 0.95;
+                                const taxSavings = (annualDepreciation + mortgageInterestYear1 + operatingExpenses) * taxBracket;
                                 const firstYearPrincipal = annualMortgage - mortgageInterestYear1;
-                                
-                                // Total return
                                 const totalReturn = annualCashFlow + taxSavings + firstYearPrincipal;
                                 const totalReturnPercent = (totalReturn / totalCashInvested) * 100;
                                 
+                                // Revenue vs Expenses bar proportions
+                                const revenueBarWidth = 100;
+                                const expenseBarWidth = Math.min((monthlyTotalExpenses / monthlyRevenue) * 100, 100);
+                                const cashFlowPositive = monthlyCashFlow > 0;
+                                
                                 return (
-                                <div className="mb-4">
-                                  {/* Annual Revenue - Hero metric */}
-                                  <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
-                                    <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: 'oklch(0.55 0.14 75)' }}>
-                                      Projected Annual Revenue
+                                <div>
+                                  {/* === HERO: Monthly Cash Flow === */}
+                                  <div 
+                                    className="rounded-xl p-4 mb-3 text-center"
+                                    style={{ 
+                                      background: cashFlowPositive 
+                                        ? 'linear-gradient(135deg, oklch(0.96 0.03 145), oklch(0.98 0.01 145))' 
+                                        : 'linear-gradient(135deg, oklch(0.96 0.03 25), oklch(0.98 0.01 25))',
+                                    }}
+                                  >
+                                    <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: cashFlowPositive ? 'oklch(0.45 0.12 145)' : 'oklch(0.50 0.12 25)' }}>
+                                      Monthly Cash Flow
                                     </p>
-                                    <p 
-                                      className="text-4xl font-black"
-                                      style={{ 
-                                        color: 'oklch(0.35 0.12 75)',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                      }}
-                                    >
-                                      {formatCurrency(validation.projection.annualRevenue)}
+                                    <p className="text-3xl font-black tracking-tight" style={{ color: cashFlowPositive ? 'oklch(0.35 0.15 145)' : 'oklch(0.45 0.18 25)' }}>
+                                      {formatCurrency(monthlyCashFlow)}
                                     </p>
-                                    <p className="text-sm font-medium mt-1" style={{ color: 'oklch(0.45 0 0)' }}>
-                                      {formatCurrency(validation.projection.monthlyRevenue)}/month • {Math.round(validation.projection.occupancy)}% occ • {formatCurrency(validation.projection.adr)}/night
-                                    </p>
-                                  </div>
-                                  
-                                  {/* Cash Flow - The key metric for investors */}
-                                  <div className="text-center mb-3 p-3 rounded-lg" style={{ backgroundColor: annualCashFlow > 0 ? 'oklch(0.55 0.15 145 / 0.08)' : 'oklch(0.55 0.20 25 / 0.08)' }}>
-                                    <p className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: annualCashFlow > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.50 0.15 25)' }}>
-                                      Annual Cash Flow
-                                    </p>
-                                    <p 
-                                      className="text-2xl font-bold"
-                                      style={{ color: annualCashFlow > 0 ? 'oklch(0.40 0.15 145)' : 'oklch(0.50 0.20 25)' }}
-                                    >
-                                      {formatCurrency(annualCashFlow)}
-                                    </p>
-                                    <p className="text-xs mt-1" style={{ color: 'oklch(0.50 0 0)' }}>
-                                      {formatCurrency(monthlyCashFlow)}/month after all expenses
+                                    <p className="text-[11px] mt-1" style={{ color: 'oklch(0.50 0 0)' }}>
+                                      {formatCurrency(monthlyRevenue)}/mo revenue – {formatCurrency(monthlyTotalExpenses)}/mo expenses
                                     </p>
                                   </div>
                                   
-                                  {/* Return Metrics Grid */}
-                                  <div className="grid grid-cols-2 gap-2 mb-3">
-                                    <div className="p-2 rounded-lg text-center" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                                      <p className="text-lg font-bold" style={{ color: cashOnCashReturn > 10 ? 'oklch(0.45 0.15 145)' : 'oklch(0.35 0 0)' }}>
-                                        {cashOnCashReturn.toFixed(1)}%
-                                      </p>
-                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Cash-on-Cash</p>
-                                    </div>
-                                    <div className="p-2 rounded-lg text-center" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                                      <p className="text-lg font-bold" style={{ color: capRate > 8 ? 'oklch(0.45 0.15 145)' : 'oklch(0.35 0 0)' }}>
-                                        {capRate.toFixed(1)}%
-                                      </p>
-                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Cap Rate</p>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Tax Benefits & Total Return */}
-                                  <details className="text-xs mb-3">
-                                    <summary className="cursor-pointer font-medium py-1 flex items-center gap-1" style={{ color: 'oklch(0.45 0 0)' }}>
-                                      <ChevronDown className="w-3 h-3" />
-                                      View Tax Benefits & Total Return
-                                    </summary>
-                                    <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                      <div className="space-y-2">
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Annual Depreciation</span>
-                                          <span className="font-medium" style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(annualDepreciation)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Est. Tax Savings (25% bracket)</span>
-                                          <span className="font-medium" style={{ color: 'oklch(0.45 0.15 145)' }}>+{formatCurrency(taxSavings)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Equity Buildup (Yr 1)</span>
-                                          <span className="font-medium" style={{ color: 'oklch(0.45 0.15 145)' }}>+{formatCurrency(firstYearPrincipal)}</span>
-                                        </div>
-                                        <div className="flex justify-between pt-2 mt-2" style={{ borderTop: '1px dashed oklch(0.85 0 0)' }}>
-                                          <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>Total Return (Yr 1)</span>
-                                          <span className="font-bold" style={{ color: 'oklch(0.45 0.15 145)' }}>{formatCurrency(totalReturn)} ({totalReturnPercent.toFixed(1)}%)</span>
-                                        </div>
+                                  {/* === VISUAL: Revenue vs Expenses Bar === */}
+                                  <div className="mb-3 px-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-[10px] font-medium w-14" style={{ color: 'oklch(0.50 0 0)' }}>Revenue</span>
+                                      <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'oklch(0.94 0 0)' }}>
+                                        <div className="h-full rounded-full" style={{ width: `${revenueBarWidth}%`, backgroundColor: 'oklch(0.55 0.14 75)' }} />
                                       </div>
                                     </div>
-                                  </details>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[10px] font-medium w-14" style={{ color: 'oklch(0.50 0 0)' }}>Expenses</span>
+                                      <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'oklch(0.94 0 0)' }}>
+                                        <div className="h-full rounded-full" style={{ width: `${expenseBarWidth}%`, backgroundColor: expenseBarWidth >= 100 ? 'oklch(0.55 0.18 25)' : 'oklch(0.60 0.08 250)' }} />
+                                      </div>
+                                    </div>
+                                  </div>
                                   
-                                  {/* Investment Breakdown */}
-                                  <details className="text-xs mb-3">
-                                    <summary className="cursor-pointer font-medium py-1 flex items-center gap-1" style={{ color: 'oklch(0.45 0 0)' }}>
-                                      <ChevronDown className="w-3 h-3" />
-                                      View Investment Breakdown
+                                  {/* === KEY METRICS: 3-column grid === */}
+                                  <div className="grid grid-cols-3 gap-1.5 mb-3">
+                                    <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                      <p className="text-base font-bold" style={{ color: cashOnCashReturn > 8 ? 'oklch(0.40 0.15 145)' : cashOnCashReturn > 0 ? 'oklch(0.35 0 0)' : 'oklch(0.50 0.15 25)' }}>
+                                        {cashOnCashReturn.toFixed(1)}%
+                                      </p>
+                                      <p className="text-[9px] uppercase tracking-wider font-medium" style={{ color: 'oklch(0.55 0 0)' }}>CoC Return</p>
+                                    </div>
+                                    <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                      <p className="text-base font-bold" style={{ color: capRate > 6 ? 'oklch(0.40 0.15 145)' : 'oklch(0.35 0 0)' }}>
+                                        {capRate.toFixed(1)}%
+                                      </p>
+                                      <p className="text-[9px] uppercase tracking-wider font-medium" style={{ color: 'oklch(0.55 0 0)' }}>Cap Rate</p>
+                                    </div>
+                                    <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                      <p className="text-base font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                        {Math.round(validation.projection.occupancy)}%
+                                      </p>
+                                      <p className="text-[9px] uppercase tracking-wider font-medium" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* === QUICK STATS ROW === */}
+                                  <div className="flex items-center justify-between text-[11px] px-1 mb-3 py-2" style={{ borderTop: '1px solid oklch(0.92 0 0)', borderBottom: '1px solid oklch(0.92 0 0)' }}>
+                                    <div>
+                                      <span style={{ color: 'oklch(0.55 0 0)' }}>ADR </span>
+                                      <span className="font-semibold" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(validation.projection.adr)}</span>
+                                    </div>
+                                    <div>
+                                      <span style={{ color: 'oklch(0.55 0 0)' }}>Annual </span>
+                                      <span className="font-semibold" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(validation.projection.annualRevenue)}</span>
+                                    </div>
+                                    <div>
+                                      <span style={{ color: 'oklch(0.55 0 0)' }}>Cash In </span>
+                                      <span className="font-semibold" style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(totalCashInvested)}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* === SINGLE EXPANDABLE: Full Breakdown === */}
+                                  <details className="text-xs mb-3 group">
+                                    <summary className="cursor-pointer font-medium py-1.5 flex items-center gap-1.5 select-none" style={{ color: 'oklch(0.40 0 0)' }}>
+                                      <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+                                      Full Investment Breakdown
                                     </summary>
-                                    <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                      <p className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.35 0 0)' }}>Cash Needed to Close:</p>
-                                      <div className="space-y-1 mb-3">
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Down Payment ({downPaymentPercent}%)</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(downPayment)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Closing Costs (~3%)</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(closingCosts)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Furnishing</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(startupCosts)}</span>
-                                        </div>
-                                        <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>Total Cash Needed</span>
-                                          <span style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(totalCashInvested)}</span>
+                                    <div className="mt-2 space-y-3">
+                                      {/* Cash to Close */}
+                                      <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.50 0 0)' }}>Cash to Close</p>
+                                        <div className="space-y-1.5">
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Down Payment ({downPaymentPercent}%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(downPayment)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Closing Costs (3%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(closingCosts)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Furnishing</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(startupFurnishing)}</span>
+                                          </div>
+                                          <div className="flex justify-between pt-1.5 mt-1" style={{ borderTop: '1px solid oklch(0.92 0 0)' }}>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.30 0 0)' }}>Total</span>
+                                            <span className="font-bold" style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(totalCashInvested)}</span>
+                                          </div>
                                         </div>
                                       </div>
                                       
-                                      <p className="text-xs font-semibold mb-2 pt-2" style={{ color: 'oklch(0.35 0 0)', borderTop: '1px dashed oklch(0.85 0 0)' }}>Monthly Expenses:</p>
-                                      <div className="space-y-1">
-                                        {loanType !== 'cash' && (
+                                      {/* Monthly Expenses */}
+                                      <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.50 0 0)' }}>Monthly Expenses</p>
+                                        <div className="space-y-1.5">
+                                          {loanType !== 'cash' && (
+                                            <div className="flex justify-between">
+                                              <span style={{ color: 'oklch(0.50 0 0)' }}>Mortgage ({interestRate}%)</span>
+                                              <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(monthlyMortgage)}</span>
+                                            </div>
+                                          )}
                                           <div className="flex justify-between">
-                                            <span style={{ color: 'oklch(0.55 0 0)' }}>Mortgage ({interestRate}%)</span>
-                                            <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(monthlyMortgage)}</span>
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Property Tax (1.2%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(propertyTax / 12)}</span>
                                           </div>
-                                        )}
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Property Tax</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(propertyTax / 12)}</span>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Insurance (0.6%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(insurance / 12)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Management (20%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(managementFee / 12)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Maintenance (5%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(maintenance / 12)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Utilities</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.30 0 0)' }}>{formatCurrency(utilities / 12)}</span>
+                                          </div>
+                                          <div className="flex justify-between pt-1.5 mt-1" style={{ borderTop: '1px solid oklch(0.92 0 0)' }}>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.30 0 0)' }}>Total Monthly</span>
+                                            <span className="font-bold" style={{ color: 'oklch(0.55 0.15 25)' }}>{formatCurrency(monthlyTotalExpenses)}</span>
+                                          </div>
                                         </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Insurance</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(insurance / 12)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Management (20%)</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(managementFee / 12)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Maintenance (5%)</span>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(maintenance / 12)}</span>
-                                        </div>
-                                        <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
-                                          <span style={{ color: 'oklch(0.35 0 0)' }}>Total Monthly</span>
-                                          <span style={{ color: 'oklch(0.55 0.15 25)' }}>{formatCurrency(totalExpenses / 12)}</span>
+                                      </div>
+                                      
+                                      {/* Year 1 Total Return */}
+                                      <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.06)' }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'oklch(0.50 0.10 75)' }}>Year 1 Total Return</p>
+                                        <div className="space-y-1.5">
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Cash Flow</span>
+                                            <span className="font-medium" style={{ color: cashFlowPositive ? 'oklch(0.40 0.12 145)' : 'oklch(0.50 0.15 25)' }}>{formatCurrency(annualCashFlow)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Tax Savings (est.)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.40 0.12 145)' }}>+{formatCurrency(taxSavings)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.50 0 0)' }}>Equity Buildup</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.40 0.12 145)' }}>+{formatCurrency(firstYearPrincipal)}</span>
+                                          </div>
+                                          <div className="flex justify-between pt-1.5 mt-1" style={{ borderTop: '1px dashed oklch(0.80 0.08 75)' }}>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.30 0 0)' }}>Total Return</span>
+                                            <span className="font-bold" style={{ color: 'oklch(0.40 0.15 145)' }}>{formatCurrency(totalReturn)} ({totalReturnPercent.toFixed(1)}%)</span>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
