@@ -48,6 +48,7 @@ import {
   Star,
   Users,
   Home,
+  Key,
   ExternalLink,
   BarChart3,
   BookOpen,
@@ -435,7 +436,7 @@ export default function LeadMagnet() {
   }, [isFirstVisit, showTour, startTour]);
   
   // Property context for property-centric workflow
-  const { myProperty, hasProperty, bedroomFilter, setMyProperty, clearProperty, globalMode } = useProperty();
+  const { myProperty, hasProperty, bedroomFilter, setMyProperty, clearProperty, globalMode, setGlobalMode } = useProperty();
   
   // Tool usage tracking - separate trackers for different tools
   const { trackAction } = useActionTracking('revenue_calculator');
@@ -3102,6 +3103,39 @@ export default function LeadMagnet() {
                   </div>
                 )}
                 
+                {/* Mode Toggle - Rent vs Purchase */}
+                <div className="mb-2">
+                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] mb-2">
+                    What are you doing with this property?
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setGlobalMode('rent')}
+                      className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all text-sm ${
+                        globalMode === 'rent'
+                          ? 'bg-white text-amber-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Home className="w-4 h-4" />
+                      <span>Renting (Arbitrage)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGlobalMode('purchase')}
+                      className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all text-sm ${
+                        globalMode === 'purchase'
+                          ? 'bg-white text-amber-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Key className="w-4 h-4" />
+                      <span>Buying (Purchase)</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-2" data-tour="address-input">
                   <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
                     <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
