@@ -238,9 +238,12 @@ export default function OfferPriceSuggester({
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(suggestions.conservativeOffer)}</p>
-                  <p className="text-xs text-red-500 flex items-center gap-1 justify-end">
-                    <TrendingDown className="w-3 h-3" />
-                    {suggestions.discountFromListing.conservative}% below listing
+                  <p className={`text-xs flex items-center gap-1 justify-end ${Number(suggestions.discountFromListing.conservative) > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                    {Number(suggestions.discountFromListing.conservative) > 0 ? (
+                      <><TrendingDown className="w-3 h-3" />{suggestions.discountFromListing.conservative}% below listing</>
+                    ) : (
+                      <><TrendingUp className="w-3 h-3" />{Math.abs(Number(suggestions.discountFromListing.conservative)).toFixed(1)}% above listing</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -259,8 +262,11 @@ export default function OfferPriceSuggester({
                 <div className="text-right">
                   <p className="text-xl font-bold text-[#C9A962]">{formatCurrency(suggestions.balancedOffer)}</p>
                   <p className="text-xs text-white/60 flex items-center gap-1 justify-end">
-                    <TrendingDown className="w-3 h-3" />
-                    {suggestions.discountFromListing.balanced}% below listing
+                    {Number(suggestions.discountFromListing.balanced) > 0 ? (
+                      <><TrendingDown className="w-3 h-3" />{suggestions.discountFromListing.balanced}% below listing</>
+                    ) : (
+                      <><TrendingUp className="w-3 h-3" />{Math.abs(Number(suggestions.discountFromListing.balanced)).toFixed(1)}% above listing</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -287,9 +293,12 @@ export default function OfferPriceSuggester({
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(suggestions.aggressiveOffer)}</p>
-                  <p className="text-xs text-red-500 flex items-center gap-1 justify-end">
-                    <TrendingDown className="w-3 h-3" />
-                    {suggestions.discountFromListing.aggressive}% below listing
+                  <p className={`text-xs flex items-center gap-1 justify-end ${Number(suggestions.discountFromListing.aggressive) > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                    {Number(suggestions.discountFromListing.aggressive) > 0 ? (
+                      <><TrendingDown className="w-3 h-3" />{suggestions.discountFromListing.aggressive}% below listing</>
+                    ) : (
+                      <><TrendingUp className="w-3 h-3" />{Math.abs(Number(suggestions.discountFromListing.aggressive)).toFixed(1)}% above listing</>
+                    )}
                   </p>
                 </div>
               </div>

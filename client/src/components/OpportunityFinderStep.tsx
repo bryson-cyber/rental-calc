@@ -190,25 +190,42 @@ const SORT_OPTIONS = [
 ];
 
 // Calculate Deal Score based on ROI and profit
-function calculateDealScore(roi: number, monthlyProfit: number, occupancy: number): { grade: string; color: string; label: string } {
-  // Score based on ROI, profit, and occupancy
+// Purchase mode uses different thresholds since CoC ROI of 10-20% is excellent for real estate
+function calculateDealScore(roi: number, monthlyProfit: number, occupancy: number, mode: 'rent' | 'purchase' = 'rent'): { grade: string; color: string; label: string } {
   let score = 0;
   
-  // ROI scoring (max 40 points)
-  if (roi >= 100) score += 40;
-  else if (roi >= 75) score += 35;
-  else if (roi >= 50) score += 30;
-  else if (roi >= 25) score += 20;
-  else if (roi >= 0) score += 10;
+  if (mode === 'purchase') {
+    // Purchase mode: Cash-on-Cash ROI thresholds (realistic for real estate)
+    if (roi >= 20) score += 40;
+    else if (roi >= 15) score += 35;
+    else if (roi >= 12) score += 30;
+    else if (roi >= 8) score += 25;
+    else if (roi >= 5) score += 15;
+    else if (roi >= 0) score += 5;
+    
+    // Monthly cash flow scoring for purchase (max 40 points)
+    if (monthlyProfit >= 1500) score += 40;
+    else if (monthlyProfit >= 1000) score += 35;
+    else if (monthlyProfit >= 500) score += 30;
+    else if (monthlyProfit >= 200) score += 20;
+    else if (monthlyProfit >= 0) score += 10;
+  } else {
+    // Rent mode: ROI scoring (max 40 points)
+    if (roi >= 100) score += 40;
+    else if (roi >= 75) score += 35;
+    else if (roi >= 50) score += 30;
+    else if (roi >= 25) score += 20;
+    else if (roi >= 0) score += 10;
+    
+    // Monthly profit scoring (max 40 points)
+    if (monthlyProfit >= 2000) score += 40;
+    else if (monthlyProfit >= 1500) score += 35;
+    else if (monthlyProfit >= 1000) score += 30;
+    else if (monthlyProfit >= 500) score += 20;
+    else if (monthlyProfit >= 0) score += 10;
+  }
   
-  // Monthly profit scoring (max 40 points)
-  if (monthlyProfit >= 2000) score += 40;
-  else if (monthlyProfit >= 1500) score += 35;
-  else if (monthlyProfit >= 1000) score += 30;
-  else if (monthlyProfit >= 500) score += 20;
-  else if (monthlyProfit >= 0) score += 10;
-  
-  // Occupancy scoring (max 20 points)
+  // Occupancy scoring (max 20 points) - same for both modes
   if (occupancy >= 70) score += 20;
   else if (occupancy >= 60) score += 15;
   else if (occupancy >= 50) score += 10;
@@ -756,7 +773,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     }, 500);
     
     try {
-      const propsToAnalyze = displayedProperties.slice(0, 50).map(p => ({
+      const propsToAnalyze = displayedProperties.map(p => ({
         id: p.id,
         address: p.address,
         rent: p.price,
@@ -772,6 +789,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       const result = await batchValidate.mutateAsync({
         properties: propsToAnalyze,
         minProfitThreshold: profitThreshold,
+        searchType: searchType === 'forSale' ? 'forSale' : 'forRent',
       });
       
       clearInterval(progressInterval);
@@ -958,7 +976,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       }, 500);
       
       try {
-        const propsToAnalyze = newProperties.slice(0, 20).map(p => ({
+        const propsToAnalyze = newProperties.map(p => ({
           id: p.id,
           address: p.address,
           rent: p.price,
@@ -974,6 +992,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
         const batchResult = await batchValidate.mutateAsync({
           properties: propsToAnalyze,
           minProfitThreshold: profitThreshold,
+          searchType: searchType === 'forSale' ? 'forSale' : 'forRent',
         });
         
         clearInterval(progressInterval);
@@ -1451,7 +1470,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     }}
                   >
                     <Zap className="w-5 h-5" />
-                    <span>Analyze All {Math.min(displayedProperties.length, 50)} Properties</span>
+                    <span>Analyze All {displayedProperties.length} Properties</span>
                     <span className="text-sm opacity-80">— Show deals above ${profitThreshold.toLocaleString()}/mo</span>
                   </button>
                 </div>
@@ -1471,7 +1490,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     </div>
                     <div>
                       <p className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>Analyzing Properties...</p>
-                      <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>Running revenue analysis on {Math.min(displayedProperties.length, 20)} properties</p>
+                      <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>Running revenue analysis on {displayedProperties.length} properties</p>
                     </div>
                   </div>
                   <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'oklch(0.90 0.03 145)' }}>
@@ -1753,8 +1772,14 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                   const hasAnalysis = validation?.success && validation?.projection;
                   
                   // Calculate deal score if we have analysis
+                  // For purchase mode, use cashOnCash from card-level calc instead of server ROI
                   const dealScore = hasAnalysis && validation.projection
-                    ? calculateDealScore(validation.projection.roi, validation.projection.monthlyProfit, validation.projection.occupancy)
+                    ? calculateDealScore(
+                        validation.projection.roi, 
+                        validation.projection.monthlyProfit, 
+                        validation.projection.occupancy,
+                        searchType === 'forSale' ? 'purchase' : 'rent'
+                      )
                     : null;
                   
                   // Calculate startup costs

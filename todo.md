@@ -13115,3 +13115,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Color-code comp markers by revenue performance (green/yellow/red)
 - [x] Add distance radius circle on map centered on subject property
 - [x] Fix property search in For Sale mode to only show for-sale listings, not rental listings
+
+### Admin batch analysis and purchase calculator fixes (April 3, 2026)
+- [x] Full math audit of all purchase mode calculations (TeslaDashboard, batch analysis, Offer Price Suggester)
+- [x] Fix purchase calculator to include property tax, insurance, maintenance, utilities in expenses
+- [x] Fix Offer Price Suggester inverted math (showing prices above listing as "below listing")
+- [x] Fix Cap Rate and Cash-on-Cash calculations to use realistic total expenses
+- [x] Fix batch analysis to support purchase mode properly (not treat purchase price as monthly rent)
+- [x] Remove 20-property batch analysis cap for admin
+- [ ] Improve purchase analysis card design/layout in OpportunityFinderStep

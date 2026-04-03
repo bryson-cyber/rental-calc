@@ -262,6 +262,7 @@ function HeroRevenueCard({
   expensePercent = 20,
   mode = 'rent',
   monthlyMortgage = 0,
+  monthlyAdditionalCosts = 0,
   revenueScenarios,
   isOwner = false,
   onRevenueOverride,
@@ -275,6 +276,7 @@ function HeroRevenueCard({
   expensePercent?: number;
   mode?: 'rent' | 'purchase';
   monthlyMortgage?: number;
+  monthlyAdditionalCosts?: number; // Property tax + insurance + maintenance + utilities (purchase mode)
   revenueScenarios?: {
     conservative: number;
     target: number;
@@ -300,7 +302,8 @@ function HeroRevenueCard({
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
   // In purchase mode, the fixed cost is the mortgage payment, not rent
   const fixedCost = mode === 'purchase' ? monthlyMortgage : monthlyRent;
-  const trueMonthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses;
+  // In purchase mode, include additional costs (property tax, insurance, maintenance, utilities)
+  const trueMonthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses - (mode === 'purchase' ? monthlyAdditionalCosts : 0);
   
   const isProfitable = trueMonthlyProfit > 0;
   const profitMargin = fixedCost > 0 ? ((trueMonthlyProfit / fixedCost) * 100) : 0;
@@ -520,14 +523,25 @@ function HeroRevenueCard({
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Expenses ({expensePercent}%)</p>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">{mode === 'purchase' ? 'All Expenses' : `Expenses (${expensePercent}%)`}</p>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
-                <p className="text-sm">Operating costs: cleaning, supplies, utilities, Airbnb fees, repairs. Industry standard is 20-30% of revenue.</p>
+                {mode === 'purchase' ? (
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">Monthly operating expenses:</p>
+                    <p>Management/Cleaning ({expensePercent}%): {formatCurrency(monthlyExpenses)}</p>
+                    <p>Property Tax (1.2%): {formatCurrency(monthlyAdditionalCosts * 0.35)}</p>
+                    <p>Insurance (0.6%): {formatCurrency(monthlyAdditionalCosts * 0.175)}</p>
+                    <p>Maintenance (5%): {formatCurrency(monthlyAdditionalCosts * 0.35)}</p>
+                    <p>Utilities: {formatCurrency(monthlyAdditionalCosts * 0.125)}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm">Operating costs: cleaning, supplies, utilities, Airbnb fees, repairs. Industry standard is 20-30% of revenue.</p>
+                )}
               </TooltipContent>
             </Tooltip>
             <div className="flex items-baseline gap-2">
-              <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses)}</p>
+              <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses + (mode === 'purchase' ? monthlyAdditionalCosts : 0))}</p>
               <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">/month</span>
             </div>
           </div>
@@ -575,6 +589,7 @@ function HeroRevenueCard({
             fixedCost={fixedCost}
             expensePercent={expensePercent}
             mode={mode}
+            monthlyAdditionalCosts={monthlyAdditionalCosts}
           />
         )}
       </div>
@@ -590,12 +605,14 @@ function ThreeTierProjections({
   scenarios,
   fixedCost,
   expensePercent,
-  mode
+  mode,
+  monthlyAdditionalCosts = 0
 }: {
   scenarios: { conservative: number; target: number; optimistic: number; source: string; compCount: number };
   fixedCost: number;
   expensePercent: number;
   mode: 'rent' | 'purchase';
+  monthlyAdditionalCosts?: number; // Property tax + insurance + maintenance + utilities (purchase mode)
 }) {
   const tiers = [
     {
@@ -667,7 +684,7 @@ function ThreeTierProjections({
         {tiers.map((tier) => {
           const monthlyRevenue = tier.annualRevenue / 12;
           const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
-          const monthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses;
+          const monthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses - (mode === 'purchase' ? monthlyAdditionalCosts : 0);
           const annualProfit = monthlyProfit * 12;
           const isProfitable = monthlyProfit > 0;
 
@@ -1750,12 +1767,18 @@ function AirbnbVsLongTermComparison({
   annualAirbnbRevenue,
   monthlyRent,
   rentometerMedian,
-  expensePercent = 20
+  expensePercent = 20,
+  mode = 'rent',
+  monthlyMortgage = 0,
+  monthlyAdditionalCosts = 0
 }: {
   annualAirbnbRevenue: number;
   monthlyRent: number;
   rentometerMedian?: number;
   expensePercent?: number;
+  mode?: 'rent' | 'purchase';
+  monthlyMortgage?: number;
+  monthlyAdditionalCosts?: number;
 }) {
   // Calculate long-term rental income (what you'd earn as a landlord)
   // Use Rentometer median if available, otherwise use user's rent as proxy
@@ -1764,11 +1787,14 @@ function AirbnbVsLongTermComparison({
   
   // Calculate Airbnb net income (after expenses)
   const airbnbExpenses = annualAirbnbRevenue * (expensePercent / 100);
-  const annualAirbnbNet = annualAirbnbRevenue - airbnbExpenses;
+  // In purchase mode, also subtract mortgage and additional costs from Airbnb net
+  const annualMortgageAndCosts = mode === 'purchase' ? (monthlyMortgage + monthlyAdditionalCosts) * 12 : 0;
+  const annualAirbnbNet = annualAirbnbRevenue - airbnbExpenses - annualMortgageAndCosts;
   
   // Long-term rental expenses (typically 5-10% for maintenance, vacancy, etc.)
   const longTermExpenseRate = 0.08; // 8% average
-  const annualLongTermNet = annualLongTermIncome * (1 - longTermExpenseRate);
+  // In purchase mode, subtract mortgage and property costs from long-term net too
+  const annualLongTermNet = annualLongTermIncome * (1 - longTermExpenseRate) - annualMortgageAndCosts;
   
   // Calculate the difference
   const annualDifference = annualAirbnbNet - annualLongTermNet;
@@ -3945,11 +3971,20 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   }, [baseHeadlineRevenue]);
   
   // Purchase mode calculations
+  // Uses comprehensive expense model matching OfferPriceSuggester & MaxPurchasePriceCalculator
   const purchaseCalcs = useMemo(() => {
     if (mode !== 'purchase' || !purchasePrice) return null;
     
     const annualRevenue = headlineRevenue;
-    const operatingExpenses = annualRevenue * (expensePercent / 100);
+    
+    // Comprehensive operating expenses (matching OfferPriceSuggester model)
+    const managementExpenses = annualRevenue * (expensePercent / 100); // 20% management/cleaning/platform fees
+    const maintenanceExpenses = annualRevenue * 0.05; // 5% maintenance & CapEx reserve
+    const propertyTax = purchasePrice * 0.012; // 1.2% property tax
+    const insuranceExpense = purchasePrice * 0.006; // 0.6% insurance (STR requires higher coverage)
+    const utilitiesExpense = 3000; // $250/month utilities (furnished STR)
+    
+    const operatingExpenses = managementExpenses + maintenanceExpenses + propertyTax + insuranceExpense + utilitiesExpense;
     const noi = annualRevenue - operatingExpenses;
     
     // Loan calculations
@@ -3965,6 +4000,13 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
       (Math.pow(1 + monthlyRate, numPayments) - 1);
     const annualDebtService = monthlyMortgage * 12;
+    
+    // Monthly fixed costs beyond mortgage (for CashFlowHero)
+    const monthlyPropertyTax = propertyTax / 12;
+    const monthlyInsurance = insuranceExpense / 12;
+    const monthlyMaintenance = maintenanceExpenses / 12;
+    const monthlyUtilities = utilitiesExpense / 12;
+    const monthlyAdditionalCosts = monthlyPropertyTax + monthlyInsurance + monthlyMaintenance + monthlyUtilities;
     
     // Investment metrics
     const capRate = (noi / purchasePrice) * 100;
@@ -3987,7 +4029,15 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       monthlyCashFlow: annualCashFlow / 12,
       cashOnCash,
       dscr,
-      breakEvenOccupancy
+      breakEvenOccupancy,
+      // Expense breakdown for display
+      operatingExpenses,
+      managementExpenses,
+      maintenanceExpenses,
+      propertyTax,
+      insuranceExpense,
+      utilitiesExpense,
+      monthlyAdditionalCosts,
     };
   }, [mode, purchasePrice, headlineRevenue, expensePercent, downPaymentPercent, interestRate, loanType, result.metrics.occupancy]);
   
@@ -4023,6 +4073,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         expensePercent={expensePercent}
         mode={mode}
         monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
+        monthlyAdditionalCosts={purchaseCalcs?.monthlyAdditionalCosts || 0}
         revenueScenarios={adjustedScenarios}
         isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
@@ -4293,6 +4344,9 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         monthlyRent={result.cashFlow.monthlyRent}
         rentometerMedian={rentometerData?.median}
         expensePercent={expensePercent}
+        mode={mode}
+        monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
+        monthlyAdditionalCosts={purchaseCalcs?.monthlyAdditionalCosts || 0}
       />
       
       {/* SECTION 4.6: Revenue Projection Range (hidden when three-tier projections are shown in HeroRevenueCard) */}

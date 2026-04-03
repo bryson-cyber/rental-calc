@@ -1151,7 +1151,7 @@ export const opportunityFinderRouter = router({
 
   /**
    * Batch Analyze All Properties
-   * Runs AirDNA Rentalizer on up to 20 properties concurrently
+   * Runs AirDNA Rentalizer on properties concurrently
    * and returns results ranked by profitability
    */
   batchValidateProperties: publicProcedure
@@ -1167,8 +1167,9 @@ export const opportunityFinderRouter = router({
         city: z.string().optional(),
         state: z.string().optional(),
         zipCode: z.string().optional(),
-      })).min(1).max(50),
+      })).min(1).max(200),
       minProfitThreshold: z.number().min(0).default(500),
+      searchType: z.enum(['forRent', 'forSale']).default('forRent'),
     }))
     .mutation(async ({ input, ctx }) => {
       // Enforce daily usage limits (admins bypass)
@@ -1182,8 +1183,9 @@ export const opportunityFinderRouter = router({
         });
       }
 
-      const { properties, minProfitThreshold } = input;
-      console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties`);
+      const { properties, minProfitThreshold, searchType } = input;
+      const isPurchaseMode = searchType === 'forSale';
+      console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties (mode: ${searchType})`);
       const startTime = Date.now();
 
       // Run all AirDNA estimates concurrently with a concurrency limit of 5
@@ -1248,10 +1250,46 @@ export const opportunityFinderRouter = router({
               console.log(`[Batch Analyze] ${prop.address}: Rentalizer=$${estimate.revenue.toLocaleString()} → Headline=$${headlineRevenue.toLocaleString()} (${compMedian.source}, ${compMedian.compCount} comps)`);
 
               const monthlyRevenue = headlineRevenue / 12;
-              const operatingCosts = monthlyRevenue * 0.20;
-              const monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
-              const annualProfit = monthlyProfit * 12;
-              const roi = (annualProfit / (prop.rent * 12)) * 100;
+              
+              let operatingCosts: number;
+              let monthlyProfit: number;
+              let annualProfit: number;
+              let roi: number;
+              
+              if (isPurchaseMode) {
+                // Purchase mode: comprehensive expense model
+                const purchasePrice = prop.rent; // In forSale mode, rent field contains purchase price
+                const managementCosts = monthlyRevenue * 0.20; // 20% management
+                const maintenanceCosts = monthlyRevenue * 0.05; // 5% maintenance
+                const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual property tax
+                const insurance = (purchasePrice * 0.006) / 12; // 0.6% annual insurance
+                const utilities = 250; // $250/month
+                operatingCosts = managementCosts + maintenanceCosts + propertyTax + insurance + utilities;
+                
+                // Mortgage calculation (20% down, 7% interest, 30-year)
+                const downPaymentPercent = 0.20;
+                const interestRate = 0.07;
+                const loanAmount = purchasePrice * (1 - downPaymentPercent);
+                const monthlyRate = interestRate / 12;
+                const numPayments = 360;
+                const monthlyMortgage = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+                
+                monthlyProfit = monthlyRevenue - operatingCosts - monthlyMortgage;
+                annualProfit = monthlyProfit * 12;
+                
+                // Cash-on-Cash ROI for purchase mode
+                const downPayment = purchasePrice * downPaymentPercent;
+                const closingCosts = purchasePrice * 0.03;
+                const totalCashInvested = downPayment + closingCosts;
+                roi = totalCashInvested > 0 ? (annualProfit / totalCashInvested) * 100 : 0;
+              } else {
+                // Rent mode: simple calculation
+                operatingCosts = monthlyRevenue * 0.20;
+                monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
+                annualProfit = monthlyProfit * 12;
+                roi = (annualProfit / (prop.rent * 12)) * 100;
+              }
+              
               const isGoodDeal = monthlyProfit >= minProfitThreshold;
               const verdict = monthlyProfit > 1000 ? 'Excellent Opportunity' :
                               monthlyProfit > 500 ? 'Good Opportunity' :
