@@ -13108,3 +13108,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Button shows green "Saved" state with BookmarkCheck icon after saving
 - [x] Grant admin access to all users with @coachinayah.com email
 - [x] Add rent/purchase mode toggle directly into Step 5 form
+- [x] Auto-detect purchase mode from Zillow/Redfin for-sale URLs

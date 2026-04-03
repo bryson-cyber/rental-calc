@@ -3146,17 +3146,48 @@ export default function LeadMagnet() {
                     value={address}
                     onChange={setAddress}
                     onPropertyDetected={(details) => {
-                      // Auto-fill property details from Zillow
+                      // Auto-fill property details from Zillow/Redfin
                       if (details.bedrooms !== null) {
                         setBedrooms(String(details.bedrooms));
                       }
                       if (details.bathrooms !== null) {
                         setBathrooms(String(details.bathrooms));
                       }
-                      if (details.price !== null && details.priceType === 'rent') {
-                        setMonthlyRent(String(details.price));
+                      // Auto-switch mode based on listing type
+                      if (details.price !== null) {
+                        if (details.priceType === 'sale') {
+                          // For-sale listing: switch to purchase mode and fill purchase price
+                          setGlobalMode('purchase');
+                          const currentProperty = myProperty || {
+                            address: details.address || address || '',
+                            city: details.city || '',
+                            state: details.state || '',
+                            zipCode: details.zipcode || '',
+                            bedrooms: details.bedrooms !== null && details.bedrooms !== undefined ? details.bedrooms : (parseInt(bedrooms) || 2),
+                            bathrooms: details.bathrooms !== null && details.bathrooms !== undefined ? details.bathrooms : (parseFloat(bathrooms) || 1),
+                          };
+                          setMyProperty({
+                            ...currentProperty,
+                            address: details.address || currentProperty.address,
+                            bedrooms: details.bedrooms ?? currentProperty.bedrooms,
+                            bathrooms: details.bathrooms ?? currentProperty.bathrooms,
+                            purchasePrice: details.price,
+                            loanType: 'conventional',
+                            downPaymentPercent: 20,
+                            interestRate: 7,
+                          });
+                          toast.success(`For-sale listing detected — switched to Purchase mode!`);
+                        } else if (details.priceType === 'rent') {
+                          // Rental listing: switch to rent mode and fill monthly rent
+                          setGlobalMode('rent');
+                          setMonthlyRent(String(details.price));
+                          toast.success(`Rental listing detected — property details loaded!`);
+                        } else {
+                          toast.success(`Property details loaded from ${details.source || 'listing'}!`);
+                        }
+                      } else {
+                        toast.success(`Property details loaded!`);
                       }
-                      toast.success(`Property details loaded from Zillow!`);
                     }}
                     placeholder="Enter address or paste Zillow/Redfin URL..."
                     showPropertyCard={true}
