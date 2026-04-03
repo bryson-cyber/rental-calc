@@ -3008,7 +3008,21 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
 }
 
 /**
+ * Revenue tier color helper
+ */
+function getRevenueTier(revenue: number, allRevenues: number[]): { color: string; label: string; bgClass: string; textClass: string } {
+  if (allRevenues.length === 0) return { color: '#3b82f6', label: 'N/A', bgClass: 'bg-slate-100', textClass: 'text-slate-600' };
+  const sorted = [...allRevenues].sort((a, b) => a - b);
+  const p33 = sorted[Math.floor(sorted.length * 0.33)];
+  const p66 = sorted[Math.floor(sorted.length * 0.66)];
+  if (revenue >= p66) return { color: '#059669', label: 'High', bgClass: 'bg-emerald-50', textClass: 'text-emerald-700' };
+  if (revenue >= p33) return { color: '#d97706', label: 'Mid', bgClass: 'bg-amber-50', textClass: 'text-amber-700' };
+  return { color: '#dc2626', label: 'Low', bgClass: 'bg-red-50', textClass: 'text-red-700' };
+}
+
+/**
  * Comp Map Modal - Shows property and comps on a Google Map
+ * Features: sidebar comp list, revenue-colored markers, distance radius circle
  */
 function CompMapModal({
   comparables,
@@ -3026,24 +3040,87 @@ function CompMapModal({
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const [activeCompIdx, setActiveCompIdx] = useState<number | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const compsWithCoords = useMemo(() => comparables.filter(c => c.latitude && c.longitude), [comparables]);
+  const allRevenues = useMemo(() => compsWithCoords.map(c => c.revenue), [compsWithCoords]);
+  
+  // Calculate max distance for radius circle (in meters)
+  const maxDistanceMeters = useMemo(() => {
+    const distances = compsWithCoords.map(c => c.distanceMeters || 0).filter(d => d > 0);
+    return distances.length > 0 ? Math.max(...distances) : 2414; // default 1.5 miles
+  }, [compsWithCoords]);
+
+  const handleCompClick = useCallback((idx: number) => {
+    const comp = compsWithCoords[idx];
+    if (!comp || !mapRef.current) return;
+    
+    setActiveCompIdx(idx);
+    
+    // Pan and zoom to the comp
+    mapRef.current.panTo({ lat: comp.latitude!, lng: comp.longitude! });
+    mapRef.current.setZoom(15);
+    
+    // Open the info window for this marker
+    const marker = markersRef.current[idx + 1]; // +1 because index 0 is the property marker
+    if (marker && infoWindowRef.current) {
+      const revenue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(comp.revenue);
+      const distanceMi = comp.distanceMeters ? (comp.distanceMeters / 1609.34).toFixed(1) : '?';
+      const imgHtml = comp.imageUrl ? `<img src="${comp.imageUrl}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : '';
+      infoWindowRef.current.setContent(`
+        <div style="font-family:'DM Sans',system-ui,sans-serif;padding:4px;max-width:260px;">
+          ${imgHtml}
+          <div style="font-weight:700;font-size:13px;color:#0F172A;margin-bottom:4px;">${comp.title || 'Comp #' + (idx + 1)}</div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${comp.bedrooms} BR \u00b7 ${comp.bathrooms} BA \u00b7 ${distanceMi} mi away</div>
+          <div style="display:flex;gap:12px;">
+            <div><div style="font-size:14px;font-weight:700;color:#059669;">${revenue}/yr</div></div>
+            <div><div style="font-size:12px;color:#64748b;">${Math.round(comp.occupancy)}% occ \u00b7 $${Math.round(comp.adr)}/nt</div></div>
+          </div>
+          ${comp.airbnbUrl ? `<a href="${comp.airbnbUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font-size:11px;color:#3b82f6;text-decoration:none;">View on Airbnb \u2192</a>` : ''}
+        </div>
+      `);
+      infoWindowRef.current.open(mapRef.current, marker);
+    }
+  }, [compsWithCoords]);
+
+  const handleResetView = useCallback(() => {
+    if (!mapRef.current) return;
+    setActiveCompIdx(null);
+    if (infoWindowRef.current) infoWindowRef.current.close();
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: propertyLatitude, lng: propertyLongitude });
+    compsWithCoords.forEach(c => bounds.extend({ lat: c.latitude!, lng: c.longitude! }));
+    mapRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: sidebarOpen ? 360 : 60 });
+  }, [propertyLatitude, propertyLongitude, compsWithCoords, sidebarOpen]);
 
   const handleMapReady = (map: google.maps.Map) => {
     mapRef.current = map;
-    
-    // Create info window
     infoWindowRef.current = new google.maps.InfoWindow();
-    
-    // Create bounds to fit all markers
     const bounds = new google.maps.LatLngBounds();
     
-    // Add subject property marker (gold star)
+    // Add distance radius circle
     const propertyPos = { lat: propertyLatitude, lng: propertyLongitude };
     bounds.extend(propertyPos);
     
+    new google.maps.Circle({
+      map,
+      center: propertyPos,
+      radius: maxDistanceMeters,
+      fillColor: '#C9A962',
+      fillOpacity: 0.06,
+      strokeColor: '#C9A962',
+      strokeOpacity: 0.3,
+      strokeWeight: 2,
+      strokeDashArray: [4, 4],
+    });
+    
+    // Add subject property marker (gold house)
     const propertyMarkerEl = document.createElement('div');
     propertyMarkerEl.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#C9A962;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
+      <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:#C9A962;border-radius:50%;border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.35);cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22" fill="#C9A962"/>
         </svg>
@@ -3071,16 +3148,15 @@ function CompMapModal({
       }
     });
     
-    // Add comp markers (numbered, blue)
-    const compsWithCoords = comparables.filter(c => c.latitude && c.longitude);
+    // Add comp markers with revenue-based colors
     compsWithCoords.forEach((comp, idx) => {
       const pos = { lat: comp.latitude!, lng: comp.longitude! };
       bounds.extend(pos);
       
+      const tier = getRevenueTier(comp.revenue, allRevenues);
       const markerEl = document.createElement('div');
-      const distanceMi = comp.distanceMeters ? (comp.distanceMeters / 1609.34).toFixed(1) : '?';
       markerEl.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:#3b82f6;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:white;">
+        <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:${tier.color};border-radius:50%;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:white;transition:transform 0.2s;">
           ${idx + 1}
         </div>
       `;
@@ -3094,23 +3170,24 @@ function CompMapModal({
       markersRef.current.push(marker);
       
       marker.addListener('click', () => {
+        setActiveCompIdx(idx);
+        // Scroll sidebar to this comp
+        sidebarItemRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
         if (infoWindowRef.current) {
           const revenue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(comp.revenue);
+          const distanceMi = comp.distanceMeters ? (comp.distanceMeters / 1609.34).toFixed(1) : '?';
           const imgHtml = comp.imageUrl ? `<img src="${comp.imageUrl}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : '';
           infoWindowRef.current.setContent(`
             <div style="font-family:'DM Sans',system-ui,sans-serif;padding:4px;max-width:260px;">
               ${imgHtml}
               <div style="font-weight:700;font-size:13px;color:#0F172A;margin-bottom:4px;">${comp.title || 'Comp #' + (idx + 1)}</div>
-              <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${comp.bedrooms} BR · ${comp.bathrooms} BA · ${distanceMi} mi away</div>
+              <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${comp.bedrooms} BR \u00b7 ${comp.bathrooms} BA \u00b7 ${distanceMi} mi away</div>
               <div style="display:flex;gap:12px;">
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:#059669;">${revenue}/yr</div>
-                </div>
-                <div>
-                  <div style="font-size:12px;color:#64748b;">${Math.round(comp.occupancy)}% occ · $${Math.round(comp.adr)}/nt</div>
-                </div>
+                <div><div style="font-size:14px;font-weight:700;color:${tier.color};">${revenue}/yr</div></div>
+                <div><div style="font-size:12px;color:#64748b;">${Math.round(comp.occupancy)}% occ \u00b7 $${Math.round(comp.adr)}/nt</div></div>
               </div>
-              ${comp.airbnbUrl ? `<a href="${comp.airbnbUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font-size:11px;color:#3b82f6;text-decoration:none;">View on Airbnb →</a>` : ''}
+              ${comp.airbnbUrl ? `<a href="${comp.airbnbUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font-size:11px;color:#3b82f6;text-decoration:none;">View on Airbnb \u2192</a>` : ''}
             </div>
           `);
           infoWindowRef.current.open(map, marker);
@@ -3118,50 +3195,191 @@ function CompMapModal({
       });
     });
     
-    // Fit map to show all markers with padding
-    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+    // Fit map to show all markers with padding for sidebar
+    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: sidebarOpen ? 360 : 60 });
+  };
+
+  const formatCompactRev = (n: number) => {
+    if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+    return `$${n}`;
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative w-full max-w-4xl h-[80vh] mx-4 bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 py-3 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <Map className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-slate-900">Comp Map</h3>
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-              {comparables.filter(c => c.latitude && c.longitude).length} comps
-            </span>
+      <div className="relative w-full max-w-6xl h-[85vh] mx-4 bg-white rounded-2xl overflow-hidden shadow-2xl flex" onClick={e => e.stopPropagation()}>
+        
+        {/* Sidebar - Comp List */}
+        <div className={`${sidebarOpen ? 'w-[320px]' : 'w-0'} transition-all duration-300 flex-shrink-0 flex flex-col bg-white border-r border-slate-200 overflow-hidden`}>
+          {/* Sidebar Header */}
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-sm text-slate-900">Comparables</h4>
+                <p className="text-xs text-slate-500">{compsWithCoords.length} properties</p>
+              </div>
+              <button
+                onClick={handleResetView}
+                className="text-xs text-[#C9A962] hover:text-[#b8963f] font-medium px-2 py-1 rounded hover:bg-[#C9A962]/10 transition-colors"
+              >
+                Reset View
+              </button>
+            </div>
+            {/* Revenue Legend */}
+            <div className="flex items-center gap-3 mt-2 text-[10px]">
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-slate-500">High Rev</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <span className="text-slate-500">Mid Rev</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span className="text-slate-500">Low Rev</span>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+          
+          {/* Your Property Card */}
+          <div
+            className="px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-[#C9A962]/5 transition-colors"
+            onClick={handleResetView}
           >
-            ✕
-          </button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#C9A962] flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#C9A962] truncate">Your Property</p>
+                <p className="text-[10px] text-slate-500 truncate">{address}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Comp List */}
+          <div className="flex-1 overflow-y-auto">
+            {compsWithCoords.map((comp, idx) => {
+              const tier = getRevenueTier(comp.revenue, allRevenues);
+              const distanceMi = comp.distanceMeters ? (comp.distanceMeters / 1609.34).toFixed(1) : '?';
+              const isActive = activeCompIdx === idx;
+              return (
+                <div
+                  key={comp.id || idx}
+                  ref={el => { sidebarItemRefs.current[idx] = el; }}
+                  className={`px-4 py-3 border-b border-slate-100 cursor-pointer transition-colors ${
+                    isActive ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'
+                  }`}
+                  onClick={() => handleCompClick(idx)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Numbered marker */}
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
+                      style={{ backgroundColor: tier.color }}
+                    >
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-900 truncate leading-tight">
+                        {comp.title || `Comp #${idx + 1}`}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {comp.bedrooms} BR \u00b7 {comp.bathrooms} BA \u00b7 {distanceMi} mi
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold ${tier.textClass}`}>
+                          {formatCompactRev(comp.revenue)}/yr
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {Math.round(comp.occupancy)}% occ
+                        </span>
+                      </div>
+                    </div>
+                    {/* Rating */}
+                    {comp.rating > 0 && (
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                        <span className="text-[10px] text-slate-600 font-medium">{comp.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
         
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-slate-200 flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-[#C9A962] border-2 border-white shadow" />
-            <span className="text-slate-600 font-medium">Your Property</span>
+        {/* Map Area */}
+        <div className="flex-1 relative">
+          {/* Header */}
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 py-3 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              {/* Sidebar toggle */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+                title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {sidebarOpen ? (
+                    <><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></>
+                  ) : (
+                    <><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><polyline points="14 9 17 12 14 15"/></>
+                  )}
+                </svg>
+              </button>
+              <Map className="w-5 h-5 text-[#C9A962]" />
+              <h3 className="font-semibold text-slate-900">Comp Map</h3>
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {compsWithCoords.length} comps
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+            >
+              \u2715
+            </button>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow flex items-center justify-center text-[8px] text-white font-bold">1</div>
-            <span className="text-slate-600 font-medium">Comparable</span>
+          
+          {/* Legend */}
+          <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-slate-200">
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded-full bg-[#C9A962] border-2 border-white shadow" />
+                <span className="text-slate-600 font-medium">Your Property</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-white shadow" />
+                <span className="text-slate-500">High</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-amber-500 border border-white shadow" />
+                <span className="text-slate-500">Mid</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white shadow" />
+                <span className="text-slate-500">Low</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100">
+              <div className="w-4 h-4 rounded-full border-2 border-dashed border-[#C9A962]/50" />
+              <span className="text-slate-500 text-[10px]">Search radius ({(maxDistanceMeters / 1609.34).toFixed(1)} mi)</span>
+            </div>
           </div>
+          
+          {/* Map */}
+          <MapView
+            className="w-full h-full"
+            initialCenter={{ lat: propertyLatitude, lng: propertyLongitude }}
+            initialZoom={13}
+            onMapReady={handleMapReady}
+            showRecenter={true}
+          />
         </div>
-        
-        {/* Map */}
-        <MapView
-          className="w-full h-full"
-          initialCenter={{ lat: propertyLatitude, lng: propertyLongitude }}
-          initialZoom={13}
-          onMapReady={handleMapReady}
-          showRecenter={true}
-        />
       </div>
     </div>
   );

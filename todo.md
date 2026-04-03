@@ -13111,3 +13111,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Auto-detect purchase mode from Zillow/Redfin for-sale URLs
 - [x] Reframe Rent Validation section for purchase mode (show as area rental rates, not rent comparison)
 - [x] Add one-click "View on Map" button to Similar Properties section showing property + comps on Google Map
+- [x] Add comp list sidebar in map modal with click-to-pan/zoom
+- [x] Color-code comp markers by revenue performance (green/yellow/red)
+- [x] Add distance radius circle on map centered on subject property
