@@ -6222,6 +6222,8 @@ export default function LeadMagnet() {
                 dataSource={result.dataSource}
                 selectedAmenities={result.selectedAmenities}
                 amenityFilter={result.amenityFilter}
+                propertyLatitude={myProperty?.latitude}
+                propertyLongitude={myProperty?.longitude}
               />
               </Suspense>
             </StepErrorBoundary>

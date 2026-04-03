@@ -625,6 +625,8 @@ export default function ShareableReportViewer() {
                 interestRate={storedInterestRate}
                 shareCode={shareCode || undefined}
                 persistedRevenueOverride={report.revenueOverride ?? reportData?._revenueOverride ?? null}
+                propertyLatitude={reportData?.latitude || report.latitude}
+                propertyLongitude={reportData?.longitude || report.longitude}
               />
             </div>
           </section>

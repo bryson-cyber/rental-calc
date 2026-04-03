@@ -8,7 +8,7 @@
  * - Color = meaning (green/yellow/red for quick decisions)
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { LightMarkdown } from '@/components/LightMarkdown';
 import {
@@ -42,9 +42,11 @@ import {
   Bot,
   Loader2,
   Pencil,
-  Check
+  Check,
+  Map
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
+import { MapView } from './Map';
 import MaxPurchasePriceCalculator from './MaxPurchasePriceCalculator';
 import { PropertyChatBot } from './PropertyChatBot';
 import OfferPriceSuggester from './OfferPriceSuggester';
@@ -196,6 +198,9 @@ interface TeslaDashboardProps {
   };
   // User-selected amenities for highlighting matching comps
   selectedAmenities?: string[];
+  // Property coordinates for map view
+  propertyLatitude?: number;
+  propertyLongitude?: number;
   // Amenity filter metadata from API
   amenityFilter?: {
     applied: boolean;
@@ -3003,13 +3008,176 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
 }
 
 /**
+ * Comp Map Modal - Shows property and comps on a Google Map
+ */
+function CompMapModal({
+  comparables,
+  propertyLatitude,
+  propertyLongitude,
+  address,
+  onClose
+}: {
+  comparables: Comparable[];
+  propertyLatitude: number;
+  propertyLongitude: number;
+  address: string;
+  onClose: () => void;
+}) {
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+
+  const handleMapReady = (map: google.maps.Map) => {
+    mapRef.current = map;
+    
+    // Create info window
+    infoWindowRef.current = new google.maps.InfoWindow();
+    
+    // Create bounds to fit all markers
+    const bounds = new google.maps.LatLngBounds();
+    
+    // Add subject property marker (gold star)
+    const propertyPos = { lat: propertyLatitude, lng: propertyLongitude };
+    bounds.extend(propertyPos);
+    
+    const propertyMarkerEl = document.createElement('div');
+    propertyMarkerEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#C9A962;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22" fill="#C9A962"/>
+        </svg>
+      </div>
+    `;
+    
+    const propertyMarker = new google.maps.marker.AdvancedMarkerElement({
+      map,
+      position: propertyPos,
+      title: address,
+      content: propertyMarkerEl,
+      zIndex: 1000,
+    });
+    markersRef.current.push(propertyMarker);
+    
+    propertyMarker.addListener('click', () => {
+      if (infoWindowRef.current) {
+        infoWindowRef.current.setContent(`
+          <div style="font-family:'DM Sans',system-ui,sans-serif;padding:8px;max-width:250px;">
+            <div style="font-weight:700;font-size:14px;color:#0F172A;margin-bottom:4px;">Your Property</div>
+            <div style="font-size:12px;color:#64748b;">${address}</div>
+          </div>
+        `);
+        infoWindowRef.current.open(map, propertyMarker);
+      }
+    });
+    
+    // Add comp markers (numbered, blue)
+    const compsWithCoords = comparables.filter(c => c.latitude && c.longitude);
+    compsWithCoords.forEach((comp, idx) => {
+      const pos = { lat: comp.latitude!, lng: comp.longitude! };
+      bounds.extend(pos);
+      
+      const markerEl = document.createElement('div');
+      const distanceMi = comp.distanceMeters ? (comp.distanceMeters / 1609.34).toFixed(1) : '?';
+      markerEl.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:#3b82f6;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:white;">
+          ${idx + 1}
+        </div>
+      `;
+      
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: pos,
+        title: comp.title,
+        content: markerEl,
+      });
+      markersRef.current.push(marker);
+      
+      marker.addListener('click', () => {
+        if (infoWindowRef.current) {
+          const revenue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(comp.revenue);
+          const imgHtml = comp.imageUrl ? `<img src="${comp.imageUrl}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : '';
+          infoWindowRef.current.setContent(`
+            <div style="font-family:'DM Sans',system-ui,sans-serif;padding:4px;max-width:260px;">
+              ${imgHtml}
+              <div style="font-weight:700;font-size:13px;color:#0F172A;margin-bottom:4px;">${comp.title || 'Comp #' + (idx + 1)}</div>
+              <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${comp.bedrooms} BR · ${comp.bathrooms} BA · ${distanceMi} mi away</div>
+              <div style="display:flex;gap:12px;">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#059669;">${revenue}/yr</div>
+                </div>
+                <div>
+                  <div style="font-size:12px;color:#64748b;">${Math.round(comp.occupancy)}% occ · $${Math.round(comp.adr)}/nt</div>
+                </div>
+              </div>
+              ${comp.airbnbUrl ? `<a href="${comp.airbnbUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;font-size:11px;color:#3b82f6;text-decoration:none;">View on Airbnb →</a>` : ''}
+            </div>
+          `);
+          infoWindowRef.current.open(map, marker);
+        }
+      });
+    });
+    
+    // Fit map to show all markers with padding
+    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative w-full max-w-4xl h-[80vh] mx-4 bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 py-3 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <Map className="w-5 h-5 text-[#C9A962]" />
+            <h3 className="font-semibold text-slate-900">Comp Map</h3>
+            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+              {comparables.filter(c => c.latitude && c.longitude).length} comps
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+          >
+            ✕
+          </button>
+        </div>
+        
+        {/* Legend */}
+        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-slate-200 flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded-full bg-[#C9A962] border-2 border-white shadow" />
+            <span className="text-slate-600 font-medium">Your Property</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow flex items-center justify-center text-[8px] text-white font-bold">1</div>
+            <span className="text-slate-600 font-medium">Comparable</span>
+          </div>
+        </div>
+        
+        {/* Map */}
+        <MapView
+          className="w-full h-full"
+          initialCenter={{ lat: propertyLatitude, lng: propertyLongitude }}
+          initialZoom={13}
+          onMapReady={handleMapReady}
+          showRecenter={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Comparable Properties Cards - Visual property cards with image carousel
  */
 function ComparableProperties({ 
   comparables,
   onViewAll,
   selectedAmenities = [],
-  amenityFilter
+  amenityFilter,
+  propertyLatitude,
+  propertyLongitude,
+  address
 }: { 
   comparables: Comparable[];
   onViewAll?: () => void;
@@ -3020,10 +3188,14 @@ function ComparableProperties({
     selected_amenities: string[];
     comp_count: number;
   };
+  propertyLatitude?: number;
+  propertyLongitude?: number;
+  address?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [selectedComp, setSelectedComp] = useState<Comparable | null>(null);
+  const [showMap, setShowMap] = useState(false);
   
   if (!comparables || comparables.length === 0) return null;
   
@@ -3088,15 +3260,38 @@ function ComparableProperties({
             <h3 className="text-lg font-semibold text-slate-900">Similar Properties Nearby</h3>
             <p className="text-slate-500 text-sm">{comparables.length} properties making money in this area</p>
           </div>
-          {comparables.length > 6 && (
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {showAll ? 'Show less' : `See all ${comparables.length}`}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {/* View on Map button */}
+            {propertyLatitude && propertyLongitude && comparables.some(c => c.latitude && c.longitude) && (
+              <button
+                onClick={() => setShowMap(true)}
+                className="flex items-center gap-1.5 text-sm font-medium text-[#C9A962] hover:text-[#b8963f] bg-[#C9A962]/10 hover:bg-[#C9A962]/20 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Map className="w-4 h-4" />
+                View on Map
+              </button>
+            )}
+            {comparables.length > 6 && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {showAll ? 'Show less' : `See all ${comparables.length}`}
+              </button>
+            )}
+          </div>
         </div>
+        
+        {/* Comp Map Modal */}
+        {showMap && propertyLatitude && propertyLongitude && (
+          <CompMapModal
+            comparables={comparables}
+            propertyLatitude={propertyLatitude}
+            propertyLongitude={propertyLongitude}
+            address={address || 'Your Property'}
+            onClose={() => setShowMap(false)}
+          />
+        )}
         
         {/* Amenity Filter Status Banner */}
         {amenityFilter && (
@@ -3476,7 +3671,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, onRevenueOverrideChange, dataSource, selectedAmenities, amenityFilter }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, onRevenueOverrideChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3915,7 +4110,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       />
       
       {/* SECTION 7: Proof - "Show me the comps" */}
-      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} amenityFilter={amenityFilter} />
+      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} amenityFilter={amenityFilter} propertyLatitude={propertyLatitude} propertyLongitude={propertyLongitude} address={address} />
 
       {/* Property-Specific AI Chatbot */}
       <PropertyChatBot
