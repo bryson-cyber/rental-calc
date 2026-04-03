@@ -13109,3 +13109,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Grant admin access to all users with @coachinayah.com email
 - [x] Add rent/purchase mode toggle directly into Step 5 form
 - [x] Auto-detect purchase mode from Zillow/Redfin for-sale URLs
+- [x] Reframe Rent Validation section for purchase mode (show as area rental rates, not rent comparison)

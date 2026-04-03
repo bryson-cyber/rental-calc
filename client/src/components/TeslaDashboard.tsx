@@ -1379,7 +1379,8 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
  */
 function RentValidationSection({
   rentometerData,
-  monthlyRent
+  monthlyRent,
+  mode = 'rent'
 }: {
   rentometerData: {
     median: number;
@@ -1414,6 +1415,7 @@ function RentValidationSection({
     }>;
   };
   monthlyRent: number;
+  mode?: 'rent' | 'purchase';
 }) {
   const [showDetails, setShowDetails] = useState(false);
   const [detailTab, setDetailTab] = useState<'stats' | 'comps' | 'history'>('stats');
@@ -1434,77 +1436,99 @@ function RentValidationSection({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        How does your rent compare to similar properties in the area?
+        {mode === 'purchase'
+          ? 'What are similar properties renting for in this area?'
+          : 'How does your rent compare to similar properties in the area?'}
       </p>
       
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Home className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-slate-900">Rent Validation</h3>
+          <h3 className="text-lg font-semibold text-slate-900">{mode === 'purchase' ? 'Area Rental Rates' : 'Rent Validation'}</h3>
         </div>
         <span className="text-sm text-slate-400">{rentometerData.sampleCount} rental comps</span>
       </div>
       
       {/* Main Status */}
-      <div className={`p-4 rounded-xl mb-4 ${
-        rentometerData.userRentVsMarket === 'below' 
-          ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200' 
-          : rentometerData.userRentVsMarket === 'above'
-          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'
-          : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-2xl font-bold text-slate-900">
-              {formatCurrency(monthlyRent)}<span className="text-base font-normal text-slate-500">/mo</span>
-            </p>
-            <p className={`text-sm font-medium ${
-              rentometerData.userRentVsMarket === 'below' 
-                ? 'text-emerald-700' 
-                : rentometerData.userRentVsMarket === 'above'
-                ? 'text-amber-700'
-                : 'text-blue-700'
-            }`}>
-              {rentometerData.percentileRank <= 25
-                ? `Bottom 25% of market — Great deal!`
-                : rentometerData.percentileRank <= 50
-                ? `Below median — Good deal`
-                : rentometerData.percentileRank <= 75
-                ? `Above median — Fair price`
-                : `Top 25% — Premium rent`
-              }
-            </p>
-          </div>
-          {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
-            <div className="text-right">
-              <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(rentometerData.rentAdvantage * 12)}</p>
-              <p className="text-xs text-emerald-600">annual rent savings vs median</p>
+      {mode === 'purchase' ? (
+        <div className="p-4 rounded-xl mb-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-700 mb-1">Median Long-Term Rent</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {formatCurrency(rentometerData.median)}<span className="text-base font-normal text-slate-500">/mo</span>
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                Properties like this one rent for {formatCurrency(rentometerData.percentile25)} – {formatCurrency(rentometerData.percentile75)}/mo
+              </p>
             </div>
-          )}
+            <div className="text-right">
+              <p className="text-2xl font-bold text-blue-700">{formatCurrency(rentometerData.median * 12)}</p>
+              <p className="text-xs text-blue-600">potential annual rental income</p>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className={`p-4 rounded-xl mb-4 ${
+          rentometerData.userRentVsMarket === 'below' 
+            ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200' 
+            : rentometerData.userRentVsMarket === 'above'
+            ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'
+            : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold text-slate-900">
+                {formatCurrency(monthlyRent)}<span className="text-base font-normal text-slate-500">/mo</span>
+              </p>
+              <p className={`text-sm font-medium ${
+                rentometerData.userRentVsMarket === 'below' 
+                  ? 'text-emerald-700' 
+                  : rentometerData.userRentVsMarket === 'above'
+                  ? 'text-amber-700'
+                  : 'text-blue-700'
+              }`}>
+                {rentometerData.percentileRank <= 25
+                  ? `Bottom 25% of market — Great deal!`
+                  : rentometerData.percentileRank <= 50
+                  ? `Below median — Good deal`
+                  : rentometerData.percentileRank <= 75
+                  ? `Above median — Fair price`
+                  : `Top 25% — Premium rent`
+                }
+              </p>
+            </div>
+            {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
+              <div className="text-right">
+                <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(rentometerData.rentAdvantage * 12)}</p>
+                <p className="text-xs text-emerald-600">annual rent savings vs median</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* Key Comparison Stats - Simplified for layman understanding */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-          <p className="text-xs text-emerald-600 font-medium mb-1">Budget Rent</p>
+          <p className="text-xs text-emerald-600 font-medium mb-1">{mode === 'purchase' ? 'Low End' : 'Budget Rent'}</p>
           <p className="text-lg font-semibold text-emerald-700">{formatCurrency(rentometerData.percentile25)}</p>
           <p className="text-[10px] text-emerald-500">Lower 25%</p>
         </div>
         <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-600 font-medium mb-1">Typical Rent</p>
+          <p className="text-xs text-blue-600 font-medium mb-1">{mode === 'purchase' ? 'Market Rate' : 'Typical Rent'}</p>
           <p className="text-lg font-semibold text-blue-700">{formatCurrency(rentometerData.median)}</p>
           <p className="text-[10px] text-blue-500">Average</p>
         </div>
         <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200">
-          <p className="text-xs text-amber-600 font-medium mb-1">Premium Rent</p>
+          <p className="text-xs text-amber-600 font-medium mb-1">{mode === 'purchase' ? 'High End' : 'Premium Rent'}</p>
           <p className="text-lg font-semibold text-amber-700">{formatCurrency(rentometerData.percentile75)}</p>
           <p className="text-[10px] text-amber-500">Upper 25%</p>
         </div>
       </div>
       
       <p className="text-xs text-slate-500 text-center mt-2">
-        Based on {rentometerData.sampleCount} similar rentals within {rentometerData.radiusMiles != null ? rentometerData.radiusMiles : '?'} miles
+        Based on {rentometerData.sampleCount} similar {mode === 'purchase' ? 'properties' : 'rentals'} within {rentometerData.radiusMiles != null ? rentometerData.radiusMiles : '?'} miles
       </p>
 
       {/* Expandable Detailed Data Dropdown */}
@@ -1603,7 +1627,7 @@ function RentValidationSection({
                         style={{ left: `${clampedPos}%` }}
                       >
                         <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap">
-                          You: {formatCurrency(monthlyRent)}
+                          {mode === 'purchase' ? 'Median' : 'You'}: {formatCurrency(mode === 'purchase' ? rentometerData.median : monthlyRent)}
                         </div>
                       </div>
                     );
@@ -3574,7 +3598,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 1: Rent Validation - Market rent data from Rentometer */}
       {rentometerData && (
-        <RentValidationSection rentometerData={rentometerData} monthlyRent={result.cashFlow.monthlyRent} />
+        <RentValidationSection rentometerData={rentometerData} monthlyRent={result.cashFlow.monthlyRent} mode={mode} />
       )}
       
       {/* SECTION 2: Revenue Projection - "What can I make?" */}
