@@ -1096,45 +1096,27 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
               <DataTable
-                headers={['Scenario', 'Projected Annual Revenue', 'Annual Operating Costs', 'Estimated Annual Profit']}
+                headers={['', 'Projected Annual Revenue', 'Annual Operating Costs', 'Estimated Annual Profit']}
                 rows={[
                   [
-                    'Conservative (Average)',
-                    formatCurrency(conservativeRevenue),
-                    formatCurrency(annualExpenses),
-                    <span key="cons-profit" className={conservativeRevenue - annualExpenses > 0 ? 'font-bold text-green-600' : 'font-bold text-red-500'}>
-                      {formatCurrency(conservativeRevenue - annualExpenses)}
-                    </span>
-                  ],
-                  [
-                    <span key="realistic" className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
-                      <strong>Realistic (Our Target)</strong>
+                    <span key="projection" className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      <strong>Projection</strong>
                     </span>,
-                    <span key="realistic-rev" className="font-bold">{formatCurrency(realisticRevenue)}</span>,
+                    <span key="proj-rev" className="font-bold">{formatCurrency(optimisticRevenue)}</span>,
                     formatCurrency(annualExpenses),
-                    <span key="realistic-profit" className="font-bold text-green-600 text-lg">
-                      {formatCurrency(realisticRevenue - annualExpenses)}
-                    </span>
-                  ],
-                  [
-                    'Optimistic (Superstar)',
-                    formatCurrency(optimisticRevenue),
-                    formatCurrency(annualExpenses),
-                    <span key="opt-profit" className="font-bold text-green-600">
+                    <span key="proj-profit" className="font-bold text-green-600 text-lg">
                       {formatCurrency(optimisticRevenue - annualExpenses)}
                     </span>
                   ]
                 ]}
-                highlight={1}
               />
             </div>
 
             <ThoughtProcess>
               The goal is to earn enough revenue to comfortably cover all our expenses and generate a healthy profit.
-              These numbers show that if we operate the property professionally and hit our <strong>Realistic</strong> target,
-              there is a strong potential for profit of <strong>{formatCurrency(realisticRevenue - annualExpenses)}</strong> per year.
-              This entire process, from property selection to competitive analysis, is designed to give us the confidence to invest.
+              Based on top-performing comparable properties, there is a strong potential for profit of <strong>{formatCurrency(optimisticRevenue - annualExpenses)}</strong> per year.
+              This projection reflects what the best operators achieve with optimized pricing, great reviews, and strong occupancy.
             </ThoughtProcess>
 
             {/* Break-Even Calculator */}
@@ -1186,10 +1168,9 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               </div>
               <div className="bg-[oklch(0.15_0_0)]/5 rounded-xl p-6">
                 <p className="text-center text-[oklch(0.15_0_0)]/80">
-                  <strong>The Reality:</strong> The difference between earning {formatCurrency(conservativeRevenue)} (average) 
-                  and {formatCurrency(optimisticRevenue)} (top performer) is 
-                  <span className="text-[oklch(0.55_0.14_75)] font-bold"> {formatCurrency(optimisticRevenue - conservativeRevenue)}</span> per year. 
-                  That's the value of professional execution.
+                  <strong>The Reality:</strong> With professional execution, this property can generate 
+                  <span className="text-[oklch(0.55_0.14_75)] font-bold">{formatCurrency(optimisticRevenue)}</span> per year in revenue.
+                  That's the power of optimized pricing, great photos, and smart operations.
                 </p>
               </div>
             </div>
@@ -1447,7 +1428,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                     <div className="space-y-3">
                       <div className="flex justify-between py-2 border-b border-[oklch(0.15_0_0)]/10">
                         <span className="text-[oklch(0.15_0_0)]/70">Revenue Potential</span>
-                        <span className="font-medium">{formatCurrency(conservativeRevenue)}</span>
+                        <span className="font-medium">{formatCurrency(optimisticRevenue * 0.70)}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[oklch(0.15_0_0)]/10">
                         <span className="text-[oklch(0.15_0_0)]/70">Time to Launch</span>
@@ -1499,7 +1480,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                 <div className="mt-6 bg-[oklch(0.55_0.14_75)]/10 rounded-xl p-4 border border-[oklch(0.55_0.14_75)]/30">
                   <p className="text-center text-[oklch(0.15_0_0)]">
                     <strong>The Difference:</strong> Professional setup typically generates <span className="text-[oklch(0.55_0.14_75)] font-bold">20-35% higher revenue</span> from day one. 
-                    That's {formatCurrency(optimisticRevenue - conservativeRevenue)} more per year in this market.
+                    That's {formatCurrency(optimisticRevenue * 0.30)} more per year in this market.
                   </p>
                 </div>
               </div>

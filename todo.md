@@ -13125,3 +13125,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Remove 20-property batch analysis cap for admin
 - [x] Improve purchase analysis card design/layout in OpportunityFinderStep
 - [x] Show only Optimistic projection card (green) labeled as 'PROJECTION' — remove Conservative and Target cards
+- [x] Update shared report page to show single Projection card instead of three tiers
+- [x] Find and update all other references to conservative/target/optimistic across codebase

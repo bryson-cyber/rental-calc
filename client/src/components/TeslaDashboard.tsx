@@ -704,8 +704,7 @@ function ThreeTierProjections({
 const METRIC_TOOLTIPS = {
   adr: "This is how much you charge per night, on average. If you charge $200 one night and $300 another, your average is $250. Higher is better!",
   occupancy: "This shows how often your place is booked. 70% means guests stay 7 out of every 10 nights. More bookings = more money!",
-  conservative: "This is the 'worst case' estimate - what you'd make if things go a bit slower than expected. Good for planning safely.",
-  optimistic: "This is the 'best case' estimate - what you could make if everything goes great. Aim for this, plan for conservative!",
+  revenueRange: "This is the projected revenue range based on top-performing comparable properties in your area. Your actual results depend on your listing quality, pricing strategy, and guest reviews.",
   revenue: "Estimated annual revenue based on similar properties in your area. This is an average projection - your actual results depend on your listing quality, pricing strategy, and guest reviews.",
   revpar: "Average Daily Earnings - combines your nightly rate and how often you're booked into one number. Higher = better performance!"
 };
@@ -740,20 +739,12 @@ function KeyMetricsRow({
         tooltip={METRIC_TOOLTIPS.occupancy}
       />
       <MetricCard
-        icon={<TrendingDown className="w-5 h-5" />}
-        label="Conservative"
-        value={formatCompactCurrency(revenueLow)}
-        sublabel="Low estimate"
-        color="amber"
-        tooltip={METRIC_TOOLTIPS.conservative}
-      />
-      <MetricCard
         icon={<TrendingUp className="w-5 h-5" />}
-        label="Optimistic"
-        value={formatCompactCurrency(revenueHigh)}
-        sublabel="High estimate"
+        label="Revenue Range"
+        value={`${formatCompactCurrency(revenueLow)} – ${formatCompactCurrency(revenueHigh)}`}
+        sublabel="Projected annual range"
         color="emerald"
-        tooltip={METRIC_TOOLTIPS.optimistic}
+        tooltip={METRIC_TOOLTIPS.revenueRange}
       />
     </div>
   );
@@ -1882,8 +1873,7 @@ function AirbnbVsLongTermComparison({
 
 /**
  * Revenue Projection Range
- * Shows conservative, expected, and optimistic revenue scenarios from the same Rentalizer methodology
- * All three values come from AirDNA's Rentalizer API for consistency
+ * Shows the projected revenue based on top-performing comparable properties
  */
 function RevenuePercentileProjections({
   revenueData,
@@ -1892,22 +1882,22 @@ function RevenuePercentileProjections({
   revenueData: { projected: number; low: number; high: number };
   bedrooms?: number;
 }) {
-  const { projected, low, high } = revenueData;
+  const { projected, high } = revenueData;
   
   // Don't show if we don't have valid data
   if (!projected || projected <= 0) return null;
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
-      {/* Section Headline - Why this matters */}
+      {/* Section Headline */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
         What can you realistically expect to earn{bedrooms ? ` with this ${bedrooms}BR property` : ''}?
       </p>
       
       <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-indigo-600" />
+        <TrendingUp className="w-5 h-5 text-emerald-600" />
         <h3 className="text-lg font-semibold text-slate-900">
-          Revenue Projection Range
+          Revenue Projection
         </h3>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1917,71 +1907,28 @@ function RevenuePercentileProjections({
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
             <p className="text-sm leading-relaxed">
-              These projections are based on market data analysis of similar properties. 
-              Conservative assumes lower occupancy, while Optimistic assumes you optimize 
-              pricing, photos, and guest experience to outperform the market.
+              This projection is based on real revenue data from top-performing comparable properties in your area.
+              It reflects what the best operators achieve with optimized pricing, great reviews, and strong occupancy.
             </p>
           </TooltipContent>
         </Tooltip>
       </div>
       
-      {/* Scenario Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
-          <p className="text-xs font-medium text-amber-600 mb-1">Conservative</p>
-          <p className="text-xl font-bold text-amber-700">{formatCompactCurrency(low)}</p>
-          <p className="text-[10px] text-amber-600">Lower occupancy scenario</p>
+      {/* Single Projection Card */}
+      <div className="rounded-xl p-5 border bg-emerald-50 border-emerald-200 mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Projection</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Based on top performers</span>
         </div>
-        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-          <p className="text-xs font-medium text-blue-600 mb-1">Expected</p>
-          <p className="text-xl font-bold text-blue-700">{formatCompactCurrency(projected)}</p>
-          <p className="text-[10px] text-blue-600">Most likely outcome</p>
-        </div>
-        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-          <p className="text-xs font-medium text-emerald-600 mb-1">Optimistic</p>
-          <p className="text-xl font-bold text-emerald-700">{formatCompactCurrency(high)}</p>
-          <p className="text-[10px] text-emerald-600">Optimized performance</p>
-        </div>
-      </div>
-      
-      {/* Visual Range Bar */}
-      <div className="mb-4">
-        <div className="flex justify-between text-xs text-slate-500 mb-1">
-          <span>{formatCompactCurrency(low)}</span>
-          <span className="font-medium">Projection Range</span>
-          <span>{formatCompactCurrency(high)}</span>
-        </div>
-        <div className="relative h-8 bg-gradient-to-r from-amber-200 via-blue-200 to-emerald-200 rounded-full">
-          {/* Conservative marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-amber-500"
-            style={{ left: '0%' }}
-          />
-          {/* Expected marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-1 bg-blue-500"
-            style={{ left: `${((projected - low) / (high - low)) * 100}%` }}
-          />
-          {/* Optimistic marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-emerald-500"
-            style={{ left: '100%' }}
-          />
-          {/* Your expected position */}
-          <div 
-            className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center bg-indigo-500"
-            style={{ 
-              left: `${((projected - low) / (high - low)) * 100}%`,
-              transform: 'translate(-50%, -50%)'
-            }}
-          >
-            <span className="text-[8px] font-bold text-white">YOU</span>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Revenue</p>
+            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(high)}</p>
           </div>
-        </div>
-        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-          <span>Low: {formatCompactCurrency(low)}</span>
-          <span className="font-medium">Expected: {formatCompactCurrency(projected)}</span>
-          <span>High: {formatCompactCurrency(high)}</span>
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Revenue</p>
+            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(high / 12)}</p>
+          </div>
         </div>
       </div>
       
@@ -1989,11 +1936,11 @@ function RevenuePercentileProjections({
       <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-700">Upside Potential</p>
+            <p className="text-sm font-medium text-indigo-700">Upside vs Average</p>
             <p className="text-2xl font-bold text-indigo-800">+{formatCompactCurrency(high - projected)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-indigo-600">+{Math.round(((high - projected) / projected) * 100)}% above expected</p>
+            <p className="text-sm text-indigo-600">+{Math.round(((high - projected) / projected) * 100)}% above average</p>
             <p className="text-xs text-indigo-500">With optimized pricing and reviews</p>
           </div>
         </div>
@@ -2180,40 +2127,34 @@ function ArbitrageCalculator({
             const annualGross = monthlyProfit * 12;
             return { monthlyProfit, annualGross };
           };
-          const baseline = calcTierProfit(revenueScenarios.conservative);
-          const strong = calcTierProfit(revenueScenarios.target);
           const top = calcTierProfit(revenueScenarios.optimistic);
-          const tiers = [
-            { label: 'Typical Host', ...baseline, bgClass: 'bg-amber-50 border-amber-200', textClass: 'text-amber-700', labelClass: 'text-amber-600' },
-            { label: 'Strong Host', ...strong, bgClass: 'bg-blue-50 border-blue-200', textClass: 'text-blue-700', labelClass: 'text-blue-600' },
-            { label: 'Top Performer', ...top, bgClass: 'bg-emerald-50 border-emerald-200', textClass: 'text-emerald-700', labelClass: 'text-emerald-600' },
-          ];
           return (
             <div className="pt-4 border-t border-slate-200">
               <div className="mb-4">
-                <p className="text-sm font-semibold text-slate-800">Profit Potential</p>
+                <p className="text-sm font-semibold text-slate-800">Profit Projection</p>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Based on {revenueScenarios.compCount} comparable {revenueScenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}
                 </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {tiers.map((tier) => (
-                  <div key={tier.label} className={`rounded-xl p-4 border ${tier.bgClass} transition-shadow hover:shadow-md`}>
-                    <span className={`text-xs font-bold uppercase tracking-wider ${tier.labelClass}`}>{tier.label}</span>
-                    <div className="mt-2 mb-1">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
-                      <p className={`text-2xl font-bold ${tier.monthlyProfit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {tier.monthlyProfit > 0 ? '+' : ''}{formatCurrency(tier.monthlyProfit)}
-                      </p>
-                    </div>
-                    <div className="pt-2 border-t border-dashed border-slate-200">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Gross</p>
-                      <p className={`text-base font-bold ${tier.annualGross > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(tier.annualGross)}
-                      </p>
-                    </div>
+              <div className="rounded-xl p-5 border bg-emerald-50 border-emerald-200 transition-shadow hover:shadow-md">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Projection</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Based on top performers</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
+                    <p className={`text-2xl font-bold ${top.monthlyProfit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {top.monthlyProfit > 0 ? '+' : ''}{formatCurrency(top.monthlyProfit)}
+                    </p>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Gross</p>
+                    <p className={`text-2xl font-bold ${top.annualGross > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {top.annualGross > 0 ? '+' : ''}{formatCurrency(top.annualGross)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           );

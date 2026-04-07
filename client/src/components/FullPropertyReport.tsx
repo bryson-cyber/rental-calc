@@ -1554,29 +1554,22 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Revenue Range */}
           <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
-            <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Annual Revenue Estimate <InfoTip text="Three scenarios for your annual income: Conservative (worst case), Projected (most likely), and Optimistic (best case). The range gives you a realistic picture of what to expect. Most hosts should plan their finances around the Projected number." /></h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+            <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Annual Revenue Projection <InfoTip text="Projected annual revenue based on top-performing comparable properties in your area. This reflects what the best operators achieve with professional setup, optimized pricing, and strong reviews." /></h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <StatCard
-                label="Conservative"
-                value={`${formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)}/yr`}
-                sublabel="Lower range"
-                icon={TrendingDown}
-                tooltip="The low end of the revenue range. Think of this as a worst-case scenario — what you might earn during a slow year or if you're just starting out with fewer reviews."
-              />
-              <StatCard
-                label="Projected"
-                value={`${formatCurrency(revenue_estimate.annual)}/yr`}
-                sublabel="Most likely"
-                icon={DollarSign}
-                highlight
-                tooltip="The most likely annual revenue based on current market conditions. This is the number most hosts should plan around."
-              />
-              <StatCard
-                label="Optimistic"
+                label="Projection"
                 value={`${formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}/yr`}
-                sublabel="Upper range"
+                sublabel="Based on top performers"
                 icon={TrendingUp}
-                tooltip="The high end of the revenue range. You could reach this with excellent reviews, professional photos, optimized pricing, and strong demand."
+                highlight
+                tooltip="Projected annual revenue based on what the top-performing comparable properties earn in your market. Achievable with professional photos, optimized pricing, and great guest experiences."
+              />
+              <StatCard
+                label="Revenue Range"
+                value={`${formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)} — ${formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}`}
+                sublabel="Low to high"
+                icon={BarChart3}
+                tooltip="The full range of possible annual revenue based on market data. The low end represents average performance, the high end represents top performers."
               />
             </div>
 
@@ -2708,80 +2701,45 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
             </div>
 
-            {/* Scenario Analysis — uses real comp percentile data when available */}
+            {/* Profit Projection — single projection based on top performers */}
             <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
-              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Profit Projections <InfoTip text={revenue_scenarios ? `Three profit scenarios based on real revenue data from ${revenue_scenarios.compCount} comparable properties. Conservative = what the average host earns. Target = what a good host earns. Optimistic = what the top 10% of hosts earn.` : "Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher."} /></h3>
+              <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Profit Projection <InfoTip text={revenue_scenarios ? `Profit projection based on real revenue data from ${revenue_scenarios.compCount} comparable properties. This reflects what the top performers in your market achieve.` : "Projected profit based on top-performing comparable properties. Achievable with professional setup, optimized pricing, and great guest experiences."} /></h3>
               {revenue_scenarios && (
                 <p className="text-xs text-[oklch(0.55_0_0)] mb-4">Based on {revenue_scenarios.compCount} comparable {revenue_scenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}</p>
               )}
-              <div className="grid grid-cols-3 gap-4">
-                {(revenue_scenarios ? [
-                  {
-                    label: 'Conservative',
-                    sublabel: 'Average host',
-                    revenue: revenue_scenarios.conservative,
-                    colorClass: 'border-amber-200 bg-amber-50',
-                    labelColor: 'text-amber-600',
-                  },
-                  {
-                    label: 'Target',
-                    sublabel: 'Good host',
-                    revenue: revenue_scenarios.target,
-                    colorClass: 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5',
-                    labelColor: 'text-[oklch(0.45_0.14_75)]',
-                  },
-                  {
-                    label: 'Optimistic',
-                    sublabel: 'Top 10%',
-                    revenue: revenue_scenarios.optimistic,
-                    colorClass: 'border-emerald-200 bg-emerald-50',
-                    labelColor: 'text-emerald-600',
-                  },
-                ] : [
-                  {
-                    label: 'Conservative',
-                    sublabel: '30% lower occupancy',
-                    revenue: revenue_estimate.nightly * ((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 0.7) * 365,
-                    colorClass: 'border-[oklch(0.90_0_0)]',
-                    labelColor: 'text-amber-600',
-                  },
-                  {
-                    label: 'Projected',
-                    sublabel: 'Based on market data',
-                    revenue: revenue_estimate.annual,
-                    colorClass: 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5',
-                    labelColor: 'text-[oklch(0.45_0.14_75)]',
-                  },
-                  {
-                    label: 'Optimistic',
-                    sublabel: '20% higher occupancy',
-                    revenue: revenue_estimate.nightly * Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95) * 365,
-                    colorClass: 'border-emerald-200 bg-emerald-50',
-                    labelColor: 'text-emerald-600',
-                  },
-                ]).map((scenario, i) => {
-                  const annualOperatingCosts = scenario.revenue * 0.20;
-                  const annualProfit = scenario.revenue - rentalCalcs.rent * 12 - annualOperatingCosts;
-                  const monthlyProfit = annualProfit / 12;
-                  return (
-                    <div key={i} className={`rounded-xl p-4 border ${scenario.colorClass}`}>
-                      <p className={`font-bold text-xs uppercase tracking-wider mb-0.5 ${scenario.labelColor}`}>{scenario.label}</p>
-                      <p className="text-[10px] text-[oklch(0.55_0_0)] mb-3">{scenario.sublabel}</p>
-                      <p className="text-lg font-bold text-[oklch(0.15_0_0)]">{formatCurrency(scenario.revenue)}/yr</p>
-                      <p className="text-xs text-[oklch(0.55_0_0)] mb-2">{formatCurrency(scenario.revenue / 12)}/mo revenue</p>
-                      <div className="pt-2 border-t border-dashed border-[oklch(0.85_0_0)]">
-                        <p className="text-[10px] text-[oklch(0.55_0_0)] uppercase tracking-wide">Monthly Profit</p>
-                        <p className={`text-base font-bold ${monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {(() => {
+                const projectionRevenue = revenue_scenarios 
+                  ? revenue_scenarios.optimistic 
+                  : revenue_estimate.nightly * Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95) * 365;
+                const annualOperatingCosts = projectionRevenue * 0.20;
+                const annualProfit = projectionRevenue - rentalCalcs.rent * 12 - annualOperatingCosts;
+                const monthlyProfit = annualProfit / 12;
+                return (
+                  <div className="rounded-xl p-5 border-2 border-emerald-200 bg-emerald-50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      <p className="font-bold text-xs uppercase tracking-wider text-emerald-600">Projection</p>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Based on top performers</span>
+                    </div>
+                    <p className="text-2xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(projectionRevenue)}/yr</p>
+                    <p className="text-sm text-[oklch(0.55_0_0)] mb-3">{formatCurrency(projectionRevenue / 12)}/mo revenue</p>
+                    <div className="pt-3 border-t border-dashed border-emerald-300 grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-emerald-600 uppercase tracking-wide">Monthly Profit</p>
+                        <p className={`text-xl font-bold ${monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {monthlyProfit >= 0 ? '+' : ''}{formatCurrency(monthlyProfit)}/mo
                         </p>
-                        <p className={`text-xs font-semibold ${annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-emerald-600 uppercase tracking-wide">Annual Profit</p>
+                        <p className={`text-xl font-bold ${annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {annualProfit >= 0 ? '+' : ''}{formatCurrency(annualProfit)}/yr
                         </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })()}
             </div>
           </section>
         )}

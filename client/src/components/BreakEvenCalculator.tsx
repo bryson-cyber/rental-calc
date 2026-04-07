@@ -271,143 +271,53 @@ export default function BreakEvenCalculator({
           <span>$20,000</span>
         </div>
         
-        {/* 3-Level Break-Even Grid */}
-        <div className="grid grid-cols-3 gap-3">
-          {/* Conservative */}
-          <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0.01_265)] text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-3">
-              <TrendingDown className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-medium text-[oklch(0.45_0_0)]">Conservative</span>
-            </div>
-            <div className="text-xs text-[oklch(0.55_0_0)] mb-1">Average performer</div>
-            <div className={`text-sm font-semibold mb-2 ${calculations.conservativeMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.conservativeMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.conservativeMonthlyProfit)}/mo
-            </div>
-            <div className="border-t border-[oklch(0.92_0.01_265)] pt-2">
-              {calculations.conservativeMonthsToBreakEven < Infinity ? (
-                <>
-                  <div className="text-xl font-bold text-[oklch(0.35_0_0)]">
-                    {formatMonths(calculations.conservativeMonthsToBreakEven)}
-                  </div>
-                  <div className="text-[10px] text-[oklch(0.55_0_0)]">to recover</div>
-                </>
-              ) : (
-                <div className="text-sm text-red-500 font-medium">
-                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
-                  Not profitable
-                </div>
-              )}
-            </div>
+        {/* Projection Break-Even */}
+        <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-200 text-center">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Projection</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Based on top performers</span>
           </div>
-
-          {/* Realistic — highlighted */}
-          <div className="bg-[oklch(0.55_0.14_75)]/5 rounded-xl p-4 border-2 border-[oklch(0.55_0.14_75)]/30 text-center relative">
-            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[oklch(0.55_0.14_75)] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Target
-            </div>
-            <div className="flex items-center justify-center gap-1.5 mb-3">
-              <Target className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
-              <span className="text-xs font-medium text-[oklch(0.35_0_0)]">Realistic</span>
-            </div>
-            <div className="text-xs text-[oklch(0.50_0_0)] mb-1">Our target</div>
-            <div className={`text-sm font-bold mb-2 ${calculations.realisticMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.realisticMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.realisticMonthlyProfit)}/mo
-            </div>
-            <div className="border-t border-[oklch(0.55_0.14_75)]/20 pt-2">
-              {calculations.realisticMonthsToBreakEven < Infinity ? (
-                <>
-                  <div className="text-2xl font-bold text-[oklch(0.55_0.14_75)]">
-                    {formatMonths(calculations.realisticMonthsToBreakEven)}
-                  </div>
-                  <div className="text-[10px] text-[oklch(0.45_0_0)] font-medium">to recover</div>
-                </>
-              ) : (
-                <div className="text-sm text-red-500 font-medium">
-                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
-                  Not profitable
-                </div>
-              )}
-            </div>
+          <div className={`text-sm font-bold mb-3 ${calculations.optimisticMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {calculations.optimisticMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticMonthlyProfit)}/mo profit
           </div>
-
-          {/* Optimistic */}
-          <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0.01_265)] text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-3">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className="text-xs font-medium text-[oklch(0.45_0_0)]">Optimistic</span>
-            </div>
-            <div className="text-xs text-[oklch(0.55_0_0)] mb-1">Superstar performer</div>
-            <div className={`text-sm font-semibold mb-2 ${calculations.optimisticMonthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.optimisticMonthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticMonthlyProfit)}/mo
-            </div>
-            <div className="border-t border-[oklch(0.92_0.01_265)] pt-2">
-              {calculations.optimisticMonthsToBreakEven < Infinity ? (
-                <>
-                  <div className="text-xl font-bold text-green-600">
-                    {formatMonths(calculations.optimisticMonthsToBreakEven)}
-                  </div>
-                  <div className="text-[10px] text-[oklch(0.55_0_0)]">to recover</div>
-                </>
-              ) : (
-                <div className="text-sm text-red-500 font-medium">
-                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
-                  Not profitable
+          <div className="border-t border-emerald-200 pt-3">
+            {calculations.optimisticMonthsToBreakEven < Infinity ? (
+              <>
+                <div className="text-2xl font-bold text-emerald-700">
+                  {formatMonths(calculations.optimisticMonthsToBreakEven)}
                 </div>
-              )}
-            </div>
+                <div className="text-[10px] text-emerald-600 font-medium">to recover startup costs</div>
+              </>
+            ) : (
+              <div className="text-sm text-red-500 font-medium">
+                <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+                Not profitable at this level
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Scenario Analysis — 3 Levels */}
-      <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+      {/* Annual Profit Projection */}
+      <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-200">
         <div className="flex items-center gap-1 mb-4">
-          <DollarSign className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
-          <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Annual Profit by Level</span>
-          <Tooltip text="Your projected annual profit at each performance level, after all expenses. These match the 3 revenue tiers from the profitability analysis above.">
+          <DollarSign className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Annual Profit Projection</span>
+          <Tooltip text="Your projected annual profit based on top-performing comparable properties, after all expenses.">
             <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
           </Tooltip>
         </div>
         
-        <div className="grid grid-cols-3 gap-4 text-center">
-          {/* Conservative */}
-          <div>
-            <div className="flex items-center justify-center gap-1 mb-2">
-              <TrendingDown className="w-4 h-4 text-amber-500" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Conservative</span>
-            </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Average performer</div>
-            <div className={`text-lg font-semibold ${calculations.conservativeAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.conservativeAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.conservativeAnnualProfit)}
-            </div>
-            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Projection</span>
           </div>
-          
-          {/* Realistic */}
-          <div className="border-x border-[oklch(0.90_0.01_265)]">
-            <div className="flex items-center justify-center gap-1 mb-2">
-              <Target className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Realistic</span>
-            </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Our target</div>
-            <div className={`text-lg font-bold ${calculations.realisticAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.realisticAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.realisticAnnualProfit)}
-            </div>
-            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
+          <div className={`text-2xl font-bold ${calculations.optimisticAnnualProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+            {calculations.optimisticAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticAnnualProfit)}
           </div>
-          
-          {/* Optimistic */}
-          <div>
-            <div className="flex items-center justify-center gap-1 mb-2">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className="text-xs text-[oklch(0.50_0_0)]">Optimistic</span>
-            </div>
-            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Superstar</div>
-            <div className={`text-lg font-semibold ${calculations.optimisticAnnualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculations.optimisticAnnualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.optimisticAnnualProfit)}
-            </div>
-            <div className="text-[10px] text-[oklch(0.55_0_0)] mt-0.5">/year</div>
-          </div>
+          <div className="text-[10px] text-emerald-600 mt-0.5">/year</div>
         </div>
       </div>
 
