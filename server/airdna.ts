@@ -5,6 +5,14 @@ import { notifyOwner } from './_core/notification';
 import { rateLimitedAirDNARequest, AirDNARateLimitError, AIRDNA_API_BASE } from './airdna-rate-limiter';
 import { isAdminRequest } from './request-context';
 
+// ============================================
+// REVENUE BOOST FACTOR
+// ============================================
+// Apply a percentage boost to all revenue and ADR numbers from AirDNA.
+// This compensates for AirDNA's conservative estimates vs actual top-performer earnings.
+// Occupancy rates are NOT boosted (they are a rate, not a dollar amount).
+export const REVENUE_BOOST_FACTOR = 1.15; // 15% boost
+
 // Helper to log cache hits to the API usage tracker
 function logCacheHit(endpoint: string, source?: string): void {
   logApiCall({
@@ -858,10 +866,10 @@ export async function searchByZipcode(zipcode: string, options?: {
       const submarketDetails = await getSubmarketDetails(submarket.id);
       if (submarketDetails?.metrics) {
         metrics = {
-          revenue: submarketDetails.metrics.revenue,
+          revenue: Math.round((submarketDetails.metrics.revenue || 0) * REVENUE_BOOST_FACTOR),
           occupancy: submarketDetails.metrics.booked,
-          adr: submarketDetails.metrics.daily_rate,
-          revpar: submarketDetails.metrics.revpar,
+          adr: Math.round((submarketDetails.metrics.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+          revpar: Math.round((submarketDetails.metrics.revpar || 0) * REVENUE_BOOST_FACTOR),
           active_listings: submarketDetails.listing_count || 0,
           market_score: submarketDetails.metrics.market_score
         };
@@ -930,10 +938,10 @@ export async function searchByZipcode(zipcode: string, options?: {
       const marketDetails = await getMarketDetails(market.id);
       if (marketDetails?.metrics) {
         metrics = {
-          revenue: marketDetails.metrics.revenue,
+          revenue: Math.round((marketDetails.metrics.revenue || 0) * REVENUE_BOOST_FACTOR),
           occupancy: marketDetails.metrics.booked,
-          adr: marketDetails.metrics.daily_rate,
-          revpar: marketDetails.metrics.revpar,
+          adr: Math.round((marketDetails.metrics.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+          revpar: Math.round((marketDetails.metrics.revpar || 0) * REVENUE_BOOST_FACTOR),
           active_listings: marketDetails.listing_count || 0,
           market_score: marketDetails.metrics.market_score
         };
@@ -1198,7 +1206,12 @@ async function getMarketMetric(
         }
       }
       
-      return { date, value: value || 0 };
+      // Apply revenue boost to revenue and ADR metrics
+      const rawValue = value || 0;
+      const boostedValue = (metricType === 'avg_revenue' || metricType === 'adr' || metricType === 'revpar')
+        ? Math.round(rawValue * REVENUE_BOOST_FACTOR)
+        : rawValue;
+      return { date, value: boostedValue };
     });
     apiCache.set(cacheKey, result);
     setDbCache(`market_metric:${marketId}:${metricType}`, 'market_metric', result, 24 * 60 * 60 * 1000).catch(() => {});
@@ -1273,7 +1286,12 @@ async function getSubmarketMetric(
         }
       }
       
-      return { date, value: value || 0 };
+      // Apply revenue boost to revenue and ADR metrics
+      const rawValue = value || 0;
+      const boostedValue = (metricType === 'avg_revenue' || metricType === 'adr' || metricType === 'revpar')
+        ? Math.round(rawValue * REVENUE_BOOST_FACTOR)
+        : rawValue;
+      return { date, value: boostedValue };
     });
     apiCache.set(cacheKey, result);
     setDbCache(`submarket_metric:${submarketId}:${metricType}`, 'submarket_metric', result, 24 * 60 * 60 * 1000).catch(() => {});
@@ -1644,10 +1662,10 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
             name: s.name,
             listing_count: details.listing_count || 0,
             metrics: metrics ? {
-              revenue: metrics.revenue || 0,
+              revenue: Math.round((metrics.revenue || 0) * REVENUE_BOOST_FACTOR),
               occupancy: metrics.booked ? Math.round(metrics.booked * 100) : 0,
-              adr: metrics.daily_rate || 0,
-              revpar: metrics.revpar || 0,
+              adr: Math.round((metrics.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+              revpar: Math.round((metrics.revpar || 0) * REVENUE_BOOST_FACTOR),
             } : undefined,
           };
         } catch (err) {
@@ -1693,9 +1711,9 @@ export async function getSubmarketMetrics(submarketId: string): Promise<{
     
     return {
       occupancy: details.metrics.booked || 0, // 'booked' is the occupancy percentage
-      adr: details.metrics.daily_rate || 0,
-      revenue: details.metrics.revenue || 0,
-      revpar: details.metrics.revpar || 0,
+      adr: Math.round((details.metrics.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+      revenue: Math.round((details.metrics.revenue || 0) * REVENUE_BOOST_FACTOR),
+      revpar: Math.round((details.metrics.revpar || 0) * REVENUE_BOOST_FACTOR),
     };
   } catch (error) {
     console.error("Error fetching submarket metrics:", error);
@@ -1826,8 +1844,8 @@ export async function getMarketListings(
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
       reviews: r.reviews || 0,
-      annual_revenue: r.revenue_ltm || 0,
-      adr: r.average_daily_rate_ltm || 0,
+      annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: r.occupancy_rate_ltm || 0,
       last_review_date: r.last_scraped_date || '',
       superhost: r.superhost ?? false,
@@ -2067,8 +2085,8 @@ export async function getSubmarketListings(
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
       reviews: r.reviews || 0,
-      annual_revenue: r.revenue_ltm || 0,
-      adr: r.average_daily_rate_ltm || 0,
+      annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: r.occupancy_rate_ltm || 0,
       last_review_date: r.last_scraped_date || '',
       superhost: r.superhost ?? false,
@@ -2510,9 +2528,9 @@ export async function exploreListingsInRadius(
         property_type: r.property_type || 'Unknown',
         rating: r.rating ?? null,
         reviews: r.reviews || 0,
-        annual_revenue: r.revenue_ltm || 0,
-        adr: r.average_daily_rate_ltm || 0,
-        occupancy: r.occupancy_rate_ltm || 0,
+        annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+        adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
+        occupancy: r.occupancy_rate_ltm || 0, // Occupancy is a rate — NOT boosted
         last_review_date: r.last_scraped_date || '',
         superhost: r.superhost ?? false,
         professionally_managed: r.professionally_managed ?? false,
@@ -2721,9 +2739,9 @@ async function tryRentalizerRequest(
       bathrooms: comp.details.bathrooms,
       rating: comp.details.rating,
       reviews: comp.details.reviews,
-      annual_revenue: comp.stats.summary.revenue,
-      adr: comp.stats.summary.adr,
-      occupancy: comp.stats.summary.occupancy,
+      annual_revenue: Math.round(comp.stats.summary.revenue * REVENUE_BOOST_FACTOR),
+      adr: Math.round(comp.stats.summary.adr * REVENUE_BOOST_FACTOR),
+      occupancy: comp.stats.summary.occupancy, // Occupancy is a rate — NOT boosted
       distance_meters: comp.distance_meters,
       latitude: (comp as any).latitude || (comp.details as any)?.latitude || (comp as any).location?.latitude,
       longitude: (comp as any).longitude || (comp.details as any)?.longitude || (comp as any).location?.longitude,
@@ -2733,22 +2751,22 @@ async function tryRentalizerRequest(
       image_url: comp.details.images?.[0] || (comp.details as any).thumbnail_url || (comp as any).thumbnail_url,
       property_type: comp.details.property_type,
       accommodates: comp.details.accommodates,
-      // Include monthly performance data for each comp
+      // Include monthly performance data for each comp (boosted)
       monthly_metrics: comp.stats.metrics?.map(m => ({
         date: m.date,
-        occupancy: m.occupancy,
-        adr: m.adr,
-        revenue: m.revenue,
-        revenue_potential: m.revenue_potential,
+        occupancy: m.occupancy, // Rate — NOT boosted
+        adr: Math.round(m.adr * REVENUE_BOOST_FACTOR),
+        revenue: Math.round(m.revenue * REVENUE_BOOST_FACTOR),
+        revenue_potential: Math.round(m.revenue_potential * REVENUE_BOOST_FACTOR),
       })),
     }));
     
-    // Map monthly forecast
+    // Map monthly forecast (boost revenue and ADR)
     const monthly_forecast: MonthlyForecast[] = payload.stats.future.metrics.map((m) => ({
       month: m.date,
-      revenue: m.revenue,
-      adr: m.adr,
-      occupancy: m.occupancy,
+      revenue: Math.round(m.revenue * REVENUE_BOOST_FACTOR),
+      adr: Math.round(m.adr * REVENUE_BOOST_FACTOR),
+      occupancy: m.occupancy, // Occupancy is a rate — NOT boosted
     }));
     
     const result: RentalizerResponse = {
@@ -2765,11 +2783,11 @@ async function tryRentalizerRequest(
         submarket_id: payload.location?.submarket_id,
       },
       estimates: {
-        annual_revenue: payload.stats.future.summary.revenue,
-        annual_revenue_low: payload.stats.future.summary.revenue_lower,
-        annual_revenue_high: payload.stats.future.summary.revenue_upper,
-        average_daily_rate: payload.stats.future.summary.adr,
-        occupancy_rate: payload.stats.future.summary.occupancy,
+        annual_revenue: Math.round(payload.stats.future.summary.revenue * REVENUE_BOOST_FACTOR),
+        annual_revenue_low: Math.round(payload.stats.future.summary.revenue_lower * REVENUE_BOOST_FACTOR),
+        annual_revenue_high: Math.round(payload.stats.future.summary.revenue_upper * REVENUE_BOOST_FACTOR),
+        average_daily_rate: Math.round(payload.stats.future.summary.adr * REVENUE_BOOST_FACTOR),
+        occupancy_rate: payload.stats.future.summary.occupancy, // Occupancy is a rate — NOT boosted
         currency: payload.stats.currency,
         currency_symbol: payload.stats.currency_symbol,
       },
@@ -2783,7 +2801,7 @@ async function tryRentalizerRequest(
         },
         metrics: payload.stats.historical.metrics.map(m => ({
           date: m.date,
-          revenue_valuation: m.revenue_valuation,
+          revenue_valuation: Math.round((m.revenue_valuation || 0) * REVENUE_BOOST_FACTOR),
         })),
       } : undefined,
     };
@@ -3760,10 +3778,10 @@ export async function getComprehensivePropertyReport(
       // If historical data is empty, use market details metrics
       if (latestOccupancy === 0 && marketDetails.metrics) {
         latestOccupancy = Math.round(marketDetails.metrics.booked * 100); // Convert decimal to percentage
-        latestAdr = Math.round(marketDetails.metrics.daily_rate);
-        latestRevenue = Math.round(marketDetails.metrics.revenue);
-        latestRevpar = Math.round(marketDetails.metrics.revpar);
-        console.log('[Market Data] Using market details metrics:', { latestOccupancy, latestAdr, latestRevenue, latestRevpar });
+        latestAdr = Math.round(marketDetails.metrics.daily_rate * REVENUE_BOOST_FACTOR);
+        latestRevenue = Math.round(marketDetails.metrics.revenue * REVENUE_BOOST_FACTOR);
+        latestRevpar = Math.round(marketDetails.metrics.revpar * REVENUE_BOOST_FACTOR);
+        console.log('[Market Data] Using market details metrics (15% boosted):', { latestOccupancy, latestAdr, latestRevenue, latestRevpar });
       }
       
       marketData = {
@@ -4488,9 +4506,9 @@ export async function getComprehensiveMarketReport(
   
   if (marketDetails.metrics) {
     latestOccupancy = Math.round(marketDetails.metrics.booked * 100);
-    latestAdr = Math.round(marketDetails.metrics.daily_rate);
-    latestRevenue = Math.round(marketDetails.metrics.revenue);
-    latestRevpar = Math.round(marketDetails.metrics.revpar);
+    latestAdr = Math.round(marketDetails.metrics.daily_rate * REVENUE_BOOST_FACTOR);
+    latestRevenue = Math.round(marketDetails.metrics.revenue * REVENUE_BOOST_FACTOR);
+    latestRevpar = Math.round(marketDetails.metrics.revpar * REVENUE_BOOST_FACTOR);
   }
   
   // Calculate market insights from listings
@@ -4702,11 +4720,11 @@ export async function getComprehensiveSubmarketReport(
   if (submarketDetails.metrics && submarketDetails.metrics.revenue > 0) {
     // Use API metrics if available and valid
     occupancy = Math.round(submarketDetails.metrics.booked * 100);
-    adr = Math.round(submarketDetails.metrics.daily_rate);
-    revenue = Math.round(submarketDetails.metrics.revenue);
-    revpar = Math.round(submarketDetails.metrics.revpar);
+    adr = Math.round(submarketDetails.metrics.daily_rate * REVENUE_BOOST_FACTOR);
+    revenue = Math.round(submarketDetails.metrics.revenue * REVENUE_BOOST_FACTOR);
+    revpar = Math.round(submarketDetails.metrics.revpar * REVENUE_BOOST_FACTOR);
     marketScore = submarketDetails.metrics.market_score;
-    console.log(`[getComprehensiveSubmarketReport] Using API metrics: occupancy=${occupancy}, adr=${adr}, revenue=${revenue}, revpar=${revpar}`);
+    console.log(`[getComprehensiveSubmarketReport] Using API metrics (15% boosted): occupancy=${occupancy}, adr=${adr}, revenue=${revenue}, revpar=${revpar}`);
   } else {
     // FALLBACK: Calculate metrics from listings data when API metrics are unavailable
     console.log(`[getComprehensiveSubmarketReport] API metrics unavailable, calculating from ${listingsResult.listings.length} listings...`);
@@ -5133,8 +5151,8 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
       property_type: d.property_type,
       rating: p.ratings?.overall || null,
       reviews: d.reviews || 0,
-      annual_revenue: p.metrics?.summary?.annual_revenue || 0,
-      adr: p.metrics?.summary?.adr || 0,
+      annual_revenue: Math.round((p.metrics?.summary?.annual_revenue || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((p.metrics?.summary?.adr || 0) * REVENUE_BOOST_FACTOR),
       occupancy: p.metrics?.summary?.occupancy || 0,
     };
     // Persist to both memory and DB cache (survives LRU eviction and server restarts)
@@ -5637,9 +5655,9 @@ export async function getCountryMarkets(
       },
       metrics: {
         occupancy: m.metrics?.booked || 0,
-        adr: m.metrics?.daily_rate || 0,
-        revenue: m.metrics?.revenue || 0,
-        revpar: m.metrics?.revpar || 0,
+        adr: Math.round((m.metrics?.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+        revenue: Math.round((m.metrics?.revenue || 0) * REVENUE_BOOST_FACTOR),
+        revpar: Math.round((m.metrics?.revpar || 0) * REVENUE_BOOST_FACTOR),
       },
       geometry: m.geom,
     }));
@@ -5768,8 +5786,8 @@ export async function getListingsInRadius(
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
       reviews: r.reviews || 0,
-      annual_revenue: r.revenue_ltm || 0,
-      adr: r.average_daily_rate_ltm || 0,
+      annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: r.occupancy_rate_ltm || 0,
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
@@ -6034,8 +6052,8 @@ export async function getTopPerformers(
             property_type: r.property_type || 'Unknown',
             rating: r.rating ?? null,
             reviews: r.reviews || 0,
-            annual_revenue: r.revenue_ltm || 0,
-            adr: r.average_daily_rate_ltm || 0,
+            annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+            adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
             occupancy: r.occupancy_rate_ltm || 0,
             superhost: r.superhost ?? false,
             professionally_managed: r.professionally_managed ?? false,
@@ -6114,8 +6132,8 @@ export async function getTopPerformers(
       property_type: r.property_type || 'Unknown',
       rating: r.rating ?? null,
       reviews: r.reviews || 0,
-      annual_revenue: r.revenue_ltm || 0,
-      adr: r.average_daily_rate_ltm || 0,
+      annual_revenue: Math.round((r.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((r.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: r.occupancy_rate_ltm || 0,
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
@@ -6532,8 +6550,8 @@ export async function getListingComps(
       bathrooms: l.bathrooms ?? 0,
       accommodates: l.accommodates || l.bedrooms * 2,
       property_type: l.property_type || "unknown",
-      annual_revenue: l.revenue_ltm || l.annual_revenue || 0,
-      adr: l.adr_ltm || l.adr || 0,
+      annual_revenue: Math.round((l.revenue_ltm || l.annual_revenue || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((l.adr_ltm || l.adr || 0) * REVENUE_BOOST_FACTOR),
       occupancy: l.occupancy_rate_ltm || l.occupancy || 0,
       rating: l.rating || null,
       reviews: l.review_count || l.reviews || 0,
@@ -6760,18 +6778,18 @@ export async function getEnhancedRentalizerEstimate(
         submarket_id: details.location?.submarket_id,
       },
       estimates: {
-        annual_revenue: estimates.revenue || estimates.annual_revenue || 0,
-        annual_revenue_low: estimates.revenue_low || estimates.annual_revenue_low || 0,
-        annual_revenue_high: estimates.revenue_high || estimates.annual_revenue_high || 0,
-        average_daily_rate: estimates.adr || estimates.average_daily_rate || 0,
+        annual_revenue: Math.round((estimates.revenue || estimates.annual_revenue || 0) * REVENUE_BOOST_FACTOR),
+        annual_revenue_low: Math.round((estimates.revenue_low || estimates.annual_revenue_low || 0) * REVENUE_BOOST_FACTOR),
+        annual_revenue_high: Math.round((estimates.revenue_high || estimates.annual_revenue_high || 0) * REVENUE_BOOST_FACTOR),
+        average_daily_rate: Math.round((estimates.adr || estimates.average_daily_rate || 0) * REVENUE_BOOST_FACTOR),
         occupancy_rate: estimates.occupancy || estimates.occupancy_rate || 0,
         currency: estimates.currency || "usd",
         currency_symbol: estimates.currency_symbol || "$",
       },
       monthly_forecast: (payload.monthly_forecast || []).map((m: any) => ({
         month: m.month || m.date,
-        revenue: m.revenue || 0,
-        adr: m.adr || 0,
+        revenue: Math.round((m.revenue || 0) * REVENUE_BOOST_FACTOR),
+        adr: Math.round((m.adr || 0) * REVENUE_BOOST_FACTOR),
         occupancy: m.occupancy || 0,
       })),
       comps: (payload.comps || []).map((c: any) => ({
@@ -6780,8 +6798,8 @@ export async function getEnhancedRentalizerEstimate(
         bathrooms: c.bathrooms ?? 0,
         rating: c.rating || null,
         reviews: c.review_count || c.reviews || 0,
-        annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
-        adr: c.adr_ltm || c.adr || 0,
+        annual_revenue: Math.round((c.revenue_ltm || c.annual_revenue || 0) * REVENUE_BOOST_FACTOR),
+        adr: Math.round((c.adr_ltm || c.adr || 0) * REVENUE_BOOST_FACTOR),
         occupancy: c.occupancy_rate_ltm || c.occupancy || 0,
         distance_meters: c.distance_meters || 0,
         airbnb_listing_id: c.airbnb_property_id,
@@ -6967,8 +6985,8 @@ export async function getFilteredMarketListings(
       accommodates: l.accommodates || (l.bedrooms ?? 0) * 2,
       property_type: l.property_type || "unknown",
       listing_type: l.listing_type || "entire_home",
-      annual_revenue: l.revenue_ltm || 0,
-      adr: l.adr_ltm || 0,
+      annual_revenue: Math.round((l.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((l.adr_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: l.occupancy_rate_ltm || 0,
       rating: l.rating || null,
       reviews: l.review_count || 0,
@@ -7042,10 +7060,10 @@ export async function getMarketProfessionalStats(
     const superhosts = listings.filter((l: any) => l.superhost === true);
 
     const avgRevenuePro = professional.length > 0
-      ? professional.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / professional.length
+      ? (professional.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / professional.length) * REVENUE_BOOST_FACTOR
       : 0;
     const avgRevenueInd = individual.length > 0
-      ? individual.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / individual.length
+      ? (individual.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / individual.length) * REVENUE_BOOST_FACTOR
       : 0;
 
     return {
@@ -7128,7 +7146,7 @@ export async function getMarketCancellationPolicies(
       count: group.length,
       percentage: total > 0 ? Math.round((group.length / total) * 100) : 0,
       avg_revenue: group.length > 0
-        ? Math.round(group.reduce((sum, l) => sum + (l.revenue_ltm || 0), 0) / group.length)
+        ? Math.round((group.reduce((sum, l) => sum + (l.revenue_ltm || 0), 0) / group.length) * REVENUE_BOOST_FACTOR)
         : 0,
       avg_occupancy: group.length > 0
         ? Math.round(group.reduce((sum, l) => sum + (l.occupancy_rate_ltm || 0), 0) / group.length)
@@ -7769,8 +7787,8 @@ export async function getListingsByArea(
       property_type: listing.property_type || 'Unknown',
       rating: listing.rating || null,
       reviews: listing.reviews || 0,
-      annual_revenue: listing.revenue_ltm || 0,
-      adr: listing.average_daily_rate_ltm || 0,
+      annual_revenue: Math.round((listing.revenue_ltm || 0) * REVENUE_BOOST_FACTOR),
+      adr: Math.round((listing.average_daily_rate_ltm || 0) * REVENUE_BOOST_FACTOR),
       occupancy: listing.occupancy_rate_ltm || 0,
       distance_meters: listing.distance || 0,
       airbnb_url: listing.airbnb_property_url || (listing.airbnb_property_id ? `https://www.airbnb.com/rooms/${listing.airbnb_property_id}` : undefined),
@@ -7882,8 +7900,8 @@ export async function getRentalizerBulkSummary(
 
     const results: BulkSummaryResult[] = (response.payload.results || []).map((r, i) => ({
       address: r.address || limitedQueries[i]?.address || '',
-      adr: r.adr || 0,
-      revenue: r.revenue || 0,
+      adr: Math.round((r.adr || 0) * REVENUE_BOOST_FACTOR),
+      revenue: Math.round((r.revenue || 0) * REVENUE_BOOST_FACTOR),
       occupancy: r.occupancy || 0,
       currency: r.currency || 'USD',
       success: !r.error,
@@ -8785,8 +8803,8 @@ export async function getBulkListings(
           property_type: listing.property_type || 'Unknown',
           rating: listing.rating || null,
           reviews: listing.reviews || 0,
-          annual_revenue: listing.stats?.annual?.revenue || listing.annual_revenue || 0,
-          adr: listing.stats?.annual?.adr || listing.adr || 0,
+          annual_revenue: Math.round((listing.stats?.annual?.revenue || listing.annual_revenue || 0) * REVENUE_BOOST_FACTOR),
+          adr: Math.round((listing.stats?.annual?.adr || listing.adr || 0) * REVENUE_BOOST_FACTOR),
           occupancy: listing.stats?.annual?.occupancy || listing.occupancy || 0,
           last_review_date: listing.last_review_date,
           amenities: listing.amenities || [],
@@ -8992,7 +9010,7 @@ export async function compareMarkets(
           id: s.id,
           name: s.name,
           listing_count: s.listing_count || 0,
-          revenue: s.metrics?.revenue || 0,
+          revenue: Math.round((s.metrics?.revenue || 0) * REVENUE_BOOST_FACTOR),
         }));
 
       const result: MarketComparisonMetrics = {
@@ -9003,9 +9021,9 @@ export async function compareMarkets(
         listing_count: details.listing_count || 0,
         metrics: {
           occupancy: details.metrics?.booked || 0, // 'booked' is the occupancy field
-          adr: details.metrics?.daily_rate || 0, // 'daily_rate' is the ADR field
-          revenue: details.metrics?.revenue || 0,
-          revpar: details.metrics?.revpar || 0,
+          adr: Math.round((details.metrics?.daily_rate || 0) * REVENUE_BOOST_FACTOR),
+          revenue: Math.round((details.metrics?.revenue || 0) * REVENUE_BOOST_FACTOR),
+          revpar: Math.round((details.metrics?.revpar || 0) * REVENUE_BOOST_FACTOR),
           market_score: details.metrics?.market_score,
           // These fields are not available from getMarketDetails
           investability: undefined,

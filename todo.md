@@ -13140,3 +13140,23 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] PropertyChatBot and AIPropertyAdvisor data now use effectiveRevenue instead of original cashFlow values
 - [x] All sections now recalculate consistently when admin clicks +/- or types a new revenue value
 - [x] Added 14 unit tests verifying revenue override propagation logic
+
+### Feature: 15% Revenue Boost on All Comp-Derived and Property Revenue Numbers (April 8, 2026)
+- [x] Apply 15% boost to all revenue numbers coming from comps and properties
+- [x] Added REVENUE_BOOST_FACTOR = 1.15 constant in server/airdna.ts
+- [x] Boost applied at data source level in tryRentalizerRequest (property estimates, monthly forecast, comps)
+- [x] Boost applied to exploreListingsInRadius (comp listings)
+- [x] Boost applied to getMarketListings, getTopPerformers (all listing mappings)
+- [x] Boost applied to getMarketMetric, getSubmarketMetric (historical revenue/ADR data points)
+- [x] Boost applied to getMarketDetails, getSubmarketDetails (market-level revenue/ADR/revpar)
+- [x] Boost applied to getRentalizerBulkSummary (bulk analysis)
+- [x] Boost applied to individual listing detail (property_id lookup)
+- [x] Boost applied to professional vs individual revenue averages
+- [x] Boost applied to cancellation policy revenue averages
+- [x] Boost applied to market comparison metrics
+- [x] Boost applied to historical revenue_valuation (absolute dollar amounts)
+- [x] Occupancy rates NOT boosted (they are rates, not dollar amounts)
+- [x] Percentage changes NOT boosted (relative metrics)
+- [x] Revenue Range, Projection card, Investment Analysis, hero section all use boosted values automatically
+- [x] Comp-median adjustment remains self-consistent (both inputs boosted = same ratio, higher final value)
+- [x] Added revenue-boost.test.ts with comprehensive tests
