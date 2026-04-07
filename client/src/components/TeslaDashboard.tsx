@@ -614,44 +614,10 @@ function ThreeTierProjections({
   mode: 'rent' | 'purchase';
   monthlyAdditionalCosts?: number; // Property tax + insurance + maintenance + utilities (purchase mode)
 }) {
-  const tiers = [
-    {
-      key: 'conservative',
-      label: 'Conservative',
-      sublabel: 'Average host',
-      description: 'What the typical operator earns',
-      annualRevenue: scenarios.conservative,
-      color: 'amber' as const,
-      bgClass: 'bg-amber-50 border-amber-200',
-      textClass: 'text-amber-700',
-      labelClass: 'text-amber-600',
-      badgeClass: 'bg-amber-100 text-amber-700',
-    },
-    {
-      key: 'target',
-      label: 'Target',
-      sublabel: 'Good host',
-      description: 'What good operators earn',
-      annualRevenue: scenarios.target,
-      color: 'blue' as const,
-      bgClass: 'bg-blue-50 border-blue-200',
-      textClass: 'text-blue-700',
-      labelClass: 'text-blue-600',
-      badgeClass: 'bg-blue-100 text-blue-700',
-    },
-    {
-      key: 'optimistic',
-      label: 'Optimistic',
-      sublabel: 'Top 10%',
-      description: 'What top operators earn',
-      annualRevenue: scenarios.optimistic,
-      color: 'emerald' as const,
-      bgClass: 'bg-emerald-50 border-emerald-200',
-      textClass: 'text-emerald-700',
-      labelClass: 'text-emerald-600',
-      badgeClass: 'bg-emerald-100 text-emerald-700',
-    },
-  ];
+  // Show only the optimistic projection
+  const projection = {
+    annualRevenue: scenarios.optimistic,
+  };
 
   return (
     <div className="mt-6 pt-5 border-t border-[oklch(0.90_0.01_265)]">
@@ -672,68 +638,61 @@ function ThreeTierProjections({
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
             <p className="text-sm leading-relaxed">
-              These three scenarios are based on real revenue data from comparable properties in your area. 
-              Conservative shows the median earner, Target shows top-quarter performance, 
-              and Optimistic shows what the top 10% of operators achieve.
+              This projection is based on real revenue data from top-performing comparable properties in your area.
+              It reflects what the best operators achieve with optimized pricing, great reviews, and strong occupancy.
             </p>
           </TooltipContent>
         </Tooltip>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {tiers.map((tier) => {
-          const monthlyRevenue = tier.annualRevenue / 12;
-          const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
-          const monthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses - (mode === 'purchase' ? monthlyAdditionalCosts : 0);
-          const annualProfit = monthlyProfit * 12;
-          const isProfitable = monthlyProfit > 0;
+      {(() => {
+        const monthlyRevenue = projection.annualRevenue / 12;
+        const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
+        const monthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses - (mode === 'purchase' ? monthlyAdditionalCosts : 0);
+        const annualProfit = monthlyProfit * 12;
+        const isProfitable = monthlyProfit > 0;
 
-          return (
-            <div
-              key={tier.key}
-              className={`rounded-xl p-4 border ${tier.bgClass} transition-shadow hover:shadow-md`}
-            >
-              {/* Tier Label */}
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className={`text-xs font-bold uppercase tracking-wider ${tier.labelClass}`}>
-                  {tier.label}
-                </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tier.badgeClass} font-medium`}>
-                  {tier.sublabel}
-                </span>
-              </div>
-              
+        return (
+          <div className="rounded-xl p-5 border bg-emerald-50 border-emerald-200 transition-shadow hover:shadow-md">
+            {/* Label */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+                Projection
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                Based on top performers
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
               {/* Monthly Revenue */}
-              <div className="mb-2">
+              <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Revenue</p>
-                <p className={`text-lg font-bold ${tier.textClass}`}>
+                <p className="text-xl font-bold text-emerald-700">
                   {formatCurrency(monthlyRevenue)}
                 </p>
               </div>
               
               {/* Monthly Profit */}
-              <div className="mb-2">
+              <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Profit</p>
-                <p className={`text-lg font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className={`text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
                   {isProfitable ? '+' : ''}{formatCurrency(monthlyProfit)}
                 </p>
               </div>
               
               {/* Annual Profit */}
-              <div className={`pt-2 border-t border-dashed ${isProfitable ? 'border-emerald-200' : 'border-red-200'}`}>
+              <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Profit</p>
-                <p className={`text-base font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className={`text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
                   {isProfitable ? '+' : ''}{formatCurrency(annualProfit)}
                   <span className="text-[10px] font-medium ml-1">/year</span>
                 </p>
               </div>
-              
-              {/* Description */}
-              <p className="text-[10px] text-slate-400 mt-2">{tier.description}</p>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
