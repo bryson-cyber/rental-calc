@@ -13127,3 +13127,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Show only Optimistic projection card (green) labeled as 'PROJECTION' — remove Conservative and Target cards
 - [x] Update shared report page to show single Projection card instead of three tiers
 - [x] Find and update all other references to conservative/target/optimistic across codebase
+- [x] Fix Revenue Range card to reflect admin-adjusted projected revenue instead of original conservative/optimistic range
+- [x] Create effectiveRevenue useMemo that scales low/high/projected proportionally when admin overrides revenue
+- [x] Update KeyMetricsRow to use effectiveRevenue.low/high for Revenue Range card
+- [x] Update all 10+ downstream components (OfferPriceSuggester, MaxPurchasePriceCalculator, AirbnbVsLongTermComparison, MarketPosition, BreakEvenCalculator, etc.) to use effectiveRevenue
+- [x] Add effectiveRevenue as optional prop to AIPropertyAdvisor component (separate function scope)

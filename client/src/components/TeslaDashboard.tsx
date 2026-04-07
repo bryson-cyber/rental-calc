@@ -2686,7 +2686,8 @@ function AIPropertyAdvisor({
   bathrooms,
   accommodates,
   monthlyRent,
-  result
+  result,
+  effectiveRevenue
 }: {
   address: string;
   bedrooms: number;
@@ -2694,6 +2695,7 @@ function AIPropertyAdvisor({
   accommodates?: number;
   monthlyRent?: number;
   result: AnalysisResult;
+  effectiveRevenue?: { projected: number; low: number; high: number };
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [advice, setAdvice] = useState<string | null>(null);
@@ -2721,9 +2723,9 @@ function AIPropertyAdvisor({
           monthlyRent: monthlyRent || result.cashFlow.monthlyRent,
         },
         revenue: {
-          projected: result.revenue.projected,
-          low: result.revenue.low,
-          high: result.revenue.high,
+          projected: effectiveRevenue?.projected ?? result.revenue.projected,
+          low: effectiveRevenue?.low ?? result.revenue.low,
+          high: effectiveRevenue?.high ?? result.revenue.high,
           adr: result.metrics.adr,
           occupancy: result.metrics.occupancy,
         },
@@ -3847,6 +3849,19 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     };
   }, [effectiveScenarios, revenueOverride]);
   
+  // Effective revenue values that respect admin override
+  // When admin adjusts revenue, scale low/high proportionally
+  const effectiveRevenue = useMemo(() => {
+    const ratio = (revenueOverride !== null && baseHeadlineRevenue > 0) 
+      ? revenueOverride / baseHeadlineRevenue 
+      : 1;
+    return {
+      projected: headlineRevenue,
+      low: Math.round(result.revenue.low * ratio),
+      high: Math.round(result.revenue.high * ratio),
+    };
+  }, [headlineRevenue, baseHeadlineRevenue, revenueOverride, result.revenue.low, result.revenue.high]);
+  
   // Persist revenue override to DB when admin changes it (debounced)
   const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
   
@@ -3985,8 +4000,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       <KeyMetricsRow
         adr={result.metrics.adr}
         occupancy={result.metrics.occupancy}
-        revenueLow={result.revenue.low}
-        revenueHigh={result.revenue.high}
+        revenueLow={effectiveRevenue.low}
+        revenueHigh={effectiveRevenue.high}
       />
       
       {/* PURCHASE MODE: Investment Metrics Section */}
@@ -4175,11 +4190,11 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Projected Revenue</span>
-                  <span className="font-medium">{formatCurrency(result.revenue.projected)}</span>
+                  <span className="font-medium">{formatCurrency(effectiveRevenue.projected)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Operating Expenses ({expensePercent}%)</span>
-                  <span className="font-medium text-red-600">-{formatCurrency(result.revenue.projected * (expensePercent / 100))}</span>
+                  <span className="font-medium text-red-600">-{formatCurrency(effectiveRevenue.projected * (expensePercent / 100))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Net Operating Income</span>
@@ -4201,7 +4216,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           {/* Offer Price Suggester */}
           <OfferPriceSuggester
             listingPrice={purchasePrice}
-            projectedAnnualRevenue={result.revenue.projected}
+            projectedAnnualRevenue={effectiveRevenue.projected}
             downPaymentPercent={downPaymentPercent}
             interestRate={interestRate}
             loanType={loanType}
@@ -4209,7 +4224,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           
           {/* Maximum Purchase Price Calculator */}
           <MaxPurchasePriceCalculator
-            projectedAnnualRevenue={result.revenue.projected}
+            projectedAnnualRevenue={effectiveRevenue.projected}
             downPaymentPercent={downPaymentPercent}
             interestRate={interestRate}
             loanType={loanType}
@@ -4240,7 +4255,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 4.5: Airbnb vs Long-Term Comparison */}
       <AirbnbVsLongTermComparison
-        annualAirbnbRevenue={result.revenue.projected}
+        annualAirbnbRevenue={effectiveRevenue.projected}
         monthlyRent={result.cashFlow.monthlyRent}
         rentometerMedian={rentometerData?.median}
         expensePercent={expensePercent}
@@ -4272,7 +4287,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       />
       
       <MarketPosition
-        propertyRevenue={result.revenue.projected}
+        propertyRevenue={effectiveRevenue.projected}
         comparables={result.comparables}
       />
       
@@ -4292,9 +4307,9 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           bathrooms,
           accommodates,
           monthlyRent,
-          projectedRevenue: result.revenue.projected,
-          revenueLow: result.revenue.low,
-          revenueHigh: result.revenue.high,
+          projectedRevenue: effectiveRevenue.projected,
+          revenueLow: effectiveRevenue.low,
+          revenueHigh: effectiveRevenue.high,
           adr: result.metrics.adr,
           occupancyRate: result.metrics.occupancy,
           monthlyRevenue: result.cashFlow.monthlyRevenue,
