@@ -13132,3 +13132,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update KeyMetricsRow to use effectiveRevenue.low/high for Revenue Range card
 - [x] Update all 10+ downstream components (OfferPriceSuggester, MaxPurchasePriceCalculator, AirbnbVsLongTermComparison, MarketPosition, BreakEvenCalculator, etc.) to use effectiveRevenue
 - [x] Add effectiveRevenue as optional prop to AIPropertyAdvisor component (separate function scope)
+
+### Bug: Admin revenue override not propagating to Revenue Range, Projection, and Investment Analysis (April 8, 2026)
+- [x] Revenue Range card ($19K – $47K) now updates when admin adjusts projected revenue (effectiveRevenue.low/high)
+- [x] Projection card uses adjustedScenarios.optimistic which scales proportionally with admin override
+- [x] Investment Analysis (ArbitrageCalculator) fixed: was using result.cashFlow.monthlyRevenue (original Rentalizer ~$26K/yr) instead of effectiveRevenue.projected/12 (P75 target ~$47K/yr). Root cause: the headline uses P75 target from comps, but ArbitrageCalculator was using the raw Rentalizer estimate
+- [x] PropertyChatBot and AIPropertyAdvisor data now use effectiveRevenue instead of original cashFlow values
+- [x] All sections now recalculate consistently when admin clicks +/- or types a new revenue value
+- [x] Added 14 unit tests verifying revenue override propagation logic

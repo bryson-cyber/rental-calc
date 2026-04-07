@@ -2729,15 +2729,19 @@ function AIPropertyAdvisor({
           adr: result.metrics.adr,
           occupancy: result.metrics.occupancy,
         },
-        cashFlow: monthlyRent || result.cashFlow.monthlyRent > 0 ? {
-          monthlyRevenue: result.cashFlow.monthlyRevenue,
-          monthlyRent: monthlyRent || result.cashFlow.monthlyRent,
-          monthlyProfit: result.cashFlow.monthlyProfit,
-          annualProfit: result.cashFlow.monthlyProfit * 12,
-          profitMargin: result.cashFlow.monthlyRent > 0 
-            ? (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100 
-            : 0,
-        } : undefined,
+        cashFlow: monthlyRent || result.cashFlow.monthlyRent > 0 ? (() => {
+          const effMonthly = effectiveRevenue?.projected ? effectiveRevenue.projected / 12 : result.cashFlow.monthlyRevenue;
+          const effRent = monthlyRent || result.cashFlow.monthlyRent;
+          const effExpenses = effMonthly * (expensePercent / 100);
+          const effProfit = effMonthly - effRent - effExpenses;
+          return {
+            monthlyRevenue: effMonthly,
+            monthlyRent: effRent,
+            monthlyProfit: effProfit,
+            annualProfit: effProfit * 12,
+            profitMargin: effRent > 0 ? (effProfit / effMonthly) * 100 : 0,
+          };
+        })() : undefined,
         comparables: result.comparables.map(c => ({
           title: c.title,
           bedrooms: c.bedrooms,
@@ -4243,7 +4247,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       {/* SECTION 4: Profit & Break-even - "What's left? When do I recoup?" (RENT MODE ONLY) */}
       {mode === 'rent' && (
         <ArbitrageCalculator
-          monthlyRevenue={result.cashFlow.monthlyRevenue}
+          monthlyRevenue={effectiveRevenue.projected / 12}
           monthlyRent={result.cashFlow.monthlyRent}
           occupancy={result.metrics.occupancy}
           adr={result.metrics.adr}
@@ -4312,8 +4316,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           revenueHigh: effectiveRevenue.high,
           adr: result.metrics.adr,
           occupancyRate: result.metrics.occupancy,
-          monthlyRevenue: result.cashFlow.monthlyRevenue,
-          monthlyProfit: result.cashFlow.monthlyProfit,
+          monthlyRevenue: effectiveRevenue.projected / 12,
+          monthlyProfit: (effectiveRevenue.projected / 12) - monthlyRent - (effectiveRevenue.projected / 12) * (expensePercent / 100),
           revenueScenarios: adjustedScenarios ? {
             conservative: adjustedScenarios.conservative,
             target: adjustedScenarios.target,
