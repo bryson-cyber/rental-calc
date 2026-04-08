@@ -22,7 +22,10 @@ import {
   BarChart3,
   Send,
   Clock,
-  MapPin
+  MapPin,
+  Settings,
+  Percent,
+  Save
 } from 'lucide-react';
 
 export default function AdminPortal() {
@@ -216,6 +219,7 @@ export default function AdminPortal() {
             <TabsTrigger value="optins">Email Opt-ins</TabsTrigger>
             <TabsTrigger value="usage">Tool Usage</TabsTrigger>
             <TabsTrigger value="hubspot">HubSpot Templates</TabsTrigger>
+            <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-1" />Settings</TabsTrigger>
           </TabsList>
 
           {/* Personalized Links Tab */}
@@ -654,8 +658,160 @@ export default function AdminPortal() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
+            <RevenueBoostSettings />
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
+  );
+}
+
+/** Revenue Boost Factor Settings Component */
+function RevenueBoostSettings() {
+  const { data: boostData, isLoading } = trpc.adminSettings.getBoostFactor.useQuery();
+  const [localFactor, setLocalFactor] = useState<string>('');
+  const [hasChanged, setHasChanged] = useState(false);
+  const utils = trpc.useUtils();
+
+  const setBoostMutation = trpc.adminSettings.setBoostFactor.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(data.message);
+        utils.adminSettings.getBoostFactor.invalidate();
+        setHasChanged(false);
+      } else {
+        toast.error(data.message);
+      }
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  useEffect(() => {
+    if (boostData && !hasChanged) {
+      setLocalFactor(String(Math.round((boostData.current - 1) * 100)));
+    }
+  }, [boostData, hasChanged]);
+
+  const handleSave = () => {
+    const pct = parseFloat(localFactor);
+    if (isNaN(pct) || pct < -50 || pct > 200) {
+      toast.error('Boost must be between -50% and 200%');
+      return;
+    }
+    const factor = 1 + pct / 100;
+    setBoostMutation.mutate({ factor });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Percent className="w-5 h-5 text-[#C9A962]" />
+          Revenue Boost Factor
+        </CardTitle>
+        <CardDescription>
+          Adjust the percentage boost applied to all AirDNA revenue and ADR values.
+          This affects new property analyses and shared reports.
+          Current: <strong>{boostData?.percentageBoost ?? 0}%</strong> boost
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-end gap-4">
+          <div className="flex-1 max-w-xs">
+            <Label htmlFor="boost-factor" className="text-sm font-medium">
+              Boost Percentage
+            </Label>
+            <div className="flex items-center gap-2 mt-1.5">
+              <Input
+                id="boost-factor"
+                type="number"
+                min="-50"
+                max="200"
+                step="5"
+                value={localFactor}
+                onChange={(e) => {
+                  setLocalFactor(e.target.value);
+                  setHasChanged(true);
+                }}
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              0% = no boost, 30% = 1.3x multiplier, 50% = 1.5x multiplier
+            </p>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanged || setBoostMutation.isPending}
+            className="bg-[#0F172A] hover:bg-[#1e293b]"
+          >
+            {setBoostMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Save
+          </Button>
+        </div>
+
+        {/* Quick presets */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">Quick Presets</Label>
+          <div className="flex flex-wrap gap-2">
+            {[0, 10, 15, 20, 25, 30, 40, 50].map((pct) => (
+              <Button
+                key={pct}
+                variant={localFactor === String(pct) ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setLocalFactor(String(pct));
+                  setHasChanged(true);
+                }}
+                className={localFactor === String(pct) ? 'bg-[#C9A962] hover:bg-[#b8944f] text-white' : ''}
+              >
+                {pct}%
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview */}
+        <div className="bg-muted/50 rounded-lg p-4 border">
+          <p className="text-sm font-medium mb-2">Preview</p>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">If AirDNA says $50,000/yr</p>
+              <p className="font-semibold text-lg">
+                ${Math.round(50000 * (1 + (parseFloat(localFactor) || 0) / 100)).toLocaleString()}/yr
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">If AirDNA says $200/night</p>
+              <p className="font-semibold text-lg">
+                ${Math.round(200 * (1 + (parseFloat(localFactor) || 0) / 100)).toLocaleString()}/night
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Note: Existing shared reports will be retroactively adjusted. New analyses will use the updated boost immediately.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

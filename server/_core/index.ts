@@ -1157,6 +1157,13 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
 
+    // Initialize revenue boost factor from DB
+    import('../boost-factor').then(({ initBoostFactor }) => {
+      initBoostFactor().catch((err) =>
+        console.error('[BoostFactor] Failed to initialize:', err),
+      );
+    }).catch(() => { /* boost-factor module not critical */ });
+
     // Initialize webinar mode from DB
     import('../webinar-cache').then(({ initWebinarMode }) => {
       initWebinarMode().catch((err) =>

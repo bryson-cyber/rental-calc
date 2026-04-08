@@ -7,6 +7,8 @@ import { getDb } from "./db";
 import { universalShareableReports, notificationAnalytics } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { generateShareCode, sendSMSNotification, sendEmailNotification } from "./sms-email-notifications";
+import { getBoostFactor } from "./boost-factor";
+import { REVENUE_BOOST_FACTOR } from "./airdna";
 
 // Report types supported by the universal shareable system
 export type ShareableReportType = 
@@ -123,6 +125,7 @@ export async function createShareableReport(
       creatorUserId: input.creatorUserId,
       sessionId: input.sessionId,
       revenueOverride: revenueOverride,
+      boostFactorAtCreation: REVENUE_BOOST_FACTOR,
     });
     
     console.log(`[ShareableReport] Created ${input.reportType} report with code: ${shareCode}`);
@@ -157,6 +160,16 @@ export async function getShareableReport(shareCode: string) {
       await db.execute(
         `UPDATE universal_shareable_reports SET viewCount = viewCount + 1, lastViewedAt = NOW() WHERE id = ${report.id}`
       );
+      
+      // Apply retroactive boost to stored report data
+      const currentBoost = getBoostFactor();
+      const originalBoost = (report as any).boostFactorAtCreation || 1.0; // Reports created before boost tracking default to 1.0 (no boost)
+      
+      if (currentBoost !== originalBoost && originalBoost > 0 && report.reportData) {
+        const scaleFactor = currentBoost / originalBoost;
+        report.reportData = applyRetroactiveBoost(report.reportData, scaleFactor);
+        console.log(`[ShareableReport] Applied retroactive boost: ${originalBoost} -> ${currentBoost} (scale: ${scaleFactor.toFixed(3)})`);
+      }
     }
     
     return report;
@@ -536,4 +549,106 @@ export async function getNotificationAnalytics(options?: {
     console.error("[NotificationAnalytics] Error getting analytics:", error);
     return null;
   }
+}
+
+
+/**
+ * Apply retroactive revenue boost to stored report data.
+ * Scales all revenue/ADR fields by the given scaleFactor.
+ * This allows existing shared reports to reflect updated boost settings.
+ */
+function applyRetroactiveBoost(reportData: any, scaleFactor: number): any {
+  if (!reportData || typeof reportData !== 'object' || scaleFactor === 1) {
+    return reportData;
+  }
+
+  const data = JSON.parse(JSON.stringify(reportData)); // deep clone
+
+  // Revenue fields to boost (absolute dollar amounts)
+  const revenueKeys = [
+    'annual_revenue', 'annual_revenue_low', 'annual_revenue_high',
+    'average_daily_rate', 'adr', 'revpar',
+    'monthlyRevenue', 'monthlyProfit', 'annualRevenue',
+    'projected_revenue', 'revenue', 'daily_rate',
+  ];
+
+  // Recursively walk the object and scale revenue fields
+  function walkAndScale(obj: any): void {
+    if (!obj || typeof obj !== 'object') return;
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        walkAndScale(item);
+      }
+      return;
+    }
+
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+
+      if (typeof val === 'number' && revenueKeys.includes(key)) {
+        obj[key] = Math.round(val * scaleFactor);
+      } else if (typeof val === 'object' && val !== null) {
+        walkAndScale(val);
+      }
+    }
+  }
+
+  // Scale top-level summary metrics
+  if (typeof data.annualRevenue === 'number') {
+    data.annualRevenue = Math.round(data.annualRevenue * scaleFactor);
+  }
+  if (typeof data.averageDailyRate === 'number') {
+    data.averageDailyRate = Math.round(data.averageDailyRate * scaleFactor);
+  }
+
+  // Scale nested report data
+  walkAndScale(data);
+
+  // Scale revenue_percentiles if present
+  if (data.revenue_percentiles && typeof data.revenue_percentiles === 'object') {
+    for (const pKey of Object.keys(data.revenue_percentiles)) {
+      if (typeof data.revenue_percentiles[pKey] === 'number') {
+        data.revenue_percentiles[pKey] = Math.round(data.revenue_percentiles[pKey] * scaleFactor);
+      }
+    }
+  }
+
+  // Scale monthly_forecast if present
+  if (Array.isArray(data.monthly_forecast)) {
+    for (const month of data.monthly_forecast) {
+      if (typeof month.revenue === 'number') {
+        month.revenue = Math.round(month.revenue * scaleFactor);
+      }
+      if (typeof month.adr === 'number') {
+        month.adr = Math.round(month.adr * scaleFactor);
+      }
+    }
+  }
+
+  // Scale comps if present
+  if (Array.isArray(data.comps)) {
+    for (const comp of data.comps) {
+      if (typeof comp.annual_revenue === 'number') {
+        comp.annual_revenue = Math.round(comp.annual_revenue * scaleFactor);
+      }
+      if (typeof comp.adr === 'number') {
+        comp.adr = Math.round(comp.adr * scaleFactor);
+      }
+      if (typeof comp.average_daily_rate === 'number') {
+        comp.average_daily_rate = Math.round(comp.average_daily_rate * scaleFactor);
+      }
+    }
+  }
+
+  // Scale estimates if present (Rentalizer response structure)
+  if (data.estimates) {
+    const est = data.estimates;
+    if (typeof est.annual_revenue === 'number') est.annual_revenue = Math.round(est.annual_revenue * scaleFactor);
+    if (typeof est.annual_revenue_low === 'number') est.annual_revenue_low = Math.round(est.annual_revenue_low * scaleFactor);
+    if (typeof est.annual_revenue_high === 'number') est.annual_revenue_high = Math.round(est.annual_revenue_high * scaleFactor);
+    if (typeof est.average_daily_rate === 'number') est.average_daily_rate = Math.round(est.average_daily_rate * scaleFactor);
+  }
+
+  return data;
 }

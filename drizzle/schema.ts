@@ -1393,6 +1393,10 @@ export const universalShareableReports = mysqlTable("universal_shareable_reports
   // Admin revenue override (persisted so shared reports show adjusted number)
   revenueOverride: int("revenueOverride"),
   
+  // Revenue boost factor that was active when this report was created (e.g., 1.30 = 30% boost)
+  // Used for retroactive boost adjustment: scale = currentBoost / boostFactorAtCreation
+  boostFactorAtCreation: decimal("boostFactorAtCreation", { precision: 5, scale: 2 }),
+  
   // Notification tracking
   smsSentTo: varchar("smsSentTo", { length: 50 }),
   smsSentAt: timestamp("smsSentAt"),
@@ -2789,3 +2793,32 @@ export const contentHubPresets = mysqlTable("content_hub_presets", {
 
 export type ContentHubPreset = typeof contentHubPresets.$inferSelect;
 export type InsertContentHubPreset = typeof contentHubPresets.$inferInsert;
+
+
+/**
+ * Admin Settings table for storing app-wide configuration
+ * Simple key-value store for settings like revenue boost factor
+ */
+export const adminSettings = mysqlTable("admin_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Setting key (unique identifier)
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  
+  // Setting value (stored as text, parsed by the application)
+  settingValue: text("settingValue").notNull(),
+  
+  // Description of what this setting does
+  description: text("description"),
+  
+  // Who last updated this setting
+  updatedByUserId: int("updatedByUserId"),
+  updatedByName: varchar("updatedByName", { length: 255 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AdminSetting = typeof adminSettings.$inferSelect;
+export type InsertAdminSetting = typeof adminSettings.$inferInsert;

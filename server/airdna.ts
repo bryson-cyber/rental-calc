@@ -11,7 +11,20 @@ import { isAdminRequest } from './request-context';
 // Apply a percentage boost to all revenue and ADR numbers from AirDNA.
 // This compensates for AirDNA's conservative estimates vs actual top-performer earnings.
 // Occupancy rates are NOT boosted (they are a rate, not a dollar amount).
-export const REVENUE_BOOST_FACTOR = 1.30; // 30% boost
+// This value is dynamically loaded from the admin_settings DB table.
+// Use updateBoostFactorFromDb() to refresh it, or setBoostFactorValue() to change it.
+export let REVENUE_BOOST_FACTOR = 1.30; // Default 30% boost — overridden by DB value
+
+/**
+ * Update the in-memory boost factor. Called by the boost-factor service
+ * when the admin changes the setting or on server startup.
+ */
+export function setBoostFactorValue(factor: number): void {
+  if (factor >= 0.5 && factor <= 3.0) {
+    REVENUE_BOOST_FACTOR = factor;
+    console.log(`[AirDNA] Revenue boost factor updated to ${factor} (${Math.round((factor - 1) * 100)}% boost)`);
+  }
+}
 
 // Helper to log cache hits to the API usage tracker
 function logCacheHit(endpoint: string, source?: string): void {

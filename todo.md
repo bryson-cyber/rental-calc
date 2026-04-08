@@ -13168,3 +13168,19 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Replace cache-hit path to also use top-3-comp-average instead of comp-median/P75
 - [x] Update client-side baseHeadlineRevenue to use result.revenue.projected directly (server-computed top-3 average)
 - [x] Added top-3-comp-average.test.ts with 8 tests
+
+### Feature: Admin-Configurable Boost Factor (April 8, 2026)
+- [x] Create admin_settings table in DB schema for key-value settings
+- [x] Add tRPC endpoints for getting/setting the boost factor (adminSettings router)
+- [x] Build admin settings UI page with boost factor slider/input (Settings tab in UnifiedAdmin)
+- [x] Replace hardcoded REVENUE_BOOST_FACTOR with DB-driven value (boost-factor.ts service)
+- [x] Cache the boost factor on server to avoid DB reads on every API call (in-memory via setBoostFactorValue)
+- [x] Added quick presets (No Boost, 15%, 30%, 50%) in admin UI
+- [x] Added 21 vitest tests for boost factor system (boost-factor.test.ts)
+
+### Feature: Retroactive Boost on Stored Shared Reports (April 8, 2026)
+- [x] Apply boost factor to revenue/ADR fields when loading stored shared reports (applyRetroactiveBoost in shareable-reports.ts)
+- [x] Track which boost factor was used when report was created vs current boost factor (boostFactorAtCreation column in universal_shareable_reports)
+- [x] Scale stored revenue values by (currentBoost / originalBoost) ratio on load
+- [x] Recursive walkAndScale handles all nested revenue/ADR fields
+- [x] Occupancy rates excluded from retroactive scaling

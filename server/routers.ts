@@ -16,6 +16,7 @@ import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
 import { adminRouter } from "./admin-router";
+import { adminSettingsRouter } from "./routers/admin-settings";
 import { newsletterRouter } from "./newsletter-router";
 import { slackAdminRouter } from "./slack-admin-router";
 
@@ -173,6 +174,7 @@ export const appRouter = router({
 
   // Admin & tracking
   admin: adminRouter,
+  adminSettings: adminSettingsRouter,
   slackAdmin: slackAdminRouter,
   adminTracking: adminTrackingRouter,
   webhook: webhookRouter,

@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -71,7 +72,9 @@ import {
   User,
   BookOpen,
   Radio,
-  Film
+  Film,
+  Settings,
+  Percent
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -445,6 +448,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="data-policy" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
               Data Policy
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -1715,6 +1722,13 @@ export default function UnifiedAdmin() {
           <TabsContent value="data-policy" className="space-y-6">
             <DataPolicyTab />
           </TabsContent>
+
+          {/* ============================================ */}
+          {/* SETTINGS TAB */}
+          {/* ============================================ */}
+          <TabsContent value="settings" className="space-y-6">
+            <SettingsTab />
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -2304,6 +2318,222 @@ function DataPolicyTab() {
             </div>
           </div>
 
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+
+// ============================================
+// SETTINGS TAB
+// Revenue boost factor and other admin settings
+// ============================================
+function SettingsTab() {
+  const [pendingFactor, setPendingFactor] = useState<number | null>(null);
+  const [inputValue, setInputValue] = useState('');
+
+  const { data: boostData, isLoading, refetch } = trpc.adminSettings.getBoostFactor.useQuery();
+
+  const setBoostMutation = trpc.adminSettings.setBoostFactor.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(data.message);
+        setPendingFactor(null);
+        refetch();
+      } else {
+        toast.error(data.message);
+      }
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Initialize input when data loads
+  const currentFactor = pendingFactor ?? boostData?.current ?? 1.3;
+  const currentPercentage = Math.round((currentFactor - 1) * 100);
+  const hasChanges = pendingFactor !== null && pendingFactor !== boostData?.current;
+
+  const handleSliderChange = (values: number[]) => {
+    const percentage = values[0];
+    const factor = 1 + percentage / 100;
+    setPendingFactor(Math.round(factor * 100) / 100);
+    setInputValue(String(percentage));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= -50 && num <= 200) {
+      const factor = 1 + num / 100;
+      setPendingFactor(Math.round(factor * 100) / 100);
+    }
+  };
+
+  const handleSave = () => {
+    if (pendingFactor !== null) {
+      setBoostMutation.mutate({ factor: pendingFactor });
+    }
+  };
+
+  const handleReset = () => {
+    setPendingFactor(null);
+    setInputValue('');
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* Revenue Boost Factor */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Revenue Boost Factor
+          </CardTitle>
+          <CardDescription>
+            Adjust the multiplier applied to all AirDNA revenue and ADR values. This affects new analyses and retroactively adjusts existing shared reports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              {/* Current Value Display */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-1">Current Boost</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-foreground">
+                      {currentPercentage}%
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      ({currentFactor.toFixed(2)}x multiplier)
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-1">Default</p>
+                  <span className="text-lg font-semibold text-foreground">
+                    {boostData ? Math.round((boostData.default - 1) * 100) : 30}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Slider Control */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Adjust Boost Percentage</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={-50}
+                      max={200}
+                      step={5}
+                      value={inputValue || String(currentPercentage)}
+                      onChange={handleInputChange}
+                      className="w-20 h-8 text-center text-sm"
+                    />
+                    <Percent className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="px-1">
+                  <Slider
+                    min={-50}
+                    max={200}
+                    step={5}
+                    value={[currentPercentage]}
+                    onValueChange={handleSliderChange}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs text-muted-foreground">-50%</span>
+                    <span className="text-xs text-muted-foreground">0% (no boost)</span>
+                    <span className="text-xs text-muted-foreground">+100%</span>
+                    <span className="text-xs text-muted-foreground">+200%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Explanation */}
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-sm space-y-2">
+                <p className="font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  How This Works
+                </p>
+                <ul className="text-amber-700 dark:text-amber-300 space-y-1 ml-6 list-disc">
+                  <li>All revenue and ADR values from AirDNA are multiplied by this factor</li>
+                  <li>Occupancy rates are <strong>not</strong> affected</li>
+                  <li>New property analyses will use the updated factor immediately</li>
+                  <li>Existing shared report links will retroactively show adjusted numbers</li>
+                  <li>The factor at time of report creation is stored for accurate retroactive scaling</li>
+                </ul>
+              </div>
+
+              {/* Save / Reset Buttons */}
+              {hasChanges && (
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    onClick={handleSave}
+                    disabled={setBoostMutation.isPending}
+                    className="flex-1"
+                  >
+                    {setBoostMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Save Changes ({currentPercentage}% boost)
+                  </Button>
+                  <Button variant="outline" onClick={handleReset}>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Quick Presets</CardTitle>
+          <CardDescription>Common boost factor configurations</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'No Boost', value: 1.0, desc: 'Raw AirDNA data' },
+              { label: '15% Boost', value: 1.15, desc: 'Conservative' },
+              { label: '30% Boost', value: 1.30, desc: 'Default' },
+              { label: '50% Boost', value: 1.50, desc: 'Aggressive' },
+            ].map((preset) => {
+              const isActive = Math.abs(currentFactor - preset.value) < 0.01;
+              return (
+                <button
+                  key={preset.label}
+                  onClick={() => {
+                    const pct = Math.round((preset.value - 1) * 100);
+                    setPendingFactor(preset.value);
+                    setInputValue(String(pct));
+                  }}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    isActive
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                  }`}
+                >
+                  <p className={`font-semibold text-sm ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                    {preset.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{preset.desc}</p>
+                  <p className="text-xs text-muted-foreground mt-1 font-mono">{preset.value.toFixed(2)}x</p>
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>
