@@ -13161,3 +13161,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Comp-median adjustment remains self-consistent (both inputs boosted = same ratio, higher final value)
 - [x] Added revenue-boost.test.ts with comprehensive tests
 - [x] Change REVENUE_BOOST_FACTOR from 1.15 to 1.30 (30% total boost on all revenue/ADR)
+- [x] Occupancy rates: NOT boosted — math is consistent because Revenue = ADR × Occ × 365, and both Revenue and ADR are boosted by same factor, so Occ stays the same
+- [x] Percentage changes: NOT boosted — relative metrics are unaffected by the boost
+- [x] Change headline projected revenue to be the average of the top 3 comps by revenue (after 30% boost)
+- [x] Replace P75/Rentalizer/comp-median logic with top-3-comp-average on server (getComprehensivePropertyReport)
+- [x] Replace cache-hit path to also use top-3-comp-average instead of comp-median/P75
+- [x] Update client-side baseHeadlineRevenue to use result.revenue.projected directly (server-computed top-3 average)
+- [x] Added top-3-comp-average.test.ts with 8 tests

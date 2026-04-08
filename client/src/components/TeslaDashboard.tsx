@@ -3829,9 +3829,10 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   }
   const yearlyChange = result.historicalData?.summary?.yearly_pct_change;
   
-  // Use Target (P75) revenue as the headline when available, fallback to Rentalizer estimate
+  // Use the server-computed projected revenue (top-3 comp average) as the headline
+  // The server already sets annual_revenue to the average of the top 3 comps by revenue
   const effectiveScenarios = revenueScenarios || result.revenueScenarios;
-  const baseHeadlineRevenue = effectiveScenarios?.target || result.revenue.projected;
+  const baseHeadlineRevenue = result.revenue.projected;
   
   // Admin revenue override — allows admin to adjust the headline revenue up/down
   // Initialize from persisted value if available (loaded from DB for shared reports)
