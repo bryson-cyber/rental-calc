@@ -1,45 +1,45 @@
 import { describe, it, expect } from 'vitest';
 
 /**
- * Tests to verify the 15% revenue boost (REVENUE_BOOST_FACTOR = 1.15)
+ * Tests to verify the 30% revenue boost (REVENUE_BOOST_FACTOR = 1.30)
  * is applied consistently across all AirDNA data entry points.
  * 
  * Since we can't easily mock the AirDNA API in unit tests, we test the
- * boost logic itself — that multiplying by 1.15 produces the expected values.
+ * boost logic itself — that multiplying by 1.30 produces the expected values.
  */
 
-const REVENUE_BOOST_FACTOR = 1.15;
+const REVENUE_BOOST_FACTOR = 1.30;
 
 describe('Revenue Boost Factor', () => {
-  it('should be exactly 1.15 (15% boost)', () => {
-    expect(REVENUE_BOOST_FACTOR).toBe(1.15);
+  it('should be exactly 1.30 (30% boost)', () => {
+    expect(REVENUE_BOOST_FACTOR).toBe(1.30);
   });
 
   describe('Property Revenue Estimates', () => {
-    it('should boost annual_revenue by 15%', () => {
+    it('should boost annual_revenue by 30%', () => {
       const originalRevenue = 47383;
       const boosted = Math.round(originalRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(54490);
+      expect(boosted).toBe(61598);
       expect(boosted).toBeGreaterThan(originalRevenue);
-      expect(boosted / originalRevenue).toBeCloseTo(1.15, 2);
+      expect(boosted / originalRevenue).toBeCloseTo(1.30, 2);
     });
 
-    it('should boost annual_revenue_low by 15%', () => {
+    it('should boost annual_revenue_low by 30%', () => {
       const originalLow = 25000;
       const boosted = Math.round(originalLow * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(28750);
+      expect(boosted).toBe(32500);
     });
 
-    it('should boost annual_revenue_high by 15%', () => {
+    it('should boost annual_revenue_high by 30%', () => {
       const originalHigh = 65000;
       const boosted = Math.round(originalHigh * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(74750);
+      expect(boosted).toBe(84500);
     });
 
-    it('should boost average_daily_rate by 15%', () => {
+    it('should boost average_daily_rate by 30%', () => {
       const originalAdr = 200;
       const boosted = Math.round(originalAdr * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(230);
+      expect(boosted).toBe(260);
     });
 
     it('should NOT boost occupancy_rate', () => {
@@ -50,16 +50,16 @@ describe('Revenue Boost Factor', () => {
   });
 
   describe('Monthly Forecast', () => {
-    it('should boost monthly revenue by 15%', () => {
+    it('should boost monthly revenue by 30%', () => {
       const originalMonthlyRevenue = 5000;
       const boosted = Math.round(originalMonthlyRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(5750);
+      expect(boosted).toBe(6500);
     });
 
-    it('should boost monthly ADR by 15%', () => {
+    it('should boost monthly ADR by 30%', () => {
       const originalAdr = 180;
       const boosted = Math.round(originalAdr * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(207);
+      expect(boosted).toBe(234);
     });
 
     it('should NOT boost monthly occupancy', () => {
@@ -69,19 +69,19 @@ describe('Revenue Boost Factor', () => {
   });
 
   describe('Comp Listings', () => {
-    it('should boost comp annual_revenue by 15%', () => {
+    it('should boost comp annual_revenue by 30%', () => {
       const compRevenues = [60000, 80000, 45000, 120000];
       const boosted = compRevenues.map(r => Math.round(r * REVENUE_BOOST_FACTOR));
-      expect(boosted).toEqual([69000, 92000, 51750, 138000]);
+      expect(boosted).toEqual([78000, 104000, 58500, 156000]);
       boosted.forEach((b, i) => {
-        expect(b / compRevenues[i]).toBeCloseTo(1.15, 2);
+        expect(b / compRevenues[i]).toBeCloseTo(1.30, 2);
       });
     });
 
-    it('should boost comp ADR by 15%', () => {
+    it('should boost comp ADR by 30%', () => {
       const compAdrs = [150, 200, 250];
       const boosted = compAdrs.map(a => Math.round(a * REVENUE_BOOST_FACTOR));
-      expect(boosted).toEqual([173, 230, 288]);
+      expect(boosted).toEqual([195, 260, 325]);
     });
 
     it('should NOT boost comp occupancy', () => {
@@ -92,22 +92,22 @@ describe('Revenue Boost Factor', () => {
   });
 
   describe('Market Metrics', () => {
-    it('should boost market revenue by 15%', () => {
+    it('should boost market revenue by 30%', () => {
       const marketRevenue = 55000;
       const boosted = Math.round(marketRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(63250);
+      expect(boosted).toBe(71500);
     });
 
-    it('should boost market ADR by 15%', () => {
+    it('should boost market ADR by 30%', () => {
       const marketAdr = 175;
       const boosted = Math.round(marketAdr * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(201);
+      expect(boosted).toBe(228);
     });
 
-    it('should boost market revpar by 15%', () => {
+    it('should boost market revpar by 30%', () => {
       const revpar = 120;
       const boosted = Math.round(revpar * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(138);
+      expect(boosted).toBe(156);
     });
 
     it('should NOT boost market occupancy', () => {
@@ -117,10 +117,10 @@ describe('Revenue Boost Factor', () => {
   });
 
   describe('Historical Revenue Valuation', () => {
-    it('should boost historical revenue_valuation by 15%', () => {
+    it('should boost historical revenue_valuation by 30%', () => {
       const historicalRevenue = 42000;
       const boosted = Math.round(historicalRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(48300);
+      expect(boosted).toBe(54600);
     });
 
     it('should NOT boost percentage changes', () => {
@@ -133,16 +133,16 @@ describe('Revenue Boost Factor', () => {
   });
 
   describe('Bulk Summary', () => {
-    it('should boost bulk summary revenue by 15%', () => {
+    it('should boost bulk summary revenue by 30%', () => {
       const bulkRevenue = 38000;
       const boosted = Math.round(bulkRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(43700);
+      expect(boosted).toBe(49400);
     });
 
-    it('should boost bulk summary ADR by 15%', () => {
+    it('should boost bulk summary ADR by 30%', () => {
       const bulkAdr = 165;
       const boosted = Math.round(bulkAdr * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(190);
+      expect(boosted).toBe(215);
     });
   });
 
@@ -161,10 +161,10 @@ describe('Revenue Boost Factor', () => {
       // Scale factor should be approximately the same
       expect(boostedScale).toBeCloseTo(originalScale, 1);
       
-      // But the final revenue should be 15% higher
+      // But the final revenue should be 30% higher
       const originalFinalRevenue = originalCompMedian; // comp median wins
       const boostedFinalRevenue = boostedCompMedian;
-      expect(boostedFinalRevenue / originalFinalRevenue).toBeCloseTo(1.15, 2);
+      expect(boostedFinalRevenue / originalFinalRevenue).toBeCloseTo(1.30, 2);
     });
 
     it('should maintain percentile relationships after boost', () => {
@@ -185,8 +185,8 @@ describe('Revenue Boost Factor', () => {
       const boostedP25 = getPercentile(boostedRevenues, 25);
       const boostedP75 = getPercentile(boostedRevenues, 75);
 
-      expect(boostedP25 / origP25).toBeCloseTo(1.15, 1);
-      expect(boostedP75 / origP75).toBeCloseTo(1.15, 1);
+      expect(boostedP25 / origP25).toBeCloseTo(1.30, 1);
+      expect(boostedP75 / origP75).toBeCloseTo(1.30, 1);
     });
   });
 
@@ -202,7 +202,7 @@ describe('Revenue Boost Factor', () => {
     it('should handle very large revenue', () => {
       const largeRevenue = 500000;
       const boosted = Math.round(largeRevenue * REVENUE_BOOST_FACTOR);
-      expect(boosted).toBe(575000);
+      expect(boosted).toBe(650000);
     });
   });
 });

@@ -11,7 +11,7 @@ import { isAdminRequest } from './request-context';
 // Apply a percentage boost to all revenue and ADR numbers from AirDNA.
 // This compensates for AirDNA's conservative estimates vs actual top-performer earnings.
 // Occupancy rates are NOT boosted (they are a rate, not a dollar amount).
-export const REVENUE_BOOST_FACTOR = 1.15; // 15% boost
+export const REVENUE_BOOST_FACTOR = 1.30; // 30% boost
 
 // Helper to log cache hits to the API usage tracker
 function logCacheHit(endpoint: string, source?: string): void {

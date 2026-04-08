@@ -13160,3 +13160,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Revenue Range, Projection card, Investment Analysis, hero section all use boosted values automatically
 - [x] Comp-median adjustment remains self-consistent (both inputs boosted = same ratio, higher final value)
 - [x] Added revenue-boost.test.ts with comprehensive tests
+- [x] Change REVENUE_BOOST_FACTOR from 1.15 to 1.30 (30% total boost on all revenue/ADR)
