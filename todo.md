@@ -13195,3 +13195,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Revenue range (low/high) reflects boosted comp values (comps are boosted before min/max extraction)
 - [x] All numbers on the page are now consistent and boosted
 - [x] Fixed JSX syntax errors in TeslaDashboard.tsx (stray closing bracket and missing conditional)
+
+### Feature: Outlier Filtering for Comps (April 9, 2026)
+- [x] Filter out comps with 95%+ occupancy (likely long-term rentals, not true STR comps)
+- [x] Apply filtering BEFORE top-3 selection so outliers don't inflate the average (fresh + cache paths)
+- [x] Graceful fallback: if filtering leaves < 3 comps, fall back to unfiltered set
+- [x] Applied to revenue_scenarios (P50/P75/P90) as well
+- [x] 9 new outlier filtering tests added (30 total in boost-factor.test.ts), all passing
+- [ ] Filter out comps with 30+ day minimum stays (data not available from AirDNA ListingData — skipped)

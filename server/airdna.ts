@@ -2884,7 +2884,23 @@ export async function getComprehensivePropertyReport(
         const exactComps = cachedReport.same_bedroom_comps.filter(
           (c: any) => c.bedrooms === propBr && matchBa(c.bathrooms, propBa) && c.annual_revenue > 0
         );
-        const allComps = exactComps.length >= 3 ? exactComps : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
+        const rawComps = exactComps.length >= 3 ? exactComps : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
+        
+        // Outlier filtering: remove likely long-term rentals (95%+ occupancy)
+        const MAX_STR_OCCUPANCY = 95;
+        let allComps = rawComps.filter((c: any) => {
+          const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100;
+          if (occ >= MAX_STR_OCCUPANCY) {
+            console.log(`[Outlier Filter CACHE] Excluding comp "${c.title}" — ${Math.round(occ)}% occupancy, rev: $${c.annual_revenue?.toLocaleString()}`);
+            return false;
+          }
+          return true;
+        });
+        // Graceful fallback
+        if (allComps.length < 3 && rawComps.length >= 3) {
+          console.log(`[Outlier Filter CACHE] Only ${allComps.length} comps after filter — falling back to unfiltered (${rawComps.length})`);
+          allComps = rawComps;
+        }
         
         if (allComps.length >= 3) {
           // Top 3 by revenue
@@ -2937,9 +2953,16 @@ export async function getComprehensivePropertyReport(
       const exactComps = propBr && propBa
         ? cachedReport.same_bedroom_comps.filter((c: any) => c.bedrooms === propBr && matchBa(c.bathrooms, propBa) && c.annual_revenue > 0)
         : [];
-      const scenarioComps = exactComps.length >= 3
+      const rawScenarioComps = exactComps.length >= 3
         ? exactComps
         : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
+      // Apply outlier filtering to revenue scenarios too
+      const MAX_OCC = 95;
+      let scenarioComps = rawScenarioComps.filter((c: any) => {
+        const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100;
+        return occ < MAX_OCC;
+      });
+      if (scenarioComps.length < 3 && rawScenarioComps.length >= 3) scenarioComps = rawScenarioComps;
       
       if (scenarioComps.length >= 3) {
         const scenarioRevenues = scenarioComps.map((c: any) => c.annual_revenue).sort((a: number, b: number) => a - b);
@@ -4195,11 +4218,36 @@ export async function getComprehensivePropertyReport(
   console.log(`Rentalizer revenue: $${propertyEstimate.estimates.annual_revenue}`);
   
   // ============================================
+  // OUTLIER FILTERING — Remove likely long-term rentals
+  // Comps with 95%+ occupancy year-round are almost certainly monthly/long-term rentals,
+  // not true short-term rental comps. These inflate the top-3 average unrealistically.
+  // ============================================
+  const filterOutlierComps = (comps: ListingData[]): ListingData[] => {
+    const MAX_STR_OCCUPANCY = 95; // 95%+ occupancy = likely long-term rental
+    const filtered = comps.filter(c => {
+      const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100; // Normalize to percentage
+      if (occ >= MAX_STR_OCCUPANCY) {
+        console.log(`[Outlier Filter] Excluding comp "${c.title}" — ${Math.round(occ)}% occupancy (likely long-term rental), rev: $${c.annual_revenue.toLocaleString()}`);
+        return false;
+      }
+      return true;
+    });
+    // Graceful fallback: if filtering removed too many, return original
+    if (filtered.length < 3 && comps.length >= 3) {
+      console.log(`[Outlier Filter] Only ${filtered.length} comps remain after filtering — falling back to unfiltered (${comps.length} comps)`);
+      return comps;
+    }
+    console.log(`[Outlier Filter] ${comps.length - filtered.length} outliers removed, ${filtered.length} comps remain`);
+    return filtered;
+  };
+
+  // ============================================
   // TOP-3 COMP AVERAGE — Headline Revenue
   // Use the average revenue of the top 3 comps (by revenue) as the projected headline.
   // This reflects what the best-performing comparable properties actually earn.
   // ============================================
-  const allCompsForHeadline = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
+  const rawCompsForHeadline = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
+  const allCompsForHeadline = filterOutlierComps(rawCompsForHeadline);
   
   if (allCompsForHeadline.length >= 3) {
     // Sort comps by revenue descending and take top 3
@@ -4265,7 +4313,10 @@ export async function getComprehensivePropertyReport(
   // THREE-TIER REVENUE SCENARIOS (P50 / P75 / P90)
   // Based on real comp data percentiles
   // ============================================
-  const scenarioComps = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
+  const rawScenarioComps = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
+  // Apply same outlier filtering to revenue scenarios
+  const filteredScenarioComps = filterOutlierComps(rawScenarioComps);
+  const scenarioComps = filteredScenarioComps;
   let revenueScenarios: { conservative: number; target: number; optimistic: number; source: string; compCount: number } | undefined;
   
   if (scenarioComps.length >= 3) {

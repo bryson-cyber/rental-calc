@@ -255,3 +255,151 @@ describe('boostFactorAtCreation tracking', () => {
     expect(scaleFactor).toBe(1);
   });
 });
+
+// ============================================
+// 6. Outlier Filtering Tests
+// ============================================
+describe('outlier filtering for top-3 comp selection', () => {
+  // Simulate the filterOutlierComps logic inline (same as in airdna.ts)
+  const MAX_STR_OCCUPANCY = 95;
+
+  const filterOutlierComps = (comps: Array<{ title: string; occupancy: number; annual_revenue: number; adr: number }>) => {
+    const filtered = comps.filter(c => {
+      const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100;
+      return occ < MAX_STR_OCCUPANCY;
+    });
+    if (filtered.length < 3 && comps.length >= 3) {
+      return comps; // Graceful fallback
+    }
+    return filtered;
+  };
+
+  it('should exclude comps with 95%+ occupancy (percentage format)', () => {
+    const comps = [
+      { title: 'Normal STR', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'Long-term rental', occupancy: 99, annual_revenue: 80000, adr: 300 },
+      { title: 'Good STR', occupancy: 68, annual_revenue: 45000, adr: 180 },
+      { title: 'Another STR', occupancy: 82, annual_revenue: 55000, adr: 220 },
+    ];
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(3);
+    expect(filtered.find(c => c.title === 'Long-term rental')).toBeUndefined();
+  });
+
+  it('should exclude comps with 0.95+ occupancy (decimal format)', () => {
+    const comps = [
+      { title: 'Normal STR', occupancy: 0.73, annual_revenue: 50000, adr: 200 },
+      { title: 'Long-term rental', occupancy: 0.99, annual_revenue: 80000, adr: 300 },
+      { title: 'Good STR', occupancy: 0.68, annual_revenue: 45000, adr: 180 },
+      { title: 'Another STR', occupancy: 0.82, annual_revenue: 55000, adr: 220 },
+    ];
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(3);
+    expect(filtered.find(c => c.title === 'Long-term rental')).toBeUndefined();
+  });
+
+  it('should keep comps at exactly 94% occupancy', () => {
+    const comps = [
+      { title: 'High but legit', occupancy: 94, annual_revenue: 60000, adr: 250 },
+      { title: 'Normal STR', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'Good STR', occupancy: 68, annual_revenue: 45000, adr: 180 },
+    ];
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(3);
+    expect(filtered.find(c => c.title === 'High but legit')).toBeDefined();
+  });
+
+  it('should exclude comps at exactly 95% occupancy', () => {
+    const comps = [
+      { title: 'Borderline', occupancy: 95, annual_revenue: 60000, adr: 250 },
+      { title: 'Normal STR', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'Good STR', occupancy: 68, annual_revenue: 45000, adr: 180 },
+      { title: 'Another STR', occupancy: 82, annual_revenue: 55000, adr: 220 },
+    ];
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(3);
+    expect(filtered.find(c => c.title === 'Borderline')).toBeUndefined();
+  });
+
+  it('should fall back to unfiltered if filtering leaves fewer than 3 comps', () => {
+    const comps = [
+      { title: 'LTR 1', occupancy: 97, annual_revenue: 80000, adr: 300 },
+      { title: 'LTR 2', occupancy: 96, annual_revenue: 75000, adr: 280 },
+      { title: 'Normal STR', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'Good STR', occupancy: 68, annual_revenue: 45000, adr: 180 },
+    ];
+    // Only 2 would remain after filtering, but we have 4 total >= 3, so fallback
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(4); // Falls back to all
+    expect(filtered.find(c => c.title === 'LTR 1')).toBeDefined();
+  });
+
+  it('should return empty array if input has fewer than 3 comps and all are outliers', () => {
+    const comps = [
+      { title: 'LTR 1', occupancy: 97, annual_revenue: 80000, adr: 300 },
+      { title: 'LTR 2', occupancy: 96, annual_revenue: 75000, adr: 280 },
+    ];
+    // Only 2 comps total, both outliers, but since total < 3, no fallback needed
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(0);
+  });
+
+  it('should not filter any comps when all have normal occupancy', () => {
+    const comps = [
+      { title: 'STR 1', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'STR 2', occupancy: 68, annual_revenue: 45000, adr: 180 },
+      { title: 'STR 3', occupancy: 82, annual_revenue: 55000, adr: 220 },
+      { title: 'STR 4', occupancy: 60, annual_revenue: 40000, adr: 160 },
+    ];
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.length).toBe(4);
+  });
+
+  it('should correctly affect top-3 average by removing outlier', () => {
+    const comps = [
+      { title: 'LTR outlier', occupancy: 99, annual_revenue: 80000, adr: 300 },
+      { title: 'Top STR', occupancy: 78, annual_revenue: 55000, adr: 220 },
+      { title: 'Good STR', occupancy: 73, annual_revenue: 50000, adr: 200 },
+      { title: 'Decent STR', occupancy: 68, annual_revenue: 45000, adr: 180 },
+      { title: 'Average STR', occupancy: 60, annual_revenue: 40000, adr: 160 },
+    ];
+
+    // Without filtering: top 3 = [80000, 55000, 50000] → avg = 61,667
+    const unfilteredTop3 = [...comps].sort((a, b) => b.annual_revenue - a.annual_revenue).slice(0, 3);
+    const unfilteredAvg = Math.round(unfilteredTop3.reduce((s, c) => s + c.annual_revenue, 0) / 3);
+    expect(unfilteredAvg).toBe(61667);
+
+    // With filtering: remove 99% occ → top 3 = [55000, 50000, 45000] → avg = 50,000
+    const filtered = filterOutlierComps(comps);
+    const filteredTop3 = [...filtered].sort((a, b) => b.annual_revenue - a.annual_revenue).slice(0, 3);
+    const filteredAvg = Math.round(filteredTop3.reduce((s, c) => s + c.annual_revenue, 0) / 3);
+    expect(filteredAvg).toBe(50000);
+
+    // The outlier was inflating the average by $11,667
+    expect(unfilteredAvg - filteredAvg).toBe(11667);
+  });
+
+  it('should handle the Oceanside example case (99% occupancy outlier)', () => {
+    // Real-world scenario from the bug report
+    const comps = [
+      { title: 'Downtown Luxury Loft', occupancy: 99, annual_revenue: 60666, adr: 491 }, // OUTLIER
+      { title: 'Modern City Townhome', occupancy: 71, annual_revenue: 38869, adr: 278 },
+      { title: 'Spacious Urban Retreat', occupancy: 88, annual_revenue: 37764, adr: 347 },
+      // ... more comps
+      { title: 'Comp 4', occupancy: 66, annual_revenue: 35000, adr: 260 },
+      { title: 'Comp 5', occupancy: 72, annual_revenue: 32000, adr: 240 },
+    ];
+
+    // Without filtering: top 3 = [60666, 38869, 37764] → avg = $45,766
+    const unfilteredTop3 = [...comps].sort((a, b) => b.annual_revenue - a.annual_revenue).slice(0, 3);
+    const unfilteredAvg = Math.round(unfilteredTop3.reduce((s, c) => s + c.annual_revenue, 0) / 3);
+    expect(unfilteredAvg).toBe(45766);
+
+    // With filtering: remove 99% → top 3 = [38869, 37764, 35000] → avg = $37,211
+    const filtered = filterOutlierComps(comps);
+    expect(filtered.find(c => c.title === 'Downtown Luxury Loft')).toBeUndefined();
+    const filteredTop3 = [...filtered].sort((a, b) => b.annual_revenue - a.annual_revenue).slice(0, 3);
+    const filteredAvg = Math.round(filteredTop3.reduce((s, c) => s + c.annual_revenue, 0) / 3);
+    expect(filteredAvg).toBe(37211);
+  });
+});
