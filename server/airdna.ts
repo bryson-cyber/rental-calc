@@ -2893,9 +2893,8 @@ export async function getComprehensivePropertyReport(
           const top3Adr = Math.round(top3.reduce((s: number, c: any) => s + c.adr, 0) / 3);
           const top3Occ = top3.reduce((s: number, c: any) => s + c.occupancy, 0) / 3;
           
-          const sortedRevs = allComps.map((c: any) => c.annual_revenue).sort((a: number, b: number) => a - b);
-          const q1Idx = Math.max(0, Math.ceil((25 / 100) * sortedRevs.length) - 1);
-          const q3Idx = Math.max(0, Math.ceil((75 / 100) * sortedRevs.length) - 1);
+          const top3Min = Math.min(...top3.map((c: any) => c.annual_revenue));
+          const top3Max = Math.max(...top3.map((c: any) => c.annual_revenue));
           const rentalizerRev = cachedProp.estimates.annual_revenue;
           
           console.log(`[Property Report] CACHE HIT — applying top-3-comp-average: $${rentalizerRev.toLocaleString()} -> $${top3Rev.toLocaleString()} (${allComps.length} comps)`);
@@ -2911,8 +2910,8 @@ export async function getComprehensivePropertyReport(
           cachedProp.estimates.annual_revenue = top3Rev;
           cachedProp.estimates.average_daily_rate = top3Adr;
           cachedProp.estimates.occupancy_rate = top3Occ > 1 ? top3Occ / 100 : top3Occ;
-          cachedProp.estimates.annual_revenue_low = sortedRevs[q1Idx];
-          cachedProp.estimates.annual_revenue_high = sortedRevs[q3Idx];
+          cachedProp.estimates.annual_revenue_low = top3Min;
+          cachedProp.estimates.annual_revenue_high = top3Max;
           if (cachedProp.monthly_forecast?.length > 0 && scale !== 1) {
             cachedProp.monthly_forecast = cachedProp.monthly_forecast.map((m: any) => ({
               ...m,
@@ -4209,20 +4208,15 @@ export async function getComprehensivePropertyReport(
     const top3Adr = Math.round(top3Comps.reduce((sum, c) => sum + c.adr, 0) / 3);
     const top3Occupancy = top3Comps.reduce((sum, c) => sum + c.occupancy, 0) / 3;
     
-    // Also compute Q1/Q3 for the revenue range display
-    const sortedRevenues = allCompsForHeadline.map(c => c.annual_revenue).sort((a, b) => a - b);
-    const getPercentile = (arr: number[], p: number) => {
-      const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
-      return arr[idx];
-    };
-    const compQ1Revenue = getPercentile(sortedRevenues, 25);
-    const compQ3Revenue = getPercentile(sortedRevenues, 75);
+    // Use the top-3 comps' min/max for the revenue range so it's consistent with the headline
+    const top3Min = Math.min(...top3Comps.map(c => c.annual_revenue));
+    const top3Max = Math.max(...top3Comps.map(c => c.annual_revenue));
     
     const rentalizerRevenue = propertyEstimate.estimates.annual_revenue;
     const targetRevenue = top3Revenue;
     
     console.log(`[Top-3 Comp Average] Top 3 comps: ${top3Comps.map(c => '$' + c.annual_revenue.toLocaleString()).join(', ')}`);
-    console.log(`[Top-3 Comp Average] Average: $${top3Revenue.toLocaleString()}, Rentalizer: $${rentalizerRevenue.toLocaleString()}, Q1: $${compQ1Revenue.toLocaleString()}, Q3: $${compQ3Revenue.toLocaleString()} (${allCompsForHeadline.length} comps used)`);
+    console.log(`[Top-3 Comp Average] Average: $${top3Revenue.toLocaleString()}, Rentalizer: $${rentalizerRevenue.toLocaleString()}, Range: $${top3Min.toLocaleString()} - $${top3Max.toLocaleString()} (top 3 of ${allCompsForHeadline.length} comps)`);
     
     const scaleFactor = targetRevenue / rentalizerRevenue;
     
@@ -4248,8 +4242,8 @@ export async function getComprehensivePropertyReport(
     propertyEstimate.estimates.average_daily_rate = top3Adr > 1 ? top3Adr : Math.round(top3Adr);
     // Normalize occupancy: if comp occupancy is > 1, it's already a percentage (e.g., 73), convert to decimal
     propertyEstimate.estimates.occupancy_rate = top3Occupancy > 1 ? top3Occupancy / 100 : top3Occupancy;
-    propertyEstimate.estimates.annual_revenue_low = compQ1Revenue; // Q1 as the low end
-    propertyEstimate.estimates.annual_revenue_high = compQ3Revenue; // Q3 as the high end
+    propertyEstimate.estimates.annual_revenue_low = top3Min; // Lowest of top 3 comps
+    propertyEstimate.estimates.annual_revenue_high = top3Max; // Highest of top 3 comps
     
     console.log(`[Top-3 Comp Average] Setting revenue: $${rentalizerRevenue.toLocaleString()} → $${targetRevenue.toLocaleString()} (scale: ${scaleFactor.toFixed(2)}x)`);
     

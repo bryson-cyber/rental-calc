@@ -13184,3 +13184,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Scale stored revenue values by (currentBoost / originalBoost) ratio on load
 - [x] Recursive walkAndScale handles all nested revenue/ADR fields
 - [x] Occupancy rates excluded from retroactive scaling
+
+### Bug: Broken Shared Report & Property Analysis (April 9, 2026)
+- [x] Fix inconsistent revenue numbers across report sections — all sections now derive from the same top-3-comp-average projected revenue
+- [x] Revenue range uses top-3 min/max instead of Q1/Q3 of all comps
+- [x] Projection card and FullPropertyReport use headline revenue (top-3 average) instead of P90
+
+### Bug Fix: Apply 30% Boost to Comp Revenues Before Top-3 Average (April 9, 2026)
+- [x] Boost factor already applied to individual comp revenues before top-3 average (confirmed in airdna.ts)
+- [x] Revenue range (low/high) reflects boosted comp values (comps are boosted before min/max extraction)
+- [x] All numbers on the page are now consistent and boosted
+- [x] Fixed JSX syntax errors in TeslaDashboard.tsx (stray closing bracket and missing conditional)

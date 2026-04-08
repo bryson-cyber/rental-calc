@@ -1557,19 +1557,19 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Annual Revenue Projection <InfoTip text="Projected annual revenue based on top-performing comparable properties in your area. This reflects what the best operators achieve with professional setup, optimized pricing, and strong reviews." /></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <StatCard
-                label="Projection"
-                value={`${formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}/yr`}
-                sublabel="Based on top performers"
+                label="Projected Revenue"
+                value={`${formatCurrency(revenue_estimate.annual)}/yr`}
+                sublabel="Average of top comparable properties"
                 icon={TrendingUp}
                 highlight
-                tooltip="Projected annual revenue based on what the top-performing comparable properties earn in your market. Achievable with professional photos, optimized pricing, and great guest experiences."
+                tooltip="Projected annual revenue based on the average of the top-performing comparable properties in your market. Achievable with professional photos, optimized pricing, and great guest experiences."
               />
               <StatCard
-                label="Revenue Range"
+                label="Top Comp Range"
                 value={`${formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)} — ${formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}`}
-                sublabel="Low to high"
+                sublabel="Lowest to highest of top comps"
                 icon={BarChart3}
-                tooltip="The full range of possible annual revenue based on market data. The low end represents average performance, the high end represents top performers."
+                tooltip="The revenue range of the top-performing comparable properties used to calculate your projection. The low end is the lowest earner among the top comps, the high end is the highest earner."
               />
             </div>
 
@@ -2708,9 +2708,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <p className="text-xs text-[oklch(0.55_0_0)] mb-4">Based on {revenue_scenarios.compCount} comparable {revenue_scenarios.source === 'exact_match' ? 'properties (same bed/bath)' : 'properties (same bedrooms)'}</p>
               )}
               {(() => {
-                const projectionRevenue = revenue_scenarios 
-                  ? revenue_scenarios.optimistic 
-                  : revenue_estimate.nightly * Math.min((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 1.2, 0.95) * 365;
+                // Use the headline revenue (top-3-comp average) as the projection — NOT P90
+                // This ensures the Profit Projection card matches the headline number
+                const projectionRevenue = revenue_estimate.annual;
                 const annualOperatingCosts = projectionRevenue * 0.20;
                 const annualProfit = projectionRevenue - rentalCalcs.rent * 12 - annualOperatingCosts;
                 const monthlyProfit = annualProfit / 12;

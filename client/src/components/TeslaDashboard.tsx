@@ -614,9 +614,11 @@ function ThreeTierProjections({
   mode: 'rent' | 'purchase';
   monthlyAdditionalCosts?: number; // Property tax + insurance + maintenance + utilities (purchase mode)
 }) {
-  // Show only the optimistic projection
+  // Use the target (P75) as the projection base — this aligns closer to the headline (top-3 avg)
+  // The headline revenue is already the top-3-comp average; scenarios.target (P75) is the closest match
+  // Using P90 here would show a HIGHER number than the headline, creating contradiction
   const projection = {
-    annualRevenue: scenarios.optimistic,
+    annualRevenue: scenarios.target,
   };
 
   return (
@@ -1882,7 +1884,7 @@ function RevenuePercentileProjections({
   revenueData: { projected: number; low: number; high: number };
   bedrooms?: number;
 }) {
-  const { projected, high } = revenueData;
+  const { projected, low, high } = revenueData;
   
   // Don't show if we don't have valid data
   if (!projected || projected <= 0) return null;
@@ -1907,44 +1909,50 @@ function RevenuePercentileProjections({
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
             <p className="text-sm leading-relaxed">
-              This projection is based on real revenue data from top-performing comparable properties in your area.
-              It reflects what the best operators achieve with optimized pricing, great reviews, and strong occupancy.
+              This projection is based on the average revenue of the top-performing comparable properties in your area.
+              The range shows the lowest to highest earner among those top comps.
             </p>
           </TooltipContent>
         </Tooltip>
       </div>
       
-      {/* Single Projection Card */}
+      {/* Single Projection Card — uses headline revenue (top-3 avg), NOT high */}
       <div className="rounded-xl p-5 border bg-emerald-50 border-emerald-200 mb-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Projection</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Based on top performers</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Average of top comps</span>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Annual Revenue</p>
-            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(high)}</p>
+            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(projected)}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly Revenue</p>
-            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(high / 12)}</p>
+            <p className="text-2xl font-bold text-emerald-700">{formatCompactCurrency(projected / 12)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide">Top Comp Range</p>
+            <p className="text-sm font-bold text-emerald-700">{formatCompactCurrency(low)} – {formatCompactCurrency(high)}</p>
           </div>
         </div>
       </div>
       
-      {/* Upside Potential */}
+      {/* Upside Potential — shows how much more the best comp earns vs the average */}
+      {high > projected && (
       <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-700">Upside vs Average</p>
+            <p className="text-sm font-medium text-indigo-700">Best Comp Upside</p>
             <p className="text-2xl font-bold text-indigo-800">+{formatCompactCurrency(high - projected)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-indigo-600">+{Math.round(((high - projected) / projected) * 100)}% above average</p>
+            <p className="text-sm text-indigo-600">+{Math.round(((high - projected) / projected) * 100)}% above projection</p>
             <p className="text-xs text-indigo-500">With optimized pricing and reviews</p>
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -2127,7 +2135,7 @@ function ArbitrageCalculator({
             const annualGross = monthlyProfit * 12;
             return { monthlyProfit, annualGross };
           };
-          const top = calcTierProfit(revenueScenarios.optimistic);
+          const top = calcTierProfit(revenueScenarios.target);
           return (
             <div className="pt-4 border-t border-slate-200">
               <div className="mb-4">
