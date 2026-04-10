@@ -13203,3 +13203,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Applied to revenue_scenarios (P50/P75/P90) as well
 - [x] 9 new outlier filtering tests added (30 total in boost-factor.test.ts), all passing
 - [ ] Filter out comps with 30+ day minimum stays (data not available from AirDNA ListingData — skipped)
+
+### Bug: Tool Not Working - Reports from Users (April 9, 2026)
+- [ ] Investigate what specifically is failing on the live site
+- [ ] Check server logs for errors
+- [ ] Reproduce the issue
+
+### Bug: Data Not Populating After Analysis (April 9, 2026)
+- [ ] Results not displaying after user clicks Validate/Get Estimate button
+- [ ] Trace data flow from API response → setResult → TeslaDashboard rendering
+
+### Task: Grant Admin Access to dfy@coachinayah.com (April 11, 2026)
+- [x] dfy@coachinayah.com already has admin role (confirmed in DB)
+- [x] Changed revenue edit permission from isOwner to isAdmin — any admin can now edit revenues
+- [x] Updated LeadMagnet.tsx (main analysis) and ShareableReportViewer.tsx (shared reports)

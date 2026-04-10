@@ -6216,7 +6216,7 @@ export default function LeadMagnet() {
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
                 revenueScenarios={result.revenueScenarios}
-                isOwner={isOwner}
+                isOwner={isAdmin}
                 shareCode={validatorShareCode || undefined}
                 onRevenueOverrideChange={setCurrentRevenueOverride}
                 dataSource={result.dataSource}

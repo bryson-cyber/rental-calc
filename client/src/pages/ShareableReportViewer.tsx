@@ -15,6 +15,7 @@
 import { useParams, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useState } from 'react';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -335,6 +336,8 @@ function isRegulationData(reportData: any): boolean {
 export default function ShareableReportViewer() {
   const { shareCode } = useParams<{ shareCode: string }>();
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -625,6 +628,7 @@ export default function ShareableReportViewer() {
                 interestRate={storedInterestRate}
                 shareCode={shareCode || undefined}
                 persistedRevenueOverride={report.revenueOverride ?? reportData?._revenueOverride ?? null}
+                isOwner={isAdmin}
                 propertyLatitude={reportData?.latitude || report.latitude}
                 propertyLongitude={reportData?.longitude || report.longitude}
               />
