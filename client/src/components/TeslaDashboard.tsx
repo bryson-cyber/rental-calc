@@ -3357,18 +3357,18 @@ function ComparableProperties({
   
   if (!comparables || comparables.length === 0) return null;
   
-  // Sort comps by amenity match when user has selected amenities
+  // Sort comps: always by revenue descending; when amenity filter active, amenity match count takes priority
   const hasAmenityFilter = selectedAmenities.length > 0;
-  const sortedComparables = hasAmenityFilter
-    ? [...comparables].sort((a, b) => {
-        const aMatchCount = a.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
-        const bMatchCount = b.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
-        // Primary sort: amenity match count (desc)
-        if (bMatchCount !== aMatchCount) return bMatchCount - aMatchCount;
-        // Secondary sort: revenue (desc) — user prefers highest revenue first
-        return b.revenue - a.revenue;
-      })
-    : comparables;
+  const sortedComparables = [...comparables].sort((a, b) => {
+    if (hasAmenityFilter) {
+      const aMatchCount = a.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
+      const bMatchCount = b.amenities?.filter(am => selectedAmenities.includes(am)).length || 0;
+      // Primary sort: amenity match count (desc)
+      if (bMatchCount !== aMatchCount) return bMatchCount - aMatchCount;
+    }
+    // Always sort by revenue (desc) — highest earners first
+    return b.revenue - a.revenue;
+  });
   
   const displayComps = showAll ? sortedComparables : sortedComparables.slice(0, 6);
   
