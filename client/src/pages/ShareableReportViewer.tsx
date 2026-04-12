@@ -628,7 +628,7 @@ export default function ShareableReportViewer() {
                 interestRate={storedInterestRate}
                 shareCode={shareCode || undefined}
                 persistedRevenueOverride={report.revenueOverride ?? reportData?._revenueOverride ?? null}
-                isOwner={isAdmin}
+                isOwner={false}
                 propertyLatitude={reportData?.latitude || report.latitude}
                 propertyLongitude={reportData?.longitude || report.longitude}
               />

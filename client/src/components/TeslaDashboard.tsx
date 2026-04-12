@@ -3926,29 +3926,35 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     setRevenueOverride(newValue);
     // Notify parent component so share button can include the override
     onRevenueOverrideChange?.(newValue);
-    // Mark as pending — user must click Save to persist
-    if (shareCode) {
-      setHasPendingOverride(true);
-      setSavedFlash(false);
-    }
+    // Always mark as pending — admin must click Save to confirm
+    setHasPendingOverride(true);
+    setSavedFlash(false);
   };
 
   const handleSaveOverride = (explicitValue?: number | null) => {
-    if (!shareCode) return;
     const valueToSave = explicitValue !== undefined ? explicitValue : revenueOverride;
-    updateOverrideMutation.mutate(
-      { shareCode, revenueOverride: valueToSave },
-      {
-        onSuccess: () => {
-          setHasPendingOverride(false);
-          setSavedFlash(true);
-          setTimeout(() => setSavedFlash(false), 3000);
-        },
-        onError: () => {
-          // Keep pending state so user can retry
-        },
-      }
-    );
+    if (shareCode) {
+      // Shared report context: persist to DB
+      updateOverrideMutation.mutate(
+        { shareCode, revenueOverride: valueToSave },
+        {
+          onSuccess: () => {
+            setHasPendingOverride(false);
+            setSavedFlash(true);
+            setTimeout(() => setSavedFlash(false), 3000);
+          },
+          onError: () => {
+            // Keep pending state so user can retry
+          },
+        }
+      );
+    } else {
+      // Main analysis page: just confirm the value is locked in (no DB needed yet)
+      // The share button will embed this value when the report is shared
+      setHasPendingOverride(false);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 3000);
+    }
   };
   
   // Reset override when base revenue changes (new analysis)
@@ -4066,7 +4072,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
-        onSaveOverride={shareCode ? (v) => handleSaveOverride(v) : undefined}
+        onSaveOverride={(v) => handleSaveOverride(v)}
         isSavingOverride={updateOverrideMutation.isPending}
         savedOverrideFlash={savedFlash}
         hasPendingOverride={hasPendingOverride}
