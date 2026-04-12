@@ -471,6 +471,32 @@ function HeroRevenueCard({
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
+            {/* Save button — inline next to +/- controls, only when pending */}
+            {isOwner && onSaveOverride && hasPendingOverride && !isEditingRevenue && (
+              <button
+                onClick={() => onSaveOverride?.()}
+                disabled={isSavingOverride}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition-colors shadow-sm"
+              >
+                {isSavingOverride ? (
+                  <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+                ) : (
+                  <><Save className="w-3 h-3" /> Save</>
+                )}
+              </button>
+            )}
+            {/* Saved flash — inline */}
+            {isOwner && onSaveOverride && savedOverrideFlash && !hasPendingOverride && !isEditingRevenue && (
+              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+              </span>
+            )}
+            {/* Save error — inline */}
+            {isOwner && onSaveOverride && saveOverrideError && !hasPendingOverride && !isEditingRevenue && (
+              <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Save failed
+              </span>
+            )}
             {!isEditingRevenue && (
               <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
             )}
@@ -487,43 +513,8 @@ function HeroRevenueCard({
               </span>
             )}
           </div>
-          {/* Owner override indicator + Save button */}
-          {isOwner && onSaveOverride && !isEditingRevenue && (
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              {revenueOverrideActive && (
-                <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                  Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
-                </p>
-              )}
-              {/* Save button — only shown when there are unsaved changes or we have a shareCode */}
-              {hasPendingOverride && (
-                <button
-                  onClick={() => onSaveOverride?.()}
-                  disabled={isSavingOverride}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition-colors shadow-sm"
-                >
-                  {isSavingOverride ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
-                  ) : (
-                    <><Save className="w-3 h-3" /> Save</>  
-                  )}
-                </button>
-              )}
-              {saveOverrideError && !hasPendingOverride && (
-                <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Save failed — try again
-                </p>
-              )}
-              {savedOverrideFlash && !hasPendingOverride && (
-                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Saved
-                </p>
-              )}
-            </div>
-          )}
-          {/* Fallback indicator for non-shareCode contexts (no save needed) */}
-          {isOwner && !onSaveOverride && revenueOverrideActive && (
+          {/* Override active indicator (below the row) */}
+          {isOwner && revenueOverrideActive && (
             <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
               Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
