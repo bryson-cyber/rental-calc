@@ -162,15 +162,15 @@ export const shareableReportsRouter = router({
         return result;
       }),
 
-    // Owner-only: Update revenue override for a shared report
+    // Admin-only: Update revenue override for a shared report
     updateRevenueOverride: protectedProcedure
       .input(z.object({
         shareCode: z.string().min(1),
         revenueOverride: z.number().nullable(),
       }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user?.openId !== ENV.ownerOpenId) {
-          throw new Error('Owner access required');
+        if (ctx.user?.role !== 'admin' && ctx.user?.openId !== ENV.ownerOpenId) {
+          throw new Error('Admin access required');
         }
         const db = await getDb();
         if (!db) throw new Error('Database unavailable');
