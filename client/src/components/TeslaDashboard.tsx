@@ -43,7 +43,8 @@ import {
   Loader2,
   Pencil,
   Check,
-  Map
+  Map,
+  Save
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import { MapView } from './Map';
@@ -267,6 +268,11 @@ function HeroRevenueCard({
   isOwner = false,
   onRevenueOverride,
   revenueOverrideActive = false,
+  onSaveOverride,
+  isSavingOverride = false,
+  savedOverrideFlash = false,
+  hasPendingOverride = false,
+  saveOverrideError = false,
   dataSource
 }: { 
   annualRevenue: number;
@@ -287,6 +293,11 @@ function HeroRevenueCard({
   isOwner?: boolean;
   onRevenueOverride?: (newRevenue: number | null) => void;
   revenueOverrideActive?: boolean;
+  onSaveOverride?: (explicitValue?: number | null) => void;
+  isSavingOverride?: boolean;
+  savedOverrideFlash?: boolean;
+  hasPendingOverride?: boolean;
+  saveOverrideError?: boolean;
   dataSource?: {
     type: 'comp_fallback';
     market: string;
@@ -449,7 +460,11 @@ function HeroRevenueCard({
             {/* Owner reset button when override is active */}
             {isOwner && onRevenueOverride && revenueOverrideActive && !isEditingRevenue && (
               <button
-                onClick={() => onRevenueOverride(null)}
+                onClick={() => {
+                  onRevenueOverride(null);
+                  // Reset saves immediately with explicit null — avoids React state closure issue
+                  if (onSaveOverride) (onSaveOverride as (v?: number | null) => void)(null);
+                }}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors border border-slate-300 shadow-sm"
                 title="Reset to original estimate"
               >
@@ -472,8 +487,43 @@ function HeroRevenueCard({
               </span>
             )}
           </div>
-          {/* Owner override indicator */}
-          {isOwner && revenueOverrideActive && (
+          {/* Owner override indicator + Save button */}
+          {isOwner && onSaveOverride && !isEditingRevenue && (
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {revenueOverrideActive && (
+                <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                  Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
+                </p>
+              )}
+              {/* Save button — only shown when there are unsaved changes or we have a shareCode */}
+              {hasPendingOverride && (
+                <button
+                  onClick={() => onSaveOverride?.()}
+                  disabled={isSavingOverride}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition-colors shadow-sm"
+                >
+                  {isSavingOverride ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="w-3 h-3" /> Save</>  
+                  )}
+                </button>
+              )}
+              {saveOverrideError && !hasPendingOverride && (
+                <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Save failed — try again
+                </p>
+              )}
+              {savedOverrideFlash && !hasPendingOverride && (
+                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Saved
+                </p>
+              )}
+            </div>
+          )}
+          {/* Fallback indicator for non-shareCode contexts (no save needed) */}
+          {isOwner && !onSaveOverride && revenueOverrideActive && (
             <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
               Admin override active — original estimate was {formatCurrency(revenueScenarios?.target || 0)}
@@ -3875,20 +3925,39 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     };
   }, [headlineRevenue, baseHeadlineRevenue, revenueOverride, result.revenue.low, result.revenue.high]);
   
-  // Persist revenue override to DB when admin changes it (debounced)
+  // Persist revenue override to DB — explicit Save button
   const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
-  
+  // Track whether there are unsaved changes (pending save)
+  const [hasPendingOverride, setHasPendingOverride] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+
   const handleRevenueOverride = (newValue: number | null) => {
     setRevenueOverride(newValue);
     // Notify parent component so share button can include the override
     onRevenueOverrideChange?.(newValue);
-    // Auto-save to DB if we have a shareCode
+    // Mark as pending — user must click Save to persist
     if (shareCode) {
-      updateOverrideMutation.mutate({
-        shareCode,
-        revenueOverride: newValue,
-      });
+      setHasPendingOverride(true);
+      setSavedFlash(false);
     }
+  };
+
+  const handleSaveOverride = (explicitValue?: number | null) => {
+    if (!shareCode) return;
+    const valueToSave = explicitValue !== undefined ? explicitValue : revenueOverride;
+    updateOverrideMutation.mutate(
+      { shareCode, revenueOverride: valueToSave },
+      {
+        onSuccess: () => {
+          setHasPendingOverride(false);
+          setSavedFlash(true);
+          setTimeout(() => setSavedFlash(false), 3000);
+        },
+        onError: () => {
+          // Keep pending state so user can retry
+        },
+      }
+    );
   };
   
   // Reset override when base revenue changes (new analysis)
@@ -4006,6 +4075,11 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         isOwner={isOwner}
         onRevenueOverride={(val) => handleRevenueOverride(val)}
         revenueOverrideActive={revenueOverride !== null}
+        onSaveOverride={shareCode ? (v) => handleSaveOverride(v) : undefined}
+        isSavingOverride={updateOverrideMutation.isPending}
+        savedOverrideFlash={savedFlash}
+        hasPendingOverride={hasPendingOverride}
+        saveOverrideError={updateOverrideMutation.isError}
         dataSource={dataSource}
       />
       
