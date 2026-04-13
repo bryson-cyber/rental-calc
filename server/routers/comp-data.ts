@@ -51,8 +51,8 @@ export const compDataRouter = router({
           }
 
           // Transform listings to match frontend interface
-          const listings = result.listings.map((listing: any) => ({
-            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
+          const rawListings = result.listings.map((listing: any) => ({
+            id: listing.airbnb_listing_id || listing.airbnb_property_id || listing.id || listing.property_id || null,
             title: listing.title || 'Untitled Listing',
             property_type: listing.property_type || 'unknown',
             bedrooms: listing.bedrooms ?? 0,
@@ -71,6 +71,15 @@ export const compDataRouter = router({
             longitude: listing.longitude || listing.location?.lng || null,
             exact_location: listing.exact_location || false,
           }));
+
+          // Deduplicate by listing ID; fall back to title+bedrooms key if no ID
+          const seen = new Set<string>();
+          const listings = rawListings.filter(l => {
+            const key = l.id ? String(l.id) : `${l.title}__${l.bedrooms}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }).map(l => ({ ...l, id: l.id ? String(l.id) : `${l.title}__${l.bedrooms}` }));
 
           // Record AirDNA API usage
           const userId = ctx.user?.id;
@@ -137,8 +146,8 @@ export const compDataRouter = router({
           }
 
           // Transform listings to match frontend interface
-          const listings = allListings.map((listing: any) => ({
-            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
+          const rawAllListings = allListings.map((listing: any) => ({
+            id: listing.airbnb_listing_id || listing.airbnb_property_id || listing.id || listing.property_id || null,
             title: listing.title || 'Untitled Listing',
             property_type: listing.property_type || 'unknown',
             bedrooms: listing.bedrooms ?? 0,
@@ -156,6 +165,15 @@ export const compDataRouter = router({
             longitude: listing.longitude || listing.location?.lng || null,
             exact_location: listing.exact_location || false,
           }));
+
+          // Deduplicate by listing ID; fall back to title+bedrooms key if no ID
+          const seenAll = new Set<string>();
+          const listings = rawAllListings.filter(l => {
+            const key = l.id ? String(l.id) : `${l.title}__${l.bedrooms}`;
+            if (seenAll.has(key)) return false;
+            seenAll.add(key);
+            return true;
+          }).map(l => ({ ...l, id: l.id ? String(l.id) : `${l.title}__${l.bedrooms}` }));
 
           // Record AirDNA API usage (multiple pages fetched)
           const userId = ctx.user?.id;
@@ -313,8 +331,8 @@ export const compDataRouter = router({
           }
           
           // Transform listings to match frontend interface
-          const listings = result.listings.map((listing: any) => ({
-            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
+          const rawZipListings = result.listings.map((listing: any) => ({
+            id: listing.airbnb_listing_id || listing.airbnb_property_id || listing.id || listing.property_id || null,
             title: listing.title || 'Untitled Listing',
             property_type: listing.property_type || 'unknown',
             bedrooms: listing.bedrooms ?? 0,
@@ -332,6 +350,15 @@ export const compDataRouter = router({
             longitude: listing.longitude || listing.location?.lng || null,
             exact_location: listing.exact_location || false,
           }));
+
+          // Deduplicate by listing ID; fall back to title+bedrooms key if no ID
+          const seenZip = new Set<string>();
+          const listings = rawZipListings.filter(l => {
+            const key = l.id ? String(l.id) : `${l.title}__${l.bedrooms}`;
+            if (seenZip.has(key)) return false;
+            seenZip.add(key);
+            return true;
+          }).map(l => ({ ...l, id: l.id ? String(l.id) : `${l.title}__${l.bedrooms}` }));
           
           console.log(`[CompData.getListingsByZipcode] Found ${listings.length} listings for zip ${input.zipcode}`);
           
