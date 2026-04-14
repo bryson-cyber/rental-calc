@@ -13217,3 +13217,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] dfy@coachinayah.com already has admin role (confirmed in DB)
 - [x] Changed revenue edit permission from isOwner to isAdmin — any admin can now edit revenues
 - [x] Updated LeadMagnet.tsx (main analysis) and ShareableReportViewer.tsx (shared reports)
+- [ ] Step 5: Add checkbox to each comp in "Similar Properties Nearby" to include/exclude from comp set
+- [ ] Step 5: Recalculate revenue projections (annual revenue, ADR, occupancy) based only on selected comps

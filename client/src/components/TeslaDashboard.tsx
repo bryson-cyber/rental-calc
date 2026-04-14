@@ -3376,7 +3376,10 @@ function ComparableProperties({
   amenityFilter,
   propertyLatitude,
   propertyLongitude,
-  address
+  address,
+  isOwner = false,
+  selectedCompIds,
+  onToggleComp,
 }: { 
   comparables: Comparable[];
   onViewAll?: () => void;
@@ -3390,6 +3393,9 @@ function ComparableProperties({
   propertyLatitude?: number;
   propertyLongitude?: number;
   address?: string;
+  isOwner?: boolean;
+  selectedCompIds?: Set<string>;
+  onToggleComp?: (id: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -3453,6 +3459,30 @@ function ComparableProperties({
       <div className="bg-white border border-slate-200 rounded-xl p-6">
         {/* Comp Strength Indicator */}
         <CompStrengthIndicator comparables={comparables} />
+
+        {/* Owner: comp selection status banner */}
+        {isOwner && selectedCompIds && selectedCompIds.size < comparables.length && (
+          <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-blue-800">{selectedCompIds.size} of {comparables.length} comps selected</span>
+              <span className="text-xs text-blue-600">— projections updated based on selection</span>
+            </div>
+            <button
+              onClick={() => {
+                // Reset all comps to selected — we need to call onToggleComp for each deselected comp
+                // Since we can't call setSelectedCompIds directly here, we expose a reset via a special call
+                comparables.forEach(c => {
+                  if (onToggleComp && selectedCompIds && !selectedCompIds.has(c.id)) {
+                    onToggleComp(c.id);
+                  }
+                });
+              }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-800 underline"
+            >
+              Reset all
+            </button>
+          </div>
+        )}
         
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -3609,10 +3639,13 @@ function ComparableProperties({
             const imageCount = comp.images?.length || (comp.imageUrl ? 1 : 0);
             const amenityMatchCount = hasAmenityFilter ? (comp.amenities?.filter(am => selectedAmenities.includes(am)).length || 0) : 0;
             
+            const isCompSelected = !selectedCompIds || selectedCompIds.has(comp.id);
             return (
               <div 
                 key={comp.id} 
-                className={`border rounded-xl overflow-hidden hover:shadow-lg transition-shadow ${
+                className={`border rounded-xl overflow-hidden hover:shadow-lg transition-all ${
+                  !isCompSelected ? 'opacity-40 grayscale' : ''
+                } ${
                   hasAmenityFilter && amenityMatchCount > 0
                     ? 'border-amber-300 ring-1 ring-amber-200/50'
                     : 'border-slate-200'
@@ -3666,8 +3699,22 @@ function ComparableProperties({
                       <span className="text-[10px] font-bold">{amenityMatchCount}/{selectedAmenities.length} match</span>
                     </div>
                   )}
-                  {/* Rating badge */}
-                  {comp.rating > 0 && (
+                  {/* Owner: include/exclude toggle */}
+                  {isOwner && onToggleComp && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleComp(comp.id); }}
+                      className={`absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm text-xs font-semibold transition-colors ${
+                        isCompSelected
+                          ? 'bg-emerald-500 text-white hover:bg-red-500'
+                          : 'bg-slate-700 text-white hover:bg-emerald-500'
+                      }`}
+                      title={isCompSelected ? 'Click to exclude from projections' : 'Click to include in projections'}
+                    >
+                      {isCompSelected ? '✓ In' : '+ Add'}
+                    </button>
+                  )}
+                  {/* Rating badge (only show when no owner toggle, or when deselected) */}
+                  {!isOwner && comp.rating > 0 && (
                     <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
                       <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                       <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
@@ -3767,10 +3814,13 @@ function ComparableProperties({
               const hasImages = (comp.images && comp.images.length > 0) || !!comp.imageUrl;
               const imageCount = comp.images?.length || (comp.imageUrl ? 1 : 0);
               
+              const isNonMatchSelected = !selectedCompIds || selectedCompIds.has(comp.id);
               return (
                 <div 
                   key={comp.id} 
-                  className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow hover:opacity-100"
+                  className={`border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-all hover:opacity-100 ${
+                    !isNonMatchSelected ? 'opacity-40 grayscale' : ''
+                  }`}
                 >
                   {/* Image */}
                   <div 
@@ -3810,12 +3860,24 @@ function ComparableProperties({
                     <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-400 shadow-sm">
                       {matchingComps.length + idx + 1}
                     </div>
-                    {comp.rating > 0 && (
+                    {isOwner && onToggleComp ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleComp(comp.id); }}
+                        className={`absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm text-xs font-semibold transition-colors ${
+                          isNonMatchSelected
+                            ? 'bg-emerald-500 text-white hover:bg-red-500'
+                            : 'bg-slate-700 text-white hover:bg-emerald-500'
+                        }`}
+                        title={isNonMatchSelected ? 'Click to exclude from projections' : 'Click to include in projections'}
+                      >
+                        {isNonMatchSelected ? '✓ In' : '+ Add'}
+                      </button>
+                    ) : comp.rating > 0 ? (
                       <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
                         <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                         <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
                       </div>
-                    )}
+                    ) : null}
                     {comp.distanceMeters !== undefined && comp.distanceMeters > 0 && (
                       <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
                         <MapPin className="w-3 h-3" />
@@ -3882,11 +3944,58 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   // The server already sets annual_revenue to the average of the top 3 comps by revenue
   const effectiveScenarios = revenueScenarios || result.revenueScenarios;
   const baseHeadlineRevenue = result.revenue.projected;
-  
+
+  // Comp selection state — all comps selected by default; admin can deselect to exclude from projections
+  const [selectedCompIds, setSelectedCompIds] = useState<Set<string>>(() => new Set(result.comparables.map(c => c.id)));
+
+  // Reset comp selection when result changes (new analysis)
+  const prevCompsRef = React.useRef(result.comparables);
+  useEffect(() => {
+    if (prevCompsRef.current !== result.comparables) {
+      setSelectedCompIds(new Set(result.comparables.map(c => c.id)));
+      prevCompsRef.current = result.comparables;
+    }
+  }, [result.comparables]);
+
+  const handleToggleComp = (compId: string) => {
+    setSelectedCompIds(prev => {
+      const next = new Set(prev);
+      if (next.has(compId)) {
+        if (next.size <= 1) return prev; // keep at least 1
+        next.delete(compId);
+      } else {
+        next.add(compId);
+      }
+      return next;
+    });
+  };
+
+  // Derive metrics from selected comps — overrides server metrics when a subset is selected
+  const derivedMetrics = useMemo(() => {
+    const selectedComps = result.comparables.filter(c => selectedCompIds.has(c.id));
+    if (selectedComps.length === 0 || selectedComps.length === result.comparables.length) {
+      return null; // all selected — use server metrics unchanged
+    }
+    const avgAdr = selectedComps.reduce((sum, c) => sum + c.adr, 0) / selectedComps.length;
+    const avgOccupancy = selectedComps.reduce((sum, c) => sum + c.occupancy, 0) / selectedComps.length;
+    const avgRevenue = selectedComps.reduce((sum, c) => sum + c.revenue, 0) / selectedComps.length;
+    const minRevenue = Math.min(...selectedComps.map(c => c.revenue));
+    const maxRevenue = Math.max(...selectedComps.map(c => c.revenue));
+    return {
+      adr: Math.round(avgAdr),
+      occupancy: Math.round(avgOccupancy * 10) / 10,
+      projectedRevenue: Math.round(avgRevenue),
+      lowRevenue: Math.round(minRevenue),
+      highRevenue: Math.round(maxRevenue),
+      compCount: selectedComps.length,
+    };
+  }, [result.comparables, selectedCompIds]);
+
   // Admin revenue override — allows admin to adjust the headline revenue up/down
   // Initialize from persisted value if available (loaded from DB for shared reports)
   const [revenueOverride, setRevenueOverride] = useState<number | null>(persistedRevenueOverride ?? null);
-  const headlineRevenue = revenueOverride ?? baseHeadlineRevenue;
+  // Headline revenue: admin override > derived from selected comps > server value
+  const headlineRevenue = revenueOverride ?? derivedMetrics?.projectedRevenue ?? baseHeadlineRevenue;
   
   // Scale revenue scenarios proportionally when admin overrides revenue
   // e.g. if target was $37k and admin sets $30k (~19% decrease), conservative & optimistic decrease by same ratio
@@ -3903,18 +4012,30 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     };
   }, [effectiveScenarios, revenueOverride]);
   
-  // Effective revenue values that respect admin override
-  // When admin adjusts revenue, scale low/high proportionally
+  // Effective revenue values that respect admin override AND comp selection
+  // Priority: admin override > derived from selected comps > server value
   const effectiveRevenue = useMemo(() => {
-    const ratio = (revenueOverride !== null && baseHeadlineRevenue > 0) 
-      ? revenueOverride / baseHeadlineRevenue 
-      : 1;
+    if (revenueOverride !== null) {
+      const ratio = baseHeadlineRevenue > 0 ? revenueOverride / baseHeadlineRevenue : 1;
+      return {
+        projected: revenueOverride,
+        low: Math.round(result.revenue.low * ratio),
+        high: Math.round(result.revenue.high * ratio),
+      };
+    }
+    if (derivedMetrics) {
+      return {
+        projected: derivedMetrics.projectedRevenue,
+        low: derivedMetrics.lowRevenue,
+        high: derivedMetrics.highRevenue,
+      };
+    }
     return {
       projected: headlineRevenue,
-      low: Math.round(result.revenue.low * ratio),
-      high: Math.round(result.revenue.high * ratio),
+      low: result.revenue.low,
+      high: result.revenue.high,
     };
-  }, [headlineRevenue, baseHeadlineRevenue, revenueOverride, result.revenue.low, result.revenue.high]);
+  }, [headlineRevenue, baseHeadlineRevenue, revenueOverride, derivedMetrics, result.revenue.low, result.revenue.high]);
   
   // Persist revenue override to DB — explicit Save button
   const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
@@ -3957,6 +4078,10 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     }
   };
   
+  // Effective ADR and occupancy — use derivedMetrics when a comp subset is selected
+  const effectiveAdr = derivedMetrics?.adr ?? result.metrics.adr;
+  const effectiveOccupancy = derivedMetrics?.occupancy ?? result.metrics.occupancy;
+
   // Reset override when base revenue changes (new analysis)
   useEffect(() => {
     if (!persistedRevenueOverride) {
@@ -4008,7 +4133,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     const cashOnCash = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded) * 100 : 0;
     const dscr = annualDebtService > 0 ? noi / annualDebtService : Infinity;
     const breakEvenOccupancy = annualDebtService > 0 ? 
-      ((annualDebtService + operatingExpenses) / annualRevenue) * result.metrics.occupancy : 0;
+      ((annualDebtService + operatingExpenses) / annualRevenue) * effectiveOccupancy : 0;
     
     return {
       noi,
@@ -4033,7 +4158,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       utilitiesExpense,
       monthlyAdditionalCosts,
     };
-  }, [mode, purchasePrice, headlineRevenue, expensePercent, downPaymentPercent, interestRate, loanType, result.metrics.occupancy]);
+  }, [mode, purchasePrice, headlineRevenue, expensePercent, downPaymentPercent, interestRate, loanType, effectiveOccupancy]);
   
   return (
     <div className="space-y-6">
@@ -4082,8 +4207,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 3: Key Metrics - ADR, Occupancy, Revenue Range */}
       <KeyMetricsRow
-        adr={result.metrics.adr}
-        occupancy={result.metrics.occupancy}
+        adr={effectiveAdr}
+        occupancy={effectiveOccupancy}
         revenueLow={effectiveRevenue.low}
         revenueHigh={effectiveRevenue.high}
       />
@@ -4329,8 +4454,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         <ArbitrageCalculator
           monthlyRevenue={effectiveRevenue.projected / 12}
           monthlyRent={result.cashFlow.monthlyRent}
-          occupancy={result.metrics.occupancy}
-          adr={result.metrics.adr}
+          occupancy={effectiveOccupancy}
+          adr={effectiveAdr}
           furnitureCost={furnitureCost}
           expensePercent={expensePercent}
           revenueScenarios={adjustedScenarios || result.revenueScenarios}
@@ -4360,7 +4485,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       <SeasonalForecast forecast={result.forecast} historicalData={result.historicalData} />
       
       <MarketHealthGrade
-        occupancy={result.metrics.occupancy}
+        occupancy={effectiveOccupancy}
         yoyChange={yearlyChange}
         professionalPct={result.marketInsights?.professionallyManagedPct}
         superhostPct={result.marketInsights?.superhostPct}
@@ -4381,7 +4506,17 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       />
       
       {/* SECTION 7: Proof - "Show me the comps" */}
-      <ComparableProperties comparables={result.comparables} selectedAmenities={selectedAmenities} amenityFilter={amenityFilter} propertyLatitude={propertyLatitude} propertyLongitude={propertyLongitude} address={address} />
+      <ComparableProperties
+        comparables={result.comparables}
+        selectedAmenities={selectedAmenities}
+        amenityFilter={amenityFilter}
+        propertyLatitude={propertyLatitude}
+        propertyLongitude={propertyLongitude}
+        address={address}
+        isOwner={isOwner}
+        selectedCompIds={selectedCompIds}
+        onToggleComp={handleToggleComp}
+      />
 
       {/* Property-Specific AI Chatbot */}
       <PropertyChatBot
@@ -4394,8 +4529,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           projectedRevenue: effectiveRevenue.projected,
           revenueLow: effectiveRevenue.low,
           revenueHigh: effectiveRevenue.high,
-          adr: result.metrics.adr,
-          occupancyRate: result.metrics.occupancy,
+          adr: effectiveAdr,
+          occupancyRate: effectiveOccupancy,
           monthlyRevenue: effectiveRevenue.projected / 12,
           monthlyProfit: (effectiveRevenue.projected / 12) - monthlyRent - (effectiveRevenue.projected / 12) * (expensePercent / 100),
           revenueScenarios: adjustedScenarios ? {
