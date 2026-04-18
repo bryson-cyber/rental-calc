@@ -340,13 +340,42 @@ export const sharedReportsRouter = router({
           .set({ viewCount: report.viewCount + 1 })
           .where(eq(sharedReports.shareId, input.shareId));
         
+        // Geocode address if lat/lng is missing
+        let latitude = report.latitude ? parseFloat(report.latitude) : null;
+        let longitude = report.longitude ? parseFloat(report.longitude) : null;
+        
+        if ((!latitude || !longitude) && report.address) {
+          try {
+            const { makeRequest } = await import('../_core/map');
+            const geocodeResult = await makeRequest<{
+              results: Array<{ geometry: { location: { lat: number; lng: number } } }>;
+              status: string;
+            }>('/maps/api/geocode/json', { address: report.address });
+            
+            if (geocodeResult.status === 'OK' && geocodeResult.results.length > 0) {
+              latitude = geocodeResult.results[0].geometry.location.lat;
+              longitude = geocodeResult.results[0].geometry.location.lng;
+              
+              // Backfill the DB so we don't geocode again
+              await db.update(sharedReports)
+                .set({
+                  latitude: latitude.toString(),
+                  longitude: longitude.toString(),
+                })
+                .where(eq(sharedReports.shareId, input.shareId));
+            }
+          } catch (e) {
+            console.error('[SharedReports] Geocoding fallback failed:', e);
+          }
+        }
+        
         return {
           success: true,
           data: {
             reportType: report.reportType,
             address: report.address,
-            latitude: report.latitude ? parseFloat(report.latitude) : null,
-            longitude: report.longitude ? parseFloat(report.longitude) : null,
+            latitude,
+            longitude,
             bedrooms: report.bedrooms,
             bathrooms: report.bathrooms ? parseFloat(report.bathrooms) : null,
             marketId: report.marketId,

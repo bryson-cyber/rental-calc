@@ -648,8 +648,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     });
   };
 
+  // Geocode address if lat/lng missing (fixes map for older reports)
+  const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
   const {
-    property = { address: '', city: '', state: '', zipCode: '', bedrooms: 0, bathrooms: 0, accommodates: 0 } as any,
+    property: rawProperty = { address: '', city: '', state: '', zipCode: '', bedrooms: 0, bathrooms: 0, accommodates: 0 } as any,
     revenue_estimate,
     monthly_forecast = [],
     comps = [],
@@ -672,6 +675,51 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     comp_selection,
     revenue_scenarios,
   } = data as any;
+
+  // Merge geocoded coordinates into property when lat/lng is missing
+  const property = useMemo(() => {
+    if (rawProperty.latitude && rawProperty.longitude) return rawProperty;
+    if (geocodedCoords) {
+      return { ...rawProperty, latitude: geocodedCoords.lat, longitude: geocodedCoords.lng };
+    }
+    return rawProperty;
+  }, [rawProperty, geocodedCoords]);
+
+  // Geocode address when lat/lng is missing
+  useEffect(() => {
+    if (rawProperty.latitude && rawProperty.longitude) return;
+    if (geocodedCoords) return;
+    if (!rawProperty.address) return;
+
+    // Use Google Maps Geocoder via the Map component's proxy
+    const script = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (script && window.google?.maps?.Geocoder) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ address: rawProperty.address }, (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          setGeocodedCoords({ lat: loc.lat(), lng: loc.lng() });
+        }
+      });
+    } else {
+      // If Google Maps isn't loaded yet, wait for it
+      const checkInterval = setInterval(() => {
+        if (window.google?.maps?.Geocoder) {
+          clearInterval(checkInterval);
+          const geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode({ address: rawProperty.address }, (results, status) => {
+            if (status === 'OK' && results?.[0]?.geometry?.location) {
+              const loc = results[0].geometry.location;
+              setGeocodedCoords({ lat: loc.lat(), lng: loc.lng() });
+            }
+          });
+        }
+      }, 500);
+      // Clean up after 10 seconds
+      setTimeout(() => clearInterval(checkInterval), 10000);
+      return () => clearInterval(checkInterval);
+    }
+  }, [rawProperty.address, rawProperty.latitude, rawProperty.longitude, geocodedCoords]);
 
   // Normalize purchase data: handle both snake_case (legacy) and camelCase (new) keys
   const normalizedPurchase = purchase ? {

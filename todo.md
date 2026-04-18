@@ -13219,3 +13219,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Updated LeadMagnet.tsx (main analysis) and ShareableReportViewer.tsx (shared reports)
 - [ ] Step 5: Add checkbox to each comp in "Similar Properties Nearby" to include/exclude from comp set
 - [ ] Step 5: Recalculate revenue projections (annual revenue, ADR, occupancy) based only on selected comps
+- [x] Fix map not loading on full property report page (shows "Map not available")
+- [ ] Update Houston investment report to remove all 2BR data — focus exclusively on 3BR
