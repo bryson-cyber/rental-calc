@@ -80,6 +80,8 @@ interface UniversalShareButtonProps {
   onShareCreated?: (shareCode: string) => void;
   /** Admin revenue override to persist when creating the share */
   revenueOverride?: number | null;
+  /** Admin-curated comp selection to persist when creating the share */
+  selectedCompIds?: string[] | null;
 }
 
 /**
@@ -116,6 +118,7 @@ export function UniversalShareButton({
   existingShareCode,
   onShareCreated,
   revenueOverride,
+  selectedCompIds,
 }: UniversalShareButtonProps) {
   const [open, setOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(
@@ -134,6 +137,27 @@ export function UniversalShareButton({
   const createReport = trpc.shareableReports.create.useMutation();
   const sendNotifications = trpc.shareableReports.sendNotifications.useMutation();
   const updateOverrideMutation = trpc.shareableReports.updateRevenueOverride.useMutation();
+  const saveCompSelectionMutation = trpc.shareableReports.saveCompSelection.useMutation();
+
+  // Auto-sync selectedCompIds to DB when it changes AFTER a share was already created
+  const lastSyncedCompIds = useRef<string[] | null | undefined>(undefined);
+  useEffect(() => {
+    if (!shareCode) return;
+    if (lastSyncedCompIds.current === undefined) {
+      lastSyncedCompIds.current = selectedCompIds ?? null;
+      return;
+    }
+    const newVal = selectedCompIds ?? null;
+    const oldVal = lastSyncedCompIds.current;
+    // Compare arrays
+    const changed = !newVal && !!oldVal || !!newVal && !oldVal ||
+      (newVal && oldVal && (newVal.length !== oldVal.length || newVal.some((id, i) => id !== oldVal[i])));
+    if (!changed) return;
+    lastSyncedCompIds.current = newVal;
+    if (newVal && newVal.length > 0) {
+      saveCompSelectionMutation.mutate({ shareCode, selectedCompIds: newVal });
+    }
+  }, [shareCode, selectedCompIds]);
 
   // Auto-sync revenueOverride to DB when it changes AFTER a share was already created
   const lastSyncedOverride = useRef<number | null | undefined>(undefined);
@@ -158,10 +182,14 @@ export function UniversalShareButton({
     
     setIsCreating(true);
     try {
-      // If admin has overridden revenue, embed it in the report data
-      const finalReportData = revenueOverride != null
-        ? { ...reportData, _revenueOverride: revenueOverride }
-        : reportData;
+      // If admin has overridden revenue or curated comps, embed in the report data
+      let finalReportData = { ...reportData };
+      if (revenueOverride != null) {
+        finalReportData._revenueOverride = revenueOverride;
+      }
+      if (selectedCompIds && selectedCompIds.length > 0) {
+        finalReportData._selectedCompIds = selectedCompIds;
+      }
       const finalAnnualRevenue = revenueOverride ?? annualRevenue;
 
       const result = await createReport.mutateAsync({
@@ -193,6 +221,15 @@ export function UniversalShareButton({
         setShareUrl(url);
         setShareCode(result.shareCode);
         onShareCreated?.(result.shareCode);
+        
+        // Also save comp selection to dedicated column if admin has curated comps
+        if (selectedCompIds && selectedCompIds.length > 0) {
+          saveCompSelectionMutation.mutate({
+            shareCode: result.shareCode,
+            selectedCompIds,
+          });
+        }
+        
         toast.success('Share link created!');
       }
     } catch (error) {

@@ -1,0 +1,1 @@
+ALTER TABLE `universal_shareable_reports` ADD `selectedCompIds` json;

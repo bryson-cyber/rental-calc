@@ -449,6 +449,8 @@ export default function LeadMagnet() {
   const [validatorShareCode, setValidatorShareCode] = useState<string | null>(null);
   // Track admin's current revenue override so the share button can include it
   const [currentRevenueOverride, setCurrentRevenueOverride] = useState<number | null>(null);
+  // Track admin's current comp selection so the share button can include it
+  const [currentSelectedCompIds, setCurrentSelectedCompIds] = useState<string[] | null>(null);
   
   // Swipe gesture state for mobile navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -2837,6 +2839,8 @@ export default function LeadMagnet() {
                       summary={`$${((result as any)?.revenue?.projected || (result as any)?.revenue_estimate?.annual || 0).toLocaleString()}/year`}
                       variant="outline"
                       size="sm"
+                      selectedCompIds={currentSelectedCompIds}
+                      revenueOverride={currentRevenueOverride}
                     />
                   ) : (
                     <ShareToolButton
@@ -6199,6 +6203,7 @@ export default function LeadMagnet() {
                 summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}
                 onShareCreated={(code) => setValidatorShareCode(code)}
                 revenueOverride={currentRevenueOverride}
+                selectedCompIds={currentSelectedCompIds}
               />
               </div>
             </div>
@@ -6223,6 +6228,7 @@ export default function LeadMagnet() {
                 isOwner={isAdmin}
                 shareCode={validatorShareCode || undefined}
                 onRevenueOverrideChange={setCurrentRevenueOverride}
+                onCompSelectionChange={setCurrentSelectedCompIds}
                 dataSource={result.dataSource}
                 selectedAmenities={result.selectedAmenities}
                 amenityFilter={result.amenityFilter}

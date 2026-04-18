@@ -190,7 +190,9 @@ interface TeslaDashboardProps {
   isOwner?: boolean;  // Only the owner can override revenue numbers
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
+  persistedSelectedCompIds?: string[] | null;  // Admin-curated comp selection loaded from DB
   onRevenueOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes revenue override
+  onCompSelectionChange?: (selectedIds: string[]) => void;  // Notify parent when admin changes comp selection
   // Data source info for fallback estimates (new construction / unknown addresses)
   dataSource?: {
     type: 'comp_fallback';
@@ -3380,6 +3382,10 @@ function ComparableProperties({
   isOwner = false,
   selectedCompIds,
   onToggleComp,
+  onSaveCompSelection,
+  isSavingCompSelection = false,
+  compSelectionSaved = false,
+  hasUnsavedCompSelection = false,
 }: { 
   comparables: Comparable[];
   onViewAll?: () => void;
@@ -3396,6 +3402,10 @@ function ComparableProperties({
   isOwner?: boolean;
   selectedCompIds?: Set<string>;
   onToggleComp?: (id: string) => void;
+  onSaveCompSelection?: () => void;
+  isSavingCompSelection?: boolean;
+  compSelectionSaved?: boolean;
+  hasUnsavedCompSelection?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -3467,20 +3477,40 @@ function ComparableProperties({
               <span className="text-sm font-semibold text-blue-800">{selectedCompIds.size} of {comparables.length} comps selected</span>
               <span className="text-xs text-blue-600">— projections updated based on selection</span>
             </div>
-            <button
-              onClick={() => {
-                // Reset all comps to selected — we need to call onToggleComp for each deselected comp
-                // Since we can't call setSelectedCompIds directly here, we expose a reset via a special call
-                comparables.forEach(c => {
-                  if (onToggleComp && selectedCompIds && !selectedCompIds.has(c.id)) {
-                    onToggleComp(c.id);
-                  }
-                });
-              }}
-              className="text-xs font-medium text-blue-600 hover:text-blue-800 underline"
-            >
-              Reset all
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Save comp selection button */}
+              {onSaveCompSelection && hasUnsavedCompSelection && (
+                <button
+                  onClick={onSaveCompSelection}
+                  disabled={isSavingCompSelection}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition-colors shadow-sm"
+                >
+                  {isSavingCompSelection ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="w-3 h-3" /> Save Selection</>
+                  )}
+                </button>
+              )}
+              {/* Saved flash */}
+              {onSaveCompSelection && compSelectionSaved && !hasUnsavedCompSelection && (
+                <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  comparables.forEach(c => {
+                    if (onToggleComp && selectedCompIds && !selectedCompIds.has(c.id)) {
+                      onToggleComp(c.id);
+                    }
+                  });
+                }}
+                className="text-xs font-medium text-blue-600 hover:text-blue-800 underline"
+              >
+                Reset all
+              </button>
+            </div>
           </div>
         )}
         
@@ -3932,7 +3962,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, onRevenueOverrideChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, persistedSelectedCompIds, onRevenueOverrideChange, onCompSelectionChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -3945,8 +3975,17 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   const effectiveScenarios = revenueScenarios || result.revenueScenarios;
   const baseHeadlineRevenue = result.revenue.projected;
 
-  // Comp selection state — all comps selected by default; admin can deselect to exclude from projections
-  const [selectedCompIds, setSelectedCompIds] = useState<Set<string>>(() => new Set(result.comparables.map(c => c.id)));
+  // Comp selection state — initialize from persisted selection if available, otherwise all comps
+  const [selectedCompIds, setSelectedCompIds] = useState<Set<string>>(() => {
+    if (persistedSelectedCompIds && persistedSelectedCompIds.length > 0) {
+      // Filter to only IDs that exist in current comparables
+      const validIds = persistedSelectedCompIds.filter(id => 
+        result.comparables.some(c => c.id === id)
+      );
+      if (validIds.length > 0) return new Set(validIds);
+    }
+    return new Set(result.comparables.map(c => c.id));
+  });
 
   // Reset comp selection when result changes (new analysis)
   const prevCompsRef = React.useRef(result.comparables);
@@ -3966,8 +4005,41 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       } else {
         next.add(compId);
       }
+      // Notify parent of selection change
+      onCompSelectionChange?.(Array.from(next));
       return next;
     });
+  };
+
+  // Save comp selection to DB — admin only, when shareCode exists
+  const saveCompSelectionMutation = trpc.shareableReports.saveCompSelection.useMutation();
+  const [compSelectionSaved, setCompSelectionSaved] = useState(false);
+  const [hasUnsavedCompSelection, setHasUnsavedCompSelection] = useState(false);
+
+  // Track unsaved comp selection changes
+  const initialCompSelectionRef = React.useRef<Set<string>>(selectedCompIds);
+  useEffect(() => {
+    // Compare current selection to initial (persisted) selection
+    const initial = initialCompSelectionRef.current;
+    const changed = selectedCompIds.size !== initial.size || 
+      Array.from(selectedCompIds).some(id => !initial.has(id));
+    setHasUnsavedCompSelection(changed);
+    setCompSelectionSaved(false);
+  }, [selectedCompIds]);
+
+  const handleSaveCompSelection = () => {
+    if (!shareCode) return;
+    saveCompSelectionMutation.mutate(
+      { shareCode, selectedCompIds: Array.from(selectedCompIds) },
+      {
+        onSuccess: () => {
+          setHasUnsavedCompSelection(false);
+          setCompSelectionSaved(true);
+          initialCompSelectionRef.current = new Set(selectedCompIds);
+          setTimeout(() => setCompSelectionSaved(false), 3000);
+        },
+      }
+    );
   };
 
   // Derive metrics from selected comps — overrides server metrics when a subset is selected
@@ -4516,6 +4588,10 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         isOwner={isOwner}
         selectedCompIds={selectedCompIds}
         onToggleComp={handleToggleComp}
+        onSaveCompSelection={shareCode ? handleSaveCompSelection : undefined}
+        isSavingCompSelection={saveCompSelectionMutation.isPending}
+        compSelectionSaved={compSelectionSaved}
+        hasUnsavedCompSelection={hasUnsavedCompSelection}
       />
 
       {/* Property-Specific AI Chatbot */}

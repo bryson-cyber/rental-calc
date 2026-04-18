@@ -13221,3 +13221,28 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Step 5: Recalculate revenue projections (annual revenue, ADR, occupancy) based only on selected comps
 - [x] Fix map not loading on full property report page (shows "Map not available")
 - [ ] Update Houston investment report to remove all 2BR data — focus exclusively on 3BR
+
+## Feature - Persist Comp Selection for Shared Reports (Apr 18, 2026)
+- [x] Add `selectedCompIds` JSON column to `universalShareableReports` table
+  - Stores admin-curated comp IDs as JSON array in dedicated DB column
+- [x] Add `saveCompSelection` tRPC endpoint to `shareable-reports.ts` router
+  - Admin-only mutation that updates the selectedCompIds column by shareCode
+- [x] Update TeslaDashboard to accept `persistedSelectedCompIds` prop
+  - Initializes comp selection from persisted data when available
+  - Falls back to all comps when no persisted selection or all IDs are stale
+  - Adds `onCompSelectionChange` callback to notify parent of selection changes
+  - Adds `handleSaveCompSelection` mutation for explicit save via comp banner button
+  - Tracks unsaved state with `hasUnsavedCompSelection` for save button visibility
+- [x] Update ComparableProperties component with save button in selection banner
+  - "Save Selection" button appears when admin has unsaved comp changes and shareCode exists
+  - "Saved" flash indicator after successful save
+- [x] Update UniversalShareButton to embed `selectedCompIds` in reportData
+  - Embeds `_selectedCompIds` in reportData JSON when creating share
+  - Saves to dedicated `selectedCompIds` column after share creation
+  - Auto-syncs comp selection changes to DB when share already exists
+- [x] Update LeadMagnet to track `currentSelectedCompIds` state
+  - Passes to both UniversalShareButton and TeslaDashboard
+- [x] Update ShareableReportViewer to pass `persistedSelectedCompIds` to TeslaDashboard
+  - Reads from DB column first, falls back to embedded reportData._selectedCompIds
+  - Client sees only admin-curated comps (isOwner=false hides toggle controls)
+- [x] Unit tests for comp selection persistence logic (10 tests passing)

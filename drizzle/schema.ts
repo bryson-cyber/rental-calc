@@ -1397,6 +1397,10 @@ export const universalShareableReports = mysqlTable("universal_shareable_reports
   // Used for retroactive boost adjustment: scale = currentBoost / boostFactorAtCreation
   boostFactorAtCreation: decimal("boostFactorAtCreation", { precision: 5, scale: 2 }),
   
+  // Admin-curated comp selection (JSON array of comp IDs)
+  // When set, shared report viewers see only these comps instead of all comps
+  selectedCompIds: json("selectedCompIds").$type<string[]>(),
+  
   // Notification tracking
   smsSentTo: varchar("smsSentTo", { length: 50 }),
   smsSentAt: timestamp("smsSentAt"),

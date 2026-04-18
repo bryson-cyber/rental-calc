@@ -182,6 +182,26 @@ export const shareableReportsRouter = router({
         return { success: true, revenueOverride: input.revenueOverride };
       }),
 
+    // Admin-only: Save comp selection for a shared report
+    saveCompSelection: protectedProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+        selectedCompIds: z.array(z.string()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin' && ctx.user?.openId !== ENV.ownerOpenId) {
+          throw new Error('Admin access required');
+        }
+        const db = await getDb();
+        if (!db) throw new Error('Database unavailable');
+        
+        await db.update(universalShareableReports)
+          .set({ selectedCompIds: input.selectedCompIds })
+          .where(eq(universalShareableReports.shareCode, input.shareCode));
+        
+        return { success: true, selectedCount: input.selectedCompIds.length };
+      }),
+
     // Get notification analytics (admin only)
     getAnalytics: protectedProcedure
       .input(z.object({
