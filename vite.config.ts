@@ -16,6 +16,10 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      // Force single React instance to prevent hooks errors from Capacitor deps
+      "react": path.resolve(import.meta.dirname, "node_modules", "react"),
+      "react-dom": path.resolve(import.meta.dirname, "node_modules", "react-dom"),
+      "react/jsx-runtime": path.resolve(import.meta.dirname, "node_modules", "react", "jsx-runtime"),
     },
   },
   envDir: path.resolve(import.meta.dirname),
