@@ -13246,3 +13246,14 @@ Files fixed (operating costs now based on revenue, not rent):
   - Reads from DB column first, falls back to embedded reportData._selectedCompIds
   - Client sees only admin-curated comps (isOwner=false hides toggle controls)
 - [x] Unit tests for comp selection persistence logic (10 tests passing)
+
+## Fix - Deep Thought Report: 3BR Only Filter (Apr 18, 2026)
+- [ ] Filter Deep Thought report to only factor in 3BR data
+  - Remove all non-3BR data from the report generation pipeline
+
+## Feature - Capacitor iOS App (Apr 30, 2026)
+- [x] Add @capacitor/core, @capacitor/cli, @capacitor/ios dependencies
+- [x] Create capacitor.config.ts with correct app ID and server URL
+- [x] Add iOS safe area and status bar handling
+- [x] Add splash screen and app icon configuration
+- [ ] Checkpoint and provide Mac setup instructions

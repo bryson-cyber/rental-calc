@@ -1,4 +1,7 @@
 import { trpc } from "@/lib/trpc";
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
@@ -9,6 +12,15 @@ import { getLoginUrl } from "./const";
 import { ToastProvider } from "./contexts/ToastContext";
 import { TranslationProvider } from "./contexts/TranslationContext";
 import "./index.css";
+
+// Initialize Capacitor plugins on native platforms
+if (Capacitor.isNativePlatform()) {
+  // Set status bar to dark style (light icons on dark background)
+  StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+  StatusBar.setBackgroundColor({ color: '#0F172A' }).catch(() => {});
+  // Hide splash screen after app is ready
+  SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {});
+}
 
 // Global error handler to capture exact crash location
 window.addEventListener('error', (event) => {
