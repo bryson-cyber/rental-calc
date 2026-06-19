@@ -182,6 +182,30 @@ export const shareableReportsRouter = router({
         return { success: true, revenueOverride: input.revenueOverride };
       }),
 
+    // Admin-only: Update occupancy/booking rate override for a shared report
+    updateOccupancyOverride: protectedProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+        occupancyOverride: z.number().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin' && ctx.user?.openId !== ENV.ownerOpenId) {
+          throw new Error('Admin access required');
+        }
+        const db = await getDb();
+        if (!db) throw new Error('Database unavailable');
+        
+        const occupancyValue = input.occupancyOverride !== null
+          ? String(input.occupancyOverride)
+          : null;
+        
+        await db.update(universalShareableReports)
+          .set({ occupancyOverride: occupancyValue })
+          .where(eq(universalShareableReports.shareCode, input.shareCode));
+        
+        return { success: true, occupancyOverride: input.occupancyOverride };
+      }),
+
     // Admin-only: Save comp selection for a shared report
     saveCompSelection: protectedProcedure
       .input(z.object({

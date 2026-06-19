@@ -190,8 +190,10 @@ interface TeslaDashboardProps {
   isOwner?: boolean;  // Only the owner can override revenue numbers
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
+  persistedOccupancyOverride?: number | null;  // Occupancy/booking rate override loaded from DB (0-100)
   persistedSelectedCompIds?: string[] | null;  // Admin-curated comp selection loaded from DB
   onRevenueOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes revenue override
+  onOccupancyOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes occupancy override
   onCompSelectionChange?: (selectedIds: string[]) => void;  // Notify parent when admin changes comp selection
   // Data source info for fallback estimates (new construction / unknown addresses)
   dataSource?: {
@@ -758,13 +760,40 @@ function KeyMetricsRow({
   adr, 
   occupancy, 
   revenueLow, 
-  revenueHigh 
+  revenueHigh,
+  isOwner,
+  occupancyOverrideActive,
+  onOccupancyOverride,
+  onSaveOccupancyOverride,
+  isSavingOccupancyOverride,
+  savedOccupancyOverrideFlash,
+  hasPendingOccupancyOverride,
 }: { 
   adr: number;
   occupancy: number;
   revenueLow: number;
   revenueHigh: number;
+  isOwner?: boolean;
+  occupancyOverrideActive?: boolean;
+  onOccupancyOverride?: (newOccupancy: number | null) => void;
+  onSaveOccupancyOverride?: (explicitValue?: number | null) => void;
+  isSavingOccupancyOverride?: boolean;
+  savedOccupancyOverrideFlash?: boolean;
+  hasPendingOccupancyOverride?: boolean;
 }) {
+  const [isEditingOccupancy, setIsEditingOccupancy] = useState(false);
+  const [occupancyInput, setOccupancyInput] = useState('');
+
+  const commitOccupancyEdit = () => {
+    const parsed = parseFloat(occupancyInput);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+      onOccupancyOverride?.(parsed);
+      onSaveOccupancyOverride?.(parsed);
+    }
+    setIsEditingOccupancy(false);
+    setOccupancyInput('');
+  };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <MetricCard
@@ -775,14 +804,86 @@ function KeyMetricsRow({
         color="blue"
         tooltip={METRIC_TOOLTIPS.adr}
       />
-      <MetricCard
-        icon={<Percent className="w-5 h-5" />}
-        label="Booking Rate"
-        value={`${Math.round(occupancy)}%`}
-        sublabel="How often you're booked"
-        color="purple"
-        tooltip={METRIC_TOOLTIPS.occupancy}
-      />
+      {/* Booking Rate card — editable by admin */}
+      <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${
+        isOwner && onOccupancyOverride ? 'cursor-pointer' : 'cursor-help'
+      } group ${
+        occupancyOverrideActive ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200'
+      }`}>
+        <div className="flex items-start justify-between">
+          <div className="inline-flex p-2 rounded-lg mb-2 bg-purple-500/10 text-purple-500 border border-purple-500/20">
+            <Percent className="w-5 h-5" />
+          </div>
+          <div className="flex items-center gap-1">
+            {isOwner && onOccupancyOverride && occupancyOverrideActive && !isEditingOccupancy && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onOccupancyOverride(null); onSaveOccupancyOverride?.(null); }}
+                className="text-xs text-amber-600 hover:text-amber-800 px-1 py-0.5 rounded hover:bg-amber-100 transition-colors"
+                title="Reset to original booking rate"
+              >
+                Reset
+              </button>
+            )}
+            {isOwner && onOccupancyOverride && !isEditingOccupancy && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsEditingOccupancy(true); setOccupancyInput(String(Math.round(occupancy))); }}
+                className="text-slate-300 hover:text-purple-500 transition-colors"
+                title="Edit booking rate"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+        <p className={`text-xs font-medium mb-0.5 ${
+          isOwner && occupancyOverrideActive ? 'text-amber-700' : 'text-slate-500'
+        }`}>Booking Rate</p>
+        {isOwner && onOccupancyOverride && isEditingOccupancy ? (
+          <div className="flex items-center gap-1 mt-1">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={occupancyInput}
+              onChange={(e) => setOccupancyInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitOccupancyEdit();
+                if (e.key === 'Escape') { setIsEditingOccupancy(false); setOccupancyInput(''); }
+              }}
+              onBlur={commitOccupancyEdit}
+              autoFocus
+              className="w-16 text-xl font-bold border-b-2 border-purple-400 bg-transparent outline-none text-slate-900"
+            />
+            <span className="text-xl font-bold text-slate-900">%</span>
+          </div>
+        ) : (
+          <p
+            className={`text-xl font-bold ${
+              isOwner && occupancyOverrideActive ? 'text-amber-700' : 'text-slate-900'
+            } ${isOwner && onOccupancyOverride ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            onClick={() => {
+              if (isOwner && onOccupancyOverride) {
+                setIsEditingOccupancy(true);
+                setOccupancyInput(String(Math.round(occupancy)));
+              }
+            }}
+            title={isOwner && onOccupancyOverride ? 'Click to edit booking rate' : undefined}
+          >
+            {Math.round(occupancy)}%
+            {isOwner && onOccupancyOverride && (
+              <Pencil className="inline w-3 h-3 ml-1 text-slate-300" />
+            )}
+          </p>
+        )}
+        <p className="text-slate-400 text-xs">How often you're booked</p>
+        {isOwner && occupancyOverrideActive && (
+          <p className="text-amber-600 text-xs mt-1 font-medium">Admin override active</p>
+        )}
+        {savedOccupancyOverrideFlash && (
+          <p className="text-emerald-600 text-xs mt-1 font-medium">✓ Saved</p>
+        )}
+      </div>
       <MetricCard
         icon={<TrendingUp className="w-5 h-5" />}
         label="Revenue Range"
@@ -3962,7 +4063,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, persistedSelectedCompIds, onRevenueOverrideChange, onCompSelectionChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, persistedOccupancyOverride, persistedSelectedCompIds, onRevenueOverrideChange, onOccupancyOverrideChange, onCompSelectionChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -4150,9 +4251,46 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     }
   };
   
-  // Effective ADR and occupancy — use derivedMetrics when a comp subset is selected
+  // Admin occupancy/booking rate override
+  const [occupancyOverride, setOccupancyOverride] = useState<number | null>(
+    persistedOccupancyOverride != null ? Number(persistedOccupancyOverride) : null
+  );
+  const [hasPendingOccupancyOverride, setHasPendingOccupancyOverride] = useState(false);
+  const [savedOccupancyFlash, setSavedOccupancyFlash] = useState(false);
+  const updateOccupancyOverrideMutation = trpc.shareableReports.updateOccupancyOverride.useMutation();
+
+  const handleOccupancyOverride = (newValue: number | null) => {
+    setOccupancyOverride(newValue);
+    onOccupancyOverrideChange?.(newValue);
+    setHasPendingOccupancyOverride(true);
+    setSavedOccupancyFlash(false);
+  };
+
+  const handleSaveOccupancyOverride = (explicitValue?: number | null) => {
+    const valueToSave = explicitValue !== undefined ? explicitValue : occupancyOverride;
+    if (shareCode) {
+      updateOccupancyOverrideMutation.mutate(
+        { shareCode, occupancyOverride: valueToSave },
+        {
+          onSuccess: () => {
+            setHasPendingOccupancyOverride(false);
+            setSavedOccupancyFlash(true);
+            setTimeout(() => setSavedOccupancyFlash(false), 3000);
+          },
+        }
+      );
+    } else {
+      setHasPendingOccupancyOverride(false);
+      setSavedOccupancyFlash(true);
+      setTimeout(() => setSavedOccupancyFlash(false), 3000);
+    }
+  };
+
+  // Effective ADR and occupancy — occupancy override > derived from comps > server value
   const effectiveAdr = derivedMetrics?.adr ?? result.metrics.adr;
-  const effectiveOccupancy = derivedMetrics?.occupancy ?? result.metrics.occupancy;
+  const effectiveOccupancy = occupancyOverride !== null
+    ? occupancyOverride
+    : (derivedMetrics?.occupancy ?? result.metrics.occupancy);
 
   // Reset override when base revenue changes (new analysis)
   useEffect(() => {
@@ -4283,6 +4421,13 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         occupancy={effectiveOccupancy}
         revenueLow={effectiveRevenue.low}
         revenueHigh={effectiveRevenue.high}
+        isOwner={isOwner}
+        occupancyOverrideActive={occupancyOverride !== null}
+        onOccupancyOverride={isOwner ? handleOccupancyOverride : undefined}
+        onSaveOccupancyOverride={isOwner ? handleSaveOccupancyOverride : undefined}
+        isSavingOccupancyOverride={updateOccupancyOverrideMutation.isPending}
+        savedOccupancyOverrideFlash={savedOccupancyFlash}
+        hasPendingOccupancyOverride={hasPendingOccupancyOverride}
       />
       
       {/* PURCHASE MODE: Investment Metrics Section */}

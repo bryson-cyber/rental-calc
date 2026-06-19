@@ -628,6 +628,11 @@ export default function ShareableReportViewer() {
                 interestRate={storedInterestRate}
                 shareCode={shareCode || undefined}
                 persistedRevenueOverride={report.revenueOverride ?? reportData?._revenueOverride ?? null}
+                persistedOccupancyOverride={
+                  report.occupancyOverride != null
+                    ? Number(report.occupancyOverride)
+                    : (reportData?._occupancyOverride ?? null)
+                }
                 persistedSelectedCompIds={report.selectedCompIds ?? reportData?._selectedCompIds ?? null}
                 isOwner={false}
                 propertyLatitude={reportData?.latitude || report.latitude}

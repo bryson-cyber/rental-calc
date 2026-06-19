@@ -80,6 +80,8 @@ interface UniversalShareButtonProps {
   onShareCreated?: (shareCode: string) => void;
   /** Admin revenue override to persist when creating the share */
   revenueOverride?: number | null;
+  /** Admin occupancy/booking rate override to persist when creating the share */
+  occupancyOverride?: number | null;
   /** Admin-curated comp selection to persist when creating the share */
   selectedCompIds?: string[] | null;
 }
@@ -118,6 +120,7 @@ export function UniversalShareButton({
   existingShareCode,
   onShareCreated,
   revenueOverride,
+  occupancyOverride,
   selectedCompIds,
 }: UniversalShareButtonProps) {
   const [open, setOpen] = useState(false);
@@ -177,15 +180,36 @@ export function UniversalShareButton({
     });
   }, [shareCode, revenueOverride]);
 
+  // Auto-sync occupancyOverride to DB when it changes AFTER a share was already created
+  const updateOccupancyOverrideMutation = trpc.shareableReports.updateOccupancyOverride.useMutation();
+  const lastSyncedOccupancyOverride = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (!shareCode) return;
+    if (lastSyncedOccupancyOverride.current === undefined) {
+      lastSyncedOccupancyOverride.current = occupancyOverride ?? null;
+      return;
+    }
+    const newVal = occupancyOverride ?? null;
+    if (newVal === lastSyncedOccupancyOverride.current) return;
+    lastSyncedOccupancyOverride.current = newVal;
+    updateOccupancyOverrideMutation.mutate({
+      shareCode,
+      occupancyOverride: newVal,
+    });
+  }, [shareCode, occupancyOverride]);
+
   const handleCreateShare = async () => {
     if (shareUrl) return; // Already created
     
     setIsCreating(true);
     try {
-      // If admin has overridden revenue or curated comps, embed in the report data
+      // If admin has overridden revenue, occupancy, or curated comps, embed in the report data
       let finalReportData = { ...reportData };
       if (revenueOverride != null) {
         finalReportData._revenueOverride = revenueOverride;
+      }
+      if (occupancyOverride != null) {
+        finalReportData._occupancyOverride = occupancyOverride;
       }
       if (selectedCompIds && selectedCompIds.length > 0) {
         finalReportData._selectedCompIds = selectedCompIds;

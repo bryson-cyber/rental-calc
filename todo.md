@@ -13257,3 +13257,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add iOS safe area and status bar handling
 - [x] Add splash screen and app icon configuration
 - [ ] Checkpoint and provide Mac setup instructions
+
+## Feature - Editable Booking Rate Override (Jun 19, 2026)
+- [x] Add occupancyOverride column to universalShareableReports schema
+- [x] Add updateOccupancyOverride tRPC procedure (admin-only)
+- [x] Add occupancy override state/handlers in TeslaDashboard
+- [x] Make Booking Rate card editable with pencil icon (admin only)
+- [x] Wire effectiveOccupancy to respect override value
+- [x] Pass occupancyOverride through UniversalShareButton for share persistence
+- [x] Pass persistedOccupancyOverride to ShareableReportViewer
+- [x] Pass onOccupancyOverrideChange to LeadMagnet TeslaDashboard

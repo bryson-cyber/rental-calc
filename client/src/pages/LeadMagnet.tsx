@@ -449,6 +449,8 @@ export default function LeadMagnet() {
   const [validatorShareCode, setValidatorShareCode] = useState<string | null>(null);
   // Track admin's current revenue override so the share button can include it
   const [currentRevenueOverride, setCurrentRevenueOverride] = useState<number | null>(null);
+  // Track admin's current occupancy/booking rate override
+  const [currentOccupancyOverride, setCurrentOccupancyOverride] = useState<number | null>(null);
   // Track admin's current comp selection so the share button can include it
   const [currentSelectedCompIds, setCurrentSelectedCompIds] = useState<string[] | null>(null);
   
@@ -2841,6 +2843,7 @@ export default function LeadMagnet() {
                       size="sm"
                       selectedCompIds={currentSelectedCompIds}
                       revenueOverride={currentRevenueOverride}
+                      occupancyOverride={currentOccupancyOverride}
                     />
                   ) : (
                     <ShareToolButton
@@ -6203,6 +6206,7 @@ export default function LeadMagnet() {
                 summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}
                 onShareCreated={(code) => setValidatorShareCode(code)}
                 revenueOverride={currentRevenueOverride}
+                occupancyOverride={currentOccupancyOverride}
                 selectedCompIds={currentSelectedCompIds}
               />
               </div>
@@ -6228,6 +6232,7 @@ export default function LeadMagnet() {
                 isOwner={isAdmin}
                 shareCode={validatorShareCode || undefined}
                 onRevenueOverrideChange={setCurrentRevenueOverride}
+                onOccupancyOverrideChange={setCurrentOccupancyOverride}
                 onCompSelectionChange={setCurrentSelectedCompIds}
                 dataSource={result.dataSource}
                 selectedAmenities={result.selectedAmenities}

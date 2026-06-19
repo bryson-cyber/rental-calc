@@ -125,7 +125,7 @@ export async function createShareableReport(
       creatorUserId: input.creatorUserId,
       sessionId: input.sessionId,
       revenueOverride: revenueOverride,
-      boostFactorAtCreation: REVENUE_BOOST_FACTOR,
+      boostFactorAtCreation: String(REVENUE_BOOST_FACTOR),
     });
     
     console.log(`[ShareableReport] Created ${input.reportType} report with code: ${shareCode}`);
