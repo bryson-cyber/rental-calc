@@ -858,23 +858,45 @@ function KeyMetricsRow({
             <span className="text-xl font-bold text-slate-900">%</span>
           </div>
         ) : (
-          <p
-            className={`text-xl font-bold ${
-              isOwner && occupancyOverrideActive ? 'text-amber-700' : 'text-slate-900'
-            } ${isOwner && onOccupancyOverride ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-            onClick={() => {
-              if (isOwner && onOccupancyOverride) {
-                setIsEditingOccupancy(true);
-                setOccupancyInput(String(Math.round(occupancy)));
-              }
-            }}
-            title={isOwner && onOccupancyOverride ? 'Click to edit booking rate' : undefined}
-          >
-            {Math.round(occupancy)}%
-            {isOwner && onOccupancyOverride && (
-              <Pencil className="inline w-3 h-3 ml-1 text-slate-300" />
+          <div className="flex items-center gap-2">
+            {/* Minus button: decrease by 5% */}
+            {isOwner && onOccupancyOverride && !isEditingOccupancy && (
+              <button
+                onClick={(e) => { e.stopPropagation(); const newVal = Math.max(0, Math.round(occupancy) - 5); onOccupancyOverride(newVal); onSaveOccupancyOverride?.(newVal); }}
+                className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition-colors border border-red-300 shadow-sm"
+                title="Decrease booking rate by 5%"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
             )}
-          </p>
+            <p
+              className={`text-xl font-bold ${
+                isOwner && occupancyOverrideActive ? 'text-amber-700' : 'text-slate-900'
+              } ${isOwner && onOccupancyOverride ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              onClick={() => {
+                if (isOwner && onOccupancyOverride) {
+                  setIsEditingOccupancy(true);
+                  setOccupancyInput(String(Math.round(occupancy)));
+                }
+              }}
+              title={isOwner && onOccupancyOverride ? 'Click to edit booking rate' : undefined}
+            >
+              {Math.round(occupancy)}%
+              {isOwner && onOccupancyOverride && (
+                <Pencil className="inline w-3 h-3 ml-1 text-slate-300" />
+              )}
+            </p>
+            {/* Plus button: increase by 5% */}
+            {isOwner && onOccupancyOverride && !isEditingOccupancy && (
+              <button
+                onClick={(e) => { e.stopPropagation(); const newVal = Math.min(100, Math.round(occupancy) + 5); onOccupancyOverride(newVal); onSaveOccupancyOverride?.(newVal); }}
+                className="w-6 h-6 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
+                title="Increase booking rate by 5%"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         )}
         <p className="text-slate-400 text-xs">How often you're booked</p>
         {isOwner && occupancyOverrideActive && (
