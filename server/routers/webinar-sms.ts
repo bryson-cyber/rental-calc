@@ -1390,28 +1390,28 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Registration Confirmation",
           sequenceOrder: 1,
-          messageBody: `Hey %FIRST_NAME%! Thanks for registering for our live workshop. Save this number so you don't miss any updates! 🎯`,
+          messageBody: `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`,
           scheduledAt: offset(t.registrationConfirm),
           audience: "all" as const,
         },
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 2,
-          messageBody: `Hey %FIRST_NAME%! Quick reminder — our live call is in 2 days. You won't want to miss this one. Mark your calendar! 📅\n\nJoin here: ${link}`,
+          messageBody: `Hey %FIRST_NAME%! Quick reminder - our live Airbnb call is in 2 days. You won't want to miss this one. Mark your calendar!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 3,
-          messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat — we have a lot of people registered. See you there! 🔥\n\nJoin here: ${link}`,
+          messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat - we have a lot of people registered. See you there!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 4,
-          messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early — seats fill up fast! 💪\n\nJoin here: ${link}`,
+          messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early - seats fill up fast!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
@@ -1425,7 +1425,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Starting NOW",
           sequenceOrder: 6,
-          messageBody: `🔴 WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
+          messageBody: `WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
           scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
@@ -1439,7 +1439,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 8,
-          messageBody: `Thanks for showing up today %FIRST_NAME%! 🙏 Here's the replay if you want to rewatch: ${replay}`,
+          messageBody: `Thanks for showing up today %FIRST_NAME%! Here's the replay if you want to rewatch: ${replay}`,
           scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
@@ -1453,7 +1453,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 10,
-          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details. 🚀`,
+          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details.`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
         },
@@ -1617,7 +1617,7 @@ IMPORTANT RULES:
 3. Keep it under 320 characters
 4. Write in a warm, conversational but professional tone
 5. Include a clear call-to-action when appropriate
-6. Use emojis sparingly (1-2 max)
+6. Do NOT use any emojis in messages
 7. The audience is: ${input.audience === "attended" ? "people who ATTENDED the webinar" : input.audience === "not_attended" ? "people who REGISTERED but DID NOT attend (no-shows)" : "all registrants"}
 ${webinarTitle ? `8. The webinar name is: "${webinarTitle}"` : ""}
 ${transcriptContext ? `9. WEBINAR CONTENT CONTEXT (use this to make the message relevant):\n${transcriptContext}` : ""}
@@ -3124,7 +3124,7 @@ async function runWebinarImport(
     if (pendingSmsRegistrants.length > 0) {
       // Get the current Registration Confirmation message from the scheduled sequence
       // (admin may have edited it), fall back to default if not found
-      let confirmationTemplate = `Hey %FIRST_NAME%! Thanks for registering for our live workshop. Save this number so you don't miss any updates! \ud83c\udfaf`;
+      let confirmationTemplate = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
       const [seqMsg] = await db.select({ messageBody: scheduledSmsMessages.messageBody })
         .from(scheduledSmsMessages)
         .where(and(
