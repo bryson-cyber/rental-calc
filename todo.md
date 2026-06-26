@@ -13267,3 +13267,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Pass occupancyOverride through UniversalShareButton for share persistence
 - [x] Pass persistedOccupancyOverride to ShareableReportViewer
 - [x] Pass onOccupancyOverrideChange to LeadMagnet TeslaDashboard
+
+## Feature - Immediate Registration Confirmation SMS
+- [x] Add confirmationSmsSent and confirmationSmsAt columns to webinarRegistrants schema
+- [x] Add auto-send confirmation SMS logic in runWebinarImport (fires every cron cycle)
+- [x] Uses the editable Registration Confirmation template from scheduled_sms_messages
+- [x] Respects optedOut flag, handles international/invalid numbers gracefully
+- [x] Rate-limits sends (500ms delay) to avoid API throttling

@@ -3106,6 +3106,80 @@ async function runWebinarImport(
     }
   }
 
+  // ═══ AUTO-SEND REGISTRATION CONFIRMATION SMS ═══════════════════════════════
+  // Send immediate confirmation SMS to all registrants who haven't received one yet.
+  // This runs every cron cycle (not just for newly imported) to catch retries.
+  {
+    const pendingSmsRegistrants = await db.select({
+      id: webinarRegistrants.id,
+      phone: webinarRegistrants.phone,
+      name: webinarRegistrants.name,
+    }).from(webinarRegistrants)
+      .where(and(
+        eq(webinarRegistrants.webinarId, webinarId),
+        eq(webinarRegistrants.confirmationSmsSent, 0),
+        eq(webinarRegistrants.optedOut, 0),
+      ));
+
+    if (pendingSmsRegistrants.length > 0) {
+      // Get the current Registration Confirmation message from the scheduled sequence
+      // (admin may have edited it), fall back to default if not found
+      let confirmationTemplate = `Hey %FIRST_NAME%! Thanks for registering for our live workshop. Save this number so you don't miss any updates! \ud83c\udfaf`;
+      const [seqMsg] = await db.select({ messageBody: scheduledSmsMessages.messageBody })
+        .from(scheduledSmsMessages)
+        .where(and(
+          eq(scheduledSmsMessages.webinarId, webinarId),
+          eq(scheduledSmsMessages.sequenceName, "Registration Confirmation"),
+        ))
+        .limit(1);
+      if (seqMsg?.messageBody) {
+        confirmationTemplate = seqMsg.messageBody;
+      }
+
+      console.log(`[Confirmation SMS] Sending to ${pendingSmsRegistrants.length} registrant(s) for webinar ${webinarId}`);
+      let confirmSent = 0;
+      let confirmFailed = 0;
+
+      for (const registrant of pendingSmsRegistrants) {
+        const firstName = (registrant.name || "there").split(" ")[0];
+        const personalizedMessage = confirmationTemplate.replace(/%FIRST_NAME%/g, firstName);
+
+        try {
+          const result = await sendSms(registrant.phone, personalizedMessage);
+          if (result.success) {
+            await db.update(webinarRegistrants)
+              .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+              .where(eq(webinarRegistrants.id, registrant.id));
+            confirmSent++;
+          } else {
+            console.log(`[Confirmation SMS] Failed for ${registrant.phone}: ${result.error}`);
+            // Mark as sent anyway for permanently-failed numbers to avoid retrying forever
+            const permanentFailure = result.error?.includes("International") ||
+              result.error?.includes("Invalid") ||
+              result.error?.includes("opt") ||
+              result.error?.includes("unsubscribe") ||
+              result.error?.includes("INVALID_CONTACT") ||
+              result.error?.includes("LOCAL_OPT_OUT");
+            if (permanentFailure) {
+              await db.update(webinarRegistrants)
+                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+                .where(eq(webinarRegistrants.id, registrant.id));
+            }
+            confirmFailed++;
+          }
+          // Rate limit: small delay between sends to avoid API throttling
+          if (pendingSmsRegistrants.length > 5) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (err: any) {
+          console.error(`[Confirmation SMS] Error sending to ${registrant.phone}:`, err.message);
+          confirmFailed++;
+        }
+      }
+      console.log(`[Confirmation SMS] Done: ${confirmSent} sent, ${confirmFailed} failed`);
+    }
+  }
+
   return {
     success: true,
     imported,

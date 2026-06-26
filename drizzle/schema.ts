@@ -2326,6 +2326,10 @@ export const webinarRegistrants = mysqlTable("webinar_registrants", {
   calendarInviteError: text("calendarInviteError"),
   /** Timestamp when calendar invite was sent or last attempted */
   calendarInviteAt: timestamp("calendarInviteAt"),
+  /** Whether a registration confirmation SMS has been sent (0=no, 1=yes) */
+  confirmationSmsSent: int("confirmationSmsSent").default(0),
+  /** Timestamp when confirmation SMS was sent */
+  confirmationSmsAt: timestamp("confirmationSmsAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [
