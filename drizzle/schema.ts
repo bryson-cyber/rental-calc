@@ -2380,7 +2380,7 @@ export const webinarSmsCampaigns = mysqlTable("webinar_sms_campaigns", {
   /** Failed count */
   failedCount: int("failedCount").default(0).notNull(),
   /** Campaign status */
-  status: mysqlEnum("campaignStatus", ["draft", "sending", "completed", "failed"]).default("draft").notNull(),
+  status: mysqlEnum("campaignStatus", ["draft", "sending", "completed", "failed", "cancelled"]).default("draft").notNull(),
   /** Who initiated the campaign (admin user ID) */
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

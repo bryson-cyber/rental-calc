@@ -249,6 +249,10 @@ function renderMessage(template: string, vars: Record<string, string>): string {
   return result;
 }
 
+// ─── In-memory cancellation sets (signal mid-send loops to stop) ────────────
+const cancelledCampaignIds = new Set<number>();
+const cancelledScheduledMessageIds = new Set<number>();
+
 // ─── Helper: Background campaign send processing ───────────────────────────
 
 async function processCampaignSends(
@@ -266,6 +270,13 @@ async function processCampaignSends(
   let failedCount = 0;
 
   for (const recipient of recipients) {
+      // Check if campaign was cancelled mid-send
+      if (cancelledCampaignIds.has(campaignId)) {
+        console.log(`[Campaign ${campaignId}] Cancelled mid-send after ${sentCount} sent, ${failedCount} failed`);
+        await db.update(webinarSmsCampaigns).set({ status: "cancelled" }).where(eq(webinarSmsCampaigns.id, campaignId));
+        cancelledCampaignIds.delete(campaignId);
+        return;
+      }
     const personalizedMessage = renderMessage(messageBody, {
       name: recipient.name.split(" ")[0],
       fullname: recipient.name,
@@ -748,6 +759,25 @@ export const webinarSmsRouter = router({
     }),
 
   /** Resend a failed campaign with the same message to recipients that failed */
+  /** Cancel/stop a campaign that is currently sending */
+  cancelCampaign: adminProcedure
+    .input(z.object({ campaignId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Add to in-memory set so the send loop stops on next iteration
+      cancelledCampaignIds.add(input.campaignId);
+
+      // Also update DB status immediately
+      await db.update(webinarSmsCampaigns)
+        .set({ status: "cancelled" })
+        .where(eq(webinarSmsCampaigns.id, input.campaignId));
+
+      console.log(`[WebinarSMS] Campaign ${input.campaignId} cancellation requested`);
+      return { success: true, message: "Campaign stopped" };
+    }),
+
   resendCampaign: adminProcedure
     .input(z.object({ campaignId: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -1332,6 +1362,9 @@ export const webinarSmsRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Add to in-memory cancellation set so the dispatcher loop stops mid-send
+      cancelledScheduledMessageIds.add(input.id);
 
       await db.update(scheduledSmsMessages).set({ status: "cancelled" })
         .where(eq(scheduledSmsMessages.id, input.id));
@@ -3180,6 +3213,47 @@ async function runWebinarImport(
     }
   }
 
+
+  // ═══ AUTO-REFRESH ATTENDANCE FOR EXISTING REGISTRANTS ═══════════════════════
+  // On every cron cycle, update the attended status for all existing registrants
+  // based on the latest data from WebinarJam. This catches people who join the
+  // live room after they were initially imported.
+  {
+    let attendanceUpdated = 0;
+    const attendanceMap = new Map<string, number>();
+    for (const r of allRegistrants) {
+      const rawPhone = r.phone_number || r.phone || "";
+      const fullPhone = (r.phone_country_code || "") + rawPhone;
+      const phone = normalizePhone(fullPhone);
+      if (phone.length >= 7) {
+        const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+        attendanceMap.set(phone, attendedLive ? 1 : 0);
+      }
+    }
+
+    const existingForAttendance = await db.select({
+      id: webinarRegistrants.id,
+      phone: webinarRegistrants.phone,
+      attended: webinarRegistrants.attended,
+    }).from(webinarRegistrants)
+      .where(eq(webinarRegistrants.webinarId, webinarId));
+
+    for (const row of existingForAttendance) {
+      const normalizedPhone = normalizePhone(row.phone);
+      const newAttended = attendanceMap.get(normalizedPhone);
+      if (newAttended !== undefined && newAttended !== row.attended) {
+        await db.update(webinarRegistrants)
+          .set({ attended: newAttended })
+          .where(eq(webinarRegistrants.id, row.id));
+        attendanceUpdated++;
+      }
+    }
+
+    if (attendanceUpdated > 0) {
+      console.log(`[Attendance Auto-Refresh] Updated ${attendanceUpdated} registrant(s) attendance for webinar ${webinarId}`);
+    }
+  }
+
   return {
     success: true,
     imported,
@@ -3566,6 +3640,14 @@ export async function startSmsDispatcher() {
           const BATCH_UPDATE_INTERVAL = 25; // Update DB counts every 25 sends
 
           for (let i = 0; i < recipients.length; i++) {
+            // Check if this scheduled message was cancelled mid-send
+            if (cancelledScheduledMessageIds.has(msg.id)) {
+              console.log(`[SMS Dispatcher] Message #${msg.id} cancelled mid-send after ${sentCount} sent, ${failedCount} failed`);
+              await db.update(webinarSmsCampaigns).set({ status: "cancelled", sentCount, failedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
+              await db.update(scheduledSmsMessages).set({ status: "cancelled", sentCount, failedCount }).where(eq(scheduledSmsMessages.id, msg.id));
+              cancelledScheduledMessageIds.delete(msg.id);
+              break;
+            }
             const recipient = recipients[i];
             const personalizedMessage = renderMessage(msg.messageBody, {
               name: recipient.name.split(" ")[0],

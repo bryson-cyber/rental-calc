@@ -13274,3 +13274,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Uses the editable Registration Confirmation template from scheduled_sms_messages
 - [x] Respects optedOut flag, handles international/invalid numbers gracefully
 - [x] Rate-limits sends (500ms delay) to avoid API throttling
+
+## Feature - SMS Stop Button + Attendance Tracking
+- [x] Add 'cancelled' status to campaign enum in schema
+- [x] Add in-memory cancellation sets for mid-send stopping
+- [x] Add cancelCampaign tRPC procedure
+- [x] Add cancellation check in processCampaignSends loop
+- [x] Add cancellation check in scheduled message dispatcher loop
+- [x] Update cancelScheduledMessage to use in-memory set
+- [x] Add Stop/Cancel button to Campaign History UI
+- [x] Add Stop button to Sequence tab for sending messages
+- [x] Add automatic attendance refresh in runWebinarImport cron

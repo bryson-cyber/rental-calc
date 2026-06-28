@@ -1258,6 +1258,18 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  {msg.status === "sending" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      disabled={cancelMsg.isPending}
+                      onClick={() => cancelMsg.mutate({ id: msg.id })}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Stop
+                    </Button>
+                  )}
                   {msg.status === "pending" && editingId !== msg.id && (
                     <Button
                       variant="ghost"
@@ -1424,6 +1436,13 @@ function CampaignHistory() {
     { id: selectedCampaignId! },
     { enabled: !!selectedCampaignId }
   );
+  const cancelCampaign = trpc.webinarSms.cancelCampaign.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || "Campaign stopped");
+      campaigns.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const resendCampaign = trpc.webinarSms.resendCampaign.useMutation({
     onSuccess: (data) => {
       toast.success(data.message || `Resending to ${data.totalRecipients} recipients`);
@@ -1510,9 +1529,24 @@ function CampaignHistory() {
                           style={{ width: `${Math.round(((c.sentCount ?? 0) + (c.failedCount ?? 0)) / Math.max(c.totalRecipients ?? 1, 1) * 100)}%` }}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Sending... {(c.sentCount ?? 0) + (c.failedCount ?? 0)} / {c.totalRecipients ?? 0}
-                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Sending... {(c.sentCount ?? 0) + (c.failedCount ?? 0)} / {c.totalRecipients ?? 0}
+                        </p>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          disabled={cancelCampaign.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelCampaign.mutate({ campaignId: c.id });
+                          }}
+                        >
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Stop
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </button>

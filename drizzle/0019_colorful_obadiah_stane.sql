@@ -1,0 +1,1 @@
+ALTER TABLE `webinar_sms_campaigns` MODIFY COLUMN `campaignStatus` enum('draft','sending','completed','failed','cancelled') NOT NULL DEFAULT 'draft';
