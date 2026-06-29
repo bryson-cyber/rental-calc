@@ -1096,7 +1096,7 @@ export const webinarSmsRouter = router({
       selectedScheduleId: settings["selected_schedule_id"] || null,
       selectedScheduleDate: settings["selected_schedule_date"] || null,
       cronEnabled: settings["cron_enabled"] === "true",
-      cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "30", 10),
+      cronIntervalMinutes: parseInt(settings["cron_interval_minutes"] || "3", 10),
       lastAutoImportAt: settings["last_auto_import_at"] || null,
       lastAutoImportResult: settings["last_auto_import_result"] || null,
       // Per-webinar credentials from dedicated table
@@ -1201,7 +1201,7 @@ export const webinarSmsRouter = router({
   saveCronConfig: adminProcedure
     .input(z.object({
       enabled: z.boolean(),
-      intervalMinutes: z.number().min(5).max(1440).default(30),
+      intervalMinutes: z.number().min(1).max(1440).default(3),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -3397,7 +3397,7 @@ export async function startWebinarImportCron() {
   }
 
   const enabled = settings["cron_enabled"] === "true";
-  const intervalMinutes = parseInt(settings["cron_interval_minutes"] || "30", 10);
+  const intervalMinutes = parseInt(settings["cron_interval_minutes"] || "3", 10);
   const webinarId = settings["selected_webinar_id"];
   const webinarName = settings["selected_webinar_name"] || "Unknown";
   const scheduleId = settings["selected_schedule_id"];
