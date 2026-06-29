@@ -13293,3 +13293,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add duplicate campaign detection in dispatcher (prevents double-send on server restart)
 - [x] Fix recovery logic to not reset messages that already have a campaign
 - [x] Add phone deduplication in both processCampaignSends and dispatcher loop
+
+## Import No-Shows to New Webinar (Jun 29, 2026)
+
+- [x] Add backend procedure: importNoShowsToWebinar (copies no-shows from source webinar to target webinar as new registrants)
+- [x] Add frontend UI: "Import No-Shows" button/dialog in the sequence builder or webinar settings
+- [x] Deduplicate by phone number (don't re-add if already registered for target webinar)

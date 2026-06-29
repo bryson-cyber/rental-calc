@@ -1415,6 +1415,74 @@ export const webinarSmsRouter = router({
       return { success: true };
     }),
 
+  /** Import no-shows from a source webinar into a target webinar as new registrants */
+  importNoShowsToWebinar: adminProcedure
+    .input(z.object({
+      sourceWebinarId: z.string().min(1), // Webinar to pull no-shows from
+      targetWebinarId: z.string().min(1), // Webinar to add them to
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get no-shows from source webinar (attended=0, not opted out)
+      const noShows = await db.select({
+        name: webinarRegistrants.name,
+        email: webinarRegistrants.email,
+        phone: webinarRegistrants.phone,
+        tags: webinarRegistrants.tags,
+      }).from(webinarRegistrants)
+        .where(and(
+          eq(webinarRegistrants.webinarId, input.sourceWebinarId),
+          eq(webinarRegistrants.attended, 0),
+          eq(webinarRegistrants.optedOut, 0),
+        ));
+
+      if (noShows.length === 0) {
+        return { success: true, imported: 0, skipped: 0, message: "No no-shows found in the source webinar." };
+      }
+
+      // Get existing registrants in target webinar to deduplicate by phone
+      const existingInTarget = await db.select({ phone: webinarRegistrants.phone })
+        .from(webinarRegistrants)
+        .where(eq(webinarRegistrants.webinarId, input.targetWebinarId));
+      const existingPhones = new Set(existingInTarget.map(r => normalizePhone(r.phone)));
+
+      // Get target webinar name from settings or existing registrants
+      const [targetSample] = await db.select({ webinarName: webinarRegistrants.webinarName })
+        .from(webinarRegistrants)
+        .where(eq(webinarRegistrants.webinarId, input.targetWebinarId))
+        .limit(1);
+      const targetWebinarName = targetSample?.webinarName || undefined;
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const noShow of noShows) {
+        const normalized = normalizePhone(noShow.phone);
+        if (existingPhones.has(normalized)) {
+          skipped++;
+          continue;
+        }
+
+        await db.insert(webinarRegistrants).values({
+          name: noShow.name,
+          email: noShow.email,
+          phone: normalized,
+          source: "no-show-import",
+          webinarId: input.targetWebinarId,
+          webinarName: targetWebinarName,
+          tags: [...(noShow.tags || []), "no-show-reimport"],
+          confirmationSmsSent: 0, // Will get confirmation SMS on next cron cycle
+        });
+        existingPhones.add(normalized); // Prevent duplicates within this batch
+        imported++;
+      }
+
+      console.log(`[ImportNoShows] Imported ${imported} no-shows from webinar ${input.sourceWebinarId} to ${input.targetWebinarId} (${skipped} already existed)`);
+      return { success: true, imported, skipped, message: `Imported ${imported} no-shows (${skipped} already registered).` };
+    }),
+
   /** Generate a pre-built SMS sequence for a webinar */
   generateSequence: adminProcedure
     .input(z.object({

@@ -65,6 +65,7 @@ import {
   Calendar,
   CalendarCheck,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
@@ -1106,6 +1107,18 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
     });
   };
 
+  // Import No-Shows state
+  const [showImportNoShows, setShowImportNoShows] = useState(false);
+  const [sourceWebinarId, setSourceWebinarId] = useState("");
+  const webinarList = trpc.webinarSms.listWebinarsWithSchedules.useQuery();
+  const importNoShows = trpc.webinarSms.importNoShowsToWebinar.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setShowImportNoShows(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const [showGenerate, setShowGenerate] = useState(false);
   const [webinarDate, setWebinarDate] = useState("");
   const [webinarLink, setWebinarLink] = useState("");
@@ -1143,10 +1156,16 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                 : "Set up a pre-built 10-message sequence for your webinar"}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowGenerate(true)}>
-            <Zap className="w-4 h-4 mr-2" />
-            {messages.length > 0 ? "Regenerate" : "Generate Sequence"}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowImportNoShows(true)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Import No-Shows
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowGenerate(true)}>
+              <Zap className="w-4 h-4 mr-2" />
+              {messages.length > 0 ? "Regenerate" : "Generate Sequence"}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -1308,6 +1327,53 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
         )}
 
         {/* Generate sequence dialog */}
+        {/* Import No-Shows Dialog */}
+        <Dialog open={showImportNoShows} onOpenChange={setShowImportNoShows}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import No-Shows from Previous Webinar</DialogTitle>
+              <DialogDescription>
+                Copy registrants who didn't attend a previous webinar into this one. They'll receive the confirmation SMS and full sequence.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Source Webinar (pull no-shows from)</label>
+                <Select value={sourceWebinarId} onValueChange={setSourceWebinarId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a previous webinar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {webinarList.data?.map((w: any) => (
+                      <SelectItem key={w.webinar_id} value={String(w.webinar_id)} disabled={String(w.webinar_id) === webinarId}>
+                        {w.name} {String(w.webinar_id) === webinarId ? "(current)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Only registrants who did NOT attend and have NOT opted out will be imported. Duplicates (same phone number) are automatically skipped.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowImportNoShows(false)}>Cancel</Button>
+              <Button
+                disabled={!sourceWebinarId || importNoShows.isPending}
+                onClick={() => {
+                  importNoShows.mutate({
+                    sourceWebinarId,
+                    targetWebinarId: webinarId,
+                  });
+                }}
+              >
+                {importNoShows.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Import No-Shows
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={showGenerate} onOpenChange={setShowGenerate}>
           <DialogContent>
             <DialogHeader>
