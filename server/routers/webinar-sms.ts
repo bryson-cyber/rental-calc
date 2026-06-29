@@ -1511,25 +1511,59 @@ export const webinarSmsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const webinarDate = new Date(input.webinarDate);
+      const tz = input.timezone || "America/New_York";
       const link = input.webinarLink || "[WEBINAR_LINK]";
       const replay = input.replayLink || "[REPLAY_LINK]";
 
-      // Use custom timing or defaults
-      const t = {
-        registrationConfirm: input.timing?.registrationConfirm ?? -10080,
-        twoDaysBefore: input.timing?.twoDaysBefore ?? -2880,
-        dayBefore: input.timing?.dayBefore ?? -1440,
-        morningOf: input.timing?.morningOf ?? -240,
-        oneHourWarning: input.timing?.oneHourWarning ?? -60,
-        goingLiveNow: input.timing?.goingLiveNow ?? -5,
-        noShowNudge: input.timing?.noShowNudge ?? 10,
-        thankYouAttended: input.timing?.thankYouAttended ?? 60,
-        missedYouNoShow: input.timing?.missedYouNoShow ?? 120,
-        followUpCta: input.timing?.followUpCta ?? 1440,
-      };
+      // Helper: get a specific time on a given day relative to webinar, in the user's timezone
+      // dayOffset: -2 = 2 days before, -1 = day before, 0 = day of, +1 = day after
+      // hour/minute: the clock time in the user's timezone
+      function getScheduledTime(dayOffset: number, hour: number, minute: number): Date {
+        // Get the webinar date in the user's timezone
+        const webinarInTz = new Date(webinarDate.toLocaleString("en-US", { timeZone: tz }));
+        // Create target date at the specified clock time
+        const target = new Date(webinarInTz);
+        target.setDate(target.getDate() + dayOffset);
+        target.setHours(hour, minute, 0, 0);
+        // Convert back to UTC: find the offset between tz and UTC
+        const tzOffset = webinarDate.getTime() - webinarInTz.getTime();
+        return new Date(target.getTime() + tzOffset);
+      }
 
-      // Helper: offset in minutes from webinar date
+      // Use custom timing offsets if provided, otherwise use smart defaults
+      const useCustomTiming = !!input.timing;
+
+      // Helper: offset in minutes from webinar date (for custom timing or same-day messages)
       const offset = (minutes: number) => new Date(webinarDate.getTime() + minutes * 60 * 1000);
+
+      // Smart defaults: multi-day reminders at sensible clock times in user's timezone
+      // Same-day and post-webinar messages still use offset from webinar time
+      const t = useCustomTiming ? {
+        registrationConfirm: input.timing!.registrationConfirm ?? -10080,
+        twoDaysBefore: input.timing!.twoDaysBefore ?? -2880,
+        dayBefore: input.timing!.dayBefore ?? -1440,
+        morningOf: input.timing!.morningOf ?? -240,
+        oneHourWarning: input.timing!.oneHourWarning ?? -60,
+        goingLiveNow: input.timing!.goingLiveNow ?? -5,
+        noShowNudge: input.timing!.noShowNudge ?? 10,
+        thankYouAttended: input.timing!.thankYouAttended ?? 60,
+        missedYouNoShow: input.timing!.missedYouNoShow ?? 120,
+        followUpCta: input.timing!.followUpCta ?? 1440,
+      } : null;
+
+      // Smart schedule times (when no custom timing provided)
+      const smartTimes = {
+        registrationConfirm: useCustomTiming ? offset(t!.registrationConfirm) : getScheduledTime(-7, 10, 0),  // 7 days before at 10 AM
+        twoDaysBefore: useCustomTiming ? offset(t!.twoDaysBefore) : getScheduledTime(-2, 10, 0),              // 2 days before at 10 AM
+        dayBefore: useCustomTiming ? offset(t!.dayBefore) : getScheduledTime(-1, 10, 0),                      // Day before at 10 AM
+        morningOf: useCustomTiming ? offset(t!.morningOf) : getScheduledTime(0, 9, 0),                        // Morning of at 9 AM
+        oneHourWarning: offset(useCustomTiming ? t!.oneHourWarning : -60),                                    // 1 hour before webinar
+        goingLiveNow: offset(useCustomTiming ? t!.goingLiveNow : -5),                                         // 5 min before
+        noShowNudge: offset(useCustomTiming ? t!.noShowNudge : 10),                                           // 10 min after start
+        thankYouAttended: offset(useCustomTiming ? t!.thankYouAttended : 60),                                 // 1 hour after
+        missedYouNoShow: offset(useCustomTiming ? t!.missedYouNoShow : 120),                                  // 2 hours after
+        followUpCta: useCustomTiming ? offset(t!.followUpCta) : getScheduledTime(1, 10, 0),                   // Next day at 10 AM
+      };
 
       // Pre-built 9-message sequence with customizable timing
       const sequence = [
@@ -1537,70 +1571,70 @@ export const webinarSmsRouter = router({
           sequenceName: "Registration Confirmation",
           sequenceOrder: 1,
           messageBody: `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`,
-          scheduledAt: offset(t.registrationConfirm),
+          scheduledAt: smartTimes.registrationConfirm,
           audience: "all" as const,
         },
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 2,
           messageBody: `Hey %FIRST_NAME%! Quick reminder - our live Airbnb call is in 2 days. You won't want to miss this one. Mark your calendar!\n\nJoin here: ${link}`,
-          scheduledAt: offset(t.twoDaysBefore),
+          scheduledAt: smartTimes.twoDaysBefore,
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 3,
           messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat - we have a lot of people registered. See you there!\n\nJoin here: ${link}`,
-          scheduledAt: offset(t.dayBefore),
+          scheduledAt: smartTimes.dayBefore,
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 4,
           messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early - seats fill up fast!\n\nJoin here: ${link}`,
-          scheduledAt: offset(t.morningOf),
+          scheduledAt: smartTimes.morningOf,
           audience: "all" as const,
         },
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
           messageBody: `%FIRST_NAME% — we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
-          scheduledAt: offset(t.oneHourWarning),
+          scheduledAt: smartTimes.oneHourWarning,
           audience: "all" as const,
         },
         {
           sequenceName: "Starting NOW",
           sequenceOrder: 6,
           messageBody: `WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
-          scheduledAt: offset(t.goingLiveNow),
+          scheduledAt: smartTimes.goingLiveNow,
           audience: "all" as const,
         },
         {
           sequenceName: "No-Show Nudge",
           sequenceOrder: 7,
           messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in — join now: ${link}`,
-          scheduledAt: offset(t.noShowNudge),
+          scheduledAt: smartTimes.noShowNudge,
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 8,
           messageBody: `Thanks for showing up today %FIRST_NAME%! Here's the replay if you want to rewatch: ${replay}`,
-          scheduledAt: offset(t.thankYouAttended),
+          scheduledAt: smartTimes.thankYouAttended,
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
           sequenceOrder: 9,
           messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
-          scheduledAt: offset(t.missedYouNoShow),
+          scheduledAt: smartTimes.missedYouNoShow,
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 10,
           messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details.`,
-          scheduledAt: offset(t.followUpCta),
+          scheduledAt: smartTimes.followUpCta,
           audience: "all" as const,
         },
       ];

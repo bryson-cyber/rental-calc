@@ -130,13 +130,14 @@ function AudienceBadge({ audience }: { audience: string }) {
 function formatDate(dateStr: string | Date | null) {
   if (!dateStr) return "—";
   const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleString("en-US", {
+    timeZone: "America/New_York",
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  });
+  }) + " ET";
 }
 
 function getRelativeTime(dateStr: string | Date | null): string | null {
