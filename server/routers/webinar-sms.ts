@@ -255,6 +255,15 @@ const cancelledScheduledMessageIds = new Set<number>();
 
 // ─── Helper: Background campaign send processing ───────────────────────────
 
+// Helper: Check if a message body contains unfilled placeholders that should block sending
+function hasUnfilledPlaceholders(messageBody: string): string | null {
+  const placeholders = ["[REPLAY_LINK]", "[WEBINAR_LINK]"];
+  for (const p of placeholders) {
+    if (messageBody.includes(p)) return p;
+  }
+  return null;
+}
+
 async function processCampaignSends(
   campaignId: number,
   recipients: Array<{ id: number; name: string; email: string | null; phone: string }>,
@@ -266,10 +275,39 @@ async function processCampaignSends(
     return;
   }
 
+  // GUARD: Block sending if message contains unfilled placeholders
+  const unfilledPlaceholder = hasUnfilledPlaceholders(messageBody);
+  if (unfilledPlaceholder) {
+    console.error(`[WebinarSMS] Campaign ${campaignId} BLOCKED: Message contains unfilled placeholder ${unfilledPlaceholder}`);
+    await db.update(webinarSmsCampaigns).set({
+      status: "failed",
+      sentCount: 0,
+      failedCount: recipients.length,
+      completedAt: new Date(),
+    }).where(eq(webinarSmsCampaigns.id, campaignId));
+    return;
+  }
+
+  // DEDUP: Remove duplicate phone numbers — only send once per unique phone
+  const seenPhones = new Set<string>();
+  const dedupedRecipients: typeof recipients = [];
+  for (const r of recipients) {
+    const normalized = normalizePhone(r.phone);
+    if (!seenPhones.has(normalized)) {
+      seenPhones.add(normalized);
+      dedupedRecipients.push(r);
+    }
+  }
+  if (dedupedRecipients.length < recipients.length) {
+    console.log(`[WebinarSMS] Campaign ${campaignId}: Deduped ${recipients.length} → ${dedupedRecipients.length} unique phones`);
+    // Update totalRecipients to reflect actual send count
+    await db.update(webinarSmsCampaigns).set({ totalRecipients: dedupedRecipients.length }).where(eq(webinarSmsCampaigns.id, campaignId));
+  }
+
   let sentCount = 0;
   let failedCount = 0;
 
-  for (const recipient of recipients) {
+  for (const recipient of dedupedRecipients) {
       // Check if campaign was cancelled mid-send
       if (cancelledCampaignIds.has(campaignId)) {
         console.log(`[Campaign ${campaignId}] Cancelled mid-send after ${sentCount} sent, ${failedCount} failed`);
@@ -316,11 +354,11 @@ async function processCampaignSends(
   await db.update(webinarSmsCampaigns).set({
     sentCount,
     failedCount,
-    status: failedCount === recipients.length ? "failed" : sentCount === 0 ? "failed" : "completed",
+    status: failedCount === dedupedRecipients.length ? "failed" : sentCount === 0 ? "failed" : "completed",
     completedAt: new Date(),
   }).where(eq(webinarSmsCampaigns.id, campaignId));
 
-  console.log(`[WebinarSMS] Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed out of ${recipients.length}`);
+  console.log(`[WebinarSMS] Campaign ${campaignId} completed: ${sentCount} sent, ${failedCount} failed out of ${dedupedRecipients.length}`);
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -723,6 +761,12 @@ export const webinarSmsRouter = router({
       if (input.filter?.attended !== undefined) conditions.push(eq(webinarRegistrants.attended, input.filter.attended));
       if (input.filter?.registrantIds?.length) {
         conditions.push(inArray(webinarRegistrants.id, input.filter.registrantIds));
+      }
+
+      // GUARD: Block sending if message contains unfilled placeholders
+      const unfilledPlaceholder = hasUnfilledPlaceholders(input.messageBody);
+      if (unfilledPlaceholder) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Message contains unfilled placeholder: ${unfilledPlaceholder}. Please replace it with an actual link before sending.` });
       }
 
       const recipients = await db.select().from(webinarRegistrants).where(and(...conditions));
@@ -3398,8 +3442,23 @@ export async function startSmsDispatcher() {
         const scheduledTime = new Date(msg.scheduledAt).getTime();
         const age = now.getTime() - scheduledTime;
 
-        if (age <= staleThresholdMs) {
-          // Within window — reset to pending for retry
+        // Check if a campaign was already created for this message
+        // If so, don't reset to pending — that would cause a duplicate send
+        const existingCampaigns = await db.select({ id: webinarSmsCampaigns.id, status: webinarSmsCampaigns.status })
+          .from(webinarSmsCampaigns)
+          .where(
+            sql`JSON_EXTRACT(${webinarSmsCampaigns.filterCriteria}, '$.scheduledMessageId') = ${msg.id}`
+          );
+        const alreadyHasCampaign = existingCampaigns.some(c => c.status === "sending" || c.status === "completed");
+
+        if (alreadyHasCampaign) {
+          // Campaign already exists — mark as sent, don't retry
+          console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" already has a campaign (${existingCampaigns.map(c => `#${c.id}:${c.status}`).join(', ')}). Marking as sent instead of resetting.`);
+          await db.update(scheduledSmsMessages)
+            .set({ status: "sent", sentAt: new Date() })
+            .where(eq(scheduledSmsMessages.id, msg.id));
+        } else if (age <= staleThresholdMs) {
+          // Within window and no campaign yet — reset to pending for retry
           console.log(`[SMS Dispatcher] RECOVERY: Resetting stuck message #${msg.id} "${msg.sequenceName}" from "sending" back to "pending" (was stuck for ${Math.round(age / 60000)}min)`);
           await db.update(scheduledSmsMessages)
             .set({ status: "pending" })
@@ -3478,6 +3537,39 @@ export async function startSmsDispatcher() {
         console.log(`[SMS Dispatcher] Processing message #${msg.id} "${msg.sequenceName}" (audience: ${msg.audience})`);
 
         try {
+          // ═══════════════════════════════════════════════════════════════════
+          // GUARD: Block messages with unfilled placeholders
+          // ═══════════════════════════════════════════════════════════════════
+          const unfilledPlaceholder = hasUnfilledPlaceholders(msg.messageBody);
+          if (unfilledPlaceholder) {
+            console.error(`[SMS Dispatcher] BLOCKED: Message #${msg.id} "${msg.sequenceName}" contains unfilled placeholder ${unfilledPlaceholder}. Marking as failed.`);
+            await db.update(scheduledSmsMessages).set({
+              status: "failed",
+              error: `Message contains unfilled placeholder: ${unfilledPlaceholder}. Please edit the message to include the actual link before sending.`,
+              sentAt: new Date(),
+            }).where(eq(scheduledSmsMessages.id, msg.id));
+            continue;
+          }
+
+          // ═══════════════════════════════════════════════════════════════════
+          // GUARD: Prevent duplicate sends — check if a campaign already exists
+          // for this scheduledMessageId that is sending or completed
+          // ═══════════════════════════════════════════════════════════════════
+          const existingCampaigns = await db.select({ id: webinarSmsCampaigns.id, status: webinarSmsCampaigns.status })
+            .from(webinarSmsCampaigns)
+            .where(
+              sql`JSON_EXTRACT(${webinarSmsCampaigns.filterCriteria}, '$.scheduledMessageId') = ${msg.id}`
+            );
+          const alreadySentOrSending = existingCampaigns.find(c => c.status === "sending" || c.status === "completed");
+          if (alreadySentOrSending) {
+            console.warn(`[SMS Dispatcher] DUPLICATE BLOCKED: Message #${msg.id} already has campaign #${alreadySentOrSending.id} (status: ${alreadySentOrSending.status}). Skipping.`);
+            await db.update(scheduledSmsMessages).set({
+              status: "sent",
+              sentAt: new Date(),
+            }).where(eq(scheduledSmsMessages.id, msg.id));
+            continue;
+          }
+
           // ═══════════════════════════════════════════════════════════════════
           // HARD RULES for attendance-targeted messages (attended / not_attended)
           // These rules prevent sending to the wrong audience.
@@ -3598,7 +3690,21 @@ export async function startSmsDispatcher() {
             phone: webinarRegistrants.phone,
           }).from(webinarRegistrants).where(and(...conditions));
 
-          if (recipients.length === 0) {
+          // DEDUP: Remove duplicate phone numbers — only send once per unique phone
+          const seenPhones = new Set<string>();
+          const dedupedRecipients: typeof recipients = [];
+          for (const r of recipients) {
+            const normalized = normalizePhone(r.phone);
+            if (!seenPhones.has(normalized)) {
+              seenPhones.add(normalized);
+              dedupedRecipients.push(r);
+            }
+          }
+          if (dedupedRecipients.length < recipients.length) {
+            console.log(`[SMS Dispatcher] Message #${msg.id}: Deduped ${recipients.length} → ${dedupedRecipients.length} unique phones`);
+          }
+
+          if (dedupedRecipients.length === 0) {
             console.log(`[SMS Dispatcher] Message #${msg.id}: No recipients found for audience "${msg.audience}", marking as sent with 0 count`);
             await db.update(scheduledSmsMessages).set({
               status: "sent",
@@ -3626,20 +3732,20 @@ export async function startSmsDispatcher() {
             name: `[Sequence] ${msg.sequenceName}`,
             messageBody: msg.messageBody,
             filterCriteria: { audience: msg.audience, webinarId: msg.webinarId, source: "sequence", scheduledMessageId: msg.id, audienceLabel } as Record<string, unknown>,
-            totalRecipients: recipients.length,
+            totalRecipients: dedupedRecipients.length,
             sentCount: 0,
             failedCount: 0,
             status: "sending",
           });
           const campaignId = campaignResult.insertId;
 
-          console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${recipients.length} recipients (campaign #${campaignId})`);
+          console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${dedupedRecipients.length} recipients (campaign #${campaignId})`);
 
           let sentCount = 0;
           let failedCount = 0;
           const BATCH_UPDATE_INTERVAL = 25; // Update DB counts every 25 sends
 
-          for (let i = 0; i < recipients.length; i++) {
+          for (let i = 0; i < dedupedRecipients.length; i++) {
             // Check if this scheduled message was cancelled mid-send
             if (cancelledScheduledMessageIds.has(msg.id)) {
               console.log(`[SMS Dispatcher] Message #${msg.id} cancelled mid-send after ${sentCount} sent, ${failedCount} failed`);
@@ -3648,7 +3754,7 @@ export async function startSmsDispatcher() {
               cancelledScheduledMessageIds.delete(msg.id);
               break;
             }
-            const recipient = recipients[i];
+            const recipient = dedupedRecipients[i];
             const personalizedMessage = renderMessage(msg.messageBody, {
               name: recipient.name.split(" ")[0],
               fullname: recipient.name,
@@ -3681,7 +3787,7 @@ export async function startSmsDispatcher() {
 
             // Update counts incrementally every BATCH_UPDATE_INTERVAL sends
             // This ensures counts are persisted even if the process crashes mid-batch
-            if ((i + 1) % BATCH_UPDATE_INTERVAL === 0 || i === recipients.length - 1) {
+            if ((i + 1) % BATCH_UPDATE_INTERVAL === 0 || i === dedupedRecipients.length - 1) {
               try {
                 await db.update(webinarSmsCampaigns).set({
                   sentCount,
@@ -3704,12 +3810,12 @@ export async function startSmsDispatcher() {
           await db.update(webinarSmsCampaigns).set({
             sentCount,
             failedCount,
-            status: failedCount === recipients.length ? "failed" : "completed",
+            status: failedCount === dedupedRecipients.length ? "failed" : "completed",
             completedAt: new Date(),
           }).where(eq(webinarSmsCampaigns.id, campaignId));
 
           await db.update(scheduledSmsMessages).set({
-            status: failedCount === recipients.length ? "failed" : "sent",
+            status: failedCount === dedupedRecipients.length ? "failed" : "sent",
             sentCount,
             failedCount,
             sentAt: new Date(),

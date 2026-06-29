@@ -13285,3 +13285,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add Stop/Cancel button to Campaign History UI
 - [x] Add Stop button to Sequence tab for sending messages
 - [x] Add automatic attendance refresh in runWebinarImport cron
+
+## Bug Fix - SMS Placeholder + Duplicate Send (Jun 28, 2026)
+
+- [x] Block SMS from sending if message contains unfilled placeholders like [REPLAY_LINK], [WEBINAR_LINK], etc.
+- [x] Prevent duplicate SMS sends to the same recipient within the same campaign/scheduled message
+- [x] Add duplicate campaign detection in dispatcher (prevents double-send on server restart)
+- [x] Fix recovery logic to not reset messages that already have a campaign
+- [x] Add phone deduplication in both processCampaignSends and dispatcher loop
