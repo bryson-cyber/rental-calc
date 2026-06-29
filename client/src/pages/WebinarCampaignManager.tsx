@@ -1344,9 +1344,9 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                     <SelectValue placeholder="Select a previous webinar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {webinarList.data?.map((w: any) => (
-                      <SelectItem key={w.webinar_id} value={String(w.webinar_id)} disabled={String(w.webinar_id) === webinarId}>
-                        {w.name} {String(w.webinar_id) === webinarId ? "(current)" : ""}
+                    {webinarList.data?.webinars?.map((w: any) => (
+                      <SelectItem key={w.id} value={w.id} disabled={w.id === webinarId}>
+                        {w.name} {w.id === webinarId ? "(current)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
