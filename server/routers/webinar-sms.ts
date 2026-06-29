@@ -1488,6 +1488,7 @@ export const webinarSmsRouter = router({
     .input(z.object({
       webinarId: z.string().min(1),
       webinarDate: z.string(), // ISO date string of the webinar
+      timezone: z.string().optional(), // IANA timezone (e.g. "America/New_York")
       webinarLink: z.string().optional(),
       replayLink: z.string().optional(),
       // Customizable timing offsets (in minutes before/after webinar)
@@ -3267,6 +3268,17 @@ async function runWebinarImport(
       ));
 
     if (pendingSmsRegistrants.length > 0) {
+      // ═══ DEDUPLICATE BY PHONE ═══
+      // Group registrants by normalized phone — only send ONE SMS per unique phone
+      const phoneMap = new Map<string, typeof pendingSmsRegistrants>();
+      for (const reg of pendingSmsRegistrants) {
+        const normPhone = reg.phone.replace(/\D/g, "").slice(-10);
+        if (!phoneMap.has(normPhone)) {
+          phoneMap.set(normPhone, []);
+        }
+        phoneMap.get(normPhone)!.push(reg);
+      }
+
       // Get the current Registration Confirmation message from the scheduled sequence
       // (admin may have edited it), fall back to default if not found
       let confirmationTemplate = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
@@ -3281,20 +3293,26 @@ async function runWebinarImport(
         confirmationTemplate = seqMsg.messageBody;
       }
 
-      console.log(`[Confirmation SMS] Sending to ${pendingSmsRegistrants.length} registrant(s) for webinar ${webinarId}`);
+      console.log(`[Confirmation SMS] Sending to ${phoneMap.size} unique phone(s) (${pendingSmsRegistrants.length} rows) for webinar ${webinarId}`);
       let confirmSent = 0;
       let confirmFailed = 0;
 
-      for (const registrant of pendingSmsRegistrants) {
+      for (const [, registrants] of phoneMap) {
+        // Use the first registrant's name for personalization
+        const registrant = registrants[0];
+        const allIds = registrants.map(r => r.id);
         const firstName = (registrant.name || "there").split(" ")[0];
         const personalizedMessage = confirmationTemplate.replace(/%FIRST_NAME%/g, firstName);
 
         try {
           const result = await sendSms(registrant.phone, personalizedMessage);
           if (result.success) {
-            await db.update(webinarRegistrants)
-              .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
-              .where(eq(webinarRegistrants.id, registrant.id));
+            // Mark ALL rows for this phone as sent
+            for (const id of allIds) {
+              await db.update(webinarRegistrants)
+                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+                .where(eq(webinarRegistrants.id, id));
+            }
             confirmSent++;
           } else {
             console.log(`[Confirmation SMS] Failed for ${registrant.phone}: ${result.error}`);
@@ -3306,14 +3324,17 @@ async function runWebinarImport(
               result.error?.includes("INVALID_CONTACT") ||
               result.error?.includes("LOCAL_OPT_OUT");
             if (permanentFailure) {
-              await db.update(webinarRegistrants)
-                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
-                .where(eq(webinarRegistrants.id, registrant.id));
+              // Mark ALL rows for this phone as sent to stop retrying
+              for (const id of allIds) {
+                await db.update(webinarRegistrants)
+                  .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+                  .where(eq(webinarRegistrants.id, id));
+              }
             }
             confirmFailed++;
           }
           // Rate limit: small delay between sends to avoid API throttling
-          if (pendingSmsRegistrants.length > 5) {
+          if (phoneMap.size > 5) {
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (err: any) {

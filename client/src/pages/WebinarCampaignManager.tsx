@@ -1121,6 +1121,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
 
   const [showGenerate, setShowGenerate] = useState(false);
   const [webinarDate, setWebinarDate] = useState("");
+  const [webinarTimezone, setWebinarTimezone] = useState("America/New_York");
   const [webinarLink, setWebinarLink] = useState("");
   const [replayLink, setReplayLink] = useState("");
   const [showAdvancedTiming, setShowAdvancedTiming] = useState(false);
@@ -1392,6 +1393,23 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                 />
               </div>
               <div>
+                <label className="text-sm font-medium mb-1.5 block">Timezone</label>
+                <Select value={webinarTimezone} onValueChange={setWebinarTimezone}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                    <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                    <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                    <SelectItem value="America/Phoenix">Arizona (no DST)</SelectItem>
+                    <SelectItem value="Pacific/Honolulu">Hawaii (HT)</SelectItem>
+                    <SelectItem value="America/Anchorage">Alaska (AKT)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <label className="text-sm font-medium mb-1.5 block">Webinar Join Link (optional)</label>
                 <Input
                   placeholder="https://..."
@@ -1467,9 +1485,17 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
               <Button
                 disabled={!webinarDate || generateSeq.isPending}
                 onClick={() => {
+                  // Convert the datetime-local value to UTC using the selected timezone
+                  // datetime-local gives us "2026-07-01T19:30" — interpret this in the selected tz
+                  const targetOffset = new Date(new Date(webinarDate).toLocaleString("en-US", { timeZone: webinarTimezone })).getTime();
+                  const utcOffset = new Date(new Date(webinarDate).toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+                  const offsetMs = utcOffset - targetOffset;
+                  const correctedDate = new Date(new Date(webinarDate).getTime() + offsetMs);
+                  
                   generateSeq.mutate({
                     webinarId,
-                    webinarDate: new Date(webinarDate).toISOString(),
+                    webinarDate: correctedDate.toISOString(),
+                    timezone: webinarTimezone,
                     webinarLink: webinarLink || undefined,
                     replayLink: replayLink || undefined,
                     timing: showAdvancedTiming ? timing : undefined,
