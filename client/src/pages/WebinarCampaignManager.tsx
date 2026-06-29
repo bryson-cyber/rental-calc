@@ -1486,12 +1486,35 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
               <Button
                 disabled={!webinarDate || generateSeq.isPending}
                 onClick={() => {
-                  // Convert the datetime-local value to UTC using the selected timezone
-                  // datetime-local gives us "2026-07-01T19:30" — interpret this in the selected tz
-                  const targetOffset = new Date(new Date(webinarDate).toLocaleString("en-US", { timeZone: webinarTimezone })).getTime();
-                  const utcOffset = new Date(new Date(webinarDate).toLocaleString("en-US", { timeZone: "UTC" })).getTime();
-                  const offsetMs = utcOffset - targetOffset;
-                  const correctedDate = new Date(new Date(webinarDate).getTime() + offsetMs);
+                  // datetime-local gives us "2026-07-01T19:30" as a local string.
+                  // We need to interpret this in the SELECTED timezone, not the browser's timezone.
+                  // Strategy: parse the raw string components and use Intl to find the correct UTC offset.
+                  const rawValue = webinarDate; // e.g. "2026-07-01T19:30"
+                  
+                  // Parse the raw datetime-local string components
+                  const [datePart, timePart] = rawValue.split("T");
+                  const [year, month, day] = datePart.split("-").map(Number);
+                  const [hour, minute] = timePart.split(":").map(Number);
+                  
+                  // Create a date assuming UTC first, then adjust for the target timezone
+                  // We need to find what UTC time corresponds to this clock time in the selected tz
+                  // Use iterative approach: guess UTC, check what it displays as in target tz, adjust
+                  let guess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+                  const formatter = new Intl.DateTimeFormat("en-US", {
+                    timeZone: webinarTimezone,
+                    year: "numeric", month: "2-digit", day: "2-digit",
+                    hour: "2-digit", minute: "2-digit", hour12: false,
+                  });
+                  // Check what our guess displays as in the target timezone
+                  const parts = formatter.formatToParts(guess);
+                  const getPart = (type: string) => parseInt(parts.find(p => p.type === type)?.value || "0");
+                  const guessHour = getPart("hour");
+                  const guessDay = getPart("day");
+                  // Calculate the difference and adjust
+                  const hourDiff = hour - guessHour;
+                  const dayDiff = day - guessDay;
+                  const totalOffsetMs = (dayDiff * 24 * 60 + hourDiff * 60 + (minute - getPart("minute"))) * 60 * 1000;
+                  const correctedDate = new Date(guess.getTime() + totalOffsetMs);
                   
                   generateSeq.mutate({
                     webinarId,
