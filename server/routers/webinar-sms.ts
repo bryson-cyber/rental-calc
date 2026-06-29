@@ -3317,12 +3317,15 @@ async function runWebinarImport(
           } else {
             console.log(`[Confirmation SMS] Failed for ${registrant.phone}: ${result.error}`);
             // Mark as sent anyway for permanently-failed numbers to avoid retrying forever
-            const permanentFailure = result.error?.includes("International") ||
-              result.error?.includes("Invalid") ||
-              result.error?.includes("opt") ||
-              result.error?.includes("unsubscribe") ||
-              result.error?.includes("INVALID_CONTACT") ||
-              result.error?.includes("LOCAL_OPT_OUT");
+            const errLower = (result.error || "").toLowerCase();
+            const permanentFailure = errLower.includes("international") ||
+              errLower.includes("invalid") ||
+              errLower.includes("opt") ||
+              errLower.includes("unsubscribe") ||
+              errLower.includes("conflict") ||
+              errLower.includes("not found") ||
+              errLower.includes("(409)") ||
+              errLower.includes("(404)");
             if (permanentFailure) {
               // Mark ALL rows for this phone as sent to stop retrying
               for (const id of allIds) {
