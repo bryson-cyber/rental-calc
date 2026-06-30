@@ -2567,6 +2567,53 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
 // SECTION 6: Settings Panel
 // ═══════════════════════════════════════════════════════════════════════════
 
+function SimpleTextingListField() {
+  const settings = trpc.webinarSms.getSettings.useQuery();
+  const saveList = trpc.webinarSms.saveSimpleTextingList.useMutation({
+    onSuccess: () => {
+      toast.success("SimpleTexting list saved");
+      settings.refetch();
+    },
+  });
+  const [listName, setListName] = useState("");
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (settings.data && !initialized) {
+      setListName(settings.data.simpleTextingListName || "");
+      setInitialized(true);
+    }
+  }, [settings.data, initialized]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-sm font-medium">Contact List Name</label>
+        <p className="text-xs text-muted-foreground mb-2">Enter the exact SimpleTexting list name (e.g., "7.1.26"). New registrants will be auto-added.</p>
+        <div className="flex gap-2">
+          <Input
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+            placeholder="e.g., 7.1.26"
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => saveList.mutate({ listName })}
+            disabled={saveList.isPending}
+          >
+            {saveList.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+          </Button>
+        </div>
+      </div>
+      {settings.data?.simpleTextingListName && (
+        <p className="text-xs text-emerald-600">Active: registrants will be added to "{settings.data.simpleTextingListName}"</p>
+      )}
+    </div>
+  );
+}
+
 function SettingsPanel({ webinarId }: { webinarId: string }) {
   const settings = trpc.webinarSms.getSettings.useQuery();
   const apiStatus = trpc.webinarSms.getApiStatus.useQuery();
@@ -2683,6 +2730,17 @@ function SettingsPanel({ webinarId }: { webinarId: string }) {
           )}
         </CardContent>
       </Card>
+      {/* SimpleTexting List Sync */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">SimpleTexting List Sync</CardTitle>
+          <CardDescription>Automatically add new registrants to a SimpleTexting contact list when they opt in.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <SimpleTextingListField />
+        </CardContent>
+      </Card>
+
       {/* Transcript Upload */}
       <Card className="border-border/50">
         <CardHeader>

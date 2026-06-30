@@ -1106,6 +1106,8 @@ export const webinarSmsRouter = router({
       webinarIntegrationId: creds.integrationWebinarId,
       webinarApiKeyConfigured: !!creds.apiKey,
       webinarHashConfigured: !!creds.webinarHash,
+      // SimpleTexting list sync
+      simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -1219,6 +1221,22 @@ export const webinarSmsRouter = router({
       await restartWebinarImportCron();
 
       return { success: true, cronEnabled: input.enabled, intervalMinutes: input.intervalMinutes };
+    }),
+
+  /** Save SimpleTexting list name for auto-adding registrants */
+  saveSimpleTextingList: adminProcedure
+    .input(z.object({
+      listName: z.string().max(255).default(""),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.insert(webinarSmsSettings)
+        .values({ settingKey: "simpletexting_list_name", settingValue: input.listName, description: "SimpleTexting contact list name to auto-add registrants" })
+        .onDuplicateKeyUpdate({ set: { settingValue: input.listName } });
+
+      return { success: true, listName: input.listName };
     }),
 
   /** Refresh attendance data from WebinarJam for existing registrants */
@@ -1599,7 +1617,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 10,
-          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, reply YES and I'll send you the details.`,
+          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, apply here: https://masterclass.coachinayah.com/turnkey-v2`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
         },
@@ -3346,6 +3364,50 @@ async function runWebinarImport(
         }
       }
       console.log(`[Confirmation SMS] Done: ${confirmSent} sent, ${confirmFailed} failed`);
+
+      // ═══ SIMPLETEXTING LIST SYNC ═══
+      // After sending confirmations, add successfully-sent phones to the configured SimpleTexting list
+      const listNameSetting = await db.select({ settingValue: webinarSmsSettings.settingValue })
+        .from(webinarSmsSettings)
+        .where(eq(webinarSmsSettings.settingKey, "simpletexting_list_name"))
+        .limit(1);
+      const listName = listNameSetting[0]?.settingValue;
+      if (listName && confirmSent > 0) {
+        const apiKey = ENV.simpletextingApiKey;
+        if (apiKey) {
+          console.log(`[SimpleTexting List] Adding ${confirmSent} contact(s) to list "${listName}"`);
+          // Collect phones that were successfully sent
+          for (const [normPhone, registrants] of phoneMap) {
+            // Only add phones that got a successful SMS (check if confirmationSmsSent was set)
+            const reg = registrants[0];
+            const [checkRow] = await db.select({ confirmationSmsSent: webinarRegistrants.confirmationSmsSent })
+              .from(webinarRegistrants)
+              .where(eq(webinarRegistrants.id, reg.id))
+              .limit(1);
+            if (checkRow?.confirmationSmsSent !== 1) continue;
+
+            try {
+              const cleanPhone = reg.phone.replace(/[^\d]/g, "");
+              const addRes = await fetch(`https://api-app2.simpletexting.com/v2/api/contact-lists/${encodeURIComponent(listName)}/contacts`, {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ contactPhoneOrId: cleanPhone }),
+              });
+              if (addRes.ok) {
+                console.log(`[SimpleTexting List] Added ${cleanPhone} to "${listName}"`);
+              } else {
+                const errText = await addRes.text();
+                console.log(`[SimpleTexting List] Failed to add ${cleanPhone}: ${addRes.status} ${errText}`);
+              }
+            } catch (err: any) {
+              console.error(`[SimpleTexting List] Error adding ${reg.phone}:`, err.message);
+            }
+          }
+        }
+      }
     }
   }
 
