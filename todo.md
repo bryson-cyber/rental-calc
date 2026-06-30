@@ -13299,3 +13299,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add backend procedure: importNoShowsToWebinar (copies no-shows from source webinar to target webinar as new registrants)
 - [x] Add frontend UI: "Import No-Shows" button/dialog in the sequence builder or webinar settings
 - [x] Deduplicate by phone number (don't re-add if already registered for target webinar)
+
+## SimpleTexting List Dropdown (Jun 29, 2026)
+
+- [x] Add fetchSimpleTextingLists tRPC procedure (fetches all lists from API, sorted newest first)
+- [x] Add createSimpleTextingList tRPC procedure (creates a new list via API)
+- [x] Replace SimpleTextingListField text input with Select dropdown that fetches actual lists
+- [x] Add loading/error states for list fetching
+- [x] Add "Create new list..." option at bottom of dropdown
+- [x] Inline create form with input + Create/Cancel buttons
+- [x] Auto-save newly created list as active list
+- [x] Show active list confirmation text

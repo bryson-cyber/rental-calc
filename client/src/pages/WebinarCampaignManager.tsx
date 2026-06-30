@@ -2569,46 +2569,108 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
 
 function SimpleTextingListField() {
   const settings = trpc.webinarSms.getSettings.useQuery();
+  const listsQuery = trpc.webinarSms.fetchSimpleTextingLists.useQuery(undefined, {
+    staleTime: 60_000,
+  });
   const saveList = trpc.webinarSms.saveSimpleTextingList.useMutation({
     onSuccess: () => {
       toast.success("SimpleTexting list saved");
       settings.refetch();
     },
   });
-  const [listName, setListName] = useState("");
-  const [initialized, setInitialized] = useState(false);
+  const createList = trpc.webinarSms.createSimpleTextingList.useMutation({
+    onSuccess: (data) => {
+      toast.success(`List "${data.name}" created`);
+      listsQuery.refetch();
+      // Auto-save the newly created list
+      saveList.mutate({ listName: data.name });
+      setCreating(false);
+      setNewListName("");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
 
-  useEffect(() => {
-    if (settings.data && !initialized) {
-      setListName(settings.data.simpleTextingListName || "");
-      setInitialized(true);
+  const [creating, setCreating] = useState(false);
+  const [newListName, setNewListName] = useState("");
+
+  const currentListName = settings.data?.simpleTextingListName || "";
+
+  const handleSelectChange = (value: string) => {
+    if (value === "__create_new__") {
+      setCreating(true);
+      return;
     }
-  }, [settings.data, initialized]);
+    saveList.mutate({ listName: value });
+  };
+
+  const handleCreateList = () => {
+    if (!newListName.trim()) return;
+    createList.mutate({ name: newListName.trim() });
+  };
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-sm font-medium">Contact List Name</label>
-        <p className="text-xs text-muted-foreground mb-2">Enter the exact SimpleTexting list name (e.g., "7.1.26"). New registrants will be auto-added.</p>
-        <div className="flex gap-2">
+        <label className="text-sm font-medium">Contact List</label>
+        <p className="text-xs text-muted-foreground mb-2">Select a SimpleTexting list. New registrants will be auto-added to this list.</p>
+        {listsQuery.isLoading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Loading lists from SimpleTexting...
+          </div>
+        ) : listsQuery.isError ? (
+          <div className="text-xs text-red-500 py-2">
+            Failed to load lists: {listsQuery.error?.message}
+            <Button variant="ghost" size="sm" className="ml-2 h-6 text-xs" onClick={() => listsQuery.refetch()}>Retry</Button>
+          </div>
+        ) : (
+          <Select value={currentListName} onValueChange={handleSelectChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a list..." />
+            </SelectTrigger>
+            <SelectContent>
+              {(listsQuery.data?.lists || []).map((list) => (
+                <SelectItem key={list.id} value={list.name}>
+                  {list.name} ({list.contactsCount} contacts)
+                </SelectItem>
+              ))}
+              <SelectItem value="__create_new__" className="text-blue-600 font-medium border-t mt-1 pt-1">
+                + Create new list...
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {creating && (
+        <div className="flex gap-2 items-center">
           <Input
-            value={listName}
-            onChange={(e) => setListName(e.target.value)}
-            placeholder="e.g., 7.1.26"
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            placeholder="New list name (e.g., 7.8.26)"
             className="flex-1"
+            onKeyDown={(e) => e.key === "Enter" && handleCreateList()}
           />
           <Button
-            variant="outline"
             size="sm"
-            onClick={() => saveList.mutate({ listName })}
-            disabled={saveList.isPending}
+            onClick={handleCreateList}
+            disabled={createList.isPending || !newListName.trim()}
           >
-            {saveList.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+            {createList.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Create"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setCreating(false); setNewListName(""); }}>
+            Cancel
           </Button>
         </div>
-      </div>
-      {settings.data?.simpleTextingListName && (
-        <p className="text-xs text-emerald-600">Active: registrants will be added to "{settings.data.simpleTextingListName}"</p>
+      )}
+
+      {currentListName && !creating && (
+        <p className="text-xs text-emerald-600">Active: registrants will be added to "{currentListName}"</p>
+      )}
+      {saveList.isPending && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</p>
       )}
     </div>
   );

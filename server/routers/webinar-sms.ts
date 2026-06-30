@@ -1223,6 +1223,58 @@ export const webinarSmsRouter = router({
       return { success: true, cronEnabled: input.enabled, intervalMinutes: input.intervalMinutes };
     }),
 
+  /** Fetch all SimpleTexting contact lists from the API */
+  fetchSimpleTextingLists: adminProcedure
+    .query(async () => {
+      const apiKey = ENV.simpletextingApiKey;
+      if (!apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "SimpleTexting API key not configured" });
+
+      const res = await fetch("https://api-app2.simpletexting.com/v2/api/contact-lists?page=0&size=100", {
+        headers: { "Authorization": `Bearer ${apiKey}` },
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `SimpleTexting API error (${res.status}): ${errText}` });
+      }
+      const data = await res.json();
+      // API returns { content: [{ id, name, contactsCount, createdAt }], ... }
+      const lists = (data.content || data || []).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        contactsCount: l.contactsCount || 0,
+        createdAt: l.createdAt || null,
+      }));
+      // Sort newest first
+      lists.sort((a: any, b: any) => {
+        if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return 0;
+      });
+      return { lists };
+    }),
+
+  /** Create a new SimpleTexting contact list */
+  createSimpleTextingList: adminProcedure
+    .input(z.object({ name: z.string().min(1).max(255) }))
+    .mutation(async ({ input }) => {
+      const apiKey = ENV.simpletextingApiKey;
+      if (!apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "SimpleTexting API key not configured" });
+
+      const res = await fetch("https://api-app2.simpletexting.com/v2/api/contact-lists", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: input.name }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Failed to create list: ${errText}` });
+      }
+      const data = await res.json();
+      return { success: true, id: data.id, name: data.name || input.name };
+    }),
+
   /** Save SimpleTexting list name for auto-adding registrants */
   saveSimpleTextingList: adminProcedure
     .input(z.object({
