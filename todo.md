@@ -13315,3 +13315,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add auto-recovery retry logic for SimpleTexting 409 "Contact marked as invalid" errors
 - [x] Delete invalid contact, re-create it, then retry the send automatically
 - [x] Log each step of recovery for debugging visibility
+
+## SMS Sequence "Send Now" Button (July 1, 2026)
+- [x] Add "Send Now" button to each scheduled message in the SMS sequence UI
+- [x] Add backend mutation to immediately dispatch a scheduled message
+- [x] Update message status after manual send

@@ -1549,6 +1549,31 @@ export const webinarSmsRouter = router({
       return { success: true };
     }),
 
+  /** Send a scheduled message immediately (bypass time check) */
+  sendScheduledMessageNow: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Fetch the message
+      const [msg] = await db.select().from(scheduledSmsMessages)
+        .where(eq(scheduledSmsMessages.id, input.id));
+      if (!msg) throw new TRPCError({ code: "NOT_FOUND", message: "Scheduled message not found" });
+      if (msg.status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Cannot send a message with status "${msg.status}". Only pending messages can be sent.` });
+      }
+
+      // Set scheduledAt to now so the dispatcher picks it up on the next tick (within 30s)
+      const now = new Date();
+      await db.update(scheduledSmsMessages)
+        .set({ scheduledAt: now })
+        .where(eq(scheduledSmsMessages.id, input.id));
+
+      console.log(`[SMS Dispatcher] SEND NOW: Message #${input.id} "${msg.sequenceName}" scheduledAt updated to NOW. Dispatcher will pick it up within 30s.`);
+      return { success: true, message: `Message "${msg.sequenceName}" will be sent within 30 seconds.` };
+    }),
+
   /** Import no-shows from a source webinar into a target webinar as new registrants */
   importNoShowsToWebinar: adminProcedure
     .input(z.object({

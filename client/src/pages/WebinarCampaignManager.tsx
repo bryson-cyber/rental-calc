@@ -1068,6 +1068,13 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
       scheduled.refetch();
     },
   });
+  const sendNow = trpc.webinarSms.sendScheduledMessageNow.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      scheduled.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const updateMsg = trpc.webinarSms.upsertScheduledMessage.useMutation({
     onSuccess: () => {
       toast.success("Message updated");
@@ -1300,6 +1307,23 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                       title="Edit message"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  {msg.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      disabled={sendNow.isPending}
+                      onClick={() => {
+                        if (confirm(`Send "${msg.sequenceName}" immediately to all recipients?`)) {
+                          sendNow.mutate({ id: msg.id });
+                        }
+                      }}
+                      title="Send this message immediately"
+                    >
+                      <Play className="w-3 h-3 mr-1" />
+                      Send Now
                     </Button>
                   )}
                   {msg.status === "pending" && (
