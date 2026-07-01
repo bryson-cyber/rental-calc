@@ -13320,3 +13320,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add "Send Now" button to each scheduled message in the SMS sequence UI
 - [x] Add backend mutation to immediately dispatch a scheduled message
 - [x] Update message status after manual send
+
+## SMS Dispatcher Recovery Logic Fix (July 1, 2026)
+- [x] Fix recovery logic to check sentCount/failedCount before marking a crashed campaign as "sent"
+- [x] If campaign has 0 sent + 0 failed (server crashed before any sends), delete empty campaign and reset to pending for retry

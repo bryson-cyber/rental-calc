@@ -3738,19 +3738,27 @@ export async function startSmsDispatcher() {
         const age = now.getTime() - scheduledTime;
 
         // Check if a campaign was already created for this message
-        // If so, don't reset to pending — that would cause a duplicate send
-        const existingCampaigns = await db.select({ id: webinarSmsCampaigns.id, status: webinarSmsCampaigns.status })
+        // If so, check whether it actually delivered anything before deciding
+        const existingCampaigns = await db.select({ id: webinarSmsCampaigns.id, status: webinarSmsCampaigns.status, sentCount: webinarSmsCampaigns.sentCount, failedCount: webinarSmsCampaigns.failedCount })
           .from(webinarSmsCampaigns)
           .where(
             sql`JSON_EXTRACT(${webinarSmsCampaigns.filterCriteria}, '$.scheduledMessageId') = ${msg.id}`
           );
-        const alreadyHasCampaign = existingCampaigns.some(c => c.status === "sending" || c.status === "completed");
+        const activeCampaign = existingCampaigns.find(c => c.status === "sending" || c.status === "completed");
 
-        if (alreadyHasCampaign) {
-          // Campaign already exists — mark as sent, don't retry
-          console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" already has a campaign (${existingCampaigns.map(c => `#${c.id}:${c.status}`).join(', ')}). Marking as sent instead of resetting.`);
+        if (activeCampaign && (activeCampaign.sentCount > 0 || activeCampaign.failedCount > 0)) {
+          // Campaign exists AND actually processed recipients — mark as sent, don't retry
+          console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" has campaign #${activeCampaign.id} with ${activeCampaign.sentCount} sent + ${activeCampaign.failedCount} failed. Marking as sent.`);
           await db.update(scheduledSmsMessages)
             .set({ status: "sent", sentAt: new Date() })
+            .where(eq(scheduledSmsMessages.id, msg.id));
+        } else if (activeCampaign && activeCampaign.sentCount === 0 && activeCampaign.failedCount === 0) {
+          // Campaign exists but sent NOTHING (server crashed immediately after creating campaign)
+          // Delete the empty campaign and reset to pending for retry
+          console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" has campaign #${activeCampaign.id} but 0 sent/0 failed (crash before any sends). Deleting empty campaign and resetting to pending.`);
+          await db.delete(webinarSmsCampaigns).where(eq(webinarSmsCampaigns.id, activeCampaign.id));
+          await db.update(scheduledSmsMessages)
+            .set({ status: "pending" })
             .where(eq(scheduledSmsMessages.id, msg.id));
         } else if (age <= staleThresholdMs) {
           // Within window and no campaign yet — reset to pending for retry
