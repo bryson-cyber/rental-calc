@@ -13310,3 +13310,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Inline create form with input + Create/Cancel buttons
 - [x] Auto-save newly created list as active list
 - [x] Show active list confirmation text
+
+## SMS Auto-Recovery for Invalid Contacts (June 30, 2026)
+- [x] Add auto-recovery retry logic for SimpleTexting 409 "Contact marked as invalid" errors
+- [x] Delete invalid contact, re-create it, then retry the send automatically
+- [x] Log each step of recovery for debugging visibility

@@ -117,8 +117,72 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
       return { success: true, smsId: data.id };
     }
     
-    // Error responses
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTO-RETRY: If contact is marked as invalid, delete and re-create
+    // the contact, then retry the send once.
+    // This handles cases where SimpleTexting flagged a contact due to
+    // duplicate sends or carrier rejections that are no longer relevant.
+    // ═══════════════════════════════════════════════════════════════════
     const errorMsg = data.message || data.errorMessage || data.error || JSON.stringify(data);
+    const isInvalidContact = res.status === 409 && (
+      errorMsg.toLowerCase().includes("contact marked as invalid") ||
+      errorMsg.toLowerCase().includes("invalid_contact") ||
+      (data.errorCode && data.errorCode === "INVALID_CONTACT")
+    );
+
+    if (isInvalidContact) {
+      console.log(`[WebinarSMS] Contact ${normalizedPhone} marked as invalid — attempting auto-recovery (delete + re-create + retry)`);
+      try {
+        // Step 1: Delete the invalid contact
+        const deleteRes = await fetch(`https://api-app2.simpletexting.com/v2/api/contacts/${normalizedPhone}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${apiKey}` },
+        });
+        console.log(`[WebinarSMS] Delete contact ${normalizedPhone}: status ${deleteRes.status}`);
+
+        // Step 2: Re-create the contact (small delay to let deletion propagate)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const createRes = await fetch("https://api-app2.simpletexting.com/v2/api/contacts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ contactPhone: normalizedPhone }),
+        });
+        const createText = await createRes.text();
+        console.log(`[WebinarSMS] Re-create contact ${normalizedPhone}: status ${createRes.status}, body: ${createText.substring(0, 200)}`);
+
+        // Step 3: Retry the original send (small delay)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const retryRes = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+        const retryText = await retryRes.text();
+        console.log(`[WebinarSMS] Retry send to ${normalizedPhone}: status ${retryRes.status}, body: ${retryText.substring(0, 500)}`);
+
+        let retryData: any;
+        try { retryData = JSON.parse(retryText); } catch { retryData = {}; }
+
+        if (retryRes.status === 201 && retryData.id) {
+          console.log(`[WebinarSMS] AUTO-RECOVERY SUCCESS: ${normalizedPhone} re-created and message sent (id: ${retryData.id})`);
+          return { success: true, smsId: retryData.id };
+        }
+
+        const retryError = retryData.message || retryData.errorMessage || retryData.error || JSON.stringify(retryData);
+        console.warn(`[WebinarSMS] AUTO-RECOVERY FAILED on retry send: ${retryError}`);
+        return { success: false, error: `SimpleTexting error after auto-recovery retry (${retryRes.status}): ${retryError}` };
+      } catch (recoveryErr: any) {
+        console.error(`[WebinarSMS] AUTO-RECOVERY exception for ${normalizedPhone}:`, recoveryErr.message);
+        return { success: false, error: `SimpleTexting error (${res.status}): ${errorMsg} [auto-recovery failed: ${recoveryErr.message}]` };
+      }
+    }
+
     return { success: false, error: `SimpleTexting error (${res.status}): ${errorMsg}` };
   } catch (err: any) {
     console.error("[WebinarSMS] SimpleTexting v2 send error:", err.message);
