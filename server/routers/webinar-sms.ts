@@ -520,6 +520,31 @@ export const webinarSmsRouter = router({
         ).catch(err => console.error(`[Calendar Auto] Manual add invite failed:`, err.message));
       }
 
+      // Instant confirmation SMS (evergreen — fires on registration)
+      if (isUsCanadaPhone(input.phone.replace(/\D/g, ""))) {
+        (async () => {
+          try {
+            let tpl = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
+            const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
+              .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
+            if (tplRow?.settingValue) tpl = tplRow.settingValue;
+            const firstName = (input.name || "there").split(" ")[0];
+            const msg = tpl.replace(/%FIRST_NAME%/g, firstName);
+            const smsResult = await sendSms(normalizedPhone, msg);
+            if (smsResult.success) {
+              await db.update(webinarRegistrants)
+                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+                .where(eq(webinarRegistrants.id, Number(result.insertId)));
+              console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} succeeded`);
+            } else {
+              console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} failed: ${smsResult.error}`);
+            }
+          } catch (err: any) {
+            console.error(`[Confirmation SMS] Instant send error:`, err.message);
+          }
+        })();
+      }
+
       return { success: true, id: result.insertId };
     }),
 
@@ -1172,6 +1197,8 @@ export const webinarSmsRouter = router({
       webinarHashConfigured: !!creds.webinarHash,
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
+      // Evergreen Registration Confirmation SMS template
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -1353,6 +1380,18 @@ export const webinarSmsRouter = router({
         .onDuplicateKeyUpdate({ set: { settingValue: input.listName } });
 
       return { success: true, listName: input.listName };
+    }),
+
+  /** Save the evergreen Registration Confirmation SMS template */
+  saveConfirmationTemplate: adminProcedure
+    .input(z.object({ template: z.string().min(1).max(500) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db.insert(webinarSmsSettings)
+        .values({ settingKey: "confirmation_sms_template", settingValue: input.template, description: "Evergreen registration confirmation SMS template" })
+        .onDuplicateKeyUpdate({ set: { settingValue: input.template } });
+      return { success: true };
     }),
 
   /** Refresh attendance data from WebinarJam for existing registrants */
@@ -1653,7 +1692,6 @@ export const webinarSmsRouter = router({
       // Customizable timing offsets (in minutes before/after webinar)
       // Negative = before webinar, Positive = after webinar
       timing: z.object({
-        registrationConfirm: z.number().default(-10080), // -7 days
         twoDaysBefore: z.number().default(-2880),        // -2 days
         dayBefore: z.number().default(-1440),             // -1 day
         morningOf: z.number().default(-240),              // -4 hours
@@ -1675,7 +1713,6 @@ export const webinarSmsRouter = router({
 
       // Use custom timing or defaults (offsets in minutes from webinar start)
       const t = {
-        registrationConfirm: input.timing?.registrationConfirm ?? -10080,
         twoDaysBefore: input.timing?.twoDaysBefore ?? -2880,
         dayBefore: input.timing?.dayBefore ?? -1440,
         morningOf: input.timing?.morningOf ?? -720,  // 12 hours before (morning of webinar day)
@@ -1693,71 +1730,64 @@ export const webinarSmsRouter = router({
       // Pre-built 9-message sequence with customizable timing
       const sequence = [
         {
-          sequenceName: "Registration Confirmation",
-          sequenceOrder: 1,
-          messageBody: `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`,
-          scheduledAt: offset(t.registrationConfirm),
-          audience: "all" as const,
-        },
-        {
           sequenceName: "2 Days Before Reminder",
-          sequenceOrder: 2,
+          sequenceOrder: 1,
           messageBody: `Hey %FIRST_NAME%! Quick reminder - our live Airbnb call is in 2 days. You won't want to miss this one. Mark your calendar!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
-          sequenceOrder: 3,
+          sequenceOrder: 2,
           messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat - we have a lot of people registered. See you there!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
-          sequenceOrder: 4,
+          sequenceOrder: 3,
           messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early - seats fill up fast!\n\nJoin here: ${link}`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
         {
           sequenceName: "1 Hour Warning",
-          sequenceOrder: 5,
+          sequenceOrder: 4,
           messageBody: `%FIRST_NAME% — we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
         {
           sequenceName: "Starting NOW",
-          sequenceOrder: 6,
+          sequenceOrder: 5,
           messageBody: `WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
           scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
         {
           sequenceName: "No-Show Nudge",
-          sequenceOrder: 7,
+          sequenceOrder: 6,
           messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in — join now: ${link}`,
           scheduledAt: offset(t.noShowNudge),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
-          sequenceOrder: 8,
+          sequenceOrder: 7,
           messageBody: `Thanks for showing up today %FIRST_NAME%! Here's the replay if you want to rewatch: ${replay}`,
           scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
-          sequenceOrder: 9,
+          sequenceOrder: 8,
           messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
-          sequenceOrder: 10,
+          sequenceOrder: 9,
           messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, apply here: https://masterclass.coachinayah.com/turnkey-v2`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
@@ -3438,18 +3468,14 @@ async function runWebinarImport(
         phoneMap.get(normPhone)!.push(reg);
       }
 
-      // Get the current Registration Confirmation message from the scheduled sequence
-      // (admin may have edited it), fall back to default if not found
+      // Get the evergreen confirmation template from settings (not from the timed sequence)
       let confirmationTemplate = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
-      const [seqMsg] = await db.select({ messageBody: scheduledSmsMessages.messageBody })
-        .from(scheduledSmsMessages)
-        .where(and(
-          eq(scheduledSmsMessages.webinarId, webinarId),
-          eq(scheduledSmsMessages.sequenceName, "Registration Confirmation"),
-        ))
+      const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
+        .from(webinarSmsSettings)
+        .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))
         .limit(1);
-      if (seqMsg?.messageBody) {
-        confirmationTemplate = seqMsg.messageBody;
+      if (templateSetting?.settingValue) {
+        confirmationTemplate = templateSetting.settingValue;
       }
 
       console.log(`[Confirmation SMS] Sending to ${phoneMap.size} unique phone(s) (${pendingSmsRegistrants.length} rows) for webinar ${webinarId}`);

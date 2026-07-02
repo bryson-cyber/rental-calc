@@ -1134,7 +1134,6 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
   const [replayLink, setReplayLink] = useState("");
   const [showAdvancedTiming, setShowAdvancedTiming] = useState(false);
   const [timing, setTiming] = useState({
-    registrationConfirm: -10080, // -7 days
     twoDaysBefore: -2880,        // -2 days
     dayBefore: -1440,             // -1 day
     morningOf: -240,              // -4 hours
@@ -1162,7 +1161,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
             <CardDescription>
               {messages.length > 0
                 ? `${messages.length} messages • ${pendingCount} pending • ${sentCount} sent`
-                : "Set up a pre-built 10-message sequence for your webinar"}
+                : "Set up a pre-built 9-message sequence for your webinar"}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -1467,7 +1466,6 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                   <div className="mt-3 space-y-2 bg-muted/30 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground mb-2">Set when each message goes out relative to the webinar start time.</p>
                     {[
-                      { key: "registrationConfirm" as const, label: "Registration Confirm", default: -10080 },
                       { key: "twoDaysBefore" as const, label: "2 Days Before", default: -2880 },
                       { key: "dayBefore" as const, label: "Day Before", default: -1440 },
                       { key: "morningOf" as const, label: "Morning Of", default: -240 },
@@ -2827,6 +2825,17 @@ function SettingsPanel({ webinarId }: { webinarId: string }) {
         </CardContent>
       </Card>
 
+      {/* Evergreen Registration Confirmation SMS */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Registration Confirmation SMS</CardTitle>
+          <CardDescription>This message is sent instantly when someone registers. Use %FIRST_NAME% for personalization.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConfirmationTemplateEditor />
+        </CardContent>
+      </Card>
+
       {/* Transcript Upload */}
       <Card className="border-border/50">
         <CardHeader>
@@ -2840,6 +2849,60 @@ function SettingsPanel({ webinarId }: { webinarId: string }) {
           <TranscriptUploader webinarId={webinarId} />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Confirmation Template Editor
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ConfirmationTemplateEditor() {
+  const settings = trpc.webinarSms.getSettings.useQuery();
+  const saveTemplate = trpc.webinarSms.saveConfirmationTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("Confirmation template saved");
+      settings.refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const [template, setTemplate] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (settings.data?.confirmationSmsTemplate && !loaded) {
+      setTemplate(settings.data.confirmationSmsTemplate);
+      setLoaded(true);
+    }
+  }, [settings.data, loaded]);
+
+  const charCount = template.length;
+  const hasChanges = template !== (settings.data?.confirmationSmsTemplate || "");
+
+  return (
+    <div className="space-y-3">
+      <textarea
+        className="w-full min-h-[80px] p-3 text-sm border rounded-lg resize-y focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none"
+        value={template}
+        onChange={(e) => setTemplate(e.target.value)}
+        placeholder="Hey %FIRST_NAME%. Thanks for registering..."
+      />
+      <div className="flex items-center justify-between">
+        <span className={`text-xs ${charCount > 160 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+          {charCount}/160 chars {charCount > 160 && `(${Math.ceil(charCount / 160)} SMS segments)`}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!hasChanges || saveTemplate.isPending || !template.trim()}
+          onClick={() => saveTemplate.mutate({ template: template.trim() })}
+        >
+          {saveTemplate.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+          Save Template
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">Sent instantly on registration. Variables: %FIRST_NAME%</p>
     </div>
   );
 }
