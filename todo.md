@@ -13324,3 +13324,9 @@ Files fixed (operating costs now based on revenue, not rent):
 ## SMS Dispatcher Recovery Logic Fix (July 1, 2026)
 - [x] Fix recovery logic to check sentCount/failedCount before marking a crashed campaign as "sent"
 - [x] If campaign has 0 sent + 0 failed (server crashed before any sends), delete empty campaign and reset to pending for retry
+
+## Editable ADR (Nightly Rate) Override
+- [x] Add ADR override state and handlers to TeslaDashboard (matching occupancy pattern)
+- [x] Make the Nightly Rate MetricCard editable with pencil icon, +/- buttons, and inline input
+- [x] Add backend mutation to persist ADR override to shareable reports
+- [x] Recalculate revenue projections when ADR is overridden

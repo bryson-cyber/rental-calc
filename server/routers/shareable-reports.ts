@@ -206,6 +206,30 @@ export const shareableReportsRouter = router({
         return { success: true, occupancyOverride: input.occupancyOverride };
       }),
 
+    // Admin-only: Update ADR/nightly rate override for a shared report
+    updateAdrOverride: protectedProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+        adrOverride: z.number().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin' && ctx.user?.openId !== ENV.ownerOpenId) {
+          throw new Error('Admin access required');
+        }
+        const db = await getDb();
+        if (!db) throw new Error('Database unavailable');
+        
+        const adrValue = input.adrOverride !== null
+          ? String(input.adrOverride)
+          : null;
+        
+        await db.update(universalShareableReports)
+          .set({ adrOverride: adrValue })
+          .where(eq(universalShareableReports.shareCode, input.shareCode));
+        
+        return { success: true, adrOverride: input.adrOverride };
+      }),
+
     // Admin-only: Save comp selection for a shared report
     saveCompSelection: protectedProcedure
       .input(z.object({

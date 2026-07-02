@@ -191,9 +191,11 @@ interface TeslaDashboardProps {
   shareCode?: string;  // Share code for persisting admin overrides
   persistedRevenueOverride?: number | null;  // Revenue override loaded from DB
   persistedOccupancyOverride?: number | null;  // Occupancy/booking rate override loaded from DB (0-100)
+  persistedAdrOverride?: number | null;  // ADR/nightly rate override loaded from DB (dollar amount)
   persistedSelectedCompIds?: string[] | null;  // Admin-curated comp selection loaded from DB
   onRevenueOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes revenue override
   onOccupancyOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes occupancy override
+  onAdrOverrideChange?: (override: number | null) => void;  // Notify parent when admin changes ADR override
   onCompSelectionChange?: (selectedIds: string[]) => void;  // Notify parent when admin changes comp selection
   // Data source info for fallback estimates (new construction / unknown addresses)
   dataSource?: {
@@ -768,6 +770,12 @@ function KeyMetricsRow({
   isSavingOccupancyOverride,
   savedOccupancyOverrideFlash,
   hasPendingOccupancyOverride,
+  adrOverrideActive,
+  onAdrOverride,
+  onSaveAdrOverride,
+  isSavingAdrOverride,
+  savedAdrOverrideFlash,
+  hasPendingAdrOverride,
 }: { 
   adr: number;
   occupancy: number;
@@ -780,9 +788,17 @@ function KeyMetricsRow({
   isSavingOccupancyOverride?: boolean;
   savedOccupancyOverrideFlash?: boolean;
   hasPendingOccupancyOverride?: boolean;
+  adrOverrideActive?: boolean;
+  onAdrOverride?: (newAdr: number | null) => void;
+  onSaveAdrOverride?: (explicitValue?: number | null) => void;
+  isSavingAdrOverride?: boolean;
+  savedAdrOverrideFlash?: boolean;
+  hasPendingAdrOverride?: boolean;
 }) {
   const [isEditingOccupancy, setIsEditingOccupancy] = useState(false);
   const [occupancyInput, setOccupancyInput] = useState('');
+  const [isEditingAdr, setIsEditingAdr] = useState(false);
+  const [adrInput, setAdrInput] = useState('');
 
   const commitOccupancyEdit = () => {
     const parsed = parseFloat(occupancyInput);
@@ -794,16 +810,120 @@ function KeyMetricsRow({
     setOccupancyInput('');
   };
 
+  const commitAdrEdit = () => {
+    const parsed = parseFloat(adrInput);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 99999) {
+      onAdrOverride?.(parsed);
+      onSaveAdrOverride?.(parsed);
+    }
+    setIsEditingAdr(false);
+    setAdrInput('');
+  };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <MetricCard
-        icon={<DollarSign className="w-5 h-5" />}
-        label="Nightly Rate"
-        value={formatCurrency(adr)}
-        sublabel="Average Daily Rate"
-        color="blue"
-        tooltip={METRIC_TOOLTIPS.adr}
-      />
+      {/* Nightly Rate card — editable by admin */}
+      <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${
+        isOwner && onAdrOverride ? 'cursor-pointer' : 'cursor-help'
+      } group ${
+        adrOverrideActive ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200'
+      }`}>
+        <div className="flex items-start justify-between">
+          <div className="inline-flex p-2 rounded-lg mb-2 bg-blue-500/10 text-blue-500 border border-blue-500/20">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div className="flex items-center gap-1">
+            {isOwner && onAdrOverride && adrOverrideActive && !isEditingAdr && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAdrOverride(null); onSaveAdrOverride?.(null); }}
+                className="text-xs text-amber-600 hover:text-amber-800 px-1 py-0.5 rounded hover:bg-amber-100 transition-colors"
+                title="Reset to original nightly rate"
+              >
+                Reset
+              </button>
+            )}
+            {isOwner && onAdrOverride && !isEditingAdr && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsEditingAdr(true); setAdrInput(String(Math.round(adr))); }}
+                className="text-slate-300 hover:text-blue-500 transition-colors"
+                title="Edit nightly rate"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+        <p className={`text-xs font-medium mb-0.5 ${
+          isOwner && adrOverrideActive ? 'text-amber-700' : 'text-slate-500'
+        }`}>Nightly Rate</p>
+        {isOwner && onAdrOverride && isEditingAdr ? (
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-xl font-bold text-slate-900">$</span>
+            <input
+              type="number"
+              min="0"
+              max="99999"
+              step="10"
+              value={adrInput}
+              onChange={(e) => setAdrInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitAdrEdit();
+                if (e.key === 'Escape') { setIsEditingAdr(false); setAdrInput(''); }
+              }}
+              onBlur={commitAdrEdit}
+              autoFocus
+              className="w-20 text-xl font-bold border-b-2 border-blue-400 bg-transparent outline-none text-slate-900"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {/* Minus button: decrease by $25 */}
+            {isOwner && onAdrOverride && !isEditingAdr && (
+              <button
+                onClick={(e) => { e.stopPropagation(); const newVal = Math.max(0, Math.round(adr) - 25); onAdrOverride(newVal); onSaveAdrOverride?.(newVal); }}
+                className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition-colors border border-red-300 shadow-sm"
+                title="Decrease nightly rate by $25"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+            )}
+            <p
+              className={`text-xl font-bold ${
+                isOwner && adrOverrideActive ? 'text-amber-700' : 'text-slate-900'
+              } ${isOwner && onAdrOverride ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              onClick={() => {
+                if (isOwner && onAdrOverride) {
+                  setIsEditingAdr(true);
+                  setAdrInput(String(Math.round(adr)));
+                }
+              }}
+              title={isOwner && onAdrOverride ? 'Click to edit nightly rate' : undefined}
+            >
+              {formatCurrency(adr)}
+              {isOwner && onAdrOverride && (
+                <Pencil className="inline w-3 h-3 ml-1 text-slate-300" />
+              )}
+            </p>
+            {/* Plus button: increase by $25 */}
+            {isOwner && onAdrOverride && !isEditingAdr && (
+              <button
+                onClick={(e) => { e.stopPropagation(); const newVal = Math.round(adr) + 25; onAdrOverride(newVal); onSaveAdrOverride?.(newVal); }}
+                className="w-6 h-6 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors border border-emerald-300 shadow-sm"
+                title="Increase nightly rate by $25"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+        <p className="text-slate-400 text-xs">Average Daily Rate</p>
+        {isOwner && adrOverrideActive && (
+          <p className="text-amber-600 text-xs mt-1 font-medium">Admin override active</p>
+        )}
+        {savedAdrOverrideFlash && (
+          <p className="text-emerald-600 text-xs mt-1 font-medium">✓ Saved</p>
+        )}
+      </div>
       {/* Booking Rate card — editable by admin */}
       <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${
         isOwner && onOccupancyOverride ? 'cursor-pointer' : 'cursor-help'
@@ -4085,7 +4205,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, persistedOccupancyOverride, persistedSelectedCompIds, onRevenueOverrideChange, onOccupancyOverrideChange, onCompSelectionChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7, revenueScenarios, isOwner = false, shareCode, persistedRevenueOverride, persistedOccupancyOverride, persistedAdrOverride, persistedSelectedCompIds, onRevenueOverrideChange, onOccupancyOverrideChange, onAdrOverrideChange, onCompSelectionChange, dataSource, selectedAmenities, amenityFilter, propertyLatitude, propertyLongitude }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -4308,8 +4428,45 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
     }
   };
 
-  // Effective ADR and occupancy — occupancy override > derived from comps > server value
-  const effectiveAdr = derivedMetrics?.adr ?? result.metrics.adr;
+  // Admin ADR/nightly rate override
+  const [adrOverride, setAdrOverride] = useState<number | null>(
+    persistedAdrOverride != null ? Number(persistedAdrOverride) : null
+  );
+  const [hasPendingAdrOverride, setHasPendingAdrOverride] = useState(false);
+  const [savedAdrFlash, setSavedAdrFlash] = useState(false);
+  const updateAdrOverrideMutation = trpc.shareableReports.updateAdrOverride.useMutation();
+
+  const handleAdrOverride = (newValue: number | null) => {
+    setAdrOverride(newValue);
+    onAdrOverrideChange?.(newValue);
+    setHasPendingAdrOverride(true);
+    setSavedAdrFlash(false);
+  };
+
+  const handleSaveAdrOverride = (explicitValue?: number | null) => {
+    const valueToSave = explicitValue !== undefined ? explicitValue : adrOverride;
+    if (shareCode) {
+      updateAdrOverrideMutation.mutate(
+        { shareCode, adrOverride: valueToSave },
+        {
+          onSuccess: () => {
+            setHasPendingAdrOverride(false);
+            setSavedAdrFlash(true);
+            setTimeout(() => setSavedAdrFlash(false), 3000);
+          },
+        }
+      );
+    } else {
+      setHasPendingAdrOverride(false);
+      setSavedAdrFlash(true);
+      setTimeout(() => setSavedAdrFlash(false), 3000);
+    }
+  };
+
+  // Effective ADR and occupancy — admin override > derived from comps > server value
+  const effectiveAdr = adrOverride !== null
+    ? adrOverride
+    : (derivedMetrics?.adr ?? result.metrics.adr);
   const effectiveOccupancy = occupancyOverride !== null
     ? occupancyOverride
     : (derivedMetrics?.occupancy ?? result.metrics.occupancy);
@@ -4450,6 +4607,12 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         isSavingOccupancyOverride={updateOccupancyOverrideMutation.isPending}
         savedOccupancyOverrideFlash={savedOccupancyFlash}
         hasPendingOccupancyOverride={hasPendingOccupancyOverride}
+        adrOverrideActive={adrOverride !== null}
+        onAdrOverride={isOwner ? handleAdrOverride : undefined}
+        onSaveAdrOverride={isOwner ? handleSaveAdrOverride : undefined}
+        isSavingAdrOverride={updateAdrOverrideMutation.isPending}
+        savedAdrOverrideFlash={savedAdrFlash}
+        hasPendingAdrOverride={hasPendingAdrOverride}
       />
       
       {/* PURCHASE MODE: Investment Metrics Section */}

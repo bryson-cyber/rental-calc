@@ -1396,6 +1396,9 @@ export const universalShareableReports = mysqlTable("universal_shareable_reports
   // Admin occupancy/booking rate override (stored as percentage 0-100, e.g. 65.5 = 65.5%)
   occupancyOverride: decimal("occupancyOverride", { precision: 5, scale: 2 }),
   
+  // Admin ADR/nightly rate override (stored as dollar amount, e.g. 250 = $250/night)
+  adrOverride: decimal("adrOverride", { precision: 10, scale: 2 }),
+  
   // Revenue boost factor that was active when this report was created (e.g., 1.30 = 30% boost)
   // Used for retroactive boost adjustment: scale = currentBoost / boostFactorAtCreation
   boostFactorAtCreation: decimal("boostFactorAtCreation", { precision: 5, scale: 2 }),

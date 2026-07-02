@@ -1,0 +1,1 @@
+ALTER TABLE `universal_shareable_reports` ADD `adrOverride` decimal(10,2);
