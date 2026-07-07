@@ -13330,3 +13330,8 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Make the Nightly Rate MetricCard editable with pencil icon, +/- buttons, and inline input
 - [x] Add backend mutation to persist ADR override to shareable reports
 - [x] Recalculate revenue projections when ADR is overridden
+
+## 15 Minutes Before Webinar SMS Message
+- [x] Add "15 Min Before" message to the SMS sequence generation (order 5, between 1 Hour Warning and Starting NOW)
+- [x] Add fifteenMinBefore timing config to backend schema and defaults (-15 min)
+- [x] Add fifteenMinBefore to frontend advanced timing UI

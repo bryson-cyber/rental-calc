@@ -1138,6 +1138,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
     dayBefore: -1440,             // -1 day
     morningOf: -240,              // -4 hours
     oneHourWarning: -60,          // -1 hour
+    fifteenMinBefore: -15,        // -15 min
     goingLiveNow: -5,             // -5 min
     noShowNudge: 10,              // +10 min
     thankYouAttended: 60,         // +1 hour
@@ -1470,6 +1471,7 @@ function SequenceBuilder({ webinarId }: { webinarId: string }) {
                       { key: "dayBefore" as const, label: "Day Before", default: -1440 },
                       { key: "morningOf" as const, label: "Morning Of", default: -240 },
                       { key: "oneHourWarning" as const, label: "1 Hour Warning", default: -60 },
+                      { key: "fifteenMinBefore" as const, label: "15 Min Before", default: -15 },
 { key: "goingLiveNow" as const, label: "Starting NOW", default: -5 },
                        { key: "noShowNudge" as const, label: "No-Show Nudge", default: 10 },
                        { key: "thankYouAttended" as const, label: "Thank You (Attended)", default: 60 },

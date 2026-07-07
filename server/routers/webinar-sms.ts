@@ -1696,6 +1696,7 @@ export const webinarSmsRouter = router({
         dayBefore: z.number().default(-1440),             // -1 day
         morningOf: z.number().default(-240),              // -4 hours
         oneHourWarning: z.number().default(-60),          // -1 hour
+        fifteenMinBefore: z.number().default(-15),         // -15 min
         goingLiveNow: z.number().default(-5),             // -5 min ("starting now")
         noShowNudge: z.number().default(10),              // +10 min (nudge no-shows)
         thankYouAttended: z.number().default(60),         // +1 hour
@@ -1717,6 +1718,7 @@ export const webinarSmsRouter = router({
         dayBefore: input.timing?.dayBefore ?? -1440,
         morningOf: input.timing?.morningOf ?? -720,  // 12 hours before (morning of webinar day)
         oneHourWarning: input.timing?.oneHourWarning ?? -60,
+        fifteenMinBefore: input.timing?.fifteenMinBefore ?? -15,
         goingLiveNow: input.timing?.goingLiveNow ?? -5,
         noShowNudge: input.timing?.noShowNudge ?? 10,
         thankYouAttended: input.timing?.thankYouAttended ?? 60,
@@ -1753,41 +1755,48 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 4,
-          messageBody: `%FIRST_NAME% — we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
+          messageBody: `%FIRST_NAME% \u2014 we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
         {
-          sequenceName: "Starting NOW",
+          sequenceName: "15 Min Before",
           sequenceOrder: 5,
+          messageBody: `%FIRST_NAME% \u2014 15 minutes! We're about to start. Get your seat now: ${link}`,
+          scheduledAt: offset(t.fifteenMinBefore),
+          audience: "all" as const,
+        },
+        {
+          sequenceName: "Starting NOW",
+          sequenceOrder: 6,
           messageBody: `WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
           scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
         {
           sequenceName: "No-Show Nudge",
-          sequenceOrder: 6,
+          sequenceOrder: 7,
           messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in — join now: ${link}`,
           scheduledAt: offset(t.noShowNudge),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
-          sequenceOrder: 7,
+          sequenceOrder: 8,
           messageBody: `Thanks for showing up today %FIRST_NAME%! Here's the replay if you want to rewatch: ${replay}`,
           scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
-          sequenceOrder: 8,
+          sequenceOrder: 9,
           messageBody: `Hey %FIRST_NAME%, we missed you today! No worries — I saved the replay for you: ${replay}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
-          sequenceOrder: 9,
+          sequenceOrder: 10,
           messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, apply here: https://masterclass.coachinayah.com/turnkey-v2`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
