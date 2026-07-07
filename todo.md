@@ -13335,3 +13335,7 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add "15 Min Before" message to the SMS sequence generation (order 5, between 1 Hour Warning and Starting NOW)
 - [x] Add fifteenMinBefore timing config to backend schema and defaults (-15 min)
 - [x] Add fifteenMinBefore to frontend advanced timing UI
+
+## Sync All Registrants to SimpleTexting List
+- [x] Add backend mutation to bulk-add all confirmed registrants to the selected SimpleTexting list
+- [x] Add "Sync All to List" button in the Settings panel next to the list dropdown

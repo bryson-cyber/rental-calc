@@ -1382,6 +1382,70 @@ export const webinarSmsRouter = router({
       return { success: true, listName: input.listName };
     }),
 
+  /** Bulk-add all confirmed registrants to the selected SimpleTexting list */
+  syncAllToList: adminProcedure
+    .mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get the configured list name
+      const [listSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
+        .from(webinarSmsSettings)
+        .where(eq(webinarSmsSettings.settingKey, "simpletexting_list_name"))
+        .limit(1);
+      const listName = listSetting?.settingValue;
+      if (!listName) throw new TRPCError({ code: "BAD_REQUEST", message: "No SimpleTexting list configured. Select a list first." });
+
+      const apiKey = ENV.simpletextingApiKey;
+      if (!apiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "SimpleTexting API key not configured" });
+
+      // Get all registrants with valid US/Canada phones
+      const allRegs = await db.select({
+        id: webinarRegistrants.id,
+        phone: webinarRegistrants.phone,
+      }).from(webinarRegistrants);
+
+      let added = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      for (const reg of allRegs) {
+        if (!reg.phone) { skipped++; continue; }
+        const cleanPhone = reg.phone.replace(/[^\d]/g, "");
+        // Skip international (not 10 or 11 digits starting with 1)
+        if (cleanPhone.length < 10 || cleanPhone.length > 11) { skipped++; continue; }
+
+        try {
+          const addRes = await fetch(`https://api-app2.simpletexting.com/v2/api/contact-lists/${encodeURIComponent(listName)}/contacts`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ contactPhoneOrId: cleanPhone }),
+          });
+          if (addRes.ok) {
+            added++;
+          } else {
+            const status = addRes.status;
+            if (status === 409) {
+              // Already in list
+              skipped++;
+            } else {
+              failed++;
+            }
+          }
+          // Rate limit: small delay between requests
+          await new Promise(r => setTimeout(r, 100));
+        } catch (err: any) {
+          failed++;
+        }
+      }
+
+      console.log(`[SimpleTexting List Sync] Done: ${added} added, ${skipped} skipped, ${failed} failed`);
+      return { success: true, added, skipped, failed, total: allRegs.length };
+    }),
+
   /** Save the evergreen Registration Confirmation SMS template */
   saveConfirmationTemplate: adminProcedure
     .input(z.object({ template: z.string().min(1).max(500) }))

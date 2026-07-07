@@ -2616,6 +2616,16 @@ function SimpleTextingListField() {
     },
   });
 
+  const syncAll = trpc.webinarSms.syncAllToList.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Synced: ${data.added} added, ${data.skipped} already in list, ${data.failed} failed`);
+      listsQuery.refetch();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
 
@@ -2691,7 +2701,18 @@ function SimpleTextingListField() {
       )}
 
       {currentListName && !creating && (
-        <p className="text-xs text-emerald-600">Active: registrants will be added to "{currentListName}"</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-emerald-600">Active: registrants will be added to "{currentListName}"</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => syncAll.mutate()}
+            disabled={syncAll.isPending}
+          >
+            {syncAll.isPending ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Syncing...</> : "Sync All to List"}
+          </Button>
+        </div>
       )}
       {saveList.isPending && (
         <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</p>
