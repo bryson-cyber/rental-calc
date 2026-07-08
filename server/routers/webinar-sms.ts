@@ -3930,96 +3930,6 @@ async function runWebinarImport(
       }
       console.log(`[Confirmation SMS] Done: ${confirmSent} sent, ${confirmFailed} failed`);
 
-      // ═══ AUTO-SEND CONFIRMATION EMAIL (alongside SMS) ═══
-      // Send confirmation email to registrants who have an email and haven't received one yet
-      {
-        const pendingEmailRegistrants = await db.select({
-          id: webinarRegistrants.id,
-          email: webinarRegistrants.email,
-          name: webinarRegistrants.name,
-        }).from(webinarRegistrants)
-          .where(and(
-            eq(webinarRegistrants.webinarId, webinarId),
-            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
-            eq(webinarRegistrants.optedOut, 0),
-          ));
-
-        // Check which ones already got a confirmation email via email_send_log
-        const alreadySentEmails = new Set<number>();
-        if (pendingEmailRegistrants.length > 0) {
-          const sentLogs = await db.select({ registrantId: emailSendLog.registrantId })
-            .from(emailSendLog)
-            .where(and(
-              eq(emailSendLog.webinarId, webinarId),
-              eq(emailSendLog.emailType, "confirmation"),
-            ));
-          for (const log of sentLogs) alreadySentEmails.add(log.registrantId);
-        }
-
-        const needsEmail = pendingEmailRegistrants.filter(r => !alreadySentEmails.has(r.id));
-        if (needsEmail.length > 0) {
-          console.log(`[Confirmation Email] Sending to ${needsEmail.length} registrant(s) for webinar ${webinarId}`);
-          // Fetch webinar schedule for dynamic date/time in emails
-          let cronWebinarDay = "";
-          let cronWebinarDate = "";
-          let cronWebinarTime = "";
-          let cronJoinUrl = "";
-          try {
-            const details = await fetchWebinarJamDetails(webinarId, overrideApiKey);
-            cronJoinUrl = details.direct_live_room_url || details.registration_url || "";
-            if (details.schedules?.length > 0) {
-              const schedDate = new Date(details.schedules[0].date + ":00");
-              cronWebinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
-              cronWebinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-              const hours = schedDate.getHours();
-              const minutes = schedDate.getMinutes();
-              const ampm = hours >= 12 ? "PM" : "AM";
-              const h = hours % 12 || 12;
-              cronWebinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
-            }
-          } catch (_) {}
-          let emailSent = 0;
-          let emailFailed = 0;
-          for (const reg of needsEmail) {
-            try {
-              const firstName = (reg.name || "there").split(" ")[0];
-              const emailContent = buildWebinarEmail("confirmation", {
-                firstName,
-                webinarLink: cronJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
-                callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-                webinarDay: cronWebinarDay || undefined,
-                webinarDate: cronWebinarDate || undefined,
-                webinarTime: cronWebinarTime || undefined,
-              });
-              if (!emailContent) continue;
-              const emailResult = await sendWebinarEmail({
-                to: reg.email!,
-                subject: emailContent.subject,
-                html: emailContent.html,
-              });
-              await db.insert(emailSendLog).values({
-                webinarId,
-                registrantId: reg.id,
-                recipientEmail: reg.email!,
-                recipientName: reg.name,
-                channel: "hubspot_smtp",
-                emailType: "confirmation",
-                status: emailResult.success ? "sent" : "failed",
-                errorMessage: emailResult.error?.slice(0, 1000) || null,
-              }).catch(() => {});
-              if (emailResult.success) emailSent++;
-              else emailFailed++;
-              // Rate limit
-              await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (err: any) {
-              console.error(`[Confirmation Email] Error for ${reg.email}:`, err.message);
-              emailFailed++;
-            }
-          }
-          console.log(`[Confirmation Email] Done: ${emailSent} sent, ${emailFailed} failed`);
-        }
-      }
-
       // ═══ SIMPLETEXTING LIST SYNC ═══
       // After sending confirmations, add successfully-sent phones to the configured SimpleTexting list
       const listNameSetting = await db.select({ settingValue: webinarSmsSettings.settingValue })
@@ -4063,6 +3973,99 @@ async function runWebinarImport(
           }
         }
       }
+    }
+  }
+
+  // ═══ AUTO-SEND CONFIRMATION EMAIL (runs independently of SMS) ═══
+  // Send confirmation email to registrants who have an email and haven't received one yet.
+  // This runs on EVERY cron cycle regardless of whether there are pending SMS.
+  {
+    const pendingEmailRegistrants = await db.select({
+      id: webinarRegistrants.id,
+      email: webinarRegistrants.email,
+      name: webinarRegistrants.name,
+    }).from(webinarRegistrants)
+      .where(and(
+        eq(webinarRegistrants.webinarId, webinarId),
+        sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+        eq(webinarRegistrants.optedOut, 0),
+      ));
+
+    // Check which ones already got a confirmation email via email_send_log
+    const alreadySentEmails = new Set<number>();
+    if (pendingEmailRegistrants.length > 0) {
+      const sentLogs = await db.select({ registrantId: emailSendLog.registrantId })
+        .from(emailSendLog)
+        .where(and(
+          eq(emailSendLog.webinarId, webinarId),
+          eq(emailSendLog.emailType, "confirmation"),
+        ));
+      for (const log of sentLogs) alreadySentEmails.add(log.registrantId);
+    }
+
+    const needsEmail = pendingEmailRegistrants.filter(r => !alreadySentEmails.has(r.id));
+    if (needsEmail.length > 0) {
+      console.log(`[Confirmation Email] Sending to ${needsEmail.length} registrant(s) for webinar ${webinarId}`);
+      // Fetch webinar schedule for dynamic date/time in emails
+      let cronEmailDay = "";
+      let cronEmailDate = "";
+      let cronEmailTime = "";
+      let cronEmailJoinUrl = "";
+      try {
+        const details = await fetchWebinarJamDetails(webinarId, overrideApiKey);
+        cronEmailJoinUrl = details.direct_live_room_url || details.registration_url || "";
+        if (details.schedules?.length > 0) {
+          const schedDate = new Date(details.schedules[0].date + ":00");
+          cronEmailDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+          cronEmailDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+          const hours = schedDate.getHours();
+          const minutes = schedDate.getMinutes();
+          const ampm = hours >= 12 ? "PM" : "AM";
+          const h = hours % 12 || 12;
+          cronEmailTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+        }
+      } catch (_) {}
+      let emailSent = 0;
+      let emailFailed = 0;
+      for (const reg of needsEmail) {
+        try {
+          const firstName = (reg.name || "there").split(" ")[0];
+          const emailContent = buildWebinarEmail("confirmation", {
+            firstName,
+            webinarLink: cronEmailJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+            callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+            webinarDay: cronEmailDay || undefined,
+            webinarDate: cronEmailDate || undefined,
+            webinarTime: cronEmailTime || undefined,
+          });
+          if (!emailContent) continue;
+          const emailResult = await sendWebinarEmail({
+            to: reg.email!,
+            subject: emailContent.subject,
+            html: emailContent.html,
+          });
+          await db.insert(emailSendLog).values({
+            webinarId,
+            registrantId: reg.id,
+            recipientEmail: reg.email!,
+            recipientName: reg.name,
+            channel: "hubspot_smtp",
+            emailType: "confirmation",
+            status: emailResult.success ? "sent" : "failed",
+            errorMessage: emailResult.error?.slice(0, 1000) || null,
+          }).catch(() => {});
+          if (emailResult.success) emailSent++;
+          else emailFailed++;
+          // Rate limit: 100ms between sends
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (err: any) {
+          console.error(`[Confirmation Email] Error for ${reg.email}:`, err.message);
+          emailFailed++;
+        }
+      }
+      console.log(`[Confirmation Email] Done: ${emailSent} sent, ${emailFailed} failed`);
+    } else {
+      console.log(`[Confirmation Email] No pending emails for webinar ${webinarId}`);
     }
   }
 
