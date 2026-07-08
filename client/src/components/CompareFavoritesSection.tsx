@@ -502,19 +502,39 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                         <p className="text-xs opacity-80">Run analysis to get revenue estimate</p>
                       </div>
                     </div>
-                    <Link 
-                      href={`/?tab=validate&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms ?? 0}&bathrooms=${fav.bathrooms ?? 1}`}
-                      onClick={(e) => e.stopPropagation()}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 w-full h-7 text-xs bg-amber-100 border-amber-300 hover:bg-amber-200 text-amber-800"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const fullAddress = `${fav.address}, ${fav.city}, ${fav.state} ${fav.zipCode}`;
+                        try {
+                          if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(fullAddress);
+                          } else {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = fullAddress;
+                            textArea.style.position = 'fixed';
+                            textArea.style.left = '-9999px';
+                            textArea.style.top = '-9999px';
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                          }
+                          toast.success('Address copied \u2014 paste it in AirDNA\'s search');
+                        } catch (err) {
+                          console.error('Clipboard copy failed:', err);
+                          toast.error('Could not copy address. Please copy it manually.');
+                        }
+                        window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
+                      }}
                     >
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2 w-full h-7 text-xs bg-amber-100 border-amber-300 hover:bg-amber-200 text-amber-800"
-                      >
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        Analyze Property
-                      </Button>
-                    </Link>
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Analyze Property
+                    </Button>
                   </div>
                 )}
                 

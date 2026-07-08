@@ -13373,3 +13373,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add instant confirmation email to manual addRegistrant and cron import flows
 - [x] Fix triple-text bug: Add optimistic locking to confirmation SMS (mark rows as sent BEFORE sending, unmark on transient failure) to prevent cron race condition
 - [x] Populate webinarDay/webinarDate/webinarTime dynamically from WebinarJam schedule in all 3 email call sites (dispatcher, cron import, manual add) instead of relying on hard-coded defaults
+- [x] Change "Analyze Property" button to open AirDNA Rentalizer in new tab + copy address to clipboard (API disconnected)

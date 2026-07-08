@@ -84,7 +84,8 @@ import {
   XCircle,
   AlertTriangle,
   Bookmark,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -2370,54 +2371,78 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                           
                           {/* ACTION BUTTONS */}
                           {!validation ? (
-                            // Before analysis - show Analyze button
+                            // Before analysis - open AirDNA Rentalizer + copy address
                             <Button
-                              onClick={() => handleValidate(property)}
-                              disabled={isValidating}
+                              onClick={async () => {
+                                const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
+                                try {
+                                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                                    await navigator.clipboard.writeText(fullAddress);
+                                  } else {
+                                    const textArea = document.createElement('textarea');
+                                    textArea.value = fullAddress;
+                                    textArea.style.position = 'fixed';
+                                    textArea.style.left = '-9999px';
+                                    textArea.style.top = '-9999px';
+                                    document.body.appendChild(textArea);
+                                    textArea.focus();
+                                    textArea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textArea);
+                                  }
+                                  toast.success('Address copied — paste it in AirDNA\'s search');
+                                } catch (err) {
+                                  console.error('Clipboard copy failed:', err);
+                                  toast.error('Could not copy address. Please copy it manually.');
+                                }
+                                window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
+                              }}
                               className="w-full h-10 text-sm"
                               style={{
                                 backgroundColor: 'oklch(0.55 0.14 75)',
                                 borderRadius: '980px',
                               }}
                             >
-                              {isValidating ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                  Analyzing...
-                                </>
-                              ) : (
-                                <>
-                                  <TrendingUp className="w-4 h-4 mr-2" />
-                                  Analyze Property
-                                </>
-                              )}
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Analyze Property
                             </Button>
                           ) : (
                             // After analysis - show action buttons with clean layout
                             <div className="space-y-2">
-                              {/* Primary Action - Deep Analysis (full width) */}
+                              {/* Primary Action - Analyze on AirDNA (full width) */}
                               <Button
                                 className="w-full h-11 text-xs font-semibold px-3"
                                 style={{
                                   backgroundColor: 'oklch(0.55 0.14 75)',
                                   borderRadius: '0.75rem',
                                 }}
-                                onClick={() => {
-                                  // Store auto-analyze intent in localStorage
-                                  const autoAnalyzeData = {
-                                    address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
-                                    bedrooms: property.bedrooms,
-                                    bathrooms: property.bathrooms,
-                                    rent: property.price,
-                                    timestamp: Date.now()
-                                  };
-                                  localStorage.setItem('autoAnalyzeProperty', JSON.stringify(autoAnalyzeData));
-                                  // Navigate to validate tab
-                                  window.location.href = `/?tab=validate`;
+                                onClick={async () => {
+                                  const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
+                                  try {
+                                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                                      await navigator.clipboard.writeText(fullAddress);
+                                    } else {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = fullAddress;
+                                      textArea.style.position = 'fixed';
+                                      textArea.style.left = '-9999px';
+                                      textArea.style.top = '-9999px';
+                                      document.body.appendChild(textArea);
+                                      textArea.focus();
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                    }
+                                    toast.success('Address copied \u2014 paste it in AirDNA\'s search');
+                                  } catch (err) {
+                                    console.error('Clipboard copy failed:', err);
+                                    toast.error('Could not copy address. Please copy it manually.');
+                                  }
+                                  window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
                                 }}
                               >
-                                <Microscope className="w-4 h-4 mr-1.5 flex-shrink-0" />
-                                <span className="truncate">Full Analysis</span>
+                                <ExternalLink className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                                <span className="truncate">Full Analysis on AirDNA</span>
                               </Button>
                               
                               {/* Secondary Action - View Listing */}
