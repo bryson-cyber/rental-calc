@@ -3442,23 +3442,24 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
     .query(async ({ input }) => {
       const db = await getDb();
 
-      const logs = await db
+      // Get ALL logs for accurate stats (no limit)
+      const allLogs = await db
         .select()
         .from(emailSendLog)
         .where(eq(emailSendLog.webinarId, input.webinarId))
-        .orderBy(desc(emailSendLog.sentAt))
-        .limit(input.limit);
+        .orderBy(desc(emailSendLog.sentAt));
 
-      // Aggregate stats
+      // Compute stats from the FULL dataset
       const stats = {
-        total: logs.length,
-        sent: logs.filter((l) => l.status === "sent").length,
-        failed: logs.filter((l) => l.status === "failed").length,
+        total: allLogs.filter((l) => l.status === "sent" || l.status === "failed").length,
+        sent: allLogs.filter((l) => l.status === "sent").length,
+        failed: allLogs.filter((l) => l.status === "failed").length,
         byType: {} as Record<string, { sent: number; failed: number }>,
         byChannel: {} as Record<string, { sent: number; failed: number }>,
       };
 
-      for (const log of logs) {
+      for (const log of allLogs) {
+        if (log.status === "pending") continue; // Don't count pending in stats
         // By type
         if (!stats.byType[log.emailType]) {
           stats.byType[log.emailType] = { sent: 0, failed: 0 };
@@ -3472,8 +3473,11 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         stats.byChannel[log.channel][log.status === "sent" ? "sent" : "failed"]++;
       }
 
+      // Return only the most recent entries for the activity feed
+      const recentLogs = allLogs.slice(0, input.limit);
+
       return {
-        logs: logs.map((l) => ({
+        logs: recentLogs.map((l) => ({
           id: l.id,
           recipientEmail: l.recipientEmail,
           recipientName: l.recipientName,
@@ -3485,7 +3489,8 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
           subject: l.subject,
           sentAt: l.sentAt?.toISOString() || null,
         })),
-        stats,      };
+        stats,
+      };
     }),
 
   /** Send a test email to verify HubSpot SMTP is working */
