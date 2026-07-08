@@ -3804,6 +3804,107 @@ function OperationsDashboard({ webinarId }: { webinarId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Send Test Email */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Send className="w-5 h-5 text-amber-600" />
+            Send Test Email
+          </CardTitle>
+          <CardDescription>
+            Send a test email to verify HubSpot SMTP is working. Emails will be prefixed with [TEST].
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TestEmailForm />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TestEmailForm() {
+  const [emailType, setEmailType] = useState("morning_of");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const sendTest = trpc.webinarSms.sendTestEmail.useMutation();
+
+  const emailTypes = [
+    { value: "confirmation", label: "Registration Confirmation" },
+    { value: "2_days_before", label: "2 Days Before" },
+    { value: "day_before", label: "Day Before" },
+    { value: "morning_of", label: "Morning Of" },
+    { value: "3h", label: "3 Hours Before" },
+    { value: "1h", label: "1 Hour Warning" },
+    { value: "15min", label: "15 Min Before" },
+    { value: "starting_now", label: "Starting NOW" },
+    { value: "no_show", label: "No-Show Nudge" },
+    { value: "thank_you", label: "Thank You (Attended)" },
+    { value: "missed_you", label: "Missed You (No-Show)" },
+    { value: "follow_up", label: "Follow-Up CTA" },
+  ];
+
+  const handleSend = () => {
+    if (!recipientEmail) return;
+    sendTest.mutate({ emailType, recipientEmail }, {
+      onSuccess: (data) => {
+        toast.success(`Test email sent: ${data.subject}`);
+      },
+      onError: (err) => {
+        toast.error(`Failed: ${err.message}`);
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Email Type</label>
+          <select
+            value={emailType}
+            onChange={(e) => setEmailType(e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+          >
+            {emailTypes.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Recipient Email</label>
+          <input
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+          />
+        </div>
+      </div>
+      <Button
+        onClick={handleSend}
+        disabled={!recipientEmail || sendTest.isPending}
+        className="w-full md:w-auto"
+      >
+        {sendTest.isPending ? (
+          <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
+        ) : (
+          <><Send className="w-4 h-4 mr-2" /> Send Test Email</>
+        )}
+      </Button>
+      {sendTest.isSuccess && (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
+          <CheckCircle2 className="w-4 h-4 inline mr-1" />
+          Email sent successfully! Check your inbox.
+        </div>
+      )}
+      {sendTest.isError && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <XCircle className="w-4 h-4 inline mr-1" />
+          {sendTest.error.message}
+        </div>
+      )}
     </div>
   );
 }

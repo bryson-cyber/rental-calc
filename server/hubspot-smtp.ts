@@ -40,7 +40,7 @@ export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ suc
   try {
     const transport = getTransporter();
     const result = await transport.sendMail({
-      from: options.from || `"Coach Inayah" <${ENV.hubspotSmtpFrom}>`,
+      from: options.from || `"Inayah" <${ENV.hubspotSmtpFrom}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -72,7 +72,14 @@ interface WebinarEmailData {
   firstName: string;
   webinarLink: string;
   replayUrl?: string;
+  webinarDay?: string;    // e.g. "Tuesday"
+  webinarDate?: string;   // e.g. "July 8, 2026"
+  webinarTime?: string;   // e.g. "7:00 PM ET"
+  callLink?: string;      // Turnkey strategy call link
 }
+
+const JOIN_LINK = "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380";
+const CALL_LINK = "https://masterclass.coachinayah.com/turnkey-v2";
 
 const BRAND = {
   navy: "#0F172A",
@@ -95,105 +102,275 @@ function wrap(content: string): string {
 </td></tr>
 <tr><td style="padding:40px;">${content}</td></tr>
 <tr><td style="background-color:${BRAND.offWhite};padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
-<p style="margin:0;color:${BRAND.textMuted};font-size:12px;">Coach Inayah | Las Vegas, NV<br>You registered for our webinar.</p>
+<p style="margin:0;color:${BRAND.textMuted};font-size:12px;">Coach Inayah | Las Vegas, NV<br>You registered for our Airbnb Masterclass.</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
 
-function cta(text: string, url: string): string {
+function ctaButton(text: string, url: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr>
 <td style="background-color:${BRAND.navy};border-radius:8px;padding:14px 32px;">
 <a href="${url}" style="color:${BRAND.gold};text-decoration:none;font-weight:600;font-size:16px;">${text}</a>
 </td></tr></table>`;
 }
 
+function p(text: string): string {
+  return `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:0 0 16px;">${text}</p>`;
+}
+
+function ul(items: string[]): string {
+  return `<ul style="color:${BRAND.textDark};font-size:16px;line-height:1.8;padding-left:20px;margin:0 0 16px;">${items.map(i => `<li>${i}</li>`).join("")}</ul>`;
+}
+
+function h2(text: string): string {
+  return `<h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;font-weight:600;">${text}</h2>`;
+}
+
+function signoff(): string {
+  return `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:16px 0 0;">Talk soon,<br><strong>Inayah</strong></p>`;
+}
+
 export function buildWebinarEmail(type: string, data: WebinarEmailData): { subject: string; html: string } | null {
-  const { firstName, webinarLink, replayUrl } = data;
+  const { firstName } = data;
   const name = firstName || "there";
+  const joinLink = data.webinarLink || JOIN_LINK;
+  const callLink = data.callLink || CALL_LINK;
+  const day = data.webinarDay || "Tuesday";
+  const date = data.webinarDate || "July 8, 2026";
+  const time = data.webinarTime || "7:00 PM ET";
 
   switch (type) {
+    case "confirmation":
+      return {
+        subject: "You're in: Your Airbnb Masterclass is booked ✅",
+        html: wrap(`
+          ${h2(`You're in, ${name}!`)}
+          ${p(`You're officially registered for my free Airbnb Masterclass on <strong>${day}, ${date} at ${time}</strong>.`)}
+          ${p("In this live class, I'll show you:")}
+          ${ul([
+            "How busy professionals are adding $2,000–$5,000/mo with Airbnb <strong>without owning property</strong>",
+            'The 5-step "Get Your First Yes" system I used to go from nanny to 50+ properties by 23',
+            "How to fund your first unit even if you don't have $20K sitting in savings",
+          ])}
+          ${p("If you show up live and stay until the end, you'll get:")}
+          ${ul([
+            'My "Landlord Yes" script',
+            "My 90-Day Launch Checklist",
+            "Access to my full training course as a bonus for action-takers",
+          ])}
+          ${p("Add this to your calendar now so you don't miss it.")}
+          ${ctaButton("Add to Calendar", joinLink)}
+          ${p(`On ${day}, I'll also send your private join link here 15 minutes before we start.`)}
+          ${signoff()}
+        `),
+      };
+
+    case "2_days_before":
+      return {
+        subject: "In 2 days: Build a second income without quitting your W2",
+        html: wrap(`
+          ${h2(`2 Days Away, ${name}!`)}
+          ${p(`Quick reminder that in 2 days you're joining me live for the Airbnb Masterclass:`)}
+          ${p(`<strong>${day}, ${date} at ${time}</strong>`)}
+          ${p("Here's what we'll cover:")}
+          ${ul([
+            "What rental arbitrage actually is (and why you don't need to own property)",
+            "How to use data, not guessing, to find units that can profit $1K–$3K/mo",
+            "The exact steps my mom used to create a 6-figure income from just 2 properties while keeping her career",
+          ])}
+          ${p("Block out 90 minutes where you can focus. This is not fluff. It's the exact system I used to replace my income and help hundreds of students do the same.")}
+          ${p(`See you soon,<br><strong>Inayah</strong>`)}
+        `),
+      };
+
+    case "day_before":
+      return {
+        subject: "Tomorrow: 5 steps to your first \"yes\" from a landlord",
+        html: wrap(`
+          ${h2(`Tomorrow's the Day, ${name}!`)}
+          ${p(`Your Airbnb Masterclass is tomorrow at <strong>${time}</strong>.`)}
+          ${p("By the end, you'll know:")}
+          ${ul([
+            "How to run the numbers on a property so you're not \"hoping\" it cash flows",
+            "How to approach landlords so they actually say yes to your business",
+            "What it really costs to start (and how students use 0% business credit to fund it)",
+          ])}
+          ${p("Remember:<br>Stay live until the end and I'll send you:")}
+          ${ul([
+            "The Landlord Yes video script",
+            "My lease addendum template",
+            "Free access to the full course we use with our paying clients",
+          ])}
+          ${p("Most people register and never show. You already proved you're different by signing up. Tomorrow is where action-takers separate from \"maybe later\" people.")}
+          ${p(`See you there,<br><strong>Inayah</strong>`)}
+        `),
+      };
+
     case "morning_of":
       return {
-        subject: `${name}, tonight's the night! Your Airbnb workshop is TODAY`,
+        subject: "Tonight: Your 90-minute Airbnb game plan",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">Tonight's the Night, ${name}!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Your live Airbnb workshop is <strong>TODAY at 7:00 PM ET</strong>. This is the session where I break down exactly how to find properties that cash flow from day one.</p>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Seats fill up fast — show up 10 minutes early to guarantee your spot.</p>
-          ${cta("Join Tonight's Workshop →", webinarLink)}
+          ${h2(`Good morning, ${name}!`)}
+          ${p(`Tonight at <strong>${time}</strong> we're live.`)}
+          ${p("I'll walk you through:")}
+          ${ul([
+            "The 5-step money-making system I use with my 50+ unit portfolio",
+            "How to budget $10K–$20K and decide if you should use cash or business credit",
+            "Real client examples (like my mom's $116K in under 10 months from 2 units)",
+          ])}
+          ${p("If you've ever thought, \"I know I'm meant for more than just my paycheck,\" this class is for you.")}
+          ${p("Watch for your join link in your inbox and texts later today.")}
+          ${p(`With you,<br><strong>Inayah</strong>`)}
         `),
       };
+
     case "3h":
       return {
-        subject: `3 hours until we go live, ${name}!`,
+        subject: "3 hours: grab a notebook, we're building your second income",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">Just 3 Hours Away!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Hey ${name}, we're going live in 3 hours. This is the one where I break down exactly how to find properties that cash flow from day one. Don't miss it.</p>
-          ${cta("Save Your Seat →", webinarLink)}
+          ${h2(`3 Hours Out, ${name}!`)}
+          ${p(`We're 3 hours out from your Airbnb Masterclass: <strong>${time}</strong>.`)}
+          ${p("Do this now so you actually get value:")}
+          ${ul([
+            "Put your phone on Do Not Disturb during the class",
+            "Grab a notebook and pen",
+            "Write this at the top of the page: \"Where do I want to be 6 months from now?\"",
+          ])}
+          ${p("My goal tonight is simple: give you a clear path so 6 months from now you're not still thinking about a second income, you're collecting it.")}
+          ${signoff()}
         `),
       };
+
     case "1h":
       return {
-        subject: `Starting in 1 HOUR — are you ready, ${name}?`,
+        subject: "We start in 1 hour – your private link inside",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">We Start in 1 Hour!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">${name}, we're starting in 1 HOUR! Get ready and show up 10 min early.</p>
-          ${cta("Join the Workshop →", webinarLink)}
+          ${h2(`1 Hour, ${name}!`)}
+          ${p("We're live in 1 hour.")}
+          ${p(`<strong>Airbnb Masterclass</strong><br>${day}, ${date} — ${time}`)}
+          ${ctaButton("Join the Masterclass →", joinLink)}
+          ${p("Show up live and stay until the end to get:")}
+          ${ul([
+            "Landlord Yes script",
+            "90-Day Launch Checklist",
+            "Full course access bonus",
+          ])}
+          ${p(`See you on the live,<br><strong>Inayah</strong>`)}
         `),
       };
+
     case "15min":
       return {
-        subject: `15 minutes! We're about to go live`,
+        subject: "We go live in 15 minutes (join link)",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">15 Minutes — Almost Time!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">${name}, we're about to go live. Grab your seat now!</p>
-          ${cta("Join NOW →", webinarLink)}
+          ${h2(`15 Minutes, ${name}!`)}
+          ${p("We're starting in 15 minutes.")}
+          ${p("Here's your private link to join:")}
+          ${ctaButton("Join Now →", joinLink)}
+          ${p("Hop on a few minutes early so you don't miss step 1 of the 5-step system or the details on the live-only bonuses.")}
+          ${p(`On in a moment,<br><strong>Inayah</strong>`)}
         `),
       };
+
     case "starting_now":
       return {
-        subject: `WE'RE LIVE! Join now, ${name}`,
+        subject: "We're live right now – you can still join",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">🔴 We're LIVE Right Now!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">${name}, the workshop has started! Join now before we get into the good stuff.</p>
-          ${cta("JOIN LIVE NOW →", webinarLink)}
+          ${h2(`We're Live, ${name}!`)}
+          ${p("I'm live right now walking through:")}
+          ${ul([
+            "How to pick a profitable market",
+            "How to avoid the biggest mistakes beginners make",
+            "The exact tools we use to run numbers in minutes",
+          ])}
+          ${p("You can still join us here:")}
+          ${ctaButton("JOIN LIVE NOW →", joinLink)}
+          ${p("If you don't make it on in the next few minutes, you'll likely miss the funding breakdown and landlord pitch.")}
+          ${p(`Come on in,<br><strong>Inayah</strong>`)}
         `),
       };
+
+    case "no_show":
+      return {
+        subject: "We just started – here's your last chance to join live",
+        html: wrap(`
+          ${h2(`We Just Started, ${name}`)}
+          ${p("We kicked off the Airbnb Masterclass about 10 minutes ago and I'm already into the 5-step \"Get Your First Yes\" system.")}
+          ${p("If you jump in now, you'll still catch:")}
+          ${ul([
+            "How to check if your city is legal",
+            "How to use data to avoid \"pretty but broke\" properties",
+            "The story of how my mom built a 6-figure income from 2 units",
+          ])}
+          ${ctaButton("Join Before We Lock the Room →", joinLink)}
+          ${p("If you miss this, assume there's no public replay.")}
+          ${p(`Hope to see you inside,<br><strong>Inayah</strong>`)}
+        `),
+      };
+
     case "thank_you":
       return {
-        subject: `Thanks for showing up tonight, ${name}!`,
+        subject: "Thank you for showing up live – here's your next step",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">Thank You, ${name}!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Thanks for showing up today! I hope you got massive value from the workshop.</p>
-          ${replayUrl ? `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Here's the replay if you want to rewatch:</p>${cta("Watch the Replay →", replayUrl)}` : `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Ready to take the next step? Reply to this email and let's talk.</p>`}
+          ${h2(`Thank You, ${name}!`)}
+          ${p("Thank you for showing up live tonight. Most people registered and never made it. You did the hard part: you actually showed up.")}
+          ${p("Now, if you want personal help launching your first (or next) unit in the next 90 days, your next step is simple:")}
+          ${ctaButton("Apply for a Turnkey Strategy Call →", callLink)}
+          ${p("On this call, my team will:")}
+          ${ul([
+            "Review your city and budget",
+            "Map out a realistic 90-day launch plan",
+            "See if you're a fit for us to help you implement it",
+          ])}
+          ${p("Proud of you for investing your time tonight.")}
+          ${p(`With love,<br><strong>Inayah</strong>`)}
         `),
       };
+
     case "missed_you":
       return {
-        subject: `${name}, you missed it — but I saved the replay`,
+        subject: `Missed you at the masterclass, ${name}`,
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">We Missed You, ${name}!</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Hey ${name}, we missed you today! No worries — I saved the replay for you.</p>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">In this workshop, I covered:</p>
-          <ul style="color:${BRAND.textDark};font-size:16px;line-height:1.8;padding-left:20px;">
-            <li>How to find properties that cash flow from day one</li>
-            <li>The exact numbers you need for a profitable Airbnb</li>
-            <li>My step-by-step system for market analysis</li>
-          </ul>
-          ${replayUrl ? cta("Watch the Replay →", replayUrl) : cta("Get the Replay →", webinarLink)}
-          <p style="color:${BRAND.textMuted};font-size:14px;margin:16px 0 0;">This replay won't be available forever.</p>
+          ${h2(`We Missed You, ${name}`)}
+          ${p("I didn't see you live on the Airbnb Masterclass.")}
+          ${p("Life happens. But nothing changes if nothing changes.")}
+          ${p("If you're still serious about adding $2K–$5K/mo without leaving your W2, here's your best next step:")}
+          ${ctaButton("Apply for a Turnkey Strategy Call →", callLink)}
+          ${p("On that call, we'll look at:")}
+          ${ul([
+            "Whether your city makes sense",
+            "What startup budget you actually need",
+            "How fast you could realistically get your first unit live",
+          ])}
+          ${p("If we run another live class, I'll email you an invite. Until then, this call is the fastest way to get moving.")}
+          ${signoff()}
         `),
       };
+
     case "follow_up":
       return {
-        subject: `Last chance: Replay expires soon, ${name}`,
+        subject: "Ready to launch your first Airbnb in the next 90 days?",
         html: wrap(`
-          <h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;">Replay Expiring Soon</h2>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">Hey ${name}, the replay from our Airbnb workshop is coming down soon.</p>
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;">If you haven't watched it yet, now's the time. I covered my complete system for building a profitable short-term rental portfolio.</p>
-          ${replayUrl ? cta("Watch Before It's Gone →", replayUrl) : cta("Get Access →", webinarLink)}
-          <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:16px 0 0;">Ready to take action? Reply to this email.</p>
+          ${h2(`Ready to Take Action, ${name}?`)}
+          ${p("Yesterday's class was about clarity. Today is about action.")}
+          ${p("If you're ready to stop trading only time for money and start building a second stream of income through Airbnb, here's what to do:")}
+          ${ul([
+            `<a href="${callLink}" style="color:${BRAND.gold};font-weight:600;">Click here</a>`,
+            "Pick a time for your Turnkey Strategy Call",
+            "Show up ready to talk honestly about your goals, fears, and timeline",
+          ])}
+          ${p("We'll map out:")}
+          ${ul([
+            "Your 6-month vision",
+            "A step-by-step plan for your first (or next) unit",
+            "Whether we're the right team to help you execute it",
+          ])}
+          ${ctaButton("Book Your Strategy Call →", callLink)}
+          ${p("The information you have now is enough to stay stuck or to start. The difference is what you do in the next 24 hours.")}
+          ${p(`See you on the call,<br><strong>Inayah</strong>`)}
         `),
       };
+
     default:
       return null;
   }

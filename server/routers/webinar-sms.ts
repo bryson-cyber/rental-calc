@@ -3400,6 +3400,37 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
         stats,      };
     }),
 
+  /** Send a test email to verify HubSpot SMTP is working */
+  sendTestEmail: adminProcedure
+    .input(z.object({
+      emailType: z.string(),
+      recipientEmail: z.string().email(),
+    }))
+    .mutation(async ({ input }) => {
+      const { sendWebinarEmail, buildWebinarEmail } = await import("../hubspot-smtp");
+      const emailContent = buildWebinarEmail(input.emailType, {
+        firstName: "Test",
+        webinarLink: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+        replayUrl: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+        callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+        webinarDay: "Tuesday",
+        webinarDate: "July 8, 2026",
+        webinarTime: "7:00 PM ET",
+      });
+      if (!emailContent) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown email type: ${input.emailType}` });
+      }
+      const result = await sendWebinarEmail({
+        to: input.recipientEmail,
+        subject: `[TEST] ${emailContent.subject}`,
+        html: emailContent.html,
+      });
+      if (!result.success) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `SMTP failed: ${result.error}` });
+      }
+      return { success: true, messageId: result.messageId, subject: emailContent.subject };
+    }),
+
   /** Send calendar invites to all registrants who haven't received one yet */
   sendMissingCalendarInvites: adminProcedure
     .input(z.object({
@@ -4509,12 +4540,16 @@ export async function startSmsDispatcher() {
           };
 
           // Extended map for post-webinar and additional pre-webinar emails (sent via HubSpot SMTP)
-          const extendedEmailMap: Record<string, "morning_of" | "3h" | "1h" | "15min" | "starting_now" | "thank_you" | "missed_you" | "follow_up" | "replay"> = {
+          const extendedEmailMap: Record<string, string> = {
+            "Registration Confirmation": "confirmation",
+            "2 Days Before Reminder": "2_days_before",
+            "Day Before Reminder": "day_before",
             "Morning Of": "morning_of",
             "3 Hours Before": "3h",
             "1 Hour Warning": "1h",
             "15 Min Before": "15min",
             "Starting NOW": "starting_now",
+            "No-Show Nudge": "no_show",
             "Thank You (Attended)": "thank_you",
             "Missed You (No-Show)": "missed_you",
             "Follow-Up CTA": "follow_up",
@@ -4571,6 +4606,7 @@ export async function startSmsDispatcher() {
                       firstName: recipient.name?.split(" ")[0] || "",
                       webinarLink: utmJoinUrl2 || joinUrl2,
                       replayUrl: replayUrl || undefined,
+                      callLink: "https://masterclass.coachinayah.com/turnkey-v2",
                     });
 
                     if (!emailContent) continue;

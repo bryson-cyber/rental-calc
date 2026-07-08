@@ -13362,3 +13362,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add post-webinar email templates (morning_of, 3h, 1h, 15min, starting_now, thank_you, missed_you, follow_up) via HubSpot SMTP
 - [x] Create new HubSpot SMTP token (Webinar Reminders) with auto-create contacts
 - [x] Add HubSpot SMTP credentials to project secrets
+
+## Webinar Email Templates - User's Exact Copy (July 8, 2026)
+- [ ] Rewrite all 12 HubSpot email templates with user's exact copy
+- [ ] Set replay URL = webinar join link (same link for both live and replay)
+- [ ] Ensure emails fire at correct times alongside SMS
+- [ ] Test email delivery end-to-end
