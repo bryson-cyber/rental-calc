@@ -1135,9 +1135,10 @@ async function startServer() {
   // ─── Heartbeat HTTP Cron Handlers ───────────────────────────────────────
   // These MUST be mounted before tRPC and Vite fallthrough.
   // Platform POSTs to these endpoints on a schedule.
-  const { webinarImportHandler, smsDispatchHandler } = await import("../scheduled-handlers");
+  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler } = await import("../scheduled-handlers");
   app.post("/api/scheduled/webinar-import", webinarImportHandler);
   app.post("/api/scheduled/sms-dispatch", smsDispatchHandler);
+  app.post("/api/scheduled/email-dispatch", emailDispatchHandler);
 
   // tRPC API
   app.use(
@@ -1201,6 +1202,13 @@ async function startServer() {
           console.error('[SMS Dispatcher] Failed to start:', err),
         );
       }).catch(() => { /* sms dispatcher not critical */ });
+
+      // Start independent email dispatcher (decoupled from SMS, fires on its own 30s timer)
+      import('../routers/webinar-sms').then(({ startEmailDispatcher }) => {
+        startEmailDispatcher().catch((err) =>
+          console.error('[Email Dispatcher] Failed to start:', err),
+        );
+      }).catch(() => { /* email dispatcher not critical */ });
     } else {
       console.log('[Cron] Production mode: setInterval crons disabled. Heartbeat HTTP crons handle scheduling.');
     }

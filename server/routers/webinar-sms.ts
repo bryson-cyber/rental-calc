@@ -4769,143 +4769,10 @@ export async function startSmsDispatcher() {
             "Starting NOW": "starting",
           };
 
-          // Extended map for post-webinar and additional pre-webinar emails (sent via HubSpot SMTP)
-          const extendedEmailMap: Record<string, string> = {
-            "Registration Confirmation": "confirmation",
-            "2 Days Before Reminder": "2_days_before",
-            "Day Before Reminder": "day_before",
-            "Morning Of": "morning_of",
-            "3 Hours Before": "3h",
-            "1 Hour Warning": "1h",
-            "15 Min Before": "15min",
-            "Starting NOW": "starting_now",
-            "No-Show Nudge": "no_show",
-            "Thank You (Attended)": "thank_you",
-            "Missed You (No-Show)": "missed_you",
-            "Follow-Up CTA": "follow_up",
-          };
-
-          const extendedEmailType = extendedEmailMap[msg.sequenceName];
-          if (extendedEmailType) {
-            // Fire extended emails in background
-            (async () => {
-              try {
-                const settingRows2 = await db.select().from(webinarSmsSettings);
-                const settings2: Record<string, string> = {};
-                for (const row of settingRows2) settings2[row.settingKey] = row.settingValue;
-                const eventName2 = settings2["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
-                const replayUrl = settings2["replay_url"] || "";
-
-                let joinUrl2 = "";
-                let webinarDay = "";
-                let webinarDate = "";
-                let webinarTime = "";
-                try {
-                  const [credRow2] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
-                  const perWebinarApiKey2 = credRow2?.apiKey || undefined;
-                  const details3 = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey2);
-                  joinUrl2 = details3.direct_live_room_url || details3.registration_url || "";
-                  // Extract webinar schedule for email templates
-                  if (details3.schedules?.length > 0) {
-                    const schedDate = new Date(details3.schedules[0].date + ":00");
-                    webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
-                    webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-                    const hours = schedDate.getHours();
-                    const minutes = schedDate.getMinutes();
-                    const ampm = hours >= 12 ? "PM" : "AM";
-                    const h = hours % 12 || 12;
-                    webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
-                  }
-                } catch (_) {}
-
-                const utmJoinUrl2 = joinUrl2 ? `${joinUrl2}${joinUrl2.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${extendedEmailType}&utm_campaign=webinar_${extendedEmailType}` : "";
-
-                // Get email recipients
-                const emailConditions2: any[] = [
-                  eq(webinarRegistrants.webinarId, msg.webinarId),
-                  sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
-                  sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
-                ];
-                // Filter by audience for post-webinar messages
-                if (msg.audience === "attended") {
-                  emailConditions2.push(eq(webinarRegistrants.attended, 1));
-                } else if (msg.audience === "not_attended") {
-                  emailConditions2.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
-                }
-
-                const emailRecipients2 = await db.select({
-                  id: webinarRegistrants.id,
-                  name: webinarRegistrants.name,
-                  email: webinarRegistrants.email,
-                }).from(webinarRegistrants).where(and(...emailConditions2));
-
-                if (emailRecipients2.length > 0) {
-                  // Send via HubSpot SMTP
-                  let hubspotSent = 0;
-                  let hubspotFailed = 0;
-                  const hubspotErrors: string[] = [];
-
-                  for (const recipient of emailRecipients2) {
-                    const emailContent = buildWebinarEmail(extendedEmailType, {
-                      firstName: recipient.name?.split(" ")[0] || "",
-                      webinarLink: utmJoinUrl2 || joinUrl2,
-                      replayUrl: replayUrl || undefined,
-                      callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-                      webinarDay: webinarDay || undefined,
-                      webinarDate: webinarDate || undefined,
-                      webinarTime: webinarTime || undefined,
-                    });
-
-                    if (!emailContent) continue;
-
-                    const result = await sendWebinarEmail({
-                      to: recipient.email!,
-                      subject: emailContent.subject,
-                      html: emailContent.html,
-                    });
-
-                    if (result.success) {
-                      hubspotSent++;
-                    } else {
-                      hubspotFailed++;
-                      hubspotErrors.push(`${recipient.email}: ${result.error}`);
-                    }
-
-                    // Log to email_send_log
-                    await db.insert(emailSendLog).values({
-                      webinarId: msg.webinarId,
-                      registrantId: recipient.id,
-                      recipientEmail: recipient.email!,
-                      recipientName: recipient.name,
-                      channel: "hubspot_smtp",
-                      emailType: `post_${extendedEmailType}`,
-                      status: result.success ? "sent" : "failed",
-                      errorMessage: result.error?.slice(0, 1000) || null,
-                    }).catch(() => {});
-
-                    // Small delay to avoid rate limiting
-                    await new Promise(r => setTimeout(r, 100));
-                  }
-
-                  console.log(`[Multi-Channel HubSpot] ${extendedEmailType}: ${hubspotSent} sent, ${hubspotFailed} failed`);
-
-                  // Alert on failures
-                  if (hubspotFailed > 0) {
-                    notifyOwner({
-                      title: `⚠️ Email Failures: ${msg.sequenceName}`,
-                      content: `${hubspotFailed}/${emailRecipients2.length} HubSpot emails failed for "${extendedEmailType}".\nErrors: ${hubspotErrors.slice(0, 3).join("; ")}`,
-                    }).catch(() => {});
-                  }
-                }
-              } catch (extErr: any) {
-                console.error(`[Multi-Channel Extended] Error sending ${extendedEmailType} emails: ${extErr.message}`);
-                notifyOwner({
-                  title: `🚨 Post-Webinar Email Failed: ${msg.sequenceName}`,
-                  content: `Failed to send ${extendedEmailType} emails: ${extErr.message}`,
-                }).catch(() => {});
-              }
-            })();
-          }
+          // NOTE: Emails are now handled by the INDEPENDENT EMAIL DISPATCHER (startEmailDispatcher)
+          // which runs on its own 30s timer, completely decoupled from the SMS batch.
+          // This prevents emails from being lost when the server restarts during a long SMS send.
+          // See the EMAIL_SEQUENCE_MAP and startEmailDispatcher() at the bottom of this file.
 
           const reminderType = reminderTypeMap[msg.sequenceName];
           if (reminderType) {
@@ -5255,4 +5122,464 @@ function formatIcsDate(date: Date): string {
     pad(date.getUTCSeconds()) +
     "Z"
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INDEPENDENT EMAIL DISPATCHER
+// Fires HubSpot SMTP emails on their own 30s timer, completely decoupled from
+// the SMS batch. This ensures emails go out even if the server restarts during
+// a long SMS send.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let emailDispatcherInterval: ReturnType<typeof setInterval> | null = null;
+let emailDispatcherRunning = false;
+
+// Map from sequence name to email type (same as extendedEmailMap inside SMS dispatcher)
+const EMAIL_SEQUENCE_MAP: Record<string, string> = {
+  "Registration Confirmation": "confirmation",
+  "2 Days Before Reminder": "2_days_before",
+  "Day Before Reminder": "day_before",
+  "Morning Of": "morning_of",
+  "3 Hours Before": "3h",
+  "1 Hour Warning": "1h",
+  "15 Min Before": "15min",
+  "Starting NOW": "starting_now",
+  "No-Show Nudge": "no_show",
+  "Thank You (Attended)": "thank_you",
+  "Missed You (No-Show)": "missed_you",
+  "Follow-Up CTA": "follow_up",
+};
+
+/**
+ * Start the independent email dispatcher.
+ * Checks every 30s for scheduled messages whose time has passed and sends
+ * the corresponding HubSpot SMTP emails if they haven't been sent yet.
+ * This is COMPLETELY INDEPENDENT of the SMS dispatcher.
+ */
+export async function startEmailDispatcher() {
+  if (emailDispatcherInterval) {
+    clearInterval(emailDispatcherInterval);
+    emailDispatcherInterval = null;
+  }
+
+  console.log("[Email Dispatcher] Starting independent email dispatcher (every 30s)");
+
+  const processScheduledEmails = async () => {
+    if (emailDispatcherRunning) return;
+    emailDispatcherRunning = true;
+
+    try {
+      const db = await getDb();
+      if (!db) { emailDispatcherRunning = false; return; }
+
+      // Find all scheduled messages whose time has passed (any status except cancelled)
+      // We check sent/sending/pending because the SMS might still be sending but the email should fire independently
+      const now = new Date();
+      const staleThresholdMs = 60 * 60 * 1000; // 1 hour — emails can fire up to 1h late
+
+      const dueMessages = await db.select().from(scheduledSmsMessages)
+        .where(
+          and(
+            lte(scheduledSmsMessages.scheduledAt, now),
+            // Don't process cancelled messages
+            ne(scheduledSmsMessages.status, "cancelled"),
+          )
+        )
+        .orderBy(scheduledSmsMessages.scheduledAt);
+
+      for (const msg of dueMessages) {
+        const emailType = EMAIL_SEQUENCE_MAP[msg.sequenceName];
+        if (!emailType) continue; // No email mapping for this sequence
+
+        // Skip if too old (> 1 hour past scheduled time)
+        const scheduledTime = new Date(msg.scheduledAt).getTime();
+        if (now.getTime() - scheduledTime > staleThresholdMs) continue;
+
+        const logEmailType = `post_${emailType}`;
+
+        // Check if emails were already sent for this type + webinar
+        // (optimistic lock: if ANY row exists with this emailType+webinarId, skip)
+        const [existingLog] = await db.select({ cnt: count() })
+          .from(emailSendLog)
+          .where(and(
+            eq(emailSendLog.webinarId, msg.webinarId),
+            eq(emailSendLog.emailType, logEmailType),
+          ));
+
+        if (existingLog && existingLog.cnt > 0) continue; // Already sent
+
+        // ─── SEND EMAILS ─────────────────────────────────────────────────
+        console.log(`[Email Dispatcher] Firing ${emailType} emails for webinar ${msg.webinarId} (sequence: "${msg.sequenceName}")`);
+
+        try {
+          // Get webinar details for email templates
+          const settingRows = await db.select().from(webinarSmsSettings);
+          const settings: Record<string, string> = {};
+          for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+          const replayUrl = settings["replay_url"] || "";
+
+          let joinUrl = "";
+          let webinarDay = "";
+          let webinarDate = "";
+          let webinarTime = "";
+          try {
+            const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+            const perWebinarApiKey = credRow?.apiKey || undefined;
+            const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
+            joinUrl = details.direct_live_room_url || details.registration_url || "";
+            if (details.schedules?.length > 0) {
+              const schedDate = new Date(details.schedules[0].date + ":00");
+              webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+              webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+              const hours = schedDate.getHours();
+              const minutes = schedDate.getMinutes();
+              const ampm = hours >= 12 ? "PM" : "AM";
+              const h = hours % 12 || 12;
+              webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+            }
+          } catch (_) {}
+
+          const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";
+
+          // Get email recipients (with audience filtering)
+          const emailConditions: any[] = [
+            eq(webinarRegistrants.webinarId, msg.webinarId),
+            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+            sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
+          ];
+          if (msg.audience === "attended") {
+            emailConditions.push(eq(webinarRegistrants.attended, 1));
+          } else if (msg.audience === "not_attended") {
+            emailConditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+          }
+
+          const emailRecipients = await db.select({
+            id: webinarRegistrants.id,
+            name: webinarRegistrants.name,
+            email: webinarRegistrants.email,
+          }).from(webinarRegistrants).where(and(...emailConditions));
+
+          if (emailRecipients.length === 0) {
+            console.log(`[Email Dispatcher] ${emailType}: 0 recipients, skipping`);
+            // Insert a marker row so we don't re-check this
+            await db.insert(emailSendLog).values({
+              webinarId: msg.webinarId,
+              registrantId: 0,
+              recipientEmail: "__no_recipients__",
+              recipientName: null,
+              channel: "hubspot_smtp",
+              emailType: logEmailType,
+              status: "sent",
+              errorMessage: "No recipients found",
+            }).catch(() => {});
+            continue;
+          }
+
+          // ═══ OPTIMISTIC LOCK: Insert pending rows IMMEDIATELY ═══
+          // This prevents the next tick from picking up the same batch
+          for (let i = 0; i < emailRecipients.length; i += 500) {
+            const batch = emailRecipients.slice(i, i + 500);
+            await db.insert(emailSendLog).values(
+              batch.map(r => ({
+                webinarId: msg.webinarId,
+                registrantId: r.id,
+                recipientEmail: r.email!,
+                recipientName: r.name,
+                channel: "hubspot_smtp" as const,
+                emailType: logEmailType,
+                status: "pending" as const,
+              }))
+            ).catch(() => {});
+          }
+
+          // Send emails
+          let sent = 0;
+          let failed = 0;
+          const errors: string[] = [];
+
+          for (const recipient of emailRecipients) {
+            const emailContent = buildWebinarEmail(emailType, {
+              firstName: recipient.name?.split(" ")[0] || "",
+              webinarLink: utmJoinUrl || joinUrl,
+              replayUrl: replayUrl || undefined,
+              callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+              webinarDay: webinarDay || undefined,
+              webinarDate: webinarDate || undefined,
+              webinarTime: webinarTime || undefined,
+            });
+
+            if (!emailContent) continue;
+
+            const result = await sendWebinarEmail({
+              to: recipient.email!,
+              subject: emailContent.subject,
+              html: emailContent.html,
+            });
+
+            // Update the pending row to sent/failed
+            await db.update(emailSendLog)
+              .set({
+                status: result.success ? "sent" : "failed",
+                errorMessage: result.error?.slice(0, 1000) || null,
+                messageId: result.messageId || null,
+              })
+              .where(and(
+                eq(emailSendLog.webinarId, msg.webinarId),
+                eq(emailSendLog.registrantId, recipient.id),
+                eq(emailSendLog.emailType, logEmailType),
+                eq(emailSendLog.status, "pending"),
+              ));
+
+            if (result.success) {
+              sent++;
+            } else {
+              failed++;
+              errors.push(`${recipient.email}: ${result.error}`);
+            }
+
+            // Small delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 100));
+          }
+
+          console.log(`[Email Dispatcher] ${emailType}: ${sent} sent, ${failed} failed (${emailRecipients.length} total)`);
+
+          // Alert on failures
+          if (failed > 0) {
+            notifyOwner({
+              title: `⚠️ Email Failures: ${msg.sequenceName}`,
+              content: `${failed}/${emailRecipients.length} HubSpot emails failed for "${emailType}".\nErrors: ${errors.slice(0, 3).join("; ")}`,
+            }).catch(() => {});
+          }
+
+          // Alert on success
+          if (sent > 0 && failed === 0) {
+            notifyOwner({
+              title: `✅ Emails Sent: ${msg.sequenceName}`,
+              content: `Successfully sent ${sent} ${emailType} emails via HubSpot SMTP.`,
+            }).catch(() => {});
+          }
+        } catch (err: any) {
+          console.error(`[Email Dispatcher] Error sending ${emailType} emails: ${err.message}`);
+          notifyOwner({
+            title: `🚨 Email Dispatch Failed: ${msg.sequenceName}`,
+            content: `Failed to send ${emailType} emails: ${err.message}`,
+          }).catch(() => {});
+        }
+      }
+    } catch (err: any) {
+      console.error("[Email Dispatcher] Critical error:", err.message);
+    } finally {
+      emailDispatcherRunning = false;
+    }
+  };
+
+  // Run immediately, then every 30 seconds
+  processScheduledEmails();
+  emailDispatcherInterval = setInterval(processScheduledEmails, 30_000);
+}
+
+
+/**
+ * Exported function for Heartbeat HTTP cron handler.
+ * Runs a single email dispatch cycle — finds due messages and sends emails.
+ * This is the production email dispatch path when Heartbeat is active.
+ */
+export async function runScheduledEmailDispatch(): Promise<{ processed: number; skipped: boolean }> {
+  // If the setInterval email dispatcher is already running (FORCE_CRON=true),
+  // let it handle dispatch to avoid double-sends
+  if (emailDispatcherInterval) {
+    console.log(`[Email Dispatch Heartbeat] setInterval dispatcher is active, delegating`);
+    return { processed: 0, skipped: true };
+  }
+
+  if (emailDispatcherRunning) {
+    return { processed: 0, skipped: true };
+  }
+
+  emailDispatcherRunning = true;
+
+  try {
+    const db = await getDb();
+    if (!db) {
+      emailDispatcherRunning = false;
+      return { processed: 0, skipped: true };
+    }
+
+    const now = new Date();
+    const staleThresholdMs = 60 * 60 * 1000; // 1 hour
+
+    const dueMessages = await db.select().from(scheduledSmsMessages)
+      .where(
+        and(
+          lte(scheduledSmsMessages.scheduledAt, now),
+          ne(scheduledSmsMessages.status, "cancelled"),
+        )
+      )
+      .orderBy(scheduledSmsMessages.scheduledAt);
+
+    let processed = 0;
+
+    for (const msg of dueMessages) {
+      const emailType = EMAIL_SEQUENCE_MAP[msg.sequenceName];
+      if (!emailType) continue;
+
+      const scheduledTime = new Date(msg.scheduledAt).getTime();
+      if (now.getTime() - scheduledTime > staleThresholdMs) continue;
+
+      const logEmailType = `post_${emailType}`;
+
+      // Check if already sent
+      const [existingLog] = await db.select({ cnt: count() })
+        .from(emailSendLog)
+        .where(and(
+          eq(emailSendLog.webinarId, msg.webinarId),
+          eq(emailSendLog.emailType, logEmailType),
+        ));
+
+      if (existingLog && existingLog.cnt > 0) continue;
+
+      // Fire the email dispatch (same logic as the interval-based dispatcher)
+      console.log(`[Email Dispatch Heartbeat] Firing ${emailType} emails for webinar ${msg.webinarId}`);
+
+      try {
+        const settingRows = await db.select().from(webinarSmsSettings);
+        const settings: Record<string, string> = {};
+        for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+        const replayUrl = settings["replay_url"] || "";
+
+        let joinUrl = "";
+        let webinarDay = "";
+        let webinarDate = "";
+        let webinarTime = "";
+        try {
+          const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+          const perWebinarApiKey = credRow?.apiKey || undefined;
+          const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
+          joinUrl = details.direct_live_room_url || details.registration_url || "";
+          if (details.schedules?.length > 0) {
+            const schedDate = new Date(details.schedules[0].date + ":00");
+            webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+            webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+            const hours = schedDate.getHours();
+            const minutes = schedDate.getMinutes();
+            const ampm = hours >= 12 ? "PM" : "AM";
+            const h = hours % 12 || 12;
+            webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+          }
+        } catch (_) {}
+
+        const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";
+
+        const emailConditions: any[] = [
+          eq(webinarRegistrants.webinarId, msg.webinarId),
+          sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+          sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
+        ];
+        if (msg.audience === "attended") {
+          emailConditions.push(eq(webinarRegistrants.attended, 1));
+        } else if (msg.audience === "not_attended") {
+          emailConditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+        }
+
+        const emailRecipients = await db.select({
+          id: webinarRegistrants.id,
+          name: webinarRegistrants.name,
+          email: webinarRegistrants.email,
+        }).from(webinarRegistrants).where(and(...emailConditions));
+
+        if (emailRecipients.length === 0) {
+          await db.insert(emailSendLog).values({
+            webinarId: msg.webinarId,
+            registrantId: 0,
+            recipientEmail: "__no_recipients__",
+            recipientName: null,
+            channel: "hubspot_smtp",
+            emailType: logEmailType,
+            status: "sent",
+            errorMessage: "No recipients found",
+          }).catch(() => {});
+          continue;
+        }
+
+        // Optimistic lock
+        for (let i = 0; i < emailRecipients.length; i += 500) {
+          const batch = emailRecipients.slice(i, i + 500);
+          await db.insert(emailSendLog).values(
+            batch.map(r => ({
+              webinarId: msg.webinarId,
+              registrantId: r.id,
+              recipientEmail: r.email!,
+              recipientName: r.name,
+              channel: "hubspot_smtp" as const,
+              emailType: logEmailType,
+              status: "pending" as const,
+            }))
+          ).catch(() => {});
+        }
+
+        let sent = 0;
+        let failed = 0;
+
+        for (const recipient of emailRecipients) {
+          const emailContent = buildWebinarEmail(emailType, {
+            firstName: recipient.name?.split(" ")[0] || "",
+            webinarLink: utmJoinUrl || joinUrl,
+            replayUrl: replayUrl || undefined,
+            callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+            webinarDay: webinarDay || undefined,
+            webinarDate: webinarDate || undefined,
+            webinarTime: webinarTime || undefined,
+          });
+
+          if (!emailContent) continue;
+
+          const result = await sendWebinarEmail({
+            to: recipient.email!,
+            subject: emailContent.subject,
+            html: emailContent.html,
+          });
+
+          await db.update(emailSendLog)
+            .set({
+              status: result.success ? "sent" : "failed",
+              errorMessage: result.error?.slice(0, 1000) || null,
+              messageId: result.messageId || null,
+            })
+            .where(and(
+              eq(emailSendLog.webinarId, msg.webinarId),
+              eq(emailSendLog.registrantId, recipient.id),
+              eq(emailSendLog.emailType, logEmailType),
+              eq(emailSendLog.status, "pending"),
+            ));
+
+          if (result.success) sent++;
+          else failed++;
+
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        console.log(`[Email Dispatch Heartbeat] ${emailType}: ${sent} sent, ${failed} failed`);
+        processed++;
+
+        if (failed > 0) {
+          notifyOwner({
+            title: `⚠️ Email Failures: ${msg.sequenceName}`,
+            content: `${failed}/${emailRecipients.length} HubSpot emails failed for "${emailType}".`,
+          }).catch(() => {});
+        }
+      } catch (err: any) {
+        console.error(`[Email Dispatch Heartbeat] Error sending ${emailType}:`, err.message);
+        notifyOwner({
+          title: `🚨 Email Dispatch Failed: ${msg.sequenceName}`,
+          content: `Failed to send ${emailType} emails: ${err.message}`,
+        }).catch(() => {});
+      }
+    }
+
+    emailDispatcherRunning = false;
+    return { processed, skipped: false };
+  } catch (err: any) {
+    emailDispatcherRunning = false;
+    throw err;
+  }
 }

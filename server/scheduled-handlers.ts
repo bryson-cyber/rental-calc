@@ -122,8 +122,49 @@ export async function smsDispatchHandler(req: Request, res: Response) {
     
     // Alert the owner
     notifyOwner({
-      title: "🚨 Scheduled SMS Dispatch Failed",
+      title: "\uD83D\uDEA8 Scheduled SMS Dispatch Failed",
       content: `The scheduled SMS dispatch handler failed.\n\nError: ${err.message}\n\nThis may mean scheduled messages are not being sent.`,
+    }).catch(() => {});
+
+    return res.status(500).json({
+      error: err.message,
+      stack: err.stack?.split("\n").slice(0, 5).join("\n"),
+      context: { url: req.url },
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+/**
+ * POST /api/scheduled/email-dispatch
+ * 
+ * Independent email dispatch handler (decoupled from SMS).
+ * Checks for due messages and sends HubSpot SMTP emails.
+ */
+export async function emailDispatchHandler(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const isAuthed = await verifyCronAuth(req);
+    if (!isAuthed) {
+      return res.status(403).json({ error: "cron-only" });
+    }
+
+    // Dynamically import to avoid circular dependencies
+    const { runScheduledEmailDispatch } = await import("./routers/webinar-sms");
+    const result = await runScheduledEmailDispatch();
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[Scheduled] email-dispatch completed in ${elapsed}ms:`, result);
+    
+    return res.json({ ok: true, elapsed, ...result });
+  } catch (err: any) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[Scheduled] email-dispatch FAILED after ${elapsed}ms:`, err.message);
+    
+    // Alert the owner
+    notifyOwner({
+      title: "\uD83D\uDEA8 Scheduled Email Dispatch Failed",
+      content: `The scheduled email dispatch handler failed.\n\nError: ${err.message}\n\nThis may mean webinar reminder emails are not being sent.`,
     }).catch(() => {});
 
     return res.status(500).json({

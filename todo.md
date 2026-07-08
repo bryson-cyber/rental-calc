@@ -13374,3 +13374,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix triple-text bug: Add optimistic locking to confirmation SMS (mark rows as sent BEFORE sending, unmark on transient failure) to prevent cron race condition
 - [x] Populate webinarDay/webinarDate/webinarTime dynamically from WebinarJam schedule in all 3 email call sites (dispatcher, cron import, manual add) instead of relying on hard-coded defaults
 - [x] Change "Analyze Property" button to open AirDNA Rentalizer in new tab + copy address to clipboard (API disconnected)
+- [x] CRITICAL: Decouple email dispatch from SMS batch — add independent email dispatcher that fires on its own 30s timer (same as SMS dispatcher) so emails send even if server restarts during SMS batch
