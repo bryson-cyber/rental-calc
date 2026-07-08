@@ -40,7 +40,7 @@ export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ suc
   try {
     const transport = getTransporter();
     const result = await transport.sendMail({
-      from: options.from || `"Inayah" <${ENV.hubspotSmtpFrom}>`,
+      from: options.from || ENV.hubspotSmtpFrom,
       to: options.to,
       subject: options.subject,
       html: options.html,
