@@ -508,7 +508,8 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                       className="mt-2 w-full h-7 text-xs bg-amber-100 border-amber-300 hover:bg-amber-200 text-amber-800"
                       onClick={async (e) => {
                         e.stopPropagation();
-                        const fullAddress = `${fav.address}, ${fav.city}, ${fav.state} ${fav.zipCode}`;
+                        const cityStateCheck = `${fav.city}, ${fav.state}`;
+                        const fullAddress = fav.address.includes(cityStateCheck) ? fav.address : `${fav.address}, ${fav.city}, ${fav.state} ${fav.zipCode}`;
                         try {
                           if (navigator.clipboard && navigator.clipboard.writeText) {
                             await navigator.clipboard.writeText(fullAddress);

@@ -2374,7 +2374,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                             // Before analysis - open AirDNA Rentalizer + copy address
                             <Button
                               onClick={async () => {
-                                const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
+                                const cityState = `${property.city}, ${property.state}`;
+                                const fullAddress = property.address.includes(cityState) ? property.address : `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
                                 try {
                                   if (navigator.clipboard && navigator.clipboard.writeText) {
                                     await navigator.clipboard.writeText(fullAddress);
@@ -2417,7 +2418,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   borderRadius: '0.75rem',
                                 }}
                                 onClick={async () => {
-                                  const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
+                                  const cityState2 = `${property.city}, ${property.state}`;
+                                  const fullAddress = property.address.includes(cityState2) ? property.address : `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
                                   try {
                                     if (navigator.clipboard && navigator.clipboard.writeText) {
                                       await navigator.clipboard.writeText(fullAddress);
