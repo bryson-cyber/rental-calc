@@ -1132,6 +1132,13 @@ async function startServer() {
   const { createOgMetaHandler } = await import('../og-meta-middleware');
   app.use(createOgMetaHandler());
 
+  // ─── Heartbeat HTTP Cron Handlers ───────────────────────────────────────
+  // These MUST be mounted before tRPC and Vite fallthrough.
+  // Platform POSTs to these endpoints on a schedule.
+  const { webinarImportHandler, smsDispatchHandler } = await import("../scheduled-handlers");
+  app.post("/api/scheduled/webinar-import", webinarImportHandler);
+  app.post("/api/scheduled/sms-dispatch", smsDispatchHandler);
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -1179,18 +1186,24 @@ async function startServer() {
     }).catch(() => { /* video-generation module not critical */ });
 
     // Start webinar SMS auto-import cron if configured
-    import('../routers/webinar-sms').then(({ startWebinarImportCron }) => {
-      startWebinarImportCron().catch((err) =>
-        console.error('[WebinarSMS Cron] Failed to start auto-import cron:', err),
-      );
-    }).catch(() => { /* webinar-sms module not critical */ });
+    // NOTE: In production, Heartbeat HTTP crons handle this via /api/scheduled/webinar-import
+    // The setInterval fallback ensures dev mode still works without Heartbeat.
+    if (process.env.NODE_ENV !== 'production' || process.env.FORCE_CRON === 'true') {
+      import('../routers/webinar-sms').then(({ startWebinarImportCron }) => {
+        startWebinarImportCron().catch((err) =>
+          console.error('[WebinarSMS Cron] Failed to start auto-import cron:', err),
+        );
+      }).catch(() => { /* webinar-sms module not critical */ });
 
-    // Start scheduled SMS message dispatcher (checks every 30s for due messages)
-    import('../routers/webinar-sms').then(({ startSmsDispatcher }) => {
-      startSmsDispatcher().catch((err) =>
-        console.error('[SMS Dispatcher] Failed to start:', err),
-      );
-    }).catch(() => { /* sms dispatcher not critical */ });
+      // Start scheduled SMS message dispatcher (checks every 30s for due messages)
+      import('../routers/webinar-sms').then(({ startSmsDispatcher }) => {
+        startSmsDispatcher().catch((err) =>
+          console.error('[SMS Dispatcher] Failed to start:', err),
+        );
+      }).catch(() => { /* sms dispatcher not critical */ });
+    } else {
+      console.log('[Cron] Production mode: setInterval crons disabled. Heartbeat HTTP crons handle scheduling.');
+    }
 
     // Calendar + Gmail reminders are now synced to the SMS dispatcher schedule
     // (multi-channel reminders fire alongside SMS when sequence names match)

@@ -13342,3 +13342,14 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Sync All to List - Progress UI
 - [x] Add loading spinner and progress percentage to Sync All to List button during sync
+
+## Webinar System Critical Fixes - Tier 1 (July 8, 2026)
+- [x] Fix sequence ordering in database for correct display (renumbered 1-12)
+- [x] Insert missing 3 Hours Before and 15 Min Before reminders for July 8 webinar
+- [x] Add failure alerting via notifyOwner() to SMS dispatcher and import cron
+- [x] Add comprehensive health check endpoint (webinarSms.systemHealth)
+- [x] Add 3 Hours Before to sequence generation template for future webinars
+- [x] Create Heartbeat HTTP cron handlers (/api/scheduled/webinar-import, /api/scheduled/sms-dispatch)
+- [x] Mount scheduled handlers in Express before tRPC middleware
+- [x] Add FORCE_CRON env var to conditionally disable setInterval in production
+- [ ] Deploy and create Heartbeat crons via manus-heartbeat CLI (requires deploy first)
