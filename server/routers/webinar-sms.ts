@@ -741,10 +741,33 @@ export const webinarSmsRouter = router({
         (async () => {
           try {
             const firstName = (input.name || "there").split(" ")[0];
+            // Fetch dynamic webinar schedule for email
+            let manualWebinarDay = "";
+            let manualWebinarDate = "";
+            let manualWebinarTime = "";
+            let manualJoinUrl = "";
+            try {
+              const [credRow3] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, selectedWebinarId || ""));
+              const detailsManual = await fetchWebinarJamDetails(selectedWebinarId || "", credRow3?.apiKey || undefined);
+              manualJoinUrl = detailsManual.direct_live_room_url || detailsManual.registration_url || "";
+              if (detailsManual.schedules?.length > 0) {
+                const sd = new Date(detailsManual.schedules[0].date + ":00");
+                manualWebinarDay = sd.toLocaleDateString("en-US", { weekday: "long" });
+                manualWebinarDate = sd.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                const hrs = sd.getHours();
+                const mins = sd.getMinutes();
+                const ap = hrs >= 12 ? "PM" : "AM";
+                const hh = hrs % 12 || 12;
+                manualWebinarTime = `${hh}:${mins.toString().padStart(2, "0")} ${ap} ET`;
+              }
+            } catch (_) {}
             const emailContent = buildWebinarEmail("confirmation", {
               firstName,
-              webinarLink: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+              webinarLink: manualJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
               callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+              webinarDay: manualWebinarDay || undefined,
+              webinarDate: manualWebinarDate || undefined,
+              webinarTime: manualWebinarTime || undefined,
             });
             if (emailContent) {
               const result2 = await sendWebinarEmail({
@@ -3936,6 +3959,25 @@ async function runWebinarImport(
         const needsEmail = pendingEmailRegistrants.filter(r => !alreadySentEmails.has(r.id));
         if (needsEmail.length > 0) {
           console.log(`[Confirmation Email] Sending to ${needsEmail.length} registrant(s) for webinar ${webinarId}`);
+          // Fetch webinar schedule for dynamic date/time in emails
+          let cronWebinarDay = "";
+          let cronWebinarDate = "";
+          let cronWebinarTime = "";
+          let cronJoinUrl = "";
+          try {
+            const details = await fetchWebinarJamDetails(webinarId, overrideApiKey);
+            cronJoinUrl = details.direct_live_room_url || details.registration_url || "";
+            if (details.schedules?.length > 0) {
+              const schedDate = new Date(details.schedules[0].date + ":00");
+              cronWebinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+              cronWebinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+              const hours = schedDate.getHours();
+              const minutes = schedDate.getMinutes();
+              const ampm = hours >= 12 ? "PM" : "AM";
+              const h = hours % 12 || 12;
+              cronWebinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+            }
+          } catch (_) {}
           let emailSent = 0;
           let emailFailed = 0;
           for (const reg of needsEmail) {
@@ -3943,8 +3985,11 @@ async function runWebinarImport(
               const firstName = (reg.name || "there").split(" ")[0];
               const emailContent = buildWebinarEmail("confirmation", {
                 firstName,
-                webinarLink: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+                webinarLink: cronJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
                 callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+                webinarDay: cronWebinarDay || undefined,
+                webinarDate: cronWebinarDate || undefined,
+                webinarTime: cronWebinarTime || undefined,
               });
               if (!emailContent) continue;
               const emailResult = await sendWebinarEmail({
@@ -4711,11 +4756,25 @@ export async function startSmsDispatcher() {
                 const replayUrl = settings2["replay_url"] || "";
 
                 let joinUrl2 = "";
+                let webinarDay = "";
+                let webinarDate = "";
+                let webinarTime = "";
                 try {
                   const [credRow2] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
                   const perWebinarApiKey2 = credRow2?.apiKey || undefined;
                   const details3 = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey2);
                   joinUrl2 = details3.direct_live_room_url || details3.registration_url || "";
+                  // Extract webinar schedule for email templates
+                  if (details3.schedules?.length > 0) {
+                    const schedDate = new Date(details3.schedules[0].date + ":00");
+                    webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+                    webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                    const hours = schedDate.getHours();
+                    const minutes = schedDate.getMinutes();
+                    const ampm = hours >= 12 ? "PM" : "AM";
+                    const h = hours % 12 || 12;
+                    webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+                  }
                 } catch (_) {}
 
                 const utmJoinUrl2 = joinUrl2 ? `${joinUrl2}${joinUrl2.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${extendedEmailType}&utm_campaign=webinar_${extendedEmailType}` : "";
@@ -4751,6 +4810,9 @@ export async function startSmsDispatcher() {
                       webinarLink: utmJoinUrl2 || joinUrl2,
                       replayUrl: replayUrl || undefined,
                       callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+                      webinarDay: webinarDay || undefined,
+                      webinarDate: webinarDate || undefined,
+                      webinarTime: webinarTime || undefined,
                     });
 
                     if (!emailContent) continue;
