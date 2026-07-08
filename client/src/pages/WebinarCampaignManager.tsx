@@ -2616,15 +2616,33 @@ function SimpleTextingListField() {
     },
   });
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ added: number; skipped: number; failed: number } | null>(null);
+
+  const syncProgressQuery = trpc.webinarSms.getSyncProgress.useQuery(undefined, {
+    enabled: syncing,
+    refetchInterval: syncing ? 1000 : false,
+  });
+
   const syncAll = trpc.webinarSms.syncAllToList.useMutation({
+    onMutate: () => {
+      setSyncing(true);
+      setSyncResult(null);
+    },
     onSuccess: (data) => {
+      setSyncing(false);
+      setSyncResult({ added: data.added, skipped: data.skipped, failed: data.failed });
       toast.success(`Synced: ${data.added} added, ${data.skipped} already in list, ${data.failed} failed`);
       listsQuery.refetch();
     },
     onError: (err) => {
+      setSyncing(false);
       toast.error(err.message);
     },
   });
+
+  const progress = syncProgressQuery.data;
+  const progressPercent = progress && progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
 
   const [creating, setCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
@@ -2701,17 +2719,40 @@ function SimpleTextingListField() {
       )}
 
       {currentListName && !creating && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-emerald-600">Active: registrants will be added to "{currentListName}"</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => syncAll.mutate()}
-            disabled={syncAll.isPending}
-          >
-            {syncAll.isPending ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Syncing...</> : "Sync All to List"}
-          </Button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-emerald-600">Active: registrants will be added to "{currentListName}"</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => syncAll.mutate()}
+              disabled={syncing}
+            >
+              {syncing ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> {progressPercent}%</> : "Sync All to List"}
+            </Button>
+          </div>
+          {syncing && progress && progress.total > 0 && (
+            <div className="space-y-1">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {progress.processed} / {progress.total} contacts processed
+                {progress.added > 0 && <span className="text-emerald-600 ml-1">({progress.added} added)</span>}
+                {progress.skipped > 0 && <span className="text-amber-600 ml-1">({progress.skipped} skipped)</span>}
+                {progress.failed > 0 && <span className="text-red-500 ml-1">({progress.failed} failed)</span>}
+              </p>
+            </div>
+          )}
+          {syncResult && !syncing && (
+            <p className="text-xs text-muted-foreground">
+              Last sync: {syncResult.added} added, {syncResult.skipped} skipped, {syncResult.failed} failed
+            </p>
+          )}
         </div>
       )}
       {saveList.isPending && (

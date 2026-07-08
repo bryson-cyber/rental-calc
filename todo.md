@@ -13339,3 +13339,6 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Sync All Registrants to SimpleTexting List
 - [x] Add backend mutation to bulk-add all confirmed registrants to the selected SimpleTexting list
 - [x] Add "Sync All to List" button in the Settings panel next to the list dropdown
+
+## Sync All to List - Progress UI
+- [x] Add loading spinner and progress percentage to Sync All to List button during sync
