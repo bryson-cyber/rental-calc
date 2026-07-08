@@ -16,7 +16,7 @@ function getTransporter() {
       throw new Error("HubSpot SMTP credentials not configured");
     }
     transporter = nodemailer.createTransport({
-      host: "smtp.hubspot.net",
+      host: "smtp.hubapi.com",
       port: 587,
       secure: false,
       auth: {

@@ -13366,6 +13366,8 @@ Files fixed (operating costs now based on revenue, not rent):
 ## Webinar Email Templates - User's Exact Copy (July 8, 2026)
 - [x] Rewrite all 12 HubSpot email templates with user's exact copy
 - [x] Set replay URL = webinar join link (same link for both live and replay)
-- [ ] Ensure emails fire at correct times alongside SMS
+- [x] Ensure emails fire at correct times alongside SMS (confirmation email fires instantly on registration; all other emails fire from dispatcher alongside SMS)
 - [ ] Test email delivery end-to-end
 - [x] Add preheader/preview text to all 12 email templates (best practice)
+- [x] Fix SMTP hostname: smtp.hubspot.net → smtp.hubapi.com (per HubSpot docs — was causing EAI_AGAIN DNS failure)
+- [x] Add instant confirmation email to manual addRegistrant and cron import flows
