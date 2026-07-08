@@ -90,10 +90,14 @@ const BRAND = {
   textMuted: "#64748b",
 };
 
-function wrap(content: string): string {
+function wrap(content: string, preheader: string = ""): string {
+  const preheaderHtml = preheader
+    ? `<span style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</span>`
+    : "";
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:${BRAND.offWhite};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+${preheaderHtml}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.offWhite};">
 <tr><td align="center" style="padding:40px 20px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:${BRAND.white};border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
@@ -162,7 +166,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("Add to Calendar", joinLink)}
           ${p(`On ${day}, I'll also send your private join link here 15 minutes before we start.`)}
           ${signoff()}
-        `),
+        `, "Here's everything you need to know before the class..."),
       };
 
     case "2_days_before":
@@ -180,7 +184,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ])}
           ${p("Block out 90 minutes where you can focus. This is not fluff. It's the exact system I used to replace my income and help hundreds of students do the same.")}
           ${p(`See you soon,<br><strong>Inayah</strong>`)}
-        `),
+        `, "90 minutes that could change your financial future..."),
       };
 
     case "day_before":
@@ -203,7 +207,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ])}
           ${p("Most people register and never show. You already proved you're different by signing up. Tomorrow is where action-takers separate from \"maybe later\" people.")}
           ${p(`See you there,<br><strong>Inayah</strong>`)}
-        `),
+        `, "The exact system that helped my mom make $116K from 2 properties..."),
       };
 
     case "morning_of":
@@ -221,7 +225,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("If you've ever thought, \"I know I'm meant for more than just my paycheck,\" this class is for you.")}
           ${p("Watch for your join link in your inbox and texts later today.")}
           ${p(`With you,<br><strong>Inayah</strong>`)}
-        `),
+        `, "Tonight's your night — here's what to expect..."),
       };
 
     case "3h":
@@ -238,7 +242,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ])}
           ${p("My goal tonight is simple: give you a clear path so 6 months from now you're not still thinking about a second income, you're collecting it.")}
           ${signoff()}
-        `),
+        `, "Grab a notebook. In 3 hours, we're building your second income..."),
       };
 
     case "1h":
@@ -256,7 +260,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "Full course access bonus",
           ])}
           ${p(`See you on the live,<br><strong>Inayah</strong>`)}
-        `),
+        `, "Your private join link is inside — don't miss this..."),
       };
 
     case "15min":
@@ -269,7 +273,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("Join Now →", joinLink)}
           ${p("Hop on a few minutes early so you don't miss step 1 of the 5-step system or the details on the live-only bonuses.")}
           ${p(`On in a moment,<br><strong>Inayah</strong>`)}
-        `),
+        `, "Open this now — we start in 15 minutes..."),
       };
 
     case "starting_now":
@@ -287,7 +291,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("JOIN LIVE NOW →", joinLink)}
           ${p("If you don't make it on in the next few minutes, you'll likely miss the funding breakdown and landlord pitch.")}
           ${p(`Come on in,<br><strong>Inayah</strong>`)}
-        `),
+        `, "Click to join — we're going live right now..."),
       };
 
     case "no_show":
@@ -305,7 +309,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("Join Before We Lock the Room →", joinLink)}
           ${p("If you miss this, assume there's no public replay.")}
           ${p(`Hope to see you inside,<br><strong>Inayah</strong>`)}
-        `),
+        `, "The class started — there's still time to join..."),
       };
 
     case "thank_you":
@@ -324,7 +328,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ])}
           ${p("Proud of you for investing your time tonight.")}
           ${p(`With love,<br><strong>Inayah</strong>`)}
-        `),
+        `, "Your replay is ready — plus what to do next..."),
       };
 
     case "missed_you":
@@ -344,7 +348,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ])}
           ${p("If we run another live class, I'll email you an invite. Until then, this call is the fastest way to get moving.")}
           ${signoff()}
-        `),
+        `, "You missed it, but I saved the replay for you..."),
       };
 
     case "follow_up":
@@ -368,7 +372,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("Book Your Strategy Call →", callLink)}
           ${p("The information you have now is enough to stay stuck or to start. The difference is what you do in the next 24 hours.")}
           ${p(`See you on the call,<br><strong>Inayah</strong>`)}
-        `),
+        `, "The replay expires soon — watch before it's gone..."),
       };
 
     default:
