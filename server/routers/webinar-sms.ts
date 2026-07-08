@@ -4006,6 +4006,26 @@ async function runWebinarImport(
     const needsEmail = pendingEmailRegistrants.filter(r => !alreadySentEmails.has(r.id));
     if (needsEmail.length > 0) {
       console.log(`[Confirmation Email] Sending to ${needsEmail.length} registrant(s) for webinar ${webinarId}`);
+
+      // ═══ OPTIMISTIC LOCK: Insert all as 'pending' IMMEDIATELY to prevent race conditions ═══
+      // This ensures the next cron cycle sees these registrants as "already handled"
+      // and won't try to send them again while we're still processing.
+      for (let i = 0; i < needsEmail.length; i += 500) {
+        const batch = needsEmail.slice(i, i + 500);
+        await db.insert(emailSendLog).values(
+          batch.map(reg => ({
+            webinarId,
+            registrantId: reg.id,
+            recipientEmail: reg.email!,
+            recipientName: reg.name,
+            channel: "hubspot_smtp" as const,
+            emailType: "confirmation" as const,
+            status: "pending" as const,
+            errorMessage: null,
+          }))
+        ).catch(() => {});
+      }
+
       // Fetch webinar schedule for dynamic date/time in emails
       let cronEmailDay = "";
       let cronEmailDate = "";
@@ -4044,22 +4064,35 @@ async function runWebinarImport(
             subject: emailContent.subject,
             html: emailContent.html,
           });
-          await db.insert(emailSendLog).values({
-            webinarId,
-            registrantId: reg.id,
-            recipientEmail: reg.email!,
-            recipientName: reg.name,
-            channel: "hubspot_smtp",
-            emailType: "confirmation",
-            status: emailResult.success ? "sent" : "failed",
-            errorMessage: emailResult.error?.slice(0, 1000) || null,
-          }).catch(() => {});
+          // Update the pending log entry to sent/failed
+          await db.update(emailSendLog)
+            .set({
+              status: emailResult.success ? "sent" : "failed",
+              errorMessage: emailResult.error?.slice(0, 1000) || null,
+            })
+            .where(and(
+              eq(emailSendLog.webinarId, webinarId),
+              eq(emailSendLog.registrantId, reg.id),
+              eq(emailSendLog.emailType, "confirmation"),
+              eq(emailSendLog.status, "pending"),
+            ))
+            .catch(() => {});
           if (emailResult.success) emailSent++;
           else emailFailed++;
           // Rate limit: 100ms between sends
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (err: any) {
           console.error(`[Confirmation Email] Error for ${reg.email}:`, err.message);
+          // Mark as failed so it can be retried manually
+          await db.update(emailSendLog)
+            .set({ status: "failed", errorMessage: err.message?.slice(0, 1000) || "Unknown error" })
+            .where(and(
+              eq(emailSendLog.webinarId, webinarId),
+              eq(emailSendLog.registrantId, reg.id),
+              eq(emailSendLog.emailType, "confirmation"),
+              eq(emailSendLog.status, "pending"),
+            ))
+            .catch(() => {});
           emailFailed++;
         }
       }
