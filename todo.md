@@ -13371,3 +13371,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add preheader/preview text to all 12 email templates (best practice)
 - [x] Fix SMTP hostname: smtp.hubspot.net → smtp.hubapi.com (per HubSpot docs — was causing EAI_AGAIN DNS failure)
 - [x] Add instant confirmation email to manual addRegistrant and cron import flows
+- [x] Fix triple-text bug: Add optimistic locking to confirmation SMS (mark rows as sent BEFORE sending, unmark on transient failure) to prevent cron race condition

@@ -687,6 +687,22 @@ export const webinarSmsRouter = router({
 
       // Instant confirmation SMS (evergreen — fires on registration)
       if (isUsCanadaPhone(input.phone.replace(/\D/g, ""))) {
+        // OPTIMISTIC LOCK: Mark as sent IMMEDIATELY to prevent cron from double-sending
+        await db.update(webinarRegistrants)
+          .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+          .where(eq(webinarRegistrants.id, Number(result.insertId)));
+
+        // Also mark any OTHER rows with the same phone in this webinar (dedup across sources)
+        if (selectedWebinarId) {
+          await db.update(webinarRegistrants)
+            .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+            .where(and(
+              eq(webinarRegistrants.webinarId, selectedWebinarId),
+              eq(webinarRegistrants.phone, normalizedPhone),
+              eq(webinarRegistrants.confirmationSmsSent, 0),
+            ));
+        }
+
         (async () => {
           try {
             let tpl = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
@@ -697,15 +713,25 @@ export const webinarSmsRouter = router({
             const msg = tpl.replace(/%FIRST_NAME%/g, firstName);
             const smsResult = await sendSms(normalizedPhone, msg);
             if (smsResult.success) {
-              await db.update(webinarRegistrants)
-                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
-                .where(eq(webinarRegistrants.id, Number(result.insertId)));
               console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} succeeded`);
             } else {
               console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} failed: ${smsResult.error}`);
+              // On transient failure, unmark so cron retries
+              const errLower = (smsResult.error || "").toLowerCase();
+              const permanent = errLower.includes("international") || errLower.includes("invalid") ||
+                errLower.includes("opt") || errLower.includes("unsubscribe");
+              if (!permanent) {
+                await db.update(webinarRegistrants)
+                  .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
+                  .where(eq(webinarRegistrants.id, Number(result.insertId)));
+              }
             }
           } catch (err: any) {
             console.error(`[Confirmation SMS] Instant send error:`, err.message);
+            // Unmark on exception so cron retries
+            await db.update(webinarRegistrants)
+              .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
+              .where(eq(webinarRegistrants.id, Number(result.insertId)));
           }
         })();
       }
@@ -3806,6 +3832,17 @@ async function runWebinarImport(
         phoneMap.get(normPhone)!.push(reg);
       }
 
+      // ═══ OPTIMISTIC LOCK: Mark ALL pending rows as sent IMMEDIATELY ═══
+      // This prevents the next cron cycle (3min later) from picking up the same rows
+      // and sending duplicate SMS. If the send fails, we'll unmark non-permanent failures.
+      const allPendingIds = pendingSmsRegistrants.map(r => r.id);
+      for (let i = 0; i < allPendingIds.length; i += 500) {
+        const batch = allPendingIds.slice(i, i + 500);
+        await db.update(webinarRegistrants)
+          .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+          .where(sql`${webinarRegistrants.id} IN (${sql.raw(batch.join(','))})`);
+      }
+
       // Get the evergreen confirmation template from settings (not from the timed sequence)
       let confirmationTemplate = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
@@ -3823,23 +3860,17 @@ async function runWebinarImport(
       for (const [, registrants] of phoneMap) {
         // Use the first registrant's name for personalization
         const registrant = registrants[0];
-        const allIds = registrants.map(r => r.id);
+        const allIds = registrants.map((r: any) => r.id);
         const firstName = (registrant.name || "there").split(" ")[0];
         const personalizedMessage = confirmationTemplate.replace(/%FIRST_NAME%/g, firstName);
 
         try {
           const result = await sendSms(registrant.phone, personalizedMessage);
           if (result.success) {
-            // Mark ALL rows for this phone as sent
-            for (const id of allIds) {
-              await db.update(webinarRegistrants)
-                .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
-                .where(eq(webinarRegistrants.id, id));
-            }
             confirmSent++;
           } else {
             console.log(`[Confirmation SMS] Failed for ${registrant.phone}: ${result.error}`);
-            // Mark as sent anyway for permanently-failed numbers to avoid retrying forever
+            // For transient failures, UNMARK so they get retried next cycle
             const errLower = (result.error || "").toLowerCase();
             const permanentFailure = errLower.includes("international") ||
               errLower.includes("invalid") ||
@@ -3849,11 +3880,11 @@ async function runWebinarImport(
               errLower.includes("not found") ||
               errLower.includes("(409)") ||
               errLower.includes("(404)");
-            if (permanentFailure) {
-              // Mark ALL rows for this phone as sent to stop retrying
+            if (!permanentFailure) {
+              // Unmark so next cron cycle retries
               for (const id of allIds) {
                 await db.update(webinarRegistrants)
-                  .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+                  .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
                   .where(eq(webinarRegistrants.id, id));
               }
             }
@@ -3865,6 +3896,12 @@ async function runWebinarImport(
           }
         } catch (err: any) {
           console.error(`[Confirmation SMS] Error sending to ${registrant.phone}:`, err.message);
+          // Unmark on exception so next cycle retries
+          for (const id of allIds) {
+            await db.update(webinarRegistrants)
+              .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
+              .where(eq(webinarRegistrants.id, id));
+          }
           confirmFailed++;
         }
       }
