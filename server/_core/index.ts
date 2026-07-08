@@ -1186,9 +1186,9 @@ async function startServer() {
     }).catch(() => { /* video-generation module not critical */ });
 
     // Start webinar SMS auto-import cron if configured
-    // NOTE: In production, Heartbeat HTTP crons handle this via /api/scheduled/webinar-import
-    // The setInterval fallback ensures dev mode still works without Heartbeat.
-    if (process.env.NODE_ENV !== 'production' || process.env.FORCE_CRON === 'true') {
+    // IMPORTANT: Only run cron/dispatcher when FORCE_CRON=true (production).
+    // The sandbox dev server must NEVER run these to avoid duplicate sends.
+    if (process.env.FORCE_CRON === 'true') {
       import('../routers/webinar-sms').then(({ startWebinarImportCron }) => {
         startWebinarImportCron().catch((err) =>
           console.error('[WebinarSMS Cron] Failed to start auto-import cron:', err),
