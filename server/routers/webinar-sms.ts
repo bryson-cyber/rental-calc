@@ -39,7 +39,8 @@ import { eq, desc, sql, and, inArray, count, lte, ne, isNull, gte } from "drizzl
 import { TRPCError } from "@trpc/server";
 import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth, sendCalendarReminderUpdates } from "../google-calendar";
 import { notifyOwner } from "../_core/notification";
-import { sendBulkReminderEmails, sendReminderEmail, checkGmailHealth, buildWebinarReminderEmail } from "../gmail-reminders";
+import { sendBulkReminderEmails, sendReminderEmail, checkGmailHealth, buildWebinarReminderEmail, buildPostWebinarEmail } from "../gmail-reminders";
+import { sendWebinarEmail, buildWebinarEmail, verifyHubSpotSmtp } from "../hubspot-smtp";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -1362,7 +1363,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, it's Inayah. You're locked in for the free Airbnb Masterclass. I'll text your private join link here before we start so you don't miss it.`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -1978,82 +1979,84 @@ export const webinarSmsRouter = router({
       // Helper: offset in minutes from webinar date
       const offset = (minutes: number) => new Date(webinarDate.getTime() + minutes * 60 * 1000);
 
-      // Pre-built 11-message sequence with customizable timing
+      // Pre-built 12-message sequence with customizable timing
+      // Copy written by Coach Inayah — personal, direct, high-converting
+      const callLink = "https://masterclass.coachinayah.com/turnkey-v2";
       const sequence = [
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 1,
-          messageBody: `Hey %FIRST_NAME%! Quick reminder - our live Airbnb call is in 2 days. You won't want to miss this one. Mark your calendar!\n\nJoin here: ${link}`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. In 2 days I'm going to walk you through how 500+ professionals added $2K\u2013$5K/mo on Airbnb without owning property. You're on the list. Block 90 mins so you can focus.`,
           scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 2,
-          messageBody: `%FIRST_NAME%, our call is TOMORROW! Show up early to guarantee your seat - we have a lot of people registered. See you there!\n\nJoin here: ${link}`,
+          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow. I'll show you the exact 5-step system my students use to launch in under 90 days while keeping their W2. Stay tuned for your join link.`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 3,
-          messageBody: `Good morning %FIRST_NAME%! Today's the day. Our call is happening TODAY. Be there early - seats fill up fast!\n\nJoin here: ${link}`,
+          messageBody: `Morning %FIRST_NAME%, it's Inayah. Tonight we're live for your Airbnb Masterclass. If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist. Worth being there.`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
         {
           sequenceName: "3 Hours Before",
           sequenceOrder: 4,
-          messageBody: `%FIRST_NAME% \u2014 just 3 hours until our live Airbnb call! This is the one where I break down exactly how to find properties that cash flow from day one. Don't miss it.\n\nJoin here: ${link}`,
+          messageBody: `3-hour heads up: your Airbnb Masterclass with me starts soon today. Find a quiet spot, bring a notebook, and be ready to map out your first cash-flowing unit.`,
           scheduledAt: offset(t.threeHoursBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
-          messageBody: `%FIRST_NAME% \u2014 we're starting in 1 HOUR! Get ready and show up 10 min early. Join here: ${link}`,
+          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property. I'll send your join link 15 minutes before go time.`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
         {
           sequenceName: "15 Min Before",
           sequenceOrder: 6,
-          messageBody: `%FIRST_NAME% \u2014 15 minutes! We're about to go live. Grab your seat now: ${link}`,
+          messageBody: `%FIRST_NAME%, we start in 15 minutes. Here's your private link to join live: ${link}\n\nHop on a few minutes early so you don't miss the landlord scripts.`,
           scheduledAt: offset(t.fifteenMinBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Starting NOW",
           sequenceOrder: 7,
-          messageBody: `WE'RE LIVE! %FIRST_NAME%, join now before we get started: ${link}`,
+          messageBody: `We're starting now. I'm walking through step 1 of the Turnkey Airbnb system. Join us here: ${link}\n\nIf you don't hop on in the next few minutes, the room may lock.`,
           scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
         {
           sequenceName: "No-Show Nudge",
           sequenceOrder: 8,
-          messageBody: `%FIRST_NAME%, we started and I don't see you in here! There's still time to jump in \u2014 join now: ${link}`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. We're 10 minutes into the Airbnb Masterclass and just covered how to pick your first unit. You can still jump in live here: ${link}\n\nIf you miss this, there's no replay.`,
           scheduledAt: offset(t.noShowNudge),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 9,
-          messageBody: `Thanks for showing up today %FIRST_NAME%! Here's the replay if you want to rewatch: ${replay}`,
+          messageBody: `%FIRST_NAME%, thank you for showing up live tonight. Proud of you for investing in yourself. Next step if you want help launching your first unit: apply for a Turnkey Strategy Call here: ${callLink}`,
           scheduledAt: offset(t.thankYouAttended),
           audience: "attended" as const,
         },
         {
           sequenceName: "Missed You (No-Show)",
           sequenceOrder: 10,
-          messageBody: `Hey %FIRST_NAME%, we missed you today! No worries \u2014 I saved the replay for you: ${replay}`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens. If you're still serious about adding $2K\u2013$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: ${callLink}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 11,
-          messageBody: `%FIRST_NAME%, did you catch the call? If you're ready to take the next step, apply here: https://masterclass.coachinayah.com/turnkey-v2`,
+          messageBody: `%FIRST_NAME%, yesterday's class was about clarity. Today is about action. If you want help launching your first Airbnb in the next 90 days, apply for a Turnkey Strategy Call here: ${callLink}\n\nWe'll see if and how we can help.`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
         },
@@ -4505,6 +4508,122 @@ export async function startSmsDispatcher() {
             "Starting NOW": "starting",
           };
 
+          // Extended map for post-webinar and additional pre-webinar emails (sent via HubSpot SMTP)
+          const extendedEmailMap: Record<string, "morning_of" | "3h" | "1h" | "15min" | "starting_now" | "thank_you" | "missed_you" | "follow_up" | "replay"> = {
+            "Morning Of": "morning_of",
+            "3 Hours Before": "3h",
+            "1 Hour Warning": "1h",
+            "15 Min Before": "15min",
+            "Starting NOW": "starting_now",
+            "Thank You (Attended)": "thank_you",
+            "Missed You (No-Show)": "missed_you",
+            "Follow-Up CTA": "follow_up",
+          };
+
+          const extendedEmailType = extendedEmailMap[msg.sequenceName];
+          if (extendedEmailType) {
+            // Fire extended emails in background
+            (async () => {
+              try {
+                const settingRows2 = await db.select().from(webinarSmsSettings);
+                const settings2: Record<string, string> = {};
+                for (const row of settingRows2) settings2[row.settingKey] = row.settingValue;
+                const eventName2 = settings2["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME;
+                const replayUrl = settings2["replay_url"] || "";
+
+                let joinUrl2 = "";
+                try {
+                  const [credRow2] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+                  const perWebinarApiKey2 = credRow2?.apiKey || undefined;
+                  const details3 = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey2);
+                  joinUrl2 = details3.direct_live_room_url || details3.registration_url || "";
+                } catch (_) {}
+
+                const utmJoinUrl2 = joinUrl2 ? `${joinUrl2}${joinUrl2.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${extendedEmailType}&utm_campaign=webinar_${extendedEmailType}` : "";
+
+                // Get email recipients
+                const emailConditions2: any[] = [
+                  eq(webinarRegistrants.webinarId, msg.webinarId),
+                  sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+                  sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
+                ];
+                // Filter by audience for post-webinar messages
+                if (msg.audience === "attended") {
+                  emailConditions2.push(eq(webinarRegistrants.attended, 1));
+                } else if (msg.audience === "not_attended") {
+                  emailConditions2.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+                }
+
+                const emailRecipients2 = await db.select({
+                  id: webinarRegistrants.id,
+                  name: webinarRegistrants.name,
+                  email: webinarRegistrants.email,
+                }).from(webinarRegistrants).where(and(...emailConditions2));
+
+                if (emailRecipients2.length > 0) {
+                  // Send via HubSpot SMTP
+                  let hubspotSent = 0;
+                  let hubspotFailed = 0;
+                  const hubspotErrors: string[] = [];
+
+                  for (const recipient of emailRecipients2) {
+                    const emailContent = buildWebinarEmail(extendedEmailType, {
+                      firstName: recipient.name?.split(" ")[0] || "",
+                      webinarLink: utmJoinUrl2 || joinUrl2,
+                      replayUrl: replayUrl || undefined,
+                    });
+
+                    if (!emailContent) continue;
+
+                    const result = await sendWebinarEmail({
+                      to: recipient.email!,
+                      subject: emailContent.subject,
+                      html: emailContent.html,
+                    });
+
+                    if (result.success) {
+                      hubspotSent++;
+                    } else {
+                      hubspotFailed++;
+                      hubspotErrors.push(`${recipient.email}: ${result.error}`);
+                    }
+
+                    // Log to email_send_log
+                    await db.insert(emailSendLog).values({
+                      webinarId: msg.webinarId,
+                      registrantId: recipient.id,
+                      recipientEmail: recipient.email!,
+                      recipientName: recipient.name,
+                      channel: "hubspot_smtp",
+                      emailType: `post_${extendedEmailType}`,
+                      status: result.success ? "sent" : "failed",
+                      errorMessage: result.error?.slice(0, 1000) || null,
+                    }).catch(() => {});
+
+                    // Small delay to avoid rate limiting
+                    await new Promise(r => setTimeout(r, 100));
+                  }
+
+                  console.log(`[Multi-Channel HubSpot] ${extendedEmailType}: ${hubspotSent} sent, ${hubspotFailed} failed`);
+
+                  // Alert on failures
+                  if (hubspotFailed > 0) {
+                    notifyOwner({
+                      title: `⚠️ Email Failures: ${msg.sequenceName}`,
+                      content: `${hubspotFailed}/${emailRecipients2.length} HubSpot emails failed for "${extendedEmailType}".\nErrors: ${hubspotErrors.slice(0, 3).join("; ")}`,
+                    }).catch(() => {});
+                  }
+                }
+              } catch (extErr: any) {
+                console.error(`[Multi-Channel Extended] Error sending ${extendedEmailType} emails: ${extErr.message}`);
+                notifyOwner({
+                  title: `🚨 Post-Webinar Email Failed: ${msg.sequenceName}`,
+                  content: `Failed to send ${extendedEmailType} emails: ${extErr.message}`,
+                }).catch(() => {});
+              }
+            })();
+          }
+
           const reminderType = reminderTypeMap[msg.sequenceName];
           if (reminderType) {
             console.log(`[Multi-Channel] SMS "${msg.sequenceName}" maps to reminder type "${reminderType}" — firing Calendar + Gmail reminders`);
@@ -4673,15 +4792,56 @@ export async function startSmsDispatcher() {
 }
 
 /**
+ * Helper: Get deduplicated recipients for a scheduled message based on its audience.
+ */
+async function getRecipientsForMessage(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, msg: { webinarId: string; audience: string }) {
+  const conditions: any[] = [eq(webinarRegistrants.webinarId, msg.webinarId)];
+  conditions.push(sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`);
+
+  if (msg.audience === "attended") {
+    conditions.push(eq(webinarRegistrants.attended, 1));
+  } else if (msg.audience === "not_attended") {
+    conditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+  }
+
+  const recipients = await db.select({
+    id: webinarRegistrants.id,
+    name: webinarRegistrants.name,
+    email: webinarRegistrants.email,
+    phone: webinarRegistrants.phone,
+  }).from(webinarRegistrants).where(and(...conditions));
+
+  // Dedup by phone
+  const seenPhones = new Set<string>();
+  const deduped: typeof recipients = [];
+  for (const r of recipients) {
+    const normalized = normalizePhone(r.phone);
+    if (!seenPhones.has(normalized)) {
+      seenPhones.add(normalized);
+      deduped.push(r);
+    }
+  }
+  return deduped;
+}
+
+/**
  * Exported function for Heartbeat HTTP cron handler.
- * Runs a single dispatch cycle without managing intervals.
- * Returns a summary of what happened.
+ * Runs a full dispatch cycle — finds due messages and sends them.
+ * This is the production dispatch path when Heartbeat is active.
  */
 export async function runScheduledDispatch(): Promise<{ processed: number; skipped: boolean }> {
   // Mutex: prevent concurrent dispatch runs
   if (smsDispatcherRunning) {
     return { processed: 0, skipped: true };
   }
+
+  // If the setInterval dispatcher is already running (FORCE_CRON=true),
+  // let it handle dispatch to avoid double-sends
+  if (smsDispatcherInterval) {
+    console.log(`[SMS Dispatch Heartbeat] setInterval dispatcher is active, delegating`);
+    return { processed: 0, skipped: true };
+  }
+
   smsDispatcherRunning = true;
 
   const db = await getDb();
@@ -4707,14 +4867,90 @@ export async function runScheduledDispatch(): Promise<{ processed: number; skipp
       return { processed: 0, skipped: false };
     }
 
-    console.log(`[SMS Dispatch Heartbeat] Found ${dueMessages.length} due message(s) to send`);
-    // Delegate to the existing processScheduledMessages logic by calling startSmsDispatcher's inner function
-    // For now, we trigger the existing dispatcher which handles the actual send logic
-    // The setInterval-based dispatcher will pick these up on its next tick
+    console.log(`[SMS Dispatch Heartbeat] Found ${dueMessages.length} due message(s) — dispatching now`);
+
+    // Process each due message using the same logic as the setInterval dispatcher
+    for (const msg of dueMessages) {
+      // Skip stale messages (>30 min past scheduled time)
+      const staleThresholdMs = 30 * 60 * 1000;
+      const scheduledTime = new Date(msg.scheduledAt).getTime();
+      if (now.getTime() - scheduledTime > staleThresholdMs) {
+        console.log(`[SMS Dispatch Heartbeat] Skipping stale message #${msg.id} "${msg.sequenceName}"`);
+        await db.update(scheduledSmsMessages)
+          .set({ status: "cancelled", sentAt: new Date() })
+          .where(eq(scheduledSmsMessages.id, msg.id));
+        notifyOwner({
+          title: `⚠️ Stale Message Skipped: ${msg.sequenceName}`,
+          content: `Message #${msg.id} was ${Math.round((now.getTime() - scheduledTime) / 60000)} minutes overdue and was cancelled.`,
+        }).catch(() => {});
+        continue;
+      }
+
+      // Mark as sending
+      await db.update(scheduledSmsMessages)
+        .set({ status: "sending" })
+        .where(eq(scheduledSmsMessages.id, msg.id));
+
+      try {
+        // Get recipients based on audience
+        const recipients = await getRecipientsForMessage(db, msg);
+        if (recipients.length === 0) {
+          await db.update(scheduledSmsMessages).set({
+            status: "sent", sentCount: 0, failedCount: 0, sentAt: new Date(),
+          }).where(eq(scheduledSmsMessages.id, msg.id));
+          continue;
+        }
+
+        // Send to each recipient
+        let sentCount = 0;
+        let failedCount = 0;
+        for (const recipient of recipients) {
+          const personalizedMessage = renderMessage(msg.messageBody, {
+            name: recipient.name.split(" ")[0],
+            fullname: recipient.name,
+            email: recipient.email || "",
+          });
+          const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+          if (result.success) sentCount++;
+          else failedCount++;
+          // Small delay between sends
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        // Update message status
+        await db.update(scheduledSmsMessages).set({
+          status: "sent", sentCount, failedCount, sentAt: new Date(),
+        }).where(eq(scheduledSmsMessages.id, msg.id));
+
+        console.log(`[SMS Dispatch Heartbeat] Message #${msg.id} "${msg.sequenceName}": ${sentCount} sent, ${failedCount} failed`);
+
+        // Alert on high failure rate
+        if (failedCount > 0 && failedCount / (sentCount + failedCount) > 0.2) {
+          notifyOwner({
+            title: `⚠️ High Failure Rate: ${msg.sequenceName}`,
+            content: `${failedCount}/${sentCount + failedCount} failed (${Math.round(failedCount / (sentCount + failedCount) * 100)}%).`,
+          }).catch(() => {});
+        }
+      } catch (err: any) {
+        console.error(`[SMS Dispatch Heartbeat] Error on message #${msg.id}:`, err.message);
+        await db.update(scheduledSmsMessages).set({
+          status: "failed", error: err.message?.slice(0, 500), sentAt: new Date(),
+        }).where(eq(scheduledSmsMessages.id, msg.id));
+        notifyOwner({
+          title: `🚨 SMS Failed: ${msg.sequenceName}`,
+          content: `Error: ${err.message}`,
+        }).catch(() => {});
+      }
+    }
+
     smsDispatcherRunning = false;
     return { processed: dueMessages.length, skipped: false };
   } catch (err: any) {
     smsDispatcherRunning = false;
+    notifyOwner({
+      title: `🚨 Heartbeat Dispatcher Error`,
+      content: `Critical error in SMS dispatch: ${err.message}`,
+    }).catch(() => {});
     throw err;
   }
 }

@@ -66,6 +66,9 @@ import {
   CalendarCheck,
   AlertTriangle,
   UserPlus,
+  Activity,
+  Heart,
+  Shield,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
@@ -3533,7 +3536,7 @@ export default function WebinarCampaignManager() {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-8 w-full max-w-4xl">
+            <TabsList className="grid grid-cols-9 w-full max-w-5xl">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Audience</span>
@@ -3561,6 +3564,10 @@ export default function WebinarCampaignManager() {
               <TabsTrigger value="calendar" className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
                 <span className="hidden sm:inline">Calendar</span>
+              </TabsTrigger>
+              <TabsTrigger value="operations" className="flex items-center gap-1.5">
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">Ops</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-1.5">
                 <Settings className="w-4 h-4" />
@@ -3599,12 +3606,204 @@ export default function WebinarCampaignManager() {
               <CalendarInvitePanel webinarId={selectedWebinarId} scheduleDate={settings.data?.selectedScheduleDate || null} />
             </TabsContent>
 
+            <TabsContent value="operations" className="mt-6">
+              <OperationsDashboard webinarId={selectedWebinarId} />
+            </TabsContent>
+
             <TabsContent value="settings" className="mt-6">
               <SettingsPanel webinarId={selectedWebinarId} />
             </TabsContent>
           </Tabs>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Operations Dashboard ──────────────────────────────────────────────────────
+
+function OperationsDashboard({ webinarId }: { webinarId: string }) {
+  const health = trpc.webinarSms.getSystemHealth.useQuery(undefined, {
+    refetchInterval: 30000, // Refresh every 30s
+  });
+  const emailLog = trpc.webinarSms.getEmailLog.useQuery(
+    { webinarId, limit: 50 },
+    { enabled: !!webinarId }
+  );
+
+  const statusIcon = (status: string) => {
+    if (status === "ok") return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    if (status === "warning") return <AlertCircle className="w-4 h-4 text-amber-500" />;
+    return <XCircle className="w-4 h-4 text-red-500" />;
+  };
+
+  const overallColor = health.data?.status === "healthy" ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
+    health.data?.status === "warning" ? "text-amber-600 bg-amber-50 border-amber-200" :
+    "text-red-600 bg-red-50 border-red-200";
+
+  return (
+    <div className="space-y-6">
+      {/* System Health Overview */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-amber-600" />
+              System Health
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {health.data && (
+                <Badge className={`${overallColor} border`}>
+                  {health.data.status === "healthy" ? "All Systems Operational" :
+                   health.data.status === "warning" ? "Degraded" : "Issues Detected"}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => health.refetch()}
+                disabled={health.isRefetching}
+              >
+                <RefreshCw className={`w-4 h-4 ${health.isRefetching ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </div>
+          {health.data?.timestamp && (
+            <CardDescription className="text-xs">
+              Last checked: {formatDate(health.data.timestamp)}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent>
+          {health.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : health.data?.checks ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {health.data.checks.map((check: any, i: number) => (
+                <div
+                  key={i}
+                  className={`flex items-start gap-3 p-3 rounded-lg border ${
+                    check.status === "ok" ? "border-emerald-100 bg-emerald-50/30" :
+                    check.status === "warning" ? "border-amber-100 bg-amber-50/30" :
+                    "border-red-100 bg-red-50/30"
+                  }`}
+                >
+                  {statusIcon(check.status)}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{check.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 break-words">{check.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Unable to fetch health data</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Email Delivery Stats */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-amber-600" />
+            Email Delivery Log
+          </CardTitle>
+          <CardDescription>
+            {emailLog.data?.stats?.total ?? 0} emails tracked for this webinar
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {emailLog.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !emailLog.data?.logs?.length ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Mail className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">No emails sent yet for this webinar.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Stats summary */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-2xl font-bold">{emailLog.data.stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Sent</p>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-50 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{emailLog.data.stats.sent}</p>
+                  <p className="text-xs text-muted-foreground">Delivered</p>
+                </div>
+                <div className="p-3 rounded-lg bg-red-50 text-center">
+                  <p className="text-2xl font-bold text-red-600">{emailLog.data.stats.failed}</p>
+                  <p className="text-xs text-muted-foreground">Failed</p>
+                </div>
+              </div>
+
+              {/* By channel breakdown */}
+              {emailLog.data.stats.byChannel && Object.keys(emailLog.data.stats.byChannel).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">By Channel</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(emailLog.data.stats.byChannel).map(([channel, stats]: [string, any]) => (
+                      <Badge key={channel} variant="outline" className="text-xs">
+                        {channel}: {stats.sent} sent{stats.failed > 0 ? `, ${stats.failed} failed` : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* By type breakdown */}
+              {emailLog.data.stats.byType && Object.keys(emailLog.data.stats.byType).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">By Type</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(emailLog.data.stats.byType).map(([type, stats]: [string, any]) => (
+                      <Badge key={type} variant="outline" className="text-xs">
+                        {type.replace(/_/g, " ")}: {stats.sent} sent{stats.failed > 0 ? `, ${stats.failed} failed` : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent log entries */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Recent Activity</p>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {emailLog.data.logs.slice(0, 20).map((log: any) => (
+                    <div
+                      key={log.id}
+                      className={`flex items-center justify-between p-2 rounded text-xs border ${
+                        log.status === "sent" ? "border-emerald-100 bg-emerald-50/20" : "border-red-100 bg-red-50/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {log.status === "sent" ? (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className="truncate">{log.recipientEmail}</span>
+                        <Badge variant="outline" className="text-[10px] px-1">
+                          {log.emailType?.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                      <span className="text-muted-foreground flex-shrink-0 ml-2">
+                        {log.sentAt ? getRelativeTime(log.sentAt) || formatDate(log.sentAt) : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

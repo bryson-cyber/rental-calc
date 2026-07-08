@@ -405,3 +405,167 @@ export function buildWebinarReminderEmail(
     htmlBody,
   };
 }
+
+/**
+ * Build post-webinar and extended reminder emails.
+ * Covers: morning_of, 3h, thank_you, missed_you, follow_up, replay
+ */
+export type ExtendedReminderType = "morning_of" | "3h" | "thank_you" | "missed_you" | "follow_up" | "replay";
+
+export function buildPostWebinarEmail(
+  recipientName: string,
+  recipientEmail: string,
+  emailType: ExtendedReminderType,
+  eventName: string,
+  joinUrl: string,
+  replayUrl?: string,
+  eventDate?: string
+): ReminderEmailParams {
+  const firstName = recipientName.split(" ")[0] || "there";
+  const ctaUrl = replayUrl || joinUrl;
+
+  const subjectMap: Record<ExtendedReminderType, string> = {
+    "morning_of": `Today's the day! ${eventName} is TONIGHT`,
+    "3h": `⏰ 3 hours until ${eventName} — don't miss this`,
+    "thank_you": `Thanks for showing up! Here's your replay`,
+    "missed_you": `We missed you! Here's what you missed...`,
+    "follow_up": `Last chance: ${eventName} replay coming down soon`,
+    "replay": `Your ${eventName} replay is ready`,
+  };
+
+  const preheaderMap: Record<ExtendedReminderType, string> = {
+    "morning_of": "Tonight at 7PM ET — your spot is reserved.",
+    "3h": "We go live in 3 hours. Get your notebook ready.",
+    "thank_you": "You showed up and that's huge. Here's the replay + next steps.",
+    "missed_you": "No judgment — life happens. But you need to see this.",
+    "follow_up": "The replay won't be available much longer.",
+    "replay": "Watch (or re-watch) at your own pace.",
+  };
+
+  const bodyMap: Record<ExtendedReminderType, string> = {
+    "morning_of": `
+      <p>Hey ${firstName}!</p>
+      <p>Today is the day. <strong>${eventName}</strong> is happening <strong>TONIGHT</strong>.</p>
+      ${eventDate ? `<p>📅 <strong>${eventDate}</strong></p>` : `<p>📅 <strong>Tonight at 7:00 PM ET</strong></p>`}
+      <p>I'm going to break down my exact system for finding properties that cash flow from day one — even if you're starting with zero experience.</p>
+      <p>Here's how to get the most out of tonight:</p>
+      <ul style="padding-left: 20px; margin: 16px 0;">
+        <li>Grab a notebook and pen</li>
+        <li>Show up 5 minutes early</li>
+        <li>Come with questions — I'll be answering them live</li>
+      </ul>
+      <p style="margin: 24px 0;">
+        <a href="${joinUrl}" style="background-color: #C9A962; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+          Save Your Link for Tonight →
+        </a>
+      </p>
+      <p>See you there!</p>
+      <p>— Coach Inayah</p>
+    `,
+    "3h": `
+      <p>Hey ${firstName}!</p>
+      <p><strong>3 hours.</strong> That's all that's between you and the blueprint that's helped hundreds of people launch their first short-term rental.</p>
+      <p><strong>${eventName}</strong> starts at 7:00 PM ET tonight.</p>
+      <p>This isn't theory. I'm sharing the exact 5-step system I use — including how to find properties that cash flow $3,000-$5,000/month without owning them.</p>
+      <p>If you've been thinking about getting into short-term rentals but don't know where to start... tonight is your answer.</p>
+      <p style="margin: 24px 0;">
+        <a href="${joinUrl}" style="background-color: #C9A962; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+          I'll Be There Tonight →
+        </a>
+      </p>
+      <p>Set your alarm. Grab your notebook. Let's go.</p>
+      <p>— Coach Inayah</p>
+    `,
+    "thank_you": `
+      <p>Hey ${firstName}!</p>
+      <p>I just want to say — <strong>thank you for showing up tonight.</strong></p>
+      <p>Most people register for things and never follow through. You did. That tells me you're serious about building something real.</p>
+      <p>Here's your replay in case you want to re-watch any part:</p>
+      <p style="margin: 24px 0;">
+        <a href="${ctaUrl}" style="background-color: #166534; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+          Watch the Replay →
+        </a>
+      </p>
+      <p><strong>What's next?</strong></p>
+      <p>If what I shared tonight resonated with you and you're ready to take the next step, I'd love to help you personally. Reply to this email or book a call — let's talk about your situation.</p>
+      <p>You showed up. Now let's make it happen.</p>
+      <p>— Coach Inayah</p>
+    `,
+    "missed_you": `
+      <p>Hey ${firstName},</p>
+      <p>I noticed you weren't able to make it to <strong>${eventName}</strong> tonight. No judgment — life happens.</p>
+      <p>But I don't want you to miss what I shared. This was one of my most actionable sessions ever. I broke down:</p>
+      <ul style="padding-left: 20px; margin: 16px 0;">
+        <li>The exact 5-step system to find cash-flowing properties</li>
+        <li>How to get started with $0 down (yes, really)</li>
+        <li>The #1 mistake beginners make that costs them thousands</li>
+        <li>Real numbers from real properties in real markets</li>
+      </ul>
+      <p><strong>Good news:</strong> I recorded the whole thing for you.</p>
+      <p style="margin: 24px 0;">
+        <a href="${ctaUrl}" style="background-color: #C9A962; color: #0F172A; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+          Watch the Replay Now →
+        </a>
+      </p>
+      <p><em>Fair warning: this replay won't be available forever. Watch it while you can.</em></p>
+      <p>— Coach Inayah</p>
+    `,
+    "follow_up": `
+      <p>Hey ${firstName},</p>
+      <p>Quick heads up — the replay for <strong>${eventName}</strong> is coming down soon.</p>
+      <p>If you haven't watched it yet (or want to re-watch), now's the time.</p>
+      <p>Here's what people are saying about this session:</p>
+      <blockquote style="border-left: 3px solid #C9A962; padding-left: 16px; margin: 16px 0; font-style: italic; color: #444;">
+        "I've been researching STRs for months and this one call gave me more clarity than everything else combined."
+      </blockquote>
+      <p style="margin: 24px 0;">
+        <a href="${ctaUrl}" style="background-color: #C9A962; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+          Watch Before It's Gone →
+        </a>
+      </p>
+      <p>If you're ready to take the next step after watching, reply to this email. I read every one.</p>
+      <p>— Coach Inayah</p>
+    `,
+    "replay": `
+      <p>Hey ${firstName}!</p>
+      <p>Your replay of <strong>${eventName}</strong> is ready.</p>
+      <p>Whether you attended live or couldn't make it — here's your chance to watch (or re-watch) at your own pace:</p>
+      <p style="margin: 24px 0;">
+        <a href="${ctaUrl}" style="background-color: #166534; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+          Watch the Replay →
+        </a>
+      </p>
+      <p><strong>Pro tip:</strong> Grab a notebook and pause when you need to. The section on finding properties (around the 15-minute mark) is where most people have their "aha" moment.</p>
+      <p>This replay will only be available for a limited time, so don't wait too long.</p>
+      <p>— Coach Inayah</p>
+    `,
+  };
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="font-size: 12px; color: #666;">${preheaderMap[emailType]}</p>
+      </div>
+      ${bodyMap[emailType]}
+      <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0 16px;">
+      <p style="font-size: 11px; color: #999; text-align: center;">
+        You're receiving this because you registered for ${eventName}.<br>
+        Coach Inayah | I&B Coaching
+      </p>
+    </body>
+    </html>
+  `;
+
+  return {
+    to: recipientEmail,
+    recipientName,
+    subject: subjectMap[emailType],
+    htmlBody,
+  };
+}

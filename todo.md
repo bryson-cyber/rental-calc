@@ -13352,4 +13352,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Create Heartbeat HTTP cron handlers (/api/scheduled/webinar-import, /api/scheduled/sms-dispatch)
 - [x] Mount scheduled handlers in Express before tRPC middleware
 - [x] Add FORCE_CRON env var to conditionally disable setInterval in production
-- [ ] Deploy and create Heartbeat crons via manus-heartbeat CLI (requires deploy first)
+- [x] Deploy and create Heartbeat crons via manus-heartbeat CLI (webinar-import: n8dnAgyFh5QpJHDxTdiTse, sms-dispatch: cGPZ3kFZmzb6wvsQJyvTJY)
+
+## SMS Copy Rewrite + HubSpot Email Integration (July 8, 2026)
+- [x] Update SMS sequence generation templates with user's new copy (12 messages)
+- [x] Update pending SMS messages in database for July 8 webinar with new copy
+- [x] Route webinar emails through HubSpot SMTP instead of Gmail
+- [x] Build Operations Dashboard tab in WebinarCampaignManager (system health + email delivery log)
+- [x] Add post-webinar email templates (morning_of, 3h, 1h, 15min, starting_now, thank_you, missed_you, follow_up) via HubSpot SMTP
+- [x] Create new HubSpot SMTP token (Webinar Reminders) with auto-create contacts
+- [x] Add HubSpot SMTP credentials to project secrets
