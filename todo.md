@@ -13385,3 +13385,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Implement v2 email sequence templates (12 emails with upgraded hooks, contrarian angles, two-camp language)
 - [x] Update email template builder to use new v2 copy for all future webinars
 - [x] Test shortened SMS delivery to Bryson's number (sent via API, 201 success — awaiting quiet hours to end for delivery confirmation)
+
+## CRITICAL: SMS Spam Bug Fix (July 9, 2026)
+- [x] Root cause: Confirmation SMS retry logic + crash recovery was resetting confirmationSmsSent=0 on failures, causing cron to re-send every 3 min. Messages queued during quiet hours all delivered at once when window opened = spam.
+- [x] Fix 1: Removed ALL retry logic from cron confirmation SMS — failures are now treated as final (no more resetting confirmationSmsSent to 0)
+- [x] Fix 2: Removed retry logic from instant send handler — same issue
+- [x] Fix 3: Disabled crash recovery logic entirely — it was incorrectly resetting rows that were successfully sent but queued by carrier

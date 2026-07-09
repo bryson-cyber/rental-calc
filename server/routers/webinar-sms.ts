@@ -716,22 +716,12 @@ export const webinarSmsRouter = router({
               console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} succeeded`);
             } else {
               console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} failed: ${smsResult.error}`);
-              // On transient failure, unmark so cron retries
-              const errLower = (smsResult.error || "").toLowerCase();
-              const permanent = errLower.includes("international") || errLower.includes("invalid") ||
-                errLower.includes("opt") || errLower.includes("unsubscribe");
-              if (!permanent) {
-                await db.update(webinarRegistrants)
-                  .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
-                  .where(eq(webinarRegistrants.id, Number(result.insertId)));
-              }
+              // DO NOT unmark/retry — prevents spam loops from quiet hours/carrier queuing.
+              // If the API accepted it (201), it's queued. If it rejected it, it's permanent.
             }
           } catch (err: any) {
             console.error(`[Confirmation SMS] Instant send error:`, err.message);
-            // Unmark on exception so cron retries
-            await db.update(webinarRegistrants)
-              .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
-              .where(eq(webinarRegistrants.id, Number(result.insertId)));
+            // DO NOT unmark — leave as sent=1 to prevent retry spam loops.
           }
         })();
       }
@@ -3839,48 +3829,16 @@ async function runWebinarImport(
   // Send immediate confirmation SMS to all registrants who haven't received one yet.
   // This runs every cron cycle (not just for newly imported) to catch retries.
   {
-    // ─── CRASH RECOVERY: Detect stale optimistic locks ───
-    // If the server crashed mid-batch, rows are marked confirmationSmsSent=1 but the
-    // SMS was never actually delivered. Detect rows marked "sent" more than 10 minutes
-    // ago that are part of a batch that never completed (no "Done" log = server died).
-    // We identify stale rows by: confirmationSmsSent=1 AND confirmationSmsAt is between
-    // 8-60 minutes ago (gives current batch time to finish, catches crashed batches).
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const staleRows = await db.select({ id: webinarRegistrants.id })
-      .from(webinarRegistrants)
-      .where(and(
-        eq(webinarRegistrants.webinarId, webinarId),
-        eq(webinarRegistrants.confirmationSmsSent, 1),
-        eq(webinarRegistrants.optedOut, 0),
-        sql`${webinarRegistrants.confirmationSmsAt} < ${tenMinutesAgo}`,
-        sql`${webinarRegistrants.confirmationSmsAt} > ${oneHourAgo}`,
-      ));
-    
-    if (staleRows.length > 50) {
-      // If more than 50 rows are "stale" (marked sent 10-60 min ago), it's likely a crashed batch.
-      // A successful batch would have all rows marked at slightly different times as each SMS sends.
-      // A crashed batch marks ALL rows at the SAME second (optimistic lock), then dies.
-      // Check if they all have the same timestamp (within 2 seconds = optimistic lock pattern)
-      const staleIds = staleRows.map(r => r.id);
-      const [{ minAt, maxAt }] = await db.select({
-        minAt: sql<Date>`MIN(${webinarRegistrants.confirmationSmsAt})`,
-        maxAt: sql<Date>`MAX(${webinarRegistrants.confirmationSmsAt})`,
-      }).from(webinarRegistrants)
-        .where(sql`${webinarRegistrants.id} IN (${sql.raw(staleIds.slice(0, 500).join(','))})`);
-      
-      const timeDiffMs = minAt && maxAt ? new Date(maxAt).getTime() - new Date(minAt).getTime() : 999999;
-      if (timeDiffMs < 5000) {
-        // All marked within 5 seconds = optimistic lock from a crashed batch. Reset them.
-        console.log(`[Confirmation SMS] CRASH RECOVERY: Resetting ${staleRows.length} stale rows (batch marked at ${minAt}, never completed)`);
-        for (let i = 0; i < staleIds.length; i += 500) {
-          const batch = staleIds.slice(i, i + 500);
-          await db.update(webinarRegistrants)
-            .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
-            .where(sql`${webinarRegistrants.id} IN (${sql.raw(batch.join(','))})`);
-        }
-      }
-    }
+    // ─── CRASH RECOVERY: DISABLED ───
+    // Previously this logic detected "stale" rows (marked sent 10-60 min ago with same timestamp)
+    // and reset them to 0 assuming a crashed batch. However, this caused SPAM: when SimpleTexting
+    // queues messages during quiet hours, the API returns success (201) but delivery is delayed.
+    // The crash recovery then sees these as "stale" and resets them, causing the cron to re-send.
+    // When quiet hours end, ALL queued messages deliver at once = spam.
+    // 
+    // FIX: Never automatically reset confirmationSmsSent. If a message truly wasn't sent due to
+    // a crash, it's better to miss one confirmation than spam dozens of duplicates.
+    // Manual recovery can be done via the admin panel if needed.
 
     const pendingSmsRegistrants = await db.select({
       id: webinarRegistrants.id,
@@ -3943,24 +3901,10 @@ async function runWebinarImport(
             confirmSent++;
           } else {
             console.log(`[Confirmation SMS] Failed for ${registrant.phone}: ${result.error}`);
-            // For transient failures, UNMARK so they get retried next cycle
-            const errLower = (result.error || "").toLowerCase();
-            const permanentFailure = errLower.includes("international") ||
-              errLower.includes("invalid") ||
-              errLower.includes("opt") ||
-              errLower.includes("unsubscribe") ||
-              errLower.includes("conflict") ||
-              errLower.includes("not found") ||
-              errLower.includes("(409)") ||
-              errLower.includes("(404)");
-            if (!permanentFailure) {
-              // Unmark so next cron cycle retries
-              for (const id of allIds) {
-                await db.update(webinarRegistrants)
-                  .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
-                  .where(eq(webinarRegistrants.id, id));
-              }
-            }
+            // NEVER retry — all failures are treated as final to prevent spam loops.
+            // The SMS was either delivered (queued by carrier/quiet hours) or permanently failed.
+            // Retrying transient failures caused infinite send loops when messages were
+            // queued during quiet hours and all delivered at once when the window opened.
             confirmFailed++;
           }
           // Rate limit: small delay between sends to avoid API throttling
@@ -3969,12 +3913,8 @@ async function runWebinarImport(
           }
         } catch (err: any) {
           console.error(`[Confirmation SMS] Error sending to ${registrant.phone}:`, err.message);
-          // Unmark on exception so next cycle retries
-          for (const id of allIds) {
-            await db.update(webinarRegistrants)
-              .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
-              .where(eq(webinarRegistrants.id, id));
-          }
+          // DO NOT unmark — leave as sent=1 to prevent retry spam loops.
+          // If the send truly failed, it's better to miss one SMS than spam dozens.
           confirmFailed++;
         }
       }
