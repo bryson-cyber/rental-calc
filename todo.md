@@ -13378,3 +13378,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Add zero-recipient retry safeguard: if audience is "attended" or "not_attended" and 0 recipients found, do NOT mark campaign as completed — retry every 5 minutes until recipients appear (max 1 hour)
 - [x] Make "Thank You (Attended)" message always manual-only — set scheduledAt far in future (or remove auto-scheduling) when creating new webinar sequences so it never auto-fires
 - [x] Verify confirmation SMS and email are going out when new registrants opt in for webinar 381 (confirmed: 592 sent, 273 pending out of 865 registrants)
+- [x] FIX: Confirmation SMS optimistic lock is not crash-safe — if server dies mid-batch, rows stay marked as sent=1 but SMS was never delivered. Add crash recovery: on startup (and every cron cycle), detect rows where confirmationSmsSent=1 but confirmationSmsAt is from a batch that never logged "Done" (stale for >10 min), and reset them to 0 so they get retried.

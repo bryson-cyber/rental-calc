@@ -3839,6 +3839,49 @@ async function runWebinarImport(
   // Send immediate confirmation SMS to all registrants who haven't received one yet.
   // This runs every cron cycle (not just for newly imported) to catch retries.
   {
+    // ─── CRASH RECOVERY: Detect stale optimistic locks ───
+    // If the server crashed mid-batch, rows are marked confirmationSmsSent=1 but the
+    // SMS was never actually delivered. Detect rows marked "sent" more than 10 minutes
+    // ago that are part of a batch that never completed (no "Done" log = server died).
+    // We identify stale rows by: confirmationSmsSent=1 AND confirmationSmsAt is between
+    // 8-60 minutes ago (gives current batch time to finish, catches crashed batches).
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const staleRows = await db.select({ id: webinarRegistrants.id })
+      .from(webinarRegistrants)
+      .where(and(
+        eq(webinarRegistrants.webinarId, webinarId),
+        eq(webinarRegistrants.confirmationSmsSent, 1),
+        eq(webinarRegistrants.optedOut, 0),
+        sql`${webinarRegistrants.confirmationSmsAt} < ${tenMinutesAgo}`,
+        sql`${webinarRegistrants.confirmationSmsAt} > ${oneHourAgo}`,
+      ));
+    
+    if (staleRows.length > 50) {
+      // If more than 50 rows are "stale" (marked sent 10-60 min ago), it's likely a crashed batch.
+      // A successful batch would have all rows marked at slightly different times as each SMS sends.
+      // A crashed batch marks ALL rows at the SAME second (optimistic lock), then dies.
+      // Check if they all have the same timestamp (within 2 seconds = optimistic lock pattern)
+      const staleIds = staleRows.map(r => r.id);
+      const [{ minAt, maxAt }] = await db.select({
+        minAt: sql<Date>`MIN(${webinarRegistrants.confirmationSmsAt})`,
+        maxAt: sql<Date>`MAX(${webinarRegistrants.confirmationSmsAt})`,
+      }).from(webinarRegistrants)
+        .where(sql`${webinarRegistrants.id} IN (${sql.raw(staleIds.slice(0, 500).join(','))})`);
+      
+      const timeDiffMs = minAt && maxAt ? new Date(maxAt).getTime() - new Date(minAt).getTime() : 999999;
+      if (timeDiffMs < 5000) {
+        // All marked within 5 seconds = optimistic lock from a crashed batch. Reset them.
+        console.log(`[Confirmation SMS] CRASH RECOVERY: Resetting ${staleRows.length} stale rows (batch marked at ${minAt}, never completed)`);
+        for (let i = 0; i < staleIds.length; i += 500) {
+          const batch = staleIds.slice(i, i + 500);
+          await db.update(webinarRegistrants)
+            .set({ confirmationSmsSent: 0, confirmationSmsAt: null })
+            .where(sql`${webinarRegistrants.id} IN (${sql.raw(batch.join(','))})`);
+        }
+      }
+    }
+
     const pendingSmsRegistrants = await db.select({
       id: webinarRegistrants.id,
       phone: webinarRegistrants.phone,
