@@ -13379,3 +13379,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Make "Thank You (Attended)" message always manual-only — set scheduledAt far in future (or remove auto-scheduling) when creating new webinar sequences so it never auto-fires
 - [x] Verify confirmation SMS and email are going out when new registrants opt in for webinar 381 (confirmed: 592 sent, 273 pending out of 865 registrants)
 - [x] FIX: Confirmation SMS optimistic lock is not crash-safe — if server dies mid-batch, rows stay marked as sent=1 but SMS was never delivered. Add crash recovery: on startup (and every cron cycle), detect rows where confirmationSmsSent=1 but confirmationSmsAt is from a batch that never logged "Done" (stale for >10 min), and reset them to 0 so they get retried.
+
+## SMS Carrier Filtering Fix + V2 Email Templates (July 8, 2026)
+- [x] Rewrite confirmation SMS to be shorter/carrier-friendly (avoid promotional language that triggers carrier filters)
+- [x] Implement v2 email sequence templates (12 emails with upgraded hooks, contrarian angles, two-camp language)
+- [x] Update email template builder to use new v2 copy for all future webinars
+- [x] Test shortened SMS delivery to Bryson's number (sent via API, 201 success — awaiting quiet hours to end for delivery confirmation)

@@ -705,7 +705,7 @@ export const webinarSmsRouter = router({
 
         (async () => {
           try {
-            let tpl = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
+            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
             const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
               .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
             if (tplRow?.settingValue) tpl = tplRow.settingValue;
@@ -1451,7 +1451,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, it's Inayah. You're locked in for the free Airbnb Masterclass. I'll text your private join link here before we start so you don't miss it.`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -3917,7 +3917,7 @@ async function runWebinarImport(
       }
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
-      let confirmationTemplate = `Hey %FIRST_NAME%. Thanks for registering for my live Airbnb workshop. Save this number so you don't miss any updates.`;
+      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
         .from(webinarSmsSettings)
         .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))

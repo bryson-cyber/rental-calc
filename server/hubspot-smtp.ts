@@ -65,7 +65,9 @@ export async function verifyHubSpotSmtp(): Promise<{ connected: boolean; error?:
 }
 
 // ============================================================
-// WEBINAR REMINDER EMAIL TEMPLATES
+// WEBINAR REMINDER EMAIL TEMPLATES — V2 (July 2026)
+// Upgraded hooks, contrarian angles, two-camp language,
+// "this window closes" messaging.
 // ============================================================
 
 interface WebinarEmailData {
@@ -130,8 +132,8 @@ function h2(text: string): string {
   return `<h2 style="color:${BRAND.navy};font-size:24px;margin:0 0 16px;font-weight:600;">${text}</h2>`;
 }
 
-function signoff(): string {
-  return `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:16px 0 0;">Talk soon,<br><strong>Inayah</strong></p>`;
+function signoff(closing: string = "Talk soon"): string {
+  return `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:16px 0 0;">${closing},<br><strong>Inayah</strong></p>`;
 }
 
 export function buildWebinarEmail(type: string, data: WebinarEmailData): { subject: string; html: string } | null {
@@ -144,235 +146,282 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
   const time = data.webinarTime || "7:00 PM ET";
 
   switch (type) {
+    // ─────────────────────────────────────────────────────────
+    // 1) CONFIRMATION (immediately on registration)
+    // ─────────────────────────────────────────────────────────
     case "confirmation":
       return {
-        subject: "You're in: Your Airbnb Masterclass is booked ✅",
+        subject: "You just grabbed a seat in the Airbnb \"gold rush\"",
         html: wrap(`
-          ${h2(`You're in, ${name}!`)}
-          ${p(`You're officially registered for my free Airbnb Masterclass on <strong>${day}, ${date} at ${time}</strong>.`)}
-          ${p("In this live class, I'll show you:")}
+          ${h2(`You're locked in, ${name}!`)}
+          ${p(`You're locked in for my Free Airbnb Masterclass on <strong>${day}, ${date} at ${time}</strong>.`)}
+          ${p("In 90 minutes, I'll show you how:")}
           ${ul([
-            "How busy professionals are adding $2,000–$5,000/mo with Airbnb <strong>without owning property</strong>",
-            'The 5-step "Get Your First Yes" system I used to go from nanny to 50+ properties by 23',
-            "How to fund your first unit even if you don't have $20K sitting in savings",
+            "Busy professionals are adding $2,000\u2013$5,000/mo with Airbnb",
+            "Using properties they don't own",
+            "While still working full\u2011time",
           ])}
-          ${p("If you show up live and stay until the end, you'll get:")}
+          ${p('This is the same 5\u2011step "Get Your First Yes" system I used to go from broke nanny to 50+ properties and 7 figures before 25.')}
+          ${p("If you stay live until the end, you'll also get:")}
           ${ul([
-            'My "Landlord Yes" script',
-            "My 90-Day Launch Checklist",
-            "Access to my full training course as a bonus for action-takers",
+            'My Landlord "Yes" script',
+            "The 90\u2011Day Launch Checklist",
+            "A surprise bonus training I normally reserve for paid clients",
           ])}
-          ${p("Add this to your calendar now so you don't miss it.")}
+          ${p("Block the time on your calendar now. I'll text and email your private join link 15 minutes before we go live.")}
           ${ctaButton("Add to Calendar", joinLink)}
-          ${p(`On ${day}, I'll also send your private join link here 15 minutes before we start.`)}
-          ${signoff()}
-        `, "Here's everything you need to know before the class..."),
+          ${signoff("Talk soon")}
+        `, "In 90 minutes I'll show you how busy professionals add $2K\u2013$5K/mo with Airbnb..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 2) TWO DAYS BEFORE
+    // ─────────────────────────────────────────────────────────
     case "2_days_before":
       return {
-        subject: "In 2 days: Build a second income without quitting your W2",
+        subject: "Real estate without a mortgage (in 2 days)",
         html: wrap(`
-          ${h2(`2 Days Away, ${name}!`)}
-          ${p(`Quick reminder that in 2 days you're joining me live for the Airbnb Masterclass:`)}
-          ${p(`<strong>${day}, ${date} at ${time}</strong>`)}
-          ${p("Here's what we'll cover:")}
+          ${h2(`Hey ${name},`)}
+          ${p("In 2 days, we're live:")}
+          ${p(`<strong>Airbnb Masterclass</strong><br>${day}, ${date} at ${time}`)}
+          ${p("Here's what you're walking into:")}
           ${ul([
-            "What rental arbitrage actually is (and why you don't need to own property)",
-            "How to use data, not guessing, to find units that can profit $1K–$3K/mo",
-            "The exact steps my mom used to create a 6-figure income from just 2 properties while keeping her career",
+            "Why owning property is the slowest way most beginners start",
+            "How rental arbitrage turns a $2K rent payment into $4K\u2013$6K revenue",
+            "The exact tool I use to see if a unit can profit $1K\u2013$3K/mo before I ever sign a lease",
           ])}
-          ${p("Block out 90 minutes where you can focus. This is not fluff. It's the exact system I used to replace my income and help hundreds of students do the same.")}
-          ${p(`See you soon,<br><strong>Inayah</strong>`)}
-        `, "90 minutes that could change your financial future..."),
+          ${p('Most people will register and forget. The ones who show up live are usually the ones sending me messages 6 months later saying, "I got my first unit."')}
+          ${p("You already raised your hand. Next step is just showing up.")}
+          ${signoff("See you soon")}
+        `, "Why owning property is the slowest way most beginners start..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 3) ONE DAY BEFORE
+    // ─────────────────────────────────────────────────────────
     case "day_before":
       return {
         subject: "Tomorrow: 5 steps to your first \"yes\" from a landlord",
         html: wrap(`
-          ${h2(`Tomorrow's the Day, ${name}!`)}
-          ${p(`Your Airbnb Masterclass is tomorrow at <strong>${time}</strong>.`)}
-          ${p("By the end, you'll know:")}
+          ${h2(`Hi ${name},`)}
+          ${p(`Tomorrow at <strong>${time}</strong> we go deep on the 5\u2011step money\u2011making system behind my 7\u2011figure Airbnb portfolio.`)}
+          ${p("You'll see:")}
           ${ul([
-            "How to run the numbers on a property so you're not \"hoping\" it cash flows",
-            "How to approach landlords so they actually say yes to your business",
-            "What it really costs to start (and how students use 0% business credit to fund it)",
+            "How to check if your city is legal (so you don't get shut down)",
+            'How to use data, not "that listing looks cute," to pick units',
+            "Why my mom's two units passed $116,000 in less than 10 months while she kept her hospital job",
           ])}
-          ${p("Remember:<br>Stay live until the end and I'll send you:")}
-          ${ul([
-            "The Landlord Yes video script",
-            "My lease addendum template",
-            "Free access to the full course we use with our paying clients",
-          ])}
-          ${p("Most people register and never show. You already proved you're different by signing up. Tomorrow is where action-takers separate from \"maybe later\" people.")}
-          ${p(`See you there,<br><strong>Inayah</strong>`)}
-        `, "The exact system that helped my mom make $116K from 2 properties..."),
+          ${p('If you\'ve ever thought, "I work too hard to only have one income," this class was built for you.')}
+          ${p("Watch for your join link tomorrow. Do whatever you need to do so you're not stuck at work or in traffic when we start.")}
+          ${signoff("With you")}
+        `, "Tomorrow night: stop scrolling Airbnb and own a piece of it..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 4) MORNING OF
+    // ─────────────────────────────────────────────────────────
     case "morning_of":
       return {
-        subject: "Tonight: Your 90-minute Airbnb game plan",
+        subject: "Tonight: 90 minutes that could change your next 6 months",
         html: wrap(`
-          ${h2(`Good morning, ${name}!`)}
-          ${p(`Tonight at <strong>${time}</strong> we're live.`)}
-          ${p("I'll walk you through:")}
+          ${h2(`Good morning ${name},`)}
+          ${p(`Tonight at <strong>${time}</strong> is your Airbnb Masterclass.`)}
+          ${p("Here's my promise:")}
+          ${p("If you bring a notebook and focus for 90 minutes, you'll walk away knowing:")}
           ${ul([
-            "The 5-step money-making system I use with my 50+ unit portfolio",
-            "How to budget $10K–$20K and decide if you should use cash or business credit",
-            "Real client examples (like my mom's $116K in under 10 months from 2 units)",
+            "What rental arbitrage is and exactly how it makes money",
+            "How much you realistically need to start ($10K\u2013$20K, or business credit)",
+            "The timeline to go from zero to first cash\u2011flowing unit in about 90 days",
           ])}
-          ${p("If you've ever thought, \"I know I'm meant for more than just my paycheck,\" this class is for you.")}
-          ${p("Watch for your join link in your inbox and texts later today.")}
-          ${p(`With you,<br><strong>Inayah</strong>`)}
-        `, "Tonight's your night — here's what to expect..."),
+          ${p("For most people, the real cost isn't the money. It's more months of their life trading every hour for a paycheck.")}
+          ${p("Let's change that tonight.")}
+          ${signoff("Talk soon")}
+        `, "Tonight: trade one evening for a second income..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 5) THREE HOURS BEFORE
+    // ─────────────────────────────────────────────────────────
     case "3h":
       return {
-        subject: "3 hours: grab a notebook, we're building your second income",
+        subject: "In 3 hours, we start building your \"no-clock-in\" income",
         html: wrap(`
-          ${h2(`3 Hours Out, ${name}!`)}
-          ${p(`We're 3 hours out from your Airbnb Masterclass: <strong>${time}</strong>.`)}
-          ${p("Do this now so you actually get value:")}
+          ${h2(`Hey ${name},`)}
+          ${p("Quick heads up: we're 3 hours out.")}
+          ${p(`<strong>${day}, ${date} at ${time}</strong><br>Airbnb Masterclass with me, live.`)}
+          ${p("Do this now:")}
           ${ul([
-            "Put your phone on Do Not Disturb during the class",
-            "Grab a notebook and pen",
-            "Write this at the top of the page: \"Where do I want to be 6 months from now?\"",
+            "Block 90 minutes where you won't be interrupted",
+            "Grab a notebook",
+            'Write one line at the top: "Where do I want my life to be 6 months from now?"',
           ])}
-          ${p("My goal tonight is simple: give you a clear path so 6 months from now you're not still thinking about a second income, you're collecting it.")}
-          ${signoff()}
-        `, "Grab a notebook. In 3 hours, we're building your second income..."),
+          ${p("Tonight, I'll show you a path where your time is no longer your only source of money.")}
+          ${signoff("See you soon")}
+        `, "3-hour warning: Airbnb Masterclass..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 6) ONE HOUR BEFORE
+    // ─────────────────────────────────────────────────────────
     case "1h":
       return {
-        subject: "We start in 1 hour – your private link inside",
+        subject: "You coming? We go live in 1 hour",
         html: wrap(`
-          ${h2(`1 Hour, ${name}!`)}
-          ${p("We're live in 1 hour.")}
-          ${p(`<strong>Airbnb Masterclass</strong><br>${day}, ${date} — ${time}`)}
-          ${ctaButton("Join the Masterclass →", joinLink)}
+          ${h2(`Hi ${name},`)}
+          ${p("We're 1 hour away.")}
+          ${p(`<strong>Airbnb Masterclass</strong><br>${day}, ${date} at ${time}`)}
+          ${ctaButton("Join the Masterclass \u2192", joinLink)}
+          ${p("On this session I'll break down:")}
+          ${ul([
+            "How we generated 7 figures from mostly rented units",
+            "Why this isn't flipping, wholesaling, or being a landlord in the old\u2011school way",
+            "The exact 5 steps you'll follow if you decide to start",
+          ])}
           ${p("Show up live and stay until the end to get:")}
           ${ul([
-            "Landlord Yes script",
-            "90-Day Launch Checklist",
-            "Full course access bonus",
+            'Landlord "Yes" script',
+            "90\u2011Day Launch Checklist",
+            "Bonus training access",
           ])}
-          ${p(`See you on the live,<br><strong>Inayah</strong>`)}
-        `, "Your private join link is inside — don't miss this..."),
+          ${signoff("See you in a bit")}
+        `, "60 minutes: your seat in the Airbnb gold rush..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 7) FIFTEEN MINUTES BEFORE
+    // ─────────────────────────────────────────────────────────
     case "15min":
       return {
-        subject: "We go live in 15 minutes (join link)",
+        subject: "We start in 15 minutes (join link inside)",
         html: wrap(`
-          ${h2(`15 Minutes, ${name}!`)}
+          ${h2(`${name},`)}
           ${p("We're starting in 15 minutes.")}
-          ${p("Here's your private link to join:")}
-          ${ctaButton("Join Now →", joinLink)}
-          ${p("Hop on a few minutes early so you don't miss step 1 of the 5-step system or the details on the live-only bonuses.")}
-          ${p(`On in a moment,<br><strong>Inayah</strong>`)}
-        `, "Open this now — we start in 15 minutes..."),
+          ${p("Here's your private link:")}
+          ${ctaButton("Join Now \u2192", joinLink)}
+          ${p("First thing I'm covering: what rental arbitrage actually is and how hosts are making $300+ per night on properties they don't own.")}
+          ${p("Hop on a few minutes early so you don't miss step 1.")}
+          ${signoff("On in a moment")}
+        `, "Last call before the room fills..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 8) STARTING NOW
+    // ─────────────────────────────────────────────────────────
     case "starting_now":
       return {
-        subject: "We're live right now – you can still join",
+        subject: "We're live right now",
         html: wrap(`
-          ${h2(`We're Live, ${name}!`)}
+          ${h2(`Hey ${name},`)}
           ${p("I'm live right now walking through:")}
           ${ul([
-            "How to pick a profitable market",
-            "How to avoid the biggest mistakes beginners make",
-            "The exact tools we use to run numbers in minutes",
+            'Why Airbnb is still growing (despite all the "it\'s dead" posts)',
+            "The numbers behind a real deal we ran",
+            'Step 1 of the 5\u2011step "Get Your First Yes" system',
           ])}
-          ${p("You can still join us here:")}
-          ${ctaButton("JOIN LIVE NOW →", joinLink)}
-          ${p("If you don't make it on in the next few minutes, you'll likely miss the funding breakdown and landlord pitch.")}
-          ${p(`Come on in,<br><strong>Inayah</strong>`)}
-        `, "Click to join — we're going live right now..."),
+          ${p("You can still join here:")}
+          ${ctaButton("JOIN LIVE NOW \u2192", joinLink)}
+          ${p("If you don't hop on in the next few minutes, assume there's no public replay.")}
+          ${signoff("Come in")}
+        `, "Live now: 5-step Airbnb income system..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 9) NO-SHOW (10 min after start, non-attendees only)
+    // ─────────────────────────────────────────────────────────
     case "no_show":
       return {
-        subject: "We just started – here's your last chance to join live",
+        subject: "We just started \u2013 you can still catch this",
         html: wrap(`
-          ${h2(`We Just Started, ${name}`)}
-          ${p("We kicked off the Airbnb Masterclass about 10 minutes ago and I'm already into the 5-step \"Get Your First Yes\" system.")}
+          ${h2(`Hey ${name},`)}
+          ${p("We're about 10 minutes into the Airbnb Masterclass.")}
+          ${p("I've already covered:")}
+          ${ul([
+            'The difference between "pretty but broke" units and boring but profitable ones',
+            "How I went from nanny to $1M+ a year in bookings in my early 20s",
+          ])}
           ${p("If you jump in now, you'll still catch:")}
           ${ul([
-            "How to check if your city is legal",
-            "How to use data to avoid \"pretty but broke\" properties",
-            "The story of how my mom built a 6-figure income from 2 units",
+            "The live research demo",
+            "The funding breakdown",
+            "The offer for people who want our help in the next 90 days",
           ])}
-          ${ctaButton("Join Before We Lock the Room →", joinLink)}
-          ${p("If you miss this, assume there's no public replay.")}
-          ${p(`Hope to see you inside,<br><strong>Inayah</strong>`)}
-        `, "The class started — there's still time to join..."),
+          ${ctaButton("Join Before the Room Locks \u2192", joinLink)}
+          ${signoff("Hope to see you inside")}
+        `, "10 minutes in. You can still make it..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 10) THANK YOU (attended live) — MANUAL ONLY
+    // ─────────────────────────────────────────────────────────
     case "thank_you":
       return {
-        subject: "Thank you for showing up live – here's your next step",
+        subject: "You showed up. Now here's what's next.",
         html: wrap(`
-          ${h2(`Thank You, ${name}!`)}
-          ${p("Thank you for showing up live tonight. Most people registered and never made it. You did the hard part: you actually showed up.")}
-          ${p("Now, if you want personal help launching your first (or next) unit in the next 90 days, your next step is simple:")}
-          ${ctaButton("Apply for a Turnkey Strategy Call →", callLink)}
-          ${p("On this call, my team will:")}
+          ${h2(`${name},`)}
+          ${p("Thank you for showing up live tonight.")}
+          ${p("Most people registered. A fraction actually came. An even smaller fraction took notes and stayed until the end. That puts you in the group that change actually happens for.")}
+          ${p("As promised, here are your bonuses:")}
           ${ul([
-            "Review your city and budget",
-            "Map out a realistic 90-day launch plan",
+            'Landlord "Yes" script',
+            "90\u2011Day Launch Checklist",
+            "Bonus training access link",
+          ])}
+          ${p("Now, if you want hands\u2011on help launching your first (or next) unit in the next 90 days, here's your next step:")}
+          ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
+          ${p("On that call my team will:")}
+          ${ul([
+            "Look at your city and budget",
+            "Map out a realistic 90\u2011day plan",
             "See if you're a fit for us to help you implement it",
           ])}
-          ${p("Proud of you for investing your time tonight.")}
-          ${p(`With love,<br><strong>Inayah</strong>`)}
-        `, "Your replay is ready — plus what to do next..."),
+          ${p("You already proved you're not Group A. Let's keep that momentum.")}
+          ${signoff("Proud of you")}
+        `, "Proud of you for showing up live..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 11) MISSED YOU (didn't attend)
+    // ─────────────────────────────────────────────────────────
     case "missed_you":
       return {
-        subject: `Missed you at the masterclass, ${name}`,
+        subject: "You registered\u2026 but I didn't see you",
         html: wrap(`
-          ${h2(`We Missed You, ${name}`)}
+          ${h2(`Hey ${name},`)}
           ${p("I didn't see you live on the Airbnb Masterclass.")}
-          ${p("Life happens. But nothing changes if nothing changes.")}
-          ${p("If you're still serious about adding $2K–$5K/mo without leaving your W2, here's your best next step:")}
-          ${ctaButton("Apply for a Turnkey Strategy Call →", callLink)}
-          ${p("On that call, we'll look at:")}
+          ${p("Totally get that life happens. But nothing changes if nothing changes.")}
+          ${p("If you're still serious about adding $2K\u2013$5K/mo without quitting your W2, here's the best next step:")}
+          ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
+          ${p("On that call we'll look at:")}
           ${ul([
-            "Whether your city makes sense",
-            "What startup budget you actually need",
-            "How fast you could realistically get your first unit live",
+            "Whether your market and budget make sense",
+            "How long it could realistically take you to get your first unit live",
+            "Whether we're the right team to walk you through it",
           ])}
-          ${p("If we run another live class, I'll email you an invite. Until then, this call is the fastest way to get moving.")}
-          ${signoff()}
-        `, "You missed it, but I saved the replay for you..."),
+          ${p('Most people will let this slide and go back to "maybe later." I don\'t want that for you.')}
+          ${signoff("Talk soon")}
+        `, "Missed you at the Airbnb Masterclass..."),
       };
 
+    // ─────────────────────────────────────────────────────────
+    // 12) FOLLOW-UP CTA (next day, all registrants)
+    // ─────────────────────────────────────────────────────────
     case "follow_up":
       return {
-        subject: "Ready to launch your first Airbnb in the next 90 days?",
+        subject: "2 types of people after last night's class\u2026",
         html: wrap(`
-          ${h2(`Ready to Take Action, ${name}?`)}
-          ${p("Yesterday's class was about clarity. Today is about action.")}
-          ${p("If you're ready to stop trading only time for money and start building a second stream of income through Airbnb, here's what to do:")}
+          ${h2(`Hi ${name},`)}
+          ${p("After every class, people split into two groups:")}
           ${ul([
-            `<a href="${callLink}" style="color:${BRAND.gold};font-weight:600;">Click here</a>`,
-            "Pick a time for your Turnkey Strategy Call",
-            "Show up ready to talk honestly about your goals, fears, and timeline",
+            '<strong>Group A</strong> replays the webinar in their head, gets inspired, and then lets fear and "I\'m busy" win.',
+            "<strong>Group B</strong> decides they're more scared of staying where they are than of trying something new\u2026 and they take the next step.",
           ])}
-          ${p("We'll map out:")}
-          ${ul([
-            "Your 6-month vision",
-            "A step-by-step plan for your first (or next) unit",
-            "Whether we're the right team to help you execute it",
-          ])}
-          ${ctaButton("Book Your Strategy Call →", callLink)}
-          ${p("The information you have now is enough to stay stuck or to start. The difference is what you do in the next 24 hours.")}
-          ${p(`See you on the call,<br><strong>Inayah</strong>`)}
-        `, "The replay expires soon — watch before it's gone..."),
+          ${p("Both groups heard the same information. Only one group changes their finances.")}
+          ${p("If you're Group B, here's what to do:")}
+          ${ctaButton("Book Your Turnkey Strategy Call \u2192", callLink)}
+          ${p("We'll review your situation, lay out a clear 90\u2011day plan, and see if we can be the team that walks you through getting your first \"yes.\"")}
+          ${p("The information alone won't change your life. What you do in the next 24 hours might.")}
+          ${signoff("See you on the call")}
+        `, "Which group are you in? (be honest)..."),
       };
 
     default:
