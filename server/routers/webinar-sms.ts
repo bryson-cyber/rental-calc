@@ -4622,6 +4622,35 @@ export async function startSmsDispatcher() {
           }
 
           if (dedupedRecipients.length === 0) {
+            // ═══ ZERO-RECIPIENT RETRY for attended/not_attended ═══
+            // If audience is attendance-based and we got 0 recipients, WebinarJam
+            // may not have finalized attendance yet. Retry for up to 1 hour.
+            if (msg.audience === "attended" || msg.audience === "not_attended") {
+              const scheduledTime = new Date(msg.scheduledAt).getTime();
+              const elapsed = Date.now() - scheduledTime;
+              const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+
+              if (elapsed < MAX_RETRY_WINDOW) {
+                console.log(`[SMS Dispatcher] Message #${msg.id}: 0 recipients for "${msg.audience}" but within retry window (${Math.round(elapsed / 60000)}min / 60min max). Leaving as pending for retry on next tick.`);
+                // Reset status back to pending so next tick picks it up again
+                await db.update(scheduledSmsMessages).set({
+                  status: "pending",
+                }).where(eq(scheduledSmsMessages.id, msg.id));
+                continue;
+              } else {
+                console.warn(`[SMS Dispatcher] Message #${msg.id}: 0 recipients for "${msg.audience}" and retry window EXPIRED (${Math.round(elapsed / 60000)}min > 60min). Marking as failed.`);
+                await db.update(scheduledSmsMessages).set({
+                  status: "failed",
+                  sentCount: 0,
+                  failedCount: 0,
+                  sentAt: new Date(),
+                  error: `Zero recipients found for audience "${msg.audience}" after retrying for ${Math.round(elapsed / 60000)} minutes. Attendance data may not have been reported by WebinarJam.`,
+                }).where(eq(scheduledSmsMessages.id, msg.id));
+                continue;
+              }
+            }
+
+            // For "all" audience, 0 recipients genuinely means nobody registered
             console.log(`[SMS Dispatcher] Message #${msg.id}: No recipients found for audience "${msg.audience}", marking as sent with 0 count`);
             await db.update(scheduledSmsMessages).set({
               status: "sent",
@@ -5045,6 +5074,23 @@ export async function runScheduledDispatch(): Promise<{ processed: number; skipp
         // Get recipients based on audience
         const recipients = await getRecipientsForMessage(db, msg);
         if (recipients.length === 0) {
+          // ZERO-RECIPIENT RETRY for attended/not_attended audiences
+          if (msg.audience === "attended" || msg.audience === "not_attended") {
+            const scheduledTime = new Date(msg.scheduledAt).getTime();
+            const elapsed = Date.now() - scheduledTime;
+            const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+            if (elapsed < MAX_RETRY_WINDOW) {
+              console.log(`[SMS Dispatcher] Message #${msg.id}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+              await db.update(scheduledSmsMessages).set({ status: "pending" }).where(eq(scheduledSmsMessages.id, msg.id));
+              continue;
+            } else {
+              await db.update(scheduledSmsMessages).set({
+                status: "failed", sentCount: 0, failedCount: 0, sentAt: new Date(),
+                error: `Zero recipients for "${msg.audience}" after ${Math.round(elapsed / 60000)}min retry window.`,
+              }).where(eq(scheduledSmsMessages.id, msg.id));
+              continue;
+            }
+          }
           await db.update(scheduledSmsMessages).set({
             status: "sent", sentCount: 0, failedCount: 0, sentAt: new Date(),
           }).where(eq(scheduledSmsMessages.id, msg.id));
@@ -5260,6 +5306,16 @@ export async function startEmailDispatcher() {
           }).from(webinarRegistrants).where(and(...emailConditions));
 
           if (emailRecipients.length === 0) {
+            // ZERO-RECIPIENT RETRY for attended/not_attended audiences
+            if (msg.audience === "attended" || msg.audience === "not_attended") {
+              const scheduledTime = new Date(msg.scheduledAt).getTime();
+              const elapsed = Date.now() - scheduledTime;
+              const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+              if (elapsed < MAX_RETRY_WINDOW) {
+                console.log(`[Email Dispatcher] ${emailType}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+                continue; // Skip this email type for now, will retry on next tick
+              }
+            }
             console.log(`[Email Dispatcher] ${emailType}: 0 recipients, skipping`);
             // Insert a marker row so we don't re-check this
             await db.insert(emailSendLog).values({
@@ -5488,6 +5544,16 @@ export async function runScheduledEmailDispatch(): Promise<{ processed: number; 
         }).from(webinarRegistrants).where(and(...emailConditions));
 
         if (emailRecipients.length === 0) {
+          // ZERO-RECIPIENT RETRY for attended/not_attended audiences
+          if (msg.audience === "attended" || msg.audience === "not_attended") {
+            const scheduledTime = new Date(msg.scheduledAt).getTime();
+            const elapsed = Date.now() - scheduledTime;
+            const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+            if (elapsed < MAX_RETRY_WINDOW) {
+              console.log(`[Email Dispatcher] ${logEmailType}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+              continue;
+            }
+          }
           await db.insert(emailSendLog).values({
             webinarId: msg.webinarId,
             registrantId: 0,

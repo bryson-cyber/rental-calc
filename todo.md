@@ -13375,3 +13375,4 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Populate webinarDay/webinarDate/webinarTime dynamically from WebinarJam schedule in all 3 email call sites (dispatcher, cron import, manual add) instead of relying on hard-coded defaults
 - [x] Change "Analyze Property" button to open AirDNA Rentalizer in new tab + copy address to clipboard (API disconnected)
 - [x] CRITICAL: Decouple email dispatch from SMS batch — add independent email dispatcher that fires on its own 30s timer (same as SMS dispatcher) so emails send even if server restarts during SMS batch
+- [x] Add zero-recipient retry safeguard: if audience is "attended" or "not_attended" and 0 recipients found, do NOT mark campaign as completed — retry every 5 minutes until recipients appear (max 1 hour)
