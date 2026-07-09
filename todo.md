@@ -13376,3 +13376,5 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Change "Analyze Property" button to open AirDNA Rentalizer in new tab + copy address to clipboard (API disconnected)
 - [x] CRITICAL: Decouple email dispatch from SMS batch — add independent email dispatcher that fires on its own 30s timer (same as SMS dispatcher) so emails send even if server restarts during SMS batch
 - [x] Add zero-recipient retry safeguard: if audience is "attended" or "not_attended" and 0 recipients found, do NOT mark campaign as completed — retry every 5 minutes until recipients appear (max 1 hour)
+- [x] Make "Thank You (Attended)" message always manual-only — set scheduledAt far in future (or remove auto-scheduling) when creating new webinar sequences so it never auto-fires
+- [x] Verify confirmation SMS and email are going out when new registrants opt in for webinar 381 (confirmed: 592 sent, 273 pending out of 865 registrants)

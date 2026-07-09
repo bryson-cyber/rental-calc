@@ -2131,7 +2131,9 @@ export const webinarSmsRouter = router({
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 9,
           messageBody: `%FIRST_NAME%, thank you for showing up live tonight. Proud of you for investing in yourself. Next step if you want help launching your first unit: apply for a Turnkey Strategy Call here: ${callLink}`,
-          scheduledAt: offset(t.thankYouAttended),
+          // MANUAL-ONLY: This message should never auto-fire. Set far-future date so
+          // it only sends when the user clicks "Send Now" during the webinar.
+          scheduledAt: new Date('2030-12-31T23:59:59Z'),
           audience: "attended" as const,
         },
         {
