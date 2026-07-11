@@ -13391,3 +13391,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Fix 1: Removed ALL retry logic from cron confirmation SMS — failures are now treated as final (no more resetting confirmationSmsSent to 0)
 - [x] Fix 2: Removed retry logic from instant send handler — same issue
 - [x] Fix 3: Disabled crash recovery logic entirely — it was incorrectly resetting rows that were successfully sent but queued by carrier
+
+## SMS Campaign Status Fix (July 11, 2026)
+- [x] Fix dispatcher to distinguish "skipped" (international/invalid) from real failures
+- [x] Fix final status logic: only mark as "failed" if zero messages sent to valid numbers
+- [x] Flush incremental counts every 5 sends (was 25) to survive crashes
+- [x] Fix recovery logic to check actual delivery records before declaring failure (prevents false-failure on crash)
+- [x] Verify all 8 pending messages for Jul 12 webinar are correctly configured and will fire

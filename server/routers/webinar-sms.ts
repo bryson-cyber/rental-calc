@@ -4352,13 +4352,40 @@ export async function startSmsDispatcher() {
             .set({ status: "sent", sentAt: new Date() })
             .where(eq(scheduledSmsMessages.id, msg.id));
         } else if (activeCampaign && activeCampaign.sentCount === 0 && activeCampaign.failedCount === 0) {
-          // Campaign exists but sent NOTHING (server crashed immediately after creating campaign)
-          // Delete the empty campaign and reset to pending for retry
-          console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" has campaign #${activeCampaign.id} but 0 sent/0 failed (crash before any sends). Deleting empty campaign and resetting to pending.`);
-          await db.delete(webinarSmsCampaigns).where(eq(webinarSmsCampaigns.id, activeCampaign.id));
-          await db.update(scheduledSmsMessages)
-            .set({ status: "pending" })
-            .where(eq(scheduledSmsMessages.id, msg.id));
+          // Campaign exists but counts show 0/0 — this could be:
+          // A) Server crashed immediately after creating campaign (no sends happened)
+          // B) Server crashed AFTER sends but BEFORE incremental count flush
+          // Check actual delivery records to distinguish A from B
+          const [deliveryCheck] = await db.select({ cnt: count() })
+            .from(webinarSmsDeliveries)
+            .where(eq(webinarSmsDeliveries.campaignId, activeCampaign.id));
+          const actualDeliveries = Number(deliveryCheck?.cnt ?? 0);
+          
+          if (actualDeliveries > 0) {
+            // Case B: Sends DID happen but counts weren't flushed. Mark as sent.
+            console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" has campaign #${activeCampaign.id} with 0/0 counts BUT ${actualDeliveries} actual delivery records. Crash lost counts. Marking as sent.`);
+            await db.update(scheduledSmsMessages)
+              .set({ status: "sent", sentAt: new Date() })
+              .where(eq(scheduledSmsMessages.id, msg.id));
+            // Also fix the campaign counts from delivery records
+            const [sentDeliveries] = await db.select({ cnt: count() })
+              .from(webinarSmsDeliveries)
+              .where(and(eq(webinarSmsDeliveries.campaignId, activeCampaign.id), eq(webinarSmsDeliveries.deliveryStatus, "sent")));
+            const actualSent = Number(sentDeliveries?.cnt ?? 0);
+            await db.update(webinarSmsCampaigns).set({
+              sentCount: actualSent,
+              failedCount: actualDeliveries - actualSent,
+              status: actualSent > 0 ? "completed" : "failed",
+              completedAt: new Date(),
+            }).where(eq(webinarSmsCampaigns.id, activeCampaign.id));
+          } else {
+            // Case A: Truly no sends happened. Delete empty campaign and retry.
+            console.log(`[SMS Dispatcher] RECOVERY: Message #${msg.id} "${msg.sequenceName}" has campaign #${activeCampaign.id} with 0/0 counts AND 0 delivery records. Deleting empty campaign and resetting to pending.`);
+            await db.delete(webinarSmsCampaigns).where(eq(webinarSmsCampaigns.id, activeCampaign.id));
+            await db.update(scheduledSmsMessages)
+              .set({ status: "pending" })
+              .where(eq(scheduledSmsMessages.id, msg.id));
+          }
         } else if (age <= staleThresholdMs) {
           // Within window and no campaign yet — reset to pending for retry
           console.log(`[SMS Dispatcher] RECOVERY: Resetting stuck message #${msg.id} "${msg.sequenceName}" from "sending" back to "pending" (was stuck for ${Math.round(age / 60000)}min)`);
@@ -4674,12 +4701,13 @@ export async function startSmsDispatcher() {
 
           let sentCount = 0;
           let failedCount = 0;
-          const BATCH_UPDATE_INTERVAL = 25; // Update DB counts every 25 sends
+          let skippedCount = 0; // International/invalid numbers — not real failures
+          const BATCH_UPDATE_INTERVAL = 5; // Flush every 5 sends to survive crashes
 
           for (let i = 0; i < dedupedRecipients.length; i++) {
             // Check if this scheduled message was cancelled mid-send
             if (cancelledScheduledMessageIds.has(msg.id)) {
-              console.log(`[SMS Dispatcher] Message #${msg.id} cancelled mid-send after ${sentCount} sent, ${failedCount} failed`);
+              console.log(`[SMS Dispatcher] Message #${msg.id} cancelled mid-send after ${sentCount} sent, ${failedCount} failed, ${skippedCount} skipped`);
               await db.update(webinarSmsCampaigns).set({ status: "cancelled", sentCount, failedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
               await db.update(scheduledSmsMessages).set({ status: "cancelled", sentCount, failedCount }).where(eq(scheduledSmsMessages.id, msg.id));
               cancelledScheduledMessageIds.delete(msg.id);
@@ -4697,8 +4725,21 @@ export async function startSmsDispatcher() {
             if (result.success) {
               sentCount++;
             } else {
-              failedCount++;
-              console.warn(`[SMS Dispatcher] Failed to send to ${recipient.phone}: ${result.error}`);
+              // Distinguish skips (international, invalid, unsubscribed) from real failures
+              const isSkip = result.error && (
+                result.error.includes("International number skipped") ||
+                result.error.includes("Invalid phone number") ||
+                result.error.includes("too short") ||
+                result.error.includes("unsubscribe") ||
+                result.error.includes("opt") ||
+                result.error.includes("Contact marked as invalid")
+              );
+              if (isSkip) {
+                skippedCount++;
+              } else {
+                failedCount++;
+              }
+              console.warn(`[SMS Dispatcher] ${isSkip ? 'Skipped' : 'Failed'} ${recipient.phone}: ${result.error}`);
             }
 
             // Track individual delivery — wrapped in try/catch so one failed
@@ -4717,7 +4758,7 @@ export async function startSmsDispatcher() {
             }
 
             // Update counts incrementally every BATCH_UPDATE_INTERVAL sends
-            // This ensures counts are persisted even if the process crashes mid-batch
+            // Flush aggressively (every 5) so crashes don't lose progress
             if ((i + 1) % BATCH_UPDATE_INTERVAL === 0 || i === dedupedRecipients.length - 1) {
               try {
                 await db.update(webinarSmsCampaigns).set({
@@ -4738,29 +4779,34 @@ export async function startSmsDispatcher() {
           }
 
           // Final update: mark campaign and message as completed
+          // CRITICAL: Only count REAL failures (not international skips) for status determination
+          // A campaign is only "failed" if zero messages were sent AND there were real failures
+          const realAttempts = sentCount + failedCount; // excludes skipped
+          const isTotalFailure = sentCount === 0 && failedCount > 0;
+          
           await db.update(webinarSmsCampaigns).set({
             sentCount,
-            failedCount,
-            status: failedCount === dedupedRecipients.length ? "failed" : "completed",
+            failedCount: failedCount + skippedCount, // Store total non-sent for visibility
+            status: isTotalFailure ? "failed" : "completed",
             completedAt: new Date(),
           }).where(eq(webinarSmsCampaigns.id, campaignId));
 
           await db.update(scheduledSmsMessages).set({
-            status: failedCount === dedupedRecipients.length ? "failed" : "sent",
+            status: isTotalFailure ? "failed" : "sent",
             sentCount,
-            failedCount,
+            failedCount: failedCount + skippedCount,
             sentAt: new Date(),
           }).where(eq(scheduledSmsMessages.id, msg.id));
 
-          console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed (campaign #${campaignId})`);
+          console.log(`[SMS Dispatcher] Message #${msg.id} "${msg.sequenceName}" completed: ${sentCount} sent, ${failedCount} failed, ${skippedCount} skipped (campaign #${campaignId})`);
           console.log(`[SMS Dispatcher] Campaign #${campaignId} created in Campaign History`);
 
-          // ALERT: Notify owner if failure rate exceeds 30%
-          const failureRate = dedupedRecipients.length > 0 ? failedCount / dedupedRecipients.length : 0;
+          // ALERT: Notify owner if failure rate exceeds 30% of REAL attempts (not skips)
+          const failureRate = realAttempts > 0 ? failedCount / realAttempts : 0;
           if (failureRate > 0.3 && failedCount > 5) {
             notifyOwner({
               title: `⚠️ High SMS Failure Rate: ${msg.sequenceName}`,
-              content: `Message "${msg.sequenceName}" had a ${Math.round(failureRate * 100)}% failure rate.\n\n• Sent: ${sentCount}\n• Failed: ${failedCount}\n• Total Recipients: ${dedupedRecipients.length}\n\nCampaign #${campaignId} | Webinar ${msg.webinarId}`,
+              content: `Message "${msg.sequenceName}" had a ${Math.round(failureRate * 100)}% failure rate.\n\n• Sent: ${sentCount}\n• Failed: ${failedCount}\n• Skipped (international/invalid): ${skippedCount}\n• Total Recipients: ${dedupedRecipients.length}\n\nCampaign #${campaignId} | Webinar ${msg.webinarId}`,
             }).catch(() => {});
           }
 
