@@ -4699,84 +4699,93 @@ export async function startSmsDispatcher() {
 
           console.log(`[SMS Dispatcher] Message #${msg.id}: Sending to ${dedupedRecipients.length} recipients (campaign #${campaignId})`);
 
+          // ═══════════════════════════════════════════════════════════════════
+          // PARALLEL SENDING: Batches of 50 concurrent API calls
+          // 800 recipients ÷ 50 per batch = 16 batches ≈ 30-60 seconds total
+          // ═══════════════════════════════════════════════════════════════════
+          const BATCH_SIZE = 50;
           let sentCount = 0;
           let failedCount = 0;
-          let skippedCount = 0; // International/invalid numbers — not real failures
-          const BATCH_UPDATE_INTERVAL = 5; // Flush every 5 sends to survive crashes
+          let skippedCount = 0;
+          let billingBlocked = false;
+          let cancelled = false;
 
-          for (let i = 0; i < dedupedRecipients.length; i++) {
-            // Check if this scheduled message was cancelled mid-send
+          for (let i = 0; i < dedupedRecipients.length; i += BATCH_SIZE) {
+            // Check cancellation before each batch
             if (cancelledScheduledMessageIds.has(msg.id)) {
               console.log(`[SMS Dispatcher] Message #${msg.id} cancelled mid-send after ${sentCount} sent, ${failedCount} failed, ${skippedCount} skipped`);
               await db.update(webinarSmsCampaigns).set({ status: "cancelled", sentCount, failedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
               await db.update(scheduledSmsMessages).set({ status: "cancelled", sentCount, failedCount }).where(eq(scheduledSmsMessages.id, msg.id));
               cancelledScheduledMessageIds.delete(msg.id);
+              cancelled = true;
               break;
             }
-            const recipient = dedupedRecipients[i];
-            const personalizedMessage = renderMessage(msg.messageBody, {
-              name: recipient.name.split(" ")[0],
-              fullname: recipient.name,
-              email: recipient.email || "",
-            });
 
-            const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+            const batch = dedupedRecipients.slice(i, i + BATCH_SIZE);
 
-            if (result.success) {
-              sentCount++;
-            } else {
-              // Distinguish skips (international, invalid, unsubscribed) from real failures
-              const isSkip = result.error && (
-                result.error.includes("International number skipped") ||
-                result.error.includes("Invalid phone number") ||
-                result.error.includes("too short") ||
-                result.error.includes("unsubscribe") ||
-                result.error.includes("opt") ||
-                result.error.includes("Contact marked as invalid")
-              );
-              if (isSkip) {
-                skippedCount++;
-              } else {
-                failedCount++;
-              }
-              console.warn(`[SMS Dispatcher] ${isSkip ? 'Skipped' : 'Failed'} ${recipient.phone}: ${result.error}`);
-            }
-
-            // Track individual delivery — wrapped in try/catch so one failed
-            // DB insert doesn't kill the entire batch
-            try {
-              await db.insert(webinarSmsDeliveries).values({
-                campaignId,
-                registrantId: recipient.id,
-                phone: recipient.phone,
-                deliveryStatus: result.success ? "sent" : "failed",
-                externalMessageId: result.success ? (result.smsId || null) : null,
-                error: result.success ? null : (result.error || "Unknown error"),
+            const batchResults = await Promise.all(batch.map(async (recipient) => {
+              const personalizedMessage = renderMessage(msg.messageBody, {
+                name: recipient.name.split(" ")[0],
+                fullname: recipient.name,
+                email: recipient.email || "",
               });
-            } catch (deliveryErr: any) {
-              console.warn(`[SMS Dispatcher] Failed to track delivery for ${recipient.phone}: ${deliveryErr.message}`);
-            }
+              const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+              return { recipient, result };
+            }));
 
-            // Update counts incrementally every BATCH_UPDATE_INTERVAL sends
-            // Flush aggressively (every 5) so crashes don't lose progress
-            if ((i + 1) % BATCH_UPDATE_INTERVAL === 0 || i === dedupedRecipients.length - 1) {
+            for (const { recipient, result } of batchResults) {
+              if (result.success) {
+                sentCount++;
+              } else {
+                if (result.error && (result.error.includes("BLOCKED_BY_PAYMENT") || result.error.includes("billing"))) {
+                  billingBlocked = true;
+                }
+                const isSkip = result.error && (
+                  result.error.includes("International number skipped") ||
+                  result.error.includes("Invalid phone number") ||
+                  result.error.includes("too short") ||
+                  result.error.includes("unsubscribe") ||
+                  result.error.includes("opt") ||
+                  result.error.includes("Contact marked as invalid")
+                );
+                if (isSkip) skippedCount++;
+                else failedCount++;
+              }
+
               try {
-                await db.update(webinarSmsCampaigns).set({
-                  sentCount,
-                  failedCount,
-                }).where(eq(webinarSmsCampaigns.id, campaignId));
-                await db.update(scheduledSmsMessages).set({
-                  sentCount,
-                  failedCount,
-                }).where(eq(scheduledSmsMessages.id, msg.id));
-              } catch (updateErr: any) {
-                console.warn(`[SMS Dispatcher] Failed to update incremental counts: ${updateErr.message}`);
+                await db.insert(webinarSmsDeliveries).values({
+                  campaignId,
+                  registrantId: recipient.id,
+                  phone: recipient.phone,
+                  deliveryStatus: result.success ? "sent" : "failed",
+                  externalMessageId: result.success ? (result.smsId || null) : null,
+                  error: result.success ? null : (result.error || "Unknown error"),
+                });
+              } catch (deliveryErr: any) {
+                // Non-critical
               }
             }
 
-            // Small delay between sends to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 150));
+            // Stop if billing blocked
+            if (billingBlocked) {
+              console.error(`[SMS Dispatcher] BILLING BLOCKED — stopping sends for message #${msg.id}`);
+              notifyOwner({
+                title: `🚨 SimpleTexting BILLING BLOCKED`,
+                content: `Account blocked by payment. Fix billing at simpletexting.com.\nMessage "${msg.sequenceName}" partially sent: ${sentCount} delivered.`,
+              }).catch(() => {});
+              break;
+            }
+
+            // Update counts every batch
+            try {
+              await db.update(webinarSmsCampaigns).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
+              await db.update(scheduledSmsMessages).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(scheduledSmsMessages.id, msg.id));
+            } catch (updateErr: any) {
+              // Non-critical
+            }
           }
+
+          if (cancelled) continue; // Skip final update if cancelled
 
           // Final update: mark campaign and message as completed
           // CRITICAL: Only count REAL failures (not international skips) for status determination
@@ -5038,6 +5047,11 @@ async function getRecipientsForMessage(db: NonNullable<Awaited<ReturnType<typeof
  * Exported function for Heartbeat HTTP cron handler.
  * Runs a full dispatch cycle — finds due messages and sends them.
  * This is the production dispatch path when Heartbeat is active.
+ *
+ * KEY DESIGN: Parallel sending + concurrent message processing.
+ * - All due messages are dispatched CONCURRENTLY (not sequentially)
+ * - Each message sends to recipients in parallel batches of 50
+ * - "Starting NOW" never waits for "15 Min Before" to finish
  */
 export async function runScheduledDispatch(): Promise<{ processed: number; skipped: boolean }> {
   // Mutex: prevent concurrent dispatch runs
@@ -5077,96 +5091,17 @@ export async function runScheduledDispatch(): Promise<{ processed: number; skipp
       return { processed: 0, skipped: false };
     }
 
-    console.log(`[SMS Dispatch Heartbeat] Found ${dueMessages.length} due message(s) — dispatching now`);
+    console.log(`[SMS Dispatch Heartbeat] Found ${dueMessages.length} due message(s) — dispatching ALL concurrently`);
 
-    // Process each due message using the same logic as the setInterval dispatcher
-    for (const msg of dueMessages) {
-      // Skip stale messages (>30 min past scheduled time)
-      const staleThresholdMs = 30 * 60 * 1000;
-      const scheduledTime = new Date(msg.scheduledAt).getTime();
-      if (now.getTime() - scheduledTime > staleThresholdMs) {
-        console.log(`[SMS Dispatch Heartbeat] Skipping stale message #${msg.id} "${msg.sequenceName}"`);
-        await db.update(scheduledSmsMessages)
-          .set({ status: "cancelled", sentAt: new Date() })
-          .where(eq(scheduledSmsMessages.id, msg.id));
-        notifyOwner({
-          title: `⚠️ Stale Message Skipped: ${msg.sequenceName}`,
-          content: `Message #${msg.id} was ${Math.round((now.getTime() - scheduledTime) / 60000)} minutes overdue and was cancelled.`,
-        }).catch(() => {});
-        continue;
-      }
+    // Process ALL due messages CONCURRENTLY — no message blocks another
+    const results = await Promise.allSettled(dueMessages.map(msg => dispatchSingleMessage(db, msg, now)));
 
-      // Mark as sending
-      await db.update(scheduledSmsMessages)
-        .set({ status: "sending" })
-        .where(eq(scheduledSmsMessages.id, msg.id));
-
-      try {
-        // Get recipients based on audience
-        const recipients = await getRecipientsForMessage(db, msg);
-        if (recipients.length === 0) {
-          // ZERO-RECIPIENT RETRY for attended/not_attended audiences
-          if (msg.audience === "attended" || msg.audience === "not_attended") {
-            const scheduledTime = new Date(msg.scheduledAt).getTime();
-            const elapsed = Date.now() - scheduledTime;
-            const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
-            if (elapsed < MAX_RETRY_WINDOW) {
-              console.log(`[SMS Dispatcher] Message #${msg.id}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
-              await db.update(scheduledSmsMessages).set({ status: "pending" }).where(eq(scheduledSmsMessages.id, msg.id));
-              continue;
-            } else {
-              await db.update(scheduledSmsMessages).set({
-                status: "failed", sentCount: 0, failedCount: 0, sentAt: new Date(),
-                error: `Zero recipients for "${msg.audience}" after ${Math.round(elapsed / 60000)}min retry window.`,
-              }).where(eq(scheduledSmsMessages.id, msg.id));
-              continue;
-            }
-          }
-          await db.update(scheduledSmsMessages).set({
-            status: "sent", sentCount: 0, failedCount: 0, sentAt: new Date(),
-          }).where(eq(scheduledSmsMessages.id, msg.id));
-          continue;
-        }
-
-        // Send to each recipient
-        let sentCount = 0;
-        let failedCount = 0;
-        for (const recipient of recipients) {
-          const personalizedMessage = renderMessage(msg.messageBody, {
-            name: recipient.name.split(" ")[0],
-            fullname: recipient.name,
-            email: recipient.email || "",
-          });
-          const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
-          if (result.success) sentCount++;
-          else failedCount++;
-          // Small delay between sends
-          await new Promise(r => setTimeout(r, 100));
-        }
-
-        // Update message status
-        await db.update(scheduledSmsMessages).set({
-          status: "sent", sentCount, failedCount, sentAt: new Date(),
-        }).where(eq(scheduledSmsMessages.id, msg.id));
-
-        console.log(`[SMS Dispatch Heartbeat] Message #${msg.id} "${msg.sequenceName}": ${sentCount} sent, ${failedCount} failed`);
-
-        // Alert on high failure rate
-        if (failedCount > 0 && failedCount / (sentCount + failedCount) > 0.2) {
-          notifyOwner({
-            title: `⚠️ High Failure Rate: ${msg.sequenceName}`,
-            content: `${failedCount}/${sentCount + failedCount} failed (${Math.round(failedCount / (sentCount + failedCount) * 100)}%).`,
-          }).catch(() => {});
-        }
-      } catch (err: any) {
-        console.error(`[SMS Dispatch Heartbeat] Error on message #${msg.id}:`, err.message);
-        await db.update(scheduledSmsMessages).set({
-          status: "failed", error: err.message?.slice(0, 500), sentAt: new Date(),
-        }).where(eq(scheduledSmsMessages.id, msg.id));
-        notifyOwner({
-          title: `🚨 SMS Failed: ${msg.sequenceName}`,
-          content: `Error: ${err.message}`,
-        }).catch(() => {});
+    // Log results
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const msg = dueMessages[i];
+      if (result.status === "rejected") {
+        console.error(`[SMS Dispatch Heartbeat] Message #${msg.id} "${msg.sequenceName}" threw: ${result.reason}`);
       }
     }
 
@@ -5179,6 +5114,319 @@ export async function runScheduledDispatch(): Promise<{ processed: number; skipp
       content: `Critical error in SMS dispatch: ${err.message}`,
     }).catch(() => {});
     throw err;
+  }
+}
+
+/**
+ * Dispatch a single scheduled message with parallel sending.
+ * Each message runs independently — no blocking between messages.
+ */
+async function dispatchSingleMessage(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  msg: any,
+  now: Date
+): Promise<void> {
+  // Skip stale messages (>30 min past scheduled time)
+  const staleThresholdMs = 30 * 60 * 1000;
+  const scheduledTime = new Date(msg.scheduledAt).getTime();
+  if (now.getTime() - scheduledTime > staleThresholdMs) {
+    console.log(`[SMS Dispatch Heartbeat] Skipping stale message #${msg.id} "${msg.sequenceName}"`);
+    await db.update(scheduledSmsMessages)
+      .set({ status: "cancelled", sentAt: new Date() })
+      .where(eq(scheduledSmsMessages.id, msg.id));
+    notifyOwner({
+      title: `⚠️ Stale Message Skipped: ${msg.sequenceName}`,
+      content: `Message #${msg.id} was ${Math.round((now.getTime() - scheduledTime) / 60000)} minutes overdue and was cancelled.`,
+    }).catch(() => {});
+    return;
+  }
+
+  // GUARD: Prevent duplicate sends — check if a campaign already exists
+  const existingCampaigns = await db.select({ id: webinarSmsCampaigns.id, status: webinarSmsCampaigns.status })
+    .from(webinarSmsCampaigns)
+    .where(
+      sql`JSON_EXTRACT(${webinarSmsCampaigns.filterCriteria}, '$.scheduledMessageId') = ${msg.id}`
+    );
+  const alreadySentOrSending = existingCampaigns.find(c => c.status === "sending" || c.status === "completed");
+  if (alreadySentOrSending) {
+    console.warn(`[SMS Dispatch Heartbeat] DUPLICATE BLOCKED: Message #${msg.id} already has campaign #${alreadySentOrSending.id}. Skipping.`);
+    await db.update(scheduledSmsMessages).set({ status: "sent", sentAt: new Date() }).where(eq(scheduledSmsMessages.id, msg.id));
+    return;
+  }
+
+  // Mark as sending
+  await db.update(scheduledSmsMessages)
+    .set({ status: "sending" })
+    .where(eq(scheduledSmsMessages.id, msg.id));
+
+  try {
+    // ═══════════════════════════════════════════════════════════════════
+    // ATTENDANCE SYNC for attended/not_attended messages
+    // Forces a fresh sync from WebinarJam before filtering recipients
+    // ═══════════════════════════════════════════════════════════════════
+    if (msg.audience === "attended" || msg.audience === "not_attended") {
+      console.log(`[SMS Dispatch Heartbeat] ATTENDANCE SYNC: Message #${msg.id} targets "${msg.audience}" — syncing from WebinarJam`);
+
+      let syncSuccess = false;
+      let syncError = "";
+      try {
+        const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+        const perWebinarApiKey = credRow?.apiKey || undefined;
+
+        let allRegistrants: any[] = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore && page <= 100) {
+          const result = await fetchWebinarJamRegistrants(msg.webinarId, undefined, page, perWebinarApiKey);
+          allRegistrants = allRegistrants.concat(result.registrants);
+          hasMore = result.hasMore;
+          page++;
+        }
+
+        // Build phone -> attendance map and update DB
+        const attendanceMap = new Map<string, number>();
+        for (const r of allRegistrants) {
+          const rawPhone = r.phone_number || r.phone || "";
+          const fullPhone = (r.phone_country_code || "") + rawPhone;
+          const phone = normalizePhone(fullPhone);
+          if (phone.length >= 7) {
+            const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+            attendanceMap.set(phone, attendedLive ? 1 : 0);
+          }
+        }
+
+        const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
+          .from(webinarRegistrants)
+          .where(eq(webinarRegistrants.webinarId, msg.webinarId));
+
+        let updated = 0;
+        for (const row of existing) {
+          const normalizedPhone = normalizePhone(row.phone);
+          const attended = attendanceMap.get(normalizedPhone);
+          if (attended !== undefined) {
+            await db.update(webinarRegistrants)
+              .set({ attended })
+              .where(eq(webinarRegistrants.id, row.id));
+            updated++;
+          }
+        }
+
+        console.log(`[SMS Dispatch Heartbeat] Attendance sync complete — updated ${updated}/${existing.length} registrants`);
+        syncSuccess = true;
+      } catch (err: any) {
+        syncError = err.message || "Unknown sync error";
+        console.error(`[SMS Dispatch Heartbeat] Attendance sync FAILED: ${syncError}`);
+      }
+
+      // If sync failed, DO NOT send — mark as failed
+      if (!syncSuccess) {
+        await db.update(scheduledSmsMessages).set({
+          status: "failed",
+          error: `Attendance sync failed — cannot verify audience. Error: ${syncError}`,
+          sentAt: new Date(),
+        }).where(eq(scheduledSmsMessages.id, msg.id));
+        notifyOwner({
+          title: `🚨 SMS Blocked: ${msg.sequenceName}`,
+          content: `Attendance sync failed. Cannot send to "${msg.audience}" without verified data.`,
+        }).catch(() => {});
+        return;
+      }
+
+      // For not_attended: require at least 1 confirmed attendee
+      if (msg.audience === "not_attended") {
+        const [attendedCount] = await db.select({ count: count() })
+          .from(webinarRegistrants)
+          .where(
+            and(
+              eq(webinarRegistrants.webinarId, msg.webinarId),
+              eq(webinarRegistrants.attended, 1)
+            )
+          );
+        const confirmedAttendees = Number(attendedCount?.count ?? 0);
+
+        if (confirmedAttendees === 0) {
+          // Retry for up to 1 hour if no attendees found yet
+          const elapsed = Date.now() - scheduledTime;
+          const MAX_RETRY_WINDOW = 60 * 60 * 1000;
+          if (elapsed < MAX_RETRY_WINDOW) {
+            console.log(`[SMS Dispatch Heartbeat] Message #${msg.id}: 0 attendees confirmed — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+            await db.update(scheduledSmsMessages).set({ status: "pending" }).where(eq(scheduledSmsMessages.id, msg.id));
+            return;
+          } else {
+            await db.update(scheduledSmsMessages).set({
+              status: "failed", sentCount: 0, failedCount: 0, sentAt: new Date(),
+              error: `0 confirmed attendees after ${Math.round(elapsed / 60000)}min. WebinarJam may not have reported attendance.`,
+            }).where(eq(scheduledSmsMessages.id, msg.id));
+            return;
+          }
+        }
+        console.log(`[SMS Dispatch Heartbeat] ${confirmedAttendees} attendee(s) confirmed — proceeding with not_attended filter`);
+      }
+    }
+
+    // Get recipients based on audience
+    const recipients = await getRecipientsForMessage(db, msg);
+    if (recipients.length === 0) {
+      // ZERO-RECIPIENT RETRY for attended/not_attended audiences
+      if (msg.audience === "attended" || msg.audience === "not_attended") {
+        const elapsed = Date.now() - scheduledTime;
+        const MAX_RETRY_WINDOW = 60 * 60 * 1000;
+        if (elapsed < MAX_RETRY_WINDOW) {
+          console.log(`[SMS Dispatch Heartbeat] Message #${msg.id}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+          await db.update(scheduledSmsMessages).set({ status: "pending" }).where(eq(scheduledSmsMessages.id, msg.id));
+          return;
+        } else {
+          await db.update(scheduledSmsMessages).set({
+            status: "failed", sentCount: 0, failedCount: 0, sentAt: new Date(),
+            error: `Zero recipients for "${msg.audience}" after ${Math.round(elapsed / 60000)}min retry window.`,
+          }).where(eq(scheduledSmsMessages.id, msg.id));
+          return;
+        }
+      }
+      await db.update(scheduledSmsMessages).set({
+        status: "sent", sentCount: 0, failedCount: 0, sentAt: new Date(),
+      }).where(eq(scheduledSmsMessages.id, msg.id));
+      return;
+    }
+
+    // Create campaign record for tracking
+    const audienceLabel = msg.audience === "attended" ? "Attended" : msg.audience === "not_attended" ? "No-Shows" : "Everyone";
+    const [campaignResult] = await db.insert(webinarSmsCampaigns).values({
+      name: `[Sequence] ${msg.sequenceName}`,
+      messageBody: msg.messageBody,
+      filterCriteria: { audience: msg.audience, webinarId: msg.webinarId, source: "sequence", scheduledMessageId: msg.id, audienceLabel } as Record<string, unknown>,
+      totalRecipients: recipients.length,
+      sentCount: 0,
+      failedCount: 0,
+      status: "sending",
+    });
+    const campaignId = campaignResult.insertId;
+
+    console.log(`[SMS Dispatch Heartbeat] Message #${msg.id} "${msg.sequenceName}": Sending to ${recipients.length} recipients in parallel (campaign #${campaignId})`);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // PARALLEL SENDING: Batches of 50 concurrent API calls
+    // 800 recipients ÷ 50 per batch = 16 batches ≈ 30-60 seconds total
+    // ═══════════════════════════════════════════════════════════════════
+    const BATCH_SIZE = 50;
+    let sentCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+    let billingBlocked = false;
+
+    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+      const batch = recipients.slice(i, i + BATCH_SIZE);
+
+      const batchResults = await Promise.all(batch.map(async (recipient) => {
+        const personalizedMessage = renderMessage(msg.messageBody, {
+          name: recipient.name.split(" ")[0],
+          fullname: recipient.name,
+          email: recipient.email || "",
+        });
+        const result = await sendSms(normalizePhone(recipient.phone), personalizedMessage);
+        return { recipient, result };
+      }));
+
+      for (const { recipient, result } of batchResults) {
+        if (result.success) {
+          sentCount++;
+        } else {
+          // Check for billing block — stop immediately if account is blocked
+          if (result.error && (result.error.includes("BLOCKED_BY_PAYMENT") || result.error.includes("billing"))) {
+            billingBlocked = true;
+          }
+          // Distinguish skips from real failures
+          const isSkip = result.error && (
+            result.error.includes("International number skipped") ||
+            result.error.includes("Invalid phone number") ||
+            result.error.includes("too short") ||
+            result.error.includes("unsubscribe") ||
+            result.error.includes("opt") ||
+            result.error.includes("Contact marked as invalid")
+          );
+          if (isSkip) skippedCount++;
+          else failedCount++;
+        }
+
+        // Track delivery
+        try {
+          await db.insert(webinarSmsDeliveries).values({
+            campaignId,
+            registrantId: recipient.id,
+            phone: recipient.phone,
+            deliveryStatus: result.success ? "sent" : "failed",
+            externalMessageId: result.success ? (result.smsId || null) : null,
+            error: result.success ? null : (result.error || "Unknown error"),
+          });
+        } catch (e: any) {
+          // Non-critical — don't kill the batch
+        }
+      }
+
+      // If billing is blocked, stop sending and alert owner
+      if (billingBlocked) {
+        console.error(`[SMS Dispatch Heartbeat] BILLING BLOCKED — stopping sends for message #${msg.id}`);
+        notifyOwner({
+          title: `🚨 SimpleTexting BILLING BLOCKED`,
+          content: `Your SimpleTexting account is blocked by payment. SMS sends have stopped. Fix billing at simpletexting.com immediately.\n\nMessage "${msg.sequenceName}" partially sent: ${sentCount} delivered before block.`,
+        }).catch(() => {});
+        break;
+      }
+
+      // Update counts every batch
+      try {
+        await db.update(webinarSmsCampaigns).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
+        await db.update(scheduledSmsMessages).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(scheduledSmsMessages.id, msg.id));
+      } catch (e: any) { /* non-critical */ }
+    }
+
+    // Final status update
+    const isTotalFailure = sentCount === 0 && failedCount > 0;
+    const finalStatus = billingBlocked ? "failed" : (isTotalFailure ? "failed" : "sent");
+    const finalError = billingBlocked ? "SimpleTexting account blocked by payment" : (isTotalFailure ? "All sends failed" : null);
+
+    await db.update(webinarSmsCampaigns).set({
+      sentCount,
+      failedCount: failedCount + skippedCount,
+      status: finalStatus === "sent" ? "completed" : "failed",
+      completedAt: new Date(),
+    }).where(eq(webinarSmsCampaigns.id, campaignId));
+
+    await db.update(scheduledSmsMessages).set({
+      status: finalStatus,
+      sentCount,
+      failedCount: failedCount + skippedCount,
+      sentAt: new Date(),
+      error: finalError,
+    }).where(eq(scheduledSmsMessages.id, msg.id));
+
+    console.log(`[SMS Dispatch Heartbeat] Message #${msg.id} "${msg.sequenceName}" DONE: ${sentCount} sent, ${failedCount} failed, ${skippedCount} skipped (campaign #${campaignId})`);
+
+    // Alert on success
+    if (sentCount > 0 && !billingBlocked) {
+      notifyOwner({
+        title: `✅ SMS Sent: ${msg.sequenceName}`,
+        content: `Delivered to ${sentCount} recipients in parallel.${failedCount > 0 ? ` (${failedCount} failed, ${skippedCount} skipped)` : ''}`,
+      }).catch(() => {});
+    }
+
+    // Alert on high failure rate
+    const realAttempts = sentCount + failedCount;
+    if (realAttempts > 0 && failedCount / realAttempts > 0.3 && failedCount > 5) {
+      notifyOwner({
+        title: `⚠️ High Failure Rate: ${msg.sequenceName}`,
+        content: `${failedCount}/${realAttempts} failed (${Math.round(failedCount / realAttempts * 100)}%).`,
+      }).catch(() => {});
+    }
+  } catch (err: any) {
+    console.error(`[SMS Dispatch Heartbeat] Error on message #${msg.id}:`, err.message);
+    await db.update(scheduledSmsMessages).set({
+      status: "failed", error: err.message?.slice(0, 500), sentAt: new Date(),
+    }).where(eq(scheduledSmsMessages.id, msg.id));
+    notifyOwner({
+      title: `🚨 SMS Failed: ${msg.sequenceName}`,
+      content: `Error: ${err.message}`,
+    }).catch(() => {});
   }
 }
 

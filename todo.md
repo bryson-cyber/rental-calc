@@ -13398,3 +13398,12 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Flush incremental counts every 5 sends (was 25) to survive crashes
 - [x] Fix recovery logic to check actual delivery records before declaring failure (prevents false-failure on crash)
 - [x] Verify all 8 pending messages for Jul 12 webinar are correctly configured and will fire
+
+## Parallel SMS Sending Fix (Jul 12)
+- [x] Rewrite heartbeat dispatcher to send all due messages CONCURRENTLY (no blocking)
+- [x] Replace sequential send loop with parallel batches of 50 concurrent API calls
+- [x] Port attendance sync logic from setInterval path to heartbeat path for no-show messages
+- [x] Add SimpleTexting billing block detection with immediate owner notification
+- [x] Update setInterval path to also use parallel batches of 50
+- [x] Add campaign tracking and delivery logging to heartbeat path
+- [x] Add duplicate send guard (check existing campaigns before creating new one)
