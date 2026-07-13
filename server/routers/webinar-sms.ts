@@ -3106,10 +3106,54 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
     .input(z.object({
       webinarId: z.string(),
       reminderType: z.enum(["24h", "1h", "starting"]),
+      /** Deliberately resend a reminder type that already went out. */
+      force: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // ═══ ONCE-PER-TYPE GUARD ═══
+      // Each event-description update makes Google email EVERY attendee, so a
+      // re-click (or two admins clicking) used to re-blast the whole list.
+      // A marker row in email_send_log (unique per webinar + type) makes the
+      // first send win and every repeat a no-op unless force is passed.
+      const reminderMarkerType = `calendar_reminder_${input.reminderType}`;
+      if (!input.force) {
+        const [already] = await db.select({ cnt: count() })
+          .from(emailSendLog)
+          .where(and(
+            eq(emailSendLog.webinarId, input.webinarId),
+            eq(emailSendLog.emailType, reminderMarkerType),
+            eq(emailSendLog.registrantId, 0),
+          ));
+        if (already && already.cnt > 0) {
+          return {
+            updated: 0,
+            failed: 0,
+            errors: [],
+            message: `The ${input.reminderType} reminder already went out for this webinar — skipping so attendees don't get duplicate emails. Pass force to resend on purpose.`,
+          };
+        }
+        const markerClaim = await db.insert(emailSendLog).values({
+          webinarId: input.webinarId,
+          registrantId: 0,
+          recipientEmail: "__calendar_reminder__",
+          recipientName: null,
+          channel: "calendar_update",
+          emailType: reminderMarkerType,
+          status: "sent",
+          errorMessage: null,
+        }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
+        if (((markerClaim as any)[0]?.affectedRows ?? 0) !== 1) {
+          return {
+            updated: 0,
+            failed: 0,
+            errors: [],
+            message: `The ${input.reminderType} reminder is already being sent by another process — skipping duplicate.`,
+          };
+        }
+      }
 
       // Get webinar details for join URL
       const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
@@ -3596,6 +3640,12 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
  * Called after inserting new registrants in both manual import and cron import.
  * Runs in the background (fire-and-forget) so it doesn't block the import.
  */
+// Re-entrancy guard: a full invite pass takes ~1.5s per registrant, so a big
+// import can run for many minutes while the 3-minute cron keeps launching new
+// passes over the same not-yet-marked registrants. Overlapping passes were
+// creating DUPLICATE calendar events for the same person.
+let calendarAutoSendRunning = false;
+
 async function autoSendCalendarInvites(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   webinarId: string,
@@ -3603,6 +3653,24 @@ async function autoSendCalendarInvites(
   overrideApiKey?: string
 ): Promise<{ sent: number; failed: number }> {
   if (newRegistrantEmails.length === 0) return { sent: 0, failed: 0 };
+  if (calendarAutoSendRunning) {
+    console.log(`[Calendar Auto] Skipped: another invite pass is already running`);
+    return { sent: 0, failed: 0 };
+  }
+  calendarAutoSendRunning = true;
+  try {
+    return await autoSendCalendarInvitesInner(db, webinarId, newRegistrantEmails, overrideApiKey);
+  } finally {
+    calendarAutoSendRunning = false;
+  }
+}
+
+async function autoSendCalendarInvitesInner(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  webinarId: string,
+  newRegistrantEmails: Array<{ id: number; email: string; name: string }>,
+  overrideApiKey?: string
+): Promise<{ sent: number; failed: number }> {
 
   // Calendar auto-send is always on — every registrant gets an invite
   const settingRows = await db.select().from(webinarSmsSettings);
@@ -3666,6 +3734,19 @@ async function autoSendCalendarInvites(
   for (let i = 0; i < newRegistrantEmails.length; i++) {
     const registrant = newRegistrantEmails[i];
     try {
+      // ═══ ATOMIC CLAIM ═══
+      // Flip calendarInviteSent 0→1 BEFORE sending. Only the pass whose UPDATE
+      // changes the row owns this registrant's invite; a concurrent pass (other
+      // instance, or a pass started before the guard existed) skips it. On a
+      // failed send the flag is reset below so the invite stays retryable.
+      const inviteClaim = await db.update(webinarRegistrants)
+        .set({ calendarInviteSent: 1, calendarInviteAt: new Date() })
+        .where(and(
+          eq(webinarRegistrants.id, registrant.id),
+          eq(webinarRegistrants.calendarInviteSent, 0),
+        ));
+      if (((inviteClaim as any)[0]?.affectedRows ?? 0) === 0) continue;
+
       // Rate-limited delay: 1500ms base (~40/min, under Google's 60/min limit)
       if (i > 0) {
         const cooldownMs = consecutiveRateLimits > 0
