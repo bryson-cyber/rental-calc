@@ -1,0 +1,1 @@
+ALTER TABLE `scheduled_sms_messages` ADD `claimedAt` timestamp;

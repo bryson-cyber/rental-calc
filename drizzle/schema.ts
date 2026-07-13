@@ -2467,6 +2467,8 @@ export const scheduledSmsMessages = mysqlTable("scheduled_sms_messages", {
   sentAt: timestamp("sentAt"),
   /** Error message if sending failed */
   error: text("error"),
+  /** When a dispatcher claimed this message for sending (used by watchdog to detect crashed blasts) */
+  claimedAt: timestamp("claimedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [

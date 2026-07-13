@@ -5627,53 +5627,59 @@ export async function startEmailDispatcher() {
             ).catch(() => {});
           }
 
-          // Send emails
+          // Send emails — PARALLEL batches of 10 concurrent SMTP sends
           let sent = 0;
           let failed = 0;
           const errors: string[] = [];
+          const EMAIL_BATCH_SIZE = 10;
 
-          for (const recipient of emailRecipients) {
-            const emailContent = buildWebinarEmail(emailType, {
-              firstName: recipient.name?.split(" ")[0] || "",
-              webinarLink: utmJoinUrl || joinUrl,
-              replayUrl: replayUrl || undefined,
-              callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-              webinarDay: webinarDay || undefined,
-              webinarDate: webinarDate || undefined,
-              webinarTime: webinarTime || undefined,
-            });
+          for (let i = 0; i < emailRecipients.length; i += EMAIL_BATCH_SIZE) {
+            const batch = emailRecipients.slice(i, i + EMAIL_BATCH_SIZE);
 
-            if (!emailContent) continue;
+            const batchResults = await Promise.all(batch.map(async (recipient) => {
+              const emailContent = buildWebinarEmail(emailType, {
+                firstName: recipient.name?.split(" ")[0] || "",
+                webinarLink: utmJoinUrl || joinUrl,
+                replayUrl: replayUrl || undefined,
+                callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+                webinarDay: webinarDay || undefined,
+                webinarDate: webinarDate || undefined,
+                webinarTime: webinarTime || undefined,
+              });
 
-            const result = await sendWebinarEmail({
-              to: recipient.email!,
-              subject: emailContent.subject,
-              html: emailContent.html,
-            });
+              if (!emailContent) return { recipient, result: { success: false, error: "No email content" } as any };
 
-            // Update the pending row to sent/failed
-            await db.update(emailSendLog)
-              .set({
-                status: result.success ? "sent" : "failed",
-                errorMessage: result.error?.slice(0, 1000) || null,
-                messageId: result.messageId || null,
-              })
-              .where(and(
-                eq(emailSendLog.webinarId, msg.webinarId),
-                eq(emailSendLog.registrantId, recipient.id),
-                eq(emailSendLog.emailType, logEmailType),
-                eq(emailSendLog.status, "pending"),
-              ));
+              const result = await sendWebinarEmail({
+                to: recipient.email!,
+                subject: emailContent.subject,
+                html: emailContent.html,
+              });
 
-            if (result.success) {
-              sent++;
-            } else {
-              failed++;
-              errors.push(`${recipient.email}: ${result.error}`);
+              return { recipient, result };
+            }));
+
+            // Update logs for each result
+            for (const { recipient, result } of batchResults) {
+              await db.update(emailSendLog)
+                .set({
+                  status: result.success ? "sent" : "failed",
+                  errorMessage: result.error?.slice(0, 1000) || null,
+                  messageId: result.messageId || null,
+                })
+                .where(and(
+                  eq(emailSendLog.webinarId, msg.webinarId),
+                  eq(emailSendLog.registrantId, recipient.id),
+                  eq(emailSendLog.emailType, logEmailType),
+                  eq(emailSendLog.status, "pending"),
+                ));
+
+              if (result.success) {
+                sent++;
+              } else {
+                failed++;
+                errors.push(`${recipient.email}: ${result.error}`);
+              }
             }
-
-            // Small delay to avoid rate limiting
-            await new Promise(r => setTimeout(r, 100));
           }
 
           console.log(`[Email Dispatcher] ${emailType}: ${sent} sent, ${failed} failed (${emailRecipients.length} total)`);
@@ -5865,42 +5871,57 @@ export async function runScheduledEmailDispatch(): Promise<{ processed: number; 
         let sent = 0;
         let failed = 0;
 
-        for (const recipient of emailRecipients) {
-          const emailContent = buildWebinarEmail(emailType, {
-            firstName: recipient.name?.split(" ")[0] || "",
-            webinarLink: utmJoinUrl || joinUrl,
-            replayUrl: replayUrl || undefined,
-            callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-            webinarDay: webinarDay || undefined,
-            webinarDate: webinarDate || undefined,
-            webinarTime: webinarTime || undefined,
-          });
+        // ═══════════════════════════════════════════════════════════════════
+        // PARALLEL SENDING: Batches of 10 concurrent SMTP sends
+        // SMTP is slower than REST API, so smaller concurrency to avoid
+        // overwhelming HubSpot SMTP relay. 1000 recipients ÷ 10 = 100 batches
+        // At ~2s per send, 10 concurrent = ~200 seconds total (vs 2000s sequential)
+        // ═══════════════════════════════════════════════════════════════════
+        const EMAIL_BATCH_SIZE = 10;
 
-          if (!emailContent) continue;
+        for (let i = 0; i < emailRecipients.length; i += EMAIL_BATCH_SIZE) {
+          const batch = emailRecipients.slice(i, i + EMAIL_BATCH_SIZE);
 
-          const result = await sendWebinarEmail({
-            to: recipient.email!,
-            subject: emailContent.subject,
-            html: emailContent.html,
-          });
+          const batchResults = await Promise.all(batch.map(async (recipient) => {
+            const emailContent = buildWebinarEmail(emailType, {
+              firstName: recipient.name?.split(" ")[0] || "",
+              webinarLink: utmJoinUrl || joinUrl,
+              replayUrl: replayUrl || undefined,
+              callLink: "https://masterclass.coachinayah.com/turnkey-v2",
+              webinarDay: webinarDay || undefined,
+              webinarDate: webinarDate || undefined,
+              webinarTime: webinarTime || undefined,
+            });
 
-          await db.update(emailSendLog)
-            .set({
-              status: result.success ? "sent" : "failed",
-              errorMessage: result.error?.slice(0, 1000) || null,
-              messageId: result.messageId || null,
-            })
-            .where(and(
-              eq(emailSendLog.webinarId, msg.webinarId),
-              eq(emailSendLog.registrantId, recipient.id),
-              eq(emailSendLog.emailType, logEmailType),
-              eq(emailSendLog.status, "pending"),
-            ));
+            if (!emailContent) return { recipient, result: { success: false, error: "No email content" } as any };
 
-          if (result.success) sent++;
-          else failed++;
+            const result = await sendWebinarEmail({
+              to: recipient.email!,
+              subject: emailContent.subject,
+              html: emailContent.html,
+            });
 
-          await new Promise(r => setTimeout(r, 100));
+            return { recipient, result };
+          }));
+
+          // Update logs for each result
+          for (const { recipient, result } of batchResults) {
+            await db.update(emailSendLog)
+              .set({
+                status: result.success ? "sent" : "failed",
+                errorMessage: result.error?.slice(0, 1000) || null,
+                messageId: result.messageId || null,
+              })
+              .where(and(
+                eq(emailSendLog.webinarId, msg.webinarId),
+                eq(emailSendLog.registrantId, recipient.id),
+                eq(emailSendLog.emailType, logEmailType),
+                eq(emailSendLog.status, "pending"),
+              ));
+
+            if (result.success) sent++;
+            else failed++;
+          }
         }
 
         console.log(`[Email Dispatch Heartbeat] ${emailType}: ${sent} sent, ${failed} failed`);

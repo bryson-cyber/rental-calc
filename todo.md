@@ -13407,3 +13407,14 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Update setInterval path to also use parallel batches of 50
 - [x] Add campaign tracking and delivery logging to heartbeat path
 - [x] Add duplicate send guard (check existing campaigns before creating new one)
+
+## Exact-Time Dispatcher Rewrite (Jul 12)
+- [x] Add claimedAt column to scheduled_sms_messages schema
+- [ ] Implement look-ahead scheduler with setTimeout arming (replaces polling)
+- [ ] Implement atomic per-message claim (replaces global mutex)
+- [ ] Implement 50-worker sliding-window blast with concurrent flusher
+- [ ] Implement watchdog for crashed blasts (10min timeout on claimedAt)
+- [ ] Add AbortSignal.timeout(10s) to sendSms fetch
+- [ ] Collapse FORCE_CRON path onto same core
+- [ ] Delete old mutex, sequential loop, batch-of-50 loop
+- [x] Apply same exact-time pattern to email dispatcher (parallel batches of 10 for SMTP)
