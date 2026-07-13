@@ -146,6 +146,7 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
         const deleteRes = await fetch(`https://api-app2.simpletexting.com/v2/api/contacts/${normalizedPhone}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10_000),
         });
         console.log(`[WebinarSMS] Delete contact ${normalizedPhone}: status ${deleteRes.status}`);
 
@@ -158,6 +159,7 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
             "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify({ contactPhone: normalizedPhone }),
+          signal: AbortSignal.timeout(10_000),
         });
         const createText = await createRes.text();
         console.log(`[WebinarSMS] Re-create contact ${normalizedPhone}: status ${createRes.status}, body: ${createText.substring(0, 200)}`);
@@ -171,6 +173,7 @@ async function sendSms(phone: string, message: string): Promise<{ success: boole
             "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(10_000),
         });
         const retryText = await retryRes.text();
         console.log(`[WebinarSMS] Retry send to ${normalizedPhone}: status ${retryRes.status}, body: ${retryText.substring(0, 500)}`);
