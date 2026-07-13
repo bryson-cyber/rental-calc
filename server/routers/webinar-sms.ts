@@ -3571,17 +3571,58 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
     .input(z.object({
       emailType: z.string(),
       recipientEmail: z.string().email(),
+      /** Which webinar's real data to render; defaults to the selected webinar. */
+      webinarId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const { sendWebinarEmail, buildWebinarEmail } = await import("../hubspot-smtp");
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Resolve the webinar to render: explicit input, else the selected one.
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const settings: Record<string, string> = {};
+      for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+      const webinarId = input.webinarId || settings["selected_webinar_id"] || "";
+
+      // Pull the REAL join link + date/time from WebinarJam so the test is a
+      // faithful preview of what registrants receive (no hardcoded webinar).
+      let joinUrl = "";
+      let replayUrl = settings["replay_url"] || undefined;
+      let webinarDay: string | undefined;
+      let webinarDate: string | undefined;
+      let webinarTime: string | undefined;
+      if (webinarId) {
+        try {
+          const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, webinarId));
+          const details = await fetchWebinarJamDetails(webinarId, credRow?.apiKey || undefined);
+          joinUrl = details.direct_live_room_url || details.registration_url || "";
+          if (details.schedules?.length > 0) {
+            const schedDate = new Date(details.schedules[0].date + ":00");
+            webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+            webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+            const hours = schedDate.getHours();
+            const minutes = schedDate.getMinutes();
+            const ampm = hours >= 12 ? "PM" : "AM";
+            const h = hours % 12 || 12;
+            webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+          }
+        } catch (err: any) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Could not load webinar ${webinarId} details for the test: ${err.message}` });
+        }
+      }
+      if (!joinUrl) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `No join link available for webinar ${webinarId || "(none selected)"} — cannot send a faithful test email.` });
+      }
+
       const emailContent = buildWebinarEmail(input.emailType, {
         firstName: "Test",
-        webinarLink: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
-        replayUrl: "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+        webinarLink: joinUrl,
+        replayUrl,
         callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-        webinarDay: "Tuesday",
-        webinarDate: "July 8, 2026",
-        webinarTime: "7:00 PM ET",
+        webinarDay,
+        webinarDate,
+        webinarTime,
       });
       if (!emailContent) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown email type: ${input.emailType}` });
@@ -3594,7 +3635,7 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       if (!result.success) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `SMTP failed: ${result.error}` });
       }
-      return { success: true, messageId: result.messageId, subject: emailContent.subject };
+      return { success: true, messageId: result.messageId, subject: emailContent.subject, webinarId };
     }),
 
   /** Send calendar invites to all registrants who haven't received one yet */
