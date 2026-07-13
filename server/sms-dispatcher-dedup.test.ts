@@ -1,82 +1,55 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
+import * as path from "path";
 
 /**
- * Tests for SMS Dispatcher Duplicate Send Fix:
- * 1. Startup recovery is awaited (not fire-and-forget) before first dispatch
- * 2. processScheduledMessages has a mutex to prevent concurrent runs
- * 3. Mutex is released in all code paths (early return, catch, finally)
+ * Duplicate-send protection for the SMS Dispatcher V2 (the dispatcher that
+ * actually runs in production; the old V1 mutex-based dispatcher this file used
+ * to test was deleted in the V2 rewrite).
+ *
+ * V2 does NOT rely on an in-process mutex. Instead every message is claimed with
+ * a single atomic conditional UPDATE, so overlapping ticks/timers/instances
+ * cannot both send the same message. These structural checks pin that guarantee.
  */
-
-describe("SMS Dispatcher Duplicate Send Fix - Code Structure", () => {
+describe("SMS Dispatcher V2 — atomic claim prevents duplicate sends", () => {
   const source = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+    path.resolve(__dirname, "routers/sms-dispatcher-v2.ts"),
     "utf-8"
   );
 
-  it("should have smsDispatcherRunning mutex variable", () => {
-    expect(source).toContain("let smsDispatcherRunning = false;");
-    expect(source).toContain("// Mutex to prevent concurrent dispatch runs");
+  it("claims a message with a conditional UPDATE gated on status='pending'", () => {
+    const claimStart = source.indexOf("async function claimScheduledMessage(");
+    expect(claimStart).toBeGreaterThan(-1);
+    const claimBody = source.substring(claimStart, claimStart + 700);
+
+    // The claim flips the row to 'sending' only while it is still 'pending'.
+    expect(claimBody).toContain('status: "sending"');
+    expect(claimBody).toContain('eq(scheduledSmsMessages.status, "pending")');
   });
 
-  it("startup recovery should NOT be fire-and-forget (no async IIFE)", () => {
-    const funcStart = source.indexOf("export async function startSmsDispatcher()");
-    const funcEnd = source.indexOf("// ─── END STARTUP RECOVERY", funcStart);
-    const recoverySection = source.substring(funcStart, funcEnd);
-
-    // Should NOT have the old fire-and-forget pattern: (async () => { ... })()
-    expect(recoverySection).not.toContain("(async () =>");
-
-    // Should use try/catch directly (awaited)
-    expect(recoverySection).toContain("try {");
-    expect(recoverySection).toContain("RECOVERY: Resetting stuck message");
+  it("only the winner of the claim proceeds (affectedRows check)", () => {
+    const claimStart = source.indexOf("async function claimScheduledMessage(");
+    const claimBody = source.substring(claimStart, claimStart + 700);
+    // affectedRows === 0 means another process already claimed it -> bail out.
+    expect(claimBody).toMatch(/affectedRows.*(===|\?\?)\s*0|affectedRows\s*\?\?\s*0\)\s*===\s*0/);
+    expect(claimBody).toContain("return null");
   });
 
-  it("processScheduledMessages should check mutex at the start", () => {
-    const funcStart = source.indexOf("const processScheduledMessages = async () => {");
-    expect(funcStart).toBeGreaterThan(-1);
-
-    // Get first 500 chars of the function
-    const funcHead = source.substring(funcStart, funcStart + 800);
-
-    // Should check mutex
-    expect(funcHead).toContain("if (smsDispatcherRunning)");
-    expect(funcHead).toContain("Previous run still in progress");
-
-    // Should set mutex
-    expect(funcHead).toContain("smsDispatcherRunning = true");
+  it("blocks a second campaign for a message that already has one", () => {
+    // Even if two claims ever raced, a pre-send campaign lookup refuses to
+    // create a second campaign for the same scheduledMessageId.
+    expect(source).toContain("DUPLICATE BLOCKED");
+    expect(source).toContain("scheduledMessageId");
   });
 
-  it("mutex should be released on early return (no due messages)", () => {
-    const funcStart = source.indexOf("const processScheduledMessages = async () => {");
-    const funcEnd = source.indexOf("smsDispatcherInterval = setInterval", funcStart);
-    const funcBody = source.substring(funcStart, funcEnd);
-
-    // When dueMessages.length === 0, should release mutex before return
-    expect(funcBody).toContain("if (dueMessages.length === 0) {\n        smsDispatcherRunning = false;\n        return;\n      }");
-  });
-
-  it("mutex should be released in finally block", () => {
-    const funcStart = source.indexOf("const processScheduledMessages = async () => {");
-    const funcEnd = source.indexOf("smsDispatcherInterval = setInterval", funcStart);
-    const funcBody = source.substring(funcStart, funcEnd);
-
-    expect(funcBody).toContain("} finally {\n      smsDispatcherRunning = false;\n    }");
-  });
-
-  it("mutex should be released when db is unavailable", () => {
-    const funcStart = source.indexOf("const processScheduledMessages = async () => {");
-    const funcHead = source.substring(funcStart, funcStart + 600);
-
-    expect(funcHead).toContain("if (!db) {\n      smsDispatcherRunning = false;\n      return;\n    }");
-  });
-
-  it("startup recovery comment should explain WHY it must be awaited", () => {
-    const funcStart = source.indexOf("export async function startSmsDispatcher()");
-    const recoverySection = source.substring(funcStart, funcStart + 1500);
-
-    expect(recoverySection).toContain("MUST complete before the first processScheduledMessages()");
-    expect(recoverySection).toContain("race condition");
-    expect(recoverySection).toContain("duplicate sends");
+  it("watchdog only fails messages with no delivery progress (heartbeat)", () => {
+    // claimedAt is refreshed on every delivery flush, so the watchdog cutoff
+    // means 'no progress', not 'started long ago' — a live blast never trips it.
+    expect(source).toContain("SMS_STUCK_SENDING_MS");
+    const flushIdx = source.indexOf("await db.insert(webinarSmsDeliveries).values(chunk);");
+    expect(flushIdx).toBeGreaterThan(-1);
+    const flushBody = source.substring(flushIdx, flushIdx + 900);
+    // The scheduledSmsMessages update inside the flush must bump claimedAt.
+    expect(flushBody).toContain("claimedAt: new Date()");
   });
 });

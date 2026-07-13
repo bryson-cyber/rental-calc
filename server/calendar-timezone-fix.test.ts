@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Tests for Calendar Invite Timezone Fix:
@@ -17,7 +18,7 @@ import * as fs from "fs";
 
 describe("Calendar Invite Timezone Fix - google-calendar.ts", () => {
   const source = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/google-calendar.ts",
+    path.resolve(__dirname, "google-calendar.ts"),
     "utf-8"
   );
 
@@ -61,7 +62,7 @@ describe("Calendar Invite Timezone Fix - google-calendar.ts", () => {
 
 describe("Calendar Invite Timezone Fix - webinar-sms.ts", () => {
   const source = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+    path.resolve(__dirname, "routers/webinar-sms.ts"),
     "utf-8"
   );
 
@@ -83,8 +84,10 @@ describe("Calendar Invite Timezone Fix - webinar-sms.ts", () => {
   });
 
   it("should keep scheduleDate as string type for startTime", () => {
-    // Should have patterns like: const startTime = scheduleDate;
-    const stringPattern = /const startTime = scheduleDate;/g;
+    // Each invite path assigns startTime directly from the raw scheduleDate
+    // string (via let or const) — never parsed through new Date(). Matches the
+    // single/bulk/auto-send paths.
+    const stringPattern = /startTime = scheduleDate;/g;
     const matches = source.match(stringPattern);
     expect(matches).not.toBeNull();
     expect(matches!.length).toBeGreaterThanOrEqual(3);

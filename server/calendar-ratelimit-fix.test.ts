@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Tests for Calendar Invite Rate Limiting Fix:
@@ -12,7 +13,7 @@ import * as fs from "fs";
 
 describe("Calendar Rate Limit Fix - Code Structure", () => {
   const calendarSource = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/google-calendar.ts",
+    path.resolve(__dirname, "google-calendar.ts"),
     "utf-8"
   );
 
@@ -89,7 +90,7 @@ describe("Calendar Rate Limit Fix - Code Structure", () => {
 
 describe("Gmail Bulk Send Rate Limit Fix", () => {
   const gmailSource = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/gmail-reminders.ts",
+    path.resolve(__dirname, "gmail-reminders.ts"),
     "utf-8"
   );
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as path from "path";
 
 /**
  * Tests for WebinarJam import fixes:
@@ -15,7 +16,7 @@ describe("WebinarJam Import Fix - Code Structure", () => {
     // Read the source to verify the fix is in place
     const fs = await import("fs");
     const source = fs.readFileSync(
-      "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+      path.resolve(__dirname, "routers/webinar-sms.ts"),
       "utf-8"
     );
 
@@ -37,7 +38,7 @@ describe("WebinarJam Import Fix - Code Structure", () => {
   it("cron runImport should re-read settings from DB each run", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
-      "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+      path.resolve(__dirname, "routers/webinar-sms.ts"),
       "utf-8"
     );
 
@@ -66,7 +67,7 @@ describe("WebinarJam Import Fix - Code Structure", () => {
   it("runWebinarImport should have schedule_id fallback logic", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
-      "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+      path.resolve(__dirname, "routers/webinar-sms.ts"),
       "utf-8"
     );
 
@@ -95,7 +96,7 @@ describe("WebinarJam Import Fix - Code Structure", () => {
   it("fetchWebinarJamRegistrants should handle paginated response correctly", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
-      "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+      path.resolve(__dirname, "routers/webinar-sms.ts"),
       "utf-8"
     );
 
@@ -119,7 +120,7 @@ describe("WebinarJam Import Fix - Code Structure", () => {
   it("import should handle phone normalization for deduplication", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
-      "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+      path.resolve(__dirname, "routers/webinar-sms.ts"),
       "utf-8"
     );
 

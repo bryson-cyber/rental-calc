@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Tests for Calendar Auto-Send Fix:
@@ -11,7 +12,7 @@ import * as fs from "fs";
 
 describe("Calendar Auto-Send Fix - Code Structure", () => {
   const source = fs.readFileSync(
-    "/home/ubuntu/rental-calculator/server/routers/webinar-sms.ts",
+    path.resolve(__dirname, "routers/webinar-sms.ts"),
     "utf-8"
   );
 
