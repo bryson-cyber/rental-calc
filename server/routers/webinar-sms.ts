@@ -4613,6 +4613,57 @@ export async function startEmailDispatcher() {
   emailDispatcherInterval = setInterval(processScheduledEmails, 30_000);
 }
 
+/**
+ * Pull live attendance from WebinarJam and update the `attended` flag on every
+ * matching registrant. Used to gate audience-filtered ("attended" /
+ * "not_attended") sends so a no-show reminder never hits someone who watched
+ * live, and vice-versa. Mirrors the SMS dispatcher's inline sync so both
+ * channels decide from the same freshly-synced data.
+ */
+async function syncWebinarAttendanceForEmail(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  webinarId: string,
+  overrideApiKey?: string,
+): Promise<{ success: boolean; error?: string; updated: number }> {
+  try {
+    let allRegistrants: any[] = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore && page <= 100) {
+      const result = await fetchWebinarJamRegistrants(webinarId, undefined, page, overrideApiKey);
+      allRegistrants = allRegistrants.concat(result.registrants);
+      hasMore = result.hasMore;
+      page++;
+    }
+
+    const attendanceMap = new Map<string, number>();
+    for (const r of allRegistrants) {
+      const rawPhone = r.phone_number || r.phone || "";
+      const fullPhone = (r.phone_country_code || "") + rawPhone;
+      const phone = normalizePhone(fullPhone);
+      if (phone.length >= 7) {
+        const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
+        attendanceMap.set(phone, attendedLive ? 1 : 0);
+      }
+    }
+
+    const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
+      .from(webinarRegistrants).where(eq(webinarRegistrants.webinarId, webinarId));
+
+    let updated = 0;
+    for (const row of existing) {
+      const attended = attendanceMap.get(normalizePhone(row.phone));
+      if (attended !== undefined) {
+        await db.update(webinarRegistrants).set({ attended }).where(eq(webinarRegistrants.id, row.id));
+        updated++;
+      }
+    }
+    return { success: true, updated };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Unknown sync error", updated: 0 };
+  }
+}
+
 // Email types whose templates hinge on the live join link. If WebinarJam can't
 // give us the link, the blast is deferred to the next tick (inside the 1-hour
 // send window) rather than sent with a broken or wrong-webinar link.
@@ -4713,6 +4764,48 @@ async function dispatchDueEmailBlasts(
       if (EMAIL_TYPES_NEEDING_JOIN_LINK.has(emailType) && !joinUrl) {
         console.error(`${logTag} ${emailType}: WebinarJam details unavailable — deferring to next tick rather than sending without a join link`);
         continue;
+      }
+
+      // ═══ ATTENDANCE SYNC — gate audience-filtered emails on fresh data ═══
+      // "attended"/"not_attended" emails must never fire from stale flags: a
+      // no-show email hitting someone who watched live (or vice-versa) is worse
+      // than a short delay. Sync from WebinarJam first; if the sync fails, or a
+      // no-show blast still sees zero confirmed attendees, defer within the
+      // 1-hour window rather than emailing the wrong audience.
+      if (msg.audience === "attended" || msg.audience === "not_attended") {
+        const [credRow2] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+        const syncApiKey = credRow2?.apiKey || undefined;
+        const sync = await syncWebinarAttendanceForEmail(db, msg.webinarId, syncApiKey);
+
+        const elapsed = Date.now() - scheduledTime;
+        const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+
+        if (!sync.success) {
+          if (elapsed < MAX_RETRY_WINDOW) {
+            console.error(`${logTag} ${emailType}: attendance sync failed (${sync.error}) — deferring (${Math.round(elapsed / 60000)}min / 60min)`);
+            continue;
+          }
+          console.error(`${logTag} ${emailType}: attendance sync still failing after 60min — skipping to avoid emailing the wrong audience`);
+          notifyOwner({
+            title: `🚨 Email Blocked: ${msg.sequenceName}`,
+            content: `Attendance sync failed for over an hour; "${msg.audience}" emails were NOT sent to avoid reaching the wrong people. Error: ${sync.error}`,
+          }).catch(() => {});
+          await db.insert(emailSendLog).values({
+            webinarId: msg.webinarId, registrantId: 0, recipientEmail: "__attendance_sync_failed__",
+            recipientName: null, channel: "hubspot_smtp", emailType: logEmailType,
+            status: "failed", errorMessage: `Attendance sync failed: ${sync.error}`,
+          }).catch(() => {});
+          continue;
+        }
+
+        if (msg.audience === "not_attended") {
+          const [attendedCount] = await db.select({ cnt: count() }).from(webinarRegistrants)
+            .where(and(eq(webinarRegistrants.webinarId, msg.webinarId), eq(webinarRegistrants.attended, 1)));
+          if (Number(attendedCount?.cnt ?? 0) === 0 && elapsed < MAX_RETRY_WINDOW) {
+            console.log(`${logTag} ${emailType}: 0 confirmed attendees yet — deferring no-show emails (${Math.round(elapsed / 60000)}min / 60min)`);
+            continue;
+          }
+        }
       }
 
       const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";

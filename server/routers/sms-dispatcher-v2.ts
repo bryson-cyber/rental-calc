@@ -5,7 +5,7 @@
  * - Look-ahead scheduler: arms setTimeout for messages due within 90s
  * - Atomic per-message claim: UPDATE WHERE status='pending' AND claimedAt IS NULL
  * - 50-worker sliding window: concurrent sends with incremental flushing
- * - Watchdog: detects crashed blasts (claimedAt > 10min) and marks failed
+ * - Watchdog: detects crashed blasts (no delivery progress for 10min) and marks failed
  * - Both FORCE_CRON and heartbeat paths use the same core
  */
 
@@ -24,6 +24,8 @@ import { notifyOwner } from "../_core/notification";
 const armedSmsTimers = new Map<number, NodeJS.Timeout>();
 const SMS_LOOKAHEAD_MS = 90_000;
 const SMS_SEND_CONCURRENCY = 50;
+// Max time a "sending" message may go without any delivery-flush progress
+// before the watchdog treats it as a crashed process (see failStuckMessages).
 const SMS_STUCK_SENDING_MS = 10 * 60 * 1000;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -70,6 +72,10 @@ export function initDispatcherV2(deps: {
 async function failStuckMessages(db: NonNullable<Awaited<ReturnType<typeof getDb>>>): Promise<void> {
   const cutoff = new Date(Date.now() - SMS_STUCK_SENDING_MS);
 
+  // claimedAt is refreshed on every delivery flush (see deliveryFlusher), so
+  // "claimedAt older than 10 min while still sending" means NO delivery progress
+  // for 10 min — a crashed/restarted process, not merely a long-running blast.
+  // A live blast of any size keeps bumping claimedAt and never trips this.
   const stuck = await db
     .select()
     .from(scheduledSmsMessages)
@@ -88,7 +94,7 @@ async function failStuckMessages(db: NonNullable<Awaited<ReturnType<typeof getDb
       .update(scheduledSmsMessages)
       .set({
         status: "failed",
-        error: "Send did not complete within 10 minutes — process likely restarted mid-blast (watchdog)",
+        error: "No delivery progress for 10 minutes — process likely restarted mid-blast (watchdog)",
         sentAt: new Date(),
       })
       .where(and(eq(scheduledSmsMessages.id, msg.id), eq(scheduledSmsMessages.status, "sending")));
@@ -446,7 +452,10 @@ async function dispatchSingleMessage(db: NonNullable<Awaited<ReturnType<typeof g
         try {
           await db.insert(webinarSmsDeliveries).values(chunk);
           await db.update(webinarSmsCampaigns).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(webinarSmsCampaigns.id, campaignId));
-          await db.update(scheduledSmsMessages).set({ sentCount, failedCount: failedCount + skippedCount }).where(eq(scheduledSmsMessages.id, msg.id));
+          // Bump claimedAt as a liveness heartbeat: it now marks "last delivery
+          // progress", not "claim time", so the watchdog can tell a legitimately
+          // long blast (which keeps flushing) from a crashed one (which stops).
+          await db.update(scheduledSmsMessages).set({ sentCount, failedCount: failedCount + skippedCount, claimedAt: new Date() }).where(eq(scheduledSmsMessages.id, msg.id));
         } catch (err: any) {
           console.error(`[SMS Dispatch] Delivery flush failed (campaign ${campaignId}):`, err.message);
         }
