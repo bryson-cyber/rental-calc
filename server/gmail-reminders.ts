@@ -282,9 +282,12 @@ export async function checkGmailHealth(): Promise<{
   }
 
   try {
-    const gmail = getGmailClient();
-    // Try getting the user's profile to verify auth works
-    await gmail.users.getProfile({ userId: "me" });
+    // Verify auth by fetching an access token for the gmail.send scope.
+    // Do NOT call users.getProfile here: it requires a READ scope that this
+    // service account intentionally does not have, so it reports
+    // "insufficient authentication scopes" even when sending works fine.
+    const auth = getGmailAuth();
+    await auth.authorize();
 
     return {
       configured: true,

@@ -558,7 +558,9 @@ export const regulationTrackerRouter = router({
         
         if (smsResult.success) {
           // Update the report with SMS sent info
-          await db.execute(`UPDATE shareable_regulation_reports SET smsSentTo = '${input.phoneNumber}', smsSentAt = NOW() WHERE id = ${report.id}`);
+          await db.update(shareableRegulationReports)
+            .set({ smsSentTo: input.phoneNumber, smsSentAt: new Date() })
+            .where(eq(shareableRegulationReports.id, report.id));
         }
         
         return smsResult;
@@ -642,10 +644,14 @@ export const regulationTrackerRouter = router({
         
         // Update the report with notification status
         if (notificationResults.sms?.success && input.userPhone) {
-          await db.execute(`UPDATE shareable_regulation_reports SET smsSentTo = '${input.userPhone}', smsSentAt = NOW() WHERE id = ${result.insertId}`);
+          await db.update(shareableRegulationReports)
+            .set({ smsSentTo: input.userPhone, smsSentAt: new Date() })
+            .where(eq(shareableRegulationReports.id, Number(result.insertId)));
         }
         if (notificationResults.email?.success && input.userEmail) {
-          await db.execute(`UPDATE shareable_regulation_reports SET emailSentTo = '${input.userEmail}', emailSentAt = NOW() WHERE id = ${result.insertId}`);
+          await db.update(shareableRegulationReports)
+            .set({ emailSentTo: input.userEmail, emailSentAt: new Date() })
+            .where(eq(shareableRegulationReports.id, Number(result.insertId)));
         }
         
         console.log(`[AutoNotify] Created report ${shareCode} for ${input.city}, ${input.state}. SMS: ${notificationResults.sms?.success || false}, Email: ${notificationResults.email?.success || false}`);
@@ -693,7 +699,9 @@ export const regulationTrackerRouter = router({
         
         if (emailResult.success) {
           // Update the report with email sent info
-          await db.execute(`UPDATE shareable_regulation_reports SET emailSentTo = '${input.email}', emailSentAt = NOW() WHERE id = ${report.id}`);
+          await db.update(shareableRegulationReports)
+            .set({ emailSentTo: input.email, emailSentAt: new Date() })
+            .where(eq(shareableRegulationReports.id, report.id));
         }
         
         return emailResult;

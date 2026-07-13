@@ -2643,6 +2643,8 @@ export const emailSendLog = mysqlTable("email_send_log", {
   index("email_log_channel_idx").on(table.channel),
   index("email_log_status_idx").on(table.status),
   index("email_log_sent_at_idx").on(table.sentAt),
+  // Atomic send claim: a dispatcher owns a recipient's send iff its INSERT wins this index.
+  uniqueIndex("email_log_claim_uq").on(table.webinarId, table.registrantId, table.emailType),
 ]);
 
 export type EmailSendLog = typeof emailSendLog.$inferSelect;

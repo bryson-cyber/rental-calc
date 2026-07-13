@@ -546,10 +546,11 @@ export const webinarSmsRouter = router({
       // 5. Check Google Calendar health
       try {
         const calHealth = await checkCalendarHealth();
+        const calOk = calHealth.configured && calHealth.authenticated;
         checks.push({
           name: "Google Calendar",
-          status: calHealth.healthy ? "ok" : "error",
-          detail: calHealth.healthy ? `Connected (${calHealth.upcomingEvents} upcoming events)` : `Error: ${calHealth.error}`,
+          status: calOk ? "ok" : "error",
+          detail: calOk ? `Connected (impersonating ${calHealth.impersonateEmail})` : `Error: ${calHealth.error || "not configured"}`,
         });
       } catch (e: any) {
         checks.push({ name: "Google Calendar", status: "error", detail: e.message });
@@ -558,10 +559,11 @@ export const webinarSmsRouter = router({
       // 6. Check Gmail health
       try {
         const gmailHealth = await checkGmailHealth();
+        const gmailOk = gmailHealth.configured && gmailHealth.authorized;
         checks.push({
           name: "Gmail",
-          status: gmailHealth.healthy ? "ok" : "error",
-          detail: gmailHealth.healthy ? "Connected and ready" : `Error: ${gmailHealth.error}`,
+          status: gmailOk ? "ok" : "error",
+          detail: gmailOk ? "Connected and ready" : `Error: ${gmailHealth.error || "not configured"}`,
         });
       } catch (e: any) {
         checks.push({ name: "Gmail", status: "error", detail: e.message });
@@ -762,9 +764,30 @@ export const webinarSmsRouter = router({
                 manualWebinarTime = `${hh}:${mins.toString().padStart(2, "0")} ${ap} ET`;
               }
             } catch (_) {}
+            if (!manualJoinUrl) {
+              // No join URL available right now — let the import cron send it
+              // later with the correct link instead of guessing a wrong one.
+              console.log(`[Confirmation Email] Instant send deferred for ${input.email}: no join URL yet`);
+              return;
+            }
+
+            // ═══ ATOMIC CLAIM (unique index email_log_claim_uq) ═══
+            // Insert-first so the import cron can never double-send this registrant.
+            const claimRes = await db.insert(emailSendLog).values({
+              webinarId: selectedWebinarId || "unknown",
+              registrantId: Number(result.insertId),
+              recipientEmail: input.email!,
+              recipientName: input.name,
+              channel: "hubspot_smtp",
+              emailType: "confirmation",
+              status: "pending",
+              errorMessage: null,
+            }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
+            if (((claimRes as any)[0]?.affectedRows ?? 0) !== 1) return;
+
             const emailContent = buildWebinarEmail("confirmation", {
               firstName,
-              webinarLink: manualJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+              webinarLink: manualJoinUrl,
               callLink: "https://masterclass.coachinayah.com/turnkey-v2",
               webinarDay: manualWebinarDay || undefined,
               webinarDate: manualWebinarDate || undefined,
@@ -781,17 +804,17 @@ export const webinarSmsRouter = router({
               } else {
                 console.log(`[Confirmation Email] Instant send to ${input.email} failed: ${result2.error}`);
               }
-              // Log to email_send_log
-              await db.insert(emailSendLog).values({
-                webinarId: selectedWebinarId || "unknown",
-                registrantId: Number(result.insertId),
-                recipientEmail: input.email!,
-                recipientName: input.name,
-                channel: "hubspot_smtp",
-                emailType: "confirmation",
-                status: result2.success ? "sent" : "failed",
-                errorMessage: result2.error?.slice(0, 1000) || null,
-              }).catch(() => {});
+              await db.update(emailSendLog)
+                .set({
+                  status: result2.success ? "sent" : "failed",
+                  errorMessage: result2.error?.slice(0, 1000) || null,
+                })
+                .where(and(
+                  eq(emailSendLog.webinarId, selectedWebinarId || "unknown"),
+                  eq(emailSendLog.registrantId, Number(result.insertId)),
+                  eq(emailSendLog.emailType, "confirmation"),
+                  eq(emailSendLog.status, "pending"),
+                )).catch(() => {});
             }
           } catch (err: any) {
             console.error(`[Confirmation Email] Instant send error:`, err.message);
@@ -3724,7 +3747,31 @@ async function autoSendCalendarInvites(
 
 // ─── Shared import logic (used by manual trigger and cron) ──────────────────
 
+// Re-entrancy guard: the import cycle sends confirmation SMS/emails, so two
+// overlapping runs (heartbeat + interval cron + manual button) must never
+// process the same pending registrants at once.
+let webinarImportRunning = false;
+
 async function runWebinarImport(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  webinarId: string,
+  webinarName: string,
+  scheduleId?: number,
+  overrideApiKey?: string
+): Promise<{ success: boolean; imported: number; skipped: number; total: number }> {
+  if (webinarImportRunning) {
+    console.log(`[WebinarImport] Skipped: another import cycle is already running`);
+    return { success: true, imported: 0, skipped: 0, total: 0 };
+  }
+  webinarImportRunning = true;
+  try {
+    return await runWebinarImportInner(db, webinarId, webinarName, scheduleId, overrideApiKey);
+  } finally {
+    webinarImportRunning = false;
+  }
+}
+
+async function runWebinarImportInner(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   webinarId: string,
   webinarName: string,
@@ -3874,16 +3921,10 @@ async function runWebinarImport(
         phoneMap.get(normPhone)!.push(reg);
       }
 
-      // ═══ OPTIMISTIC LOCK: Mark ALL pending rows as sent IMMEDIATELY ═══
-      // This prevents the next cron cycle (3min later) from picking up the same rows
-      // and sending duplicate SMS. If the send fails, we'll unmark non-permanent failures.
-      const allPendingIds = pendingSmsRegistrants.map(r => r.id);
-      for (let i = 0; i < allPendingIds.length; i += 500) {
-        const batch = allPendingIds.slice(i, i + 500);
-        await db.update(webinarRegistrants)
-          .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
-          .where(sql`${webinarRegistrants.id} IN (${sql.raw(batch.join(','))})`);
-      }
+      // Claims now happen per-phone inside the send loop below (conditional
+      // UPDATE ... WHERE confirmationSmsSent = 0). A batch pre-mark here was
+      // not atomic against a concurrent import cycle: both processes could
+      // SELECT the same pending rows before either marked them.
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
       let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
@@ -3900,11 +3941,31 @@ async function runWebinarImport(
       let confirmFailed = 0;
 
       for (const [, registrants] of phoneMap) {
-        // Use the first registrant's name for personalization
+        // Deterministic owner row: the lowest id in the phone group.
+        registrants.sort((a: any, b: any) => a.id - b.id);
         const registrant = registrants[0];
         const allIds = registrants.map((r: any) => r.id);
         const firstName = (registrant.name || "there").split(" ")[0];
         const personalizedMessage = confirmationTemplate.replace(/%FIRST_NAME%/g, firstName);
+
+        // ═══ ATOMIC CLAIM ═══
+        // Only the process whose UPDATE flips the owner row 0→1 sends to this
+        // phone; concurrent cycles (heartbeat + cron, or two instances) lose
+        // the claim and skip. Exactly-once without a cross-process mutex.
+        const claim = await db.update(webinarRegistrants)
+          .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+          .where(and(
+            eq(webinarRegistrants.id, registrant.id),
+            eq(webinarRegistrants.confirmationSmsSent, 0),
+          ));
+        if (((claim as any)[0]?.affectedRows ?? 0) === 0) continue;
+
+        // Mark sibling duplicate rows for the same phone so they never re-queue.
+        if (allIds.length > 1) {
+          await db.update(webinarRegistrants)
+            .set({ confirmationSmsSent: 1, confirmationSmsAt: new Date() })
+            .where(sql`${webinarRegistrants.id} IN (${sql.raw(allIds.join(','))}) AND ${webinarRegistrants.confirmationSmsSent} = 0`);
+        }
 
         try {
           const result = await sendSms(registrant.phone, personalizedMessage);
@@ -4006,28 +4067,19 @@ async function runWebinarImport(
 
     const needsEmail = pendingEmailRegistrants.filter(r => !alreadySentEmails.has(r.id));
     if (needsEmail.length > 0) {
-      console.log(`[Confirmation Email] Sending to ${needsEmail.length} registrant(s) for webinar ${webinarId}`);
+      console.log(`[Confirmation Email] ${needsEmail.length} registrant(s) need a confirmation email for webinar ${webinarId}`);
 
-      // ═══ OPTIMISTIC LOCK: Insert all as 'pending' IMMEDIATELY to prevent race conditions ═══
-      // This ensures the next cron cycle sees these registrants as "already handled"
-      // and won't try to send them again while we're still processing.
-      for (let i = 0; i < needsEmail.length; i += 500) {
-        const batch = needsEmail.slice(i, i + 500);
-        await db.insert(emailSendLog).values(
-          batch.map(reg => ({
-            webinarId,
-            registrantId: reg.id,
-            recipientEmail: reg.email!,
-            recipientName: reg.name,
-            channel: "hubspot_smtp" as const,
-            emailType: "confirmation" as const,
-            status: "pending" as const,
-            errorMessage: null,
-          }))
-        ).catch(() => {});
-      }
+      // Release claims stranded by a crashed process (pending > 15 min) so
+      // those registrants become claimable again instead of being lost.
+      await db.delete(emailSendLog).where(and(
+        eq(emailSendLog.webinarId, webinarId),
+        eq(emailSendLog.emailType, "confirmation"),
+        eq(emailSendLog.status, "pending"),
+        sql`${emailSendLog.sentAt} < ${new Date(Date.now() - 15 * 60 * 1000)}`,
+      )).catch(() => {});
 
-      // Fetch webinar schedule for dynamic date/time in emails
+      // Fetch webinar schedule BEFORE claiming/sending: if WebinarJam is
+      // unreachable we defer to the next cycle rather than email a wrong link.
       let cronEmailDay = "";
       let cronEmailDate = "";
       let cronEmailTime = "";
@@ -4046,14 +4098,34 @@ async function runWebinarImport(
           cronEmailTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
         }
       } catch (_) {}
+
+      if (!cronEmailJoinUrl) {
+        console.error(`[Confirmation Email] No join URL for webinar ${webinarId} — deferring ${needsEmail.length} email(s) to the next cycle instead of sending a wrong link`);
+      }
+      const confirmationSendList = cronEmailJoinUrl ? needsEmail : [];
       let emailSent = 0;
       let emailFailed = 0;
-      for (const reg of needsEmail) {
+      for (const reg of confirmationSendList) {
         try {
+          // ═══ ATOMIC CLAIM (unique index email_log_claim_uq) ═══
+          // The INSERT is the lock: whichever process inserts this registrant's
+          // 'confirmation' row owns the send; everyone else sees affectedRows 0.
+          const claimRes = await db.insert(emailSendLog).values({
+            webinarId,
+            registrantId: reg.id,
+            recipientEmail: reg.email!,
+            recipientName: reg.name,
+            channel: "hubspot_smtp" as const,
+            emailType: "confirmation" as const,
+            status: "pending" as const,
+            errorMessage: null,
+          }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
+          if (((claimRes as any)[0]?.affectedRows ?? 0) !== 1) continue;
+
           const firstName = (reg.name || "there").split(" ")[0];
           const emailContent = buildWebinarEmail("confirmation", {
             firstName,
-            webinarLink: cronEmailJoinUrl || "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380",
+            webinarLink: cronEmailJoinUrl,
             callLink: "https://masterclass.coachinayah.com/turnkey-v2",
             webinarDay: cronEmailDay || undefined,
             webinarDate: cronEmailDate || undefined,
@@ -4160,6 +4232,14 @@ export async function startWebinarImportCron() {
   if (cronInterval) {
     clearInterval(cronInterval);
     cronInterval = null;
+  }
+
+  // In heartbeat mode (production) imports run via POST /api/scheduled/webinar-import.
+  // Arming an in-process interval here too would create a second concurrent importer
+  // and duplicate confirmation sends — only FORCE_CRON instances may self-schedule.
+  if (process.env.FORCE_CRON !== "true") {
+    console.log("[WebinarSMS Cron] FORCE_CRON not set — in-process import cron disabled (heartbeat mode)");
+    return;
   }
 
   const db = await getDb();
@@ -4436,221 +4516,10 @@ export async function startEmailDispatcher() {
   const processScheduledEmails = async () => {
     if (emailDispatcherRunning) return;
     emailDispatcherRunning = true;
-
     try {
       const db = await getDb();
-      if (!db) { emailDispatcherRunning = false; return; }
-
-      // Find all scheduled messages whose time has passed (any status except cancelled)
-      // We check sent/sending/pending because the SMS might still be sending but the email should fire independently
-      const now = new Date();
-      const staleThresholdMs = 60 * 60 * 1000; // 1 hour — emails can fire up to 1h late
-
-      const dueMessages = await db.select().from(scheduledSmsMessages)
-        .where(
-          and(
-            lte(scheduledSmsMessages.scheduledAt, now),
-            // Don't process cancelled messages
-            ne(scheduledSmsMessages.status, "cancelled"),
-          )
-        )
-        .orderBy(scheduledSmsMessages.scheduledAt);
-
-      for (const msg of dueMessages) {
-        const emailType = EMAIL_SEQUENCE_MAP[msg.sequenceName];
-        if (!emailType) continue; // No email mapping for this sequence
-
-        // Skip if too old (> 1 hour past scheduled time)
-        const scheduledTime = new Date(msg.scheduledAt).getTime();
-        if (now.getTime() - scheduledTime > staleThresholdMs) continue;
-
-        const logEmailType = `post_${emailType}`;
-
-        // Check if emails were already sent for this type + webinar
-        // (optimistic lock: if ANY row exists with this emailType+webinarId, skip)
-        const [existingLog] = await db.select({ cnt: count() })
-          .from(emailSendLog)
-          .where(and(
-            eq(emailSendLog.webinarId, msg.webinarId),
-            eq(emailSendLog.emailType, logEmailType),
-          ));
-
-        if (existingLog && existingLog.cnt > 0) continue; // Already sent
-
-        // ─── SEND EMAILS ─────────────────────────────────────────────────
-        console.log(`[Email Dispatcher] Firing ${emailType} emails for webinar ${msg.webinarId} (sequence: "${msg.sequenceName}")`);
-
-        try {
-          // Get webinar details for email templates
-          const settingRows = await db.select().from(webinarSmsSettings);
-          const settings: Record<string, string> = {};
-          for (const row of settingRows) settings[row.settingKey] = row.settingValue;
-          const replayUrl = settings["replay_url"] || "";
-
-          let joinUrl = "";
-          let webinarDay = "";
-          let webinarDate = "";
-          let webinarTime = "";
-          try {
-            const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
-            const perWebinarApiKey = credRow?.apiKey || undefined;
-            const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
-            joinUrl = details.direct_live_room_url || details.registration_url || "";
-            if (details.schedules?.length > 0) {
-              const schedDate = new Date(details.schedules[0].date + ":00");
-              webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
-              webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-              const hours = schedDate.getHours();
-              const minutes = schedDate.getMinutes();
-              const ampm = hours >= 12 ? "PM" : "AM";
-              const h = hours % 12 || 12;
-              webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
-            }
-          } catch (_) {}
-
-          const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";
-
-          // Get email recipients (with audience filtering)
-          const emailConditions: any[] = [
-            eq(webinarRegistrants.webinarId, msg.webinarId),
-            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
-            sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
-          ];
-          if (msg.audience === "attended") {
-            emailConditions.push(eq(webinarRegistrants.attended, 1));
-          } else if (msg.audience === "not_attended") {
-            emailConditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
-          }
-
-          const emailRecipients = await db.select({
-            id: webinarRegistrants.id,
-            name: webinarRegistrants.name,
-            email: webinarRegistrants.email,
-          }).from(webinarRegistrants).where(and(...emailConditions));
-
-          if (emailRecipients.length === 0) {
-            // ZERO-RECIPIENT RETRY for attended/not_attended audiences
-            if (msg.audience === "attended" || msg.audience === "not_attended") {
-              const scheduledTime = new Date(msg.scheduledAt).getTime();
-              const elapsed = Date.now() - scheduledTime;
-              const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
-              if (elapsed < MAX_RETRY_WINDOW) {
-                console.log(`[Email Dispatcher] ${emailType}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
-                continue; // Skip this email type for now, will retry on next tick
-              }
-            }
-            console.log(`[Email Dispatcher] ${emailType}: 0 recipients, skipping`);
-            // Insert a marker row so we don't re-check this
-            await db.insert(emailSendLog).values({
-              webinarId: msg.webinarId,
-              registrantId: 0,
-              recipientEmail: "__no_recipients__",
-              recipientName: null,
-              channel: "hubspot_smtp",
-              emailType: logEmailType,
-              status: "sent",
-              errorMessage: "No recipients found",
-            }).catch(() => {});
-            continue;
-          }
-
-          // ═══ OPTIMISTIC LOCK: Insert pending rows IMMEDIATELY ═══
-          // This prevents the next tick from picking up the same batch
-          for (let i = 0; i < emailRecipients.length; i += 500) {
-            const batch = emailRecipients.slice(i, i + 500);
-            await db.insert(emailSendLog).values(
-              batch.map(r => ({
-                webinarId: msg.webinarId,
-                registrantId: r.id,
-                recipientEmail: r.email!,
-                recipientName: r.name,
-                channel: "hubspot_smtp" as const,
-                emailType: logEmailType,
-                status: "pending" as const,
-              }))
-            ).catch(() => {});
-          }
-
-          // Send emails — PARALLEL batches of 10 concurrent SMTP sends
-          let sent = 0;
-          let failed = 0;
-          const errors: string[] = [];
-          const EMAIL_BATCH_SIZE = 10;
-
-          for (let i = 0; i < emailRecipients.length; i += EMAIL_BATCH_SIZE) {
-            const batch = emailRecipients.slice(i, i + EMAIL_BATCH_SIZE);
-
-            const batchResults = await Promise.all(batch.map(async (recipient) => {
-              const emailContent = buildWebinarEmail(emailType, {
-                firstName: recipient.name?.split(" ")[0] || "",
-                webinarLink: utmJoinUrl || joinUrl,
-                replayUrl: replayUrl || undefined,
-                callLink: "https://masterclass.coachinayah.com/turnkey-v2",
-                webinarDay: webinarDay || undefined,
-                webinarDate: webinarDate || undefined,
-                webinarTime: webinarTime || undefined,
-              });
-
-              if (!emailContent) return { recipient, result: { success: false, error: "No email content" } as any };
-
-              const result = await sendWebinarEmail({
-                to: recipient.email!,
-                subject: emailContent.subject,
-                html: emailContent.html,
-              });
-
-              return { recipient, result };
-            }));
-
-            // Update logs for each result
-            for (const { recipient, result } of batchResults) {
-              await db.update(emailSendLog)
-                .set({
-                  status: result.success ? "sent" : "failed",
-                  errorMessage: result.error?.slice(0, 1000) || null,
-                  messageId: result.messageId || null,
-                })
-                .where(and(
-                  eq(emailSendLog.webinarId, msg.webinarId),
-                  eq(emailSendLog.registrantId, recipient.id),
-                  eq(emailSendLog.emailType, logEmailType),
-                  eq(emailSendLog.status, "pending"),
-                ));
-
-              if (result.success) {
-                sent++;
-              } else {
-                failed++;
-                errors.push(`${recipient.email}: ${result.error}`);
-              }
-            }
-          }
-
-          console.log(`[Email Dispatcher] ${emailType}: ${sent} sent, ${failed} failed (${emailRecipients.length} total)`);
-
-          // Alert on failures
-          if (failed > 0) {
-            notifyOwner({
-              title: `⚠️ Email Failures: ${msg.sequenceName}`,
-              content: `${failed}/${emailRecipients.length} HubSpot emails failed for "${emailType}".\nErrors: ${errors.slice(0, 3).join("; ")}`,
-            }).catch(() => {});
-          }
-
-          // Alert on success
-          if (sent > 0 && failed === 0) {
-            notifyOwner({
-              title: `✅ Emails Sent: ${msg.sequenceName}`,
-              content: `Successfully sent ${sent} ${emailType} emails via HubSpot SMTP.`,
-            }).catch(() => {});
-          }
-        } catch (err: any) {
-          console.error(`[Email Dispatcher] Error sending ${emailType} emails: ${err.message}`);
-          notifyOwner({
-            title: `🚨 Email Dispatch Failed: ${msg.sequenceName}`,
-            content: `Failed to send ${emailType} emails: ${err.message}`,
-          }).catch(() => {});
-        }
-      }
+      if (!db) return;
+      await dispatchDueEmailBlasts(db, "[Email Dispatcher]");
     } catch (err: any) {
       console.error("[Email Dispatcher] Critical error:", err.message);
     } finally {
@@ -4663,168 +4532,183 @@ export async function startEmailDispatcher() {
   emailDispatcherInterval = setInterval(processScheduledEmails, 30_000);
 }
 
+// Email types whose templates hinge on the live join link. If WebinarJam can't
+// give us the link, the blast is deferred to the next tick (inside the 1-hour
+// send window) rather than sent with a broken or wrong-webinar link.
+const EMAIL_TYPES_NEEDING_JOIN_LINK = new Set([
+  "confirmation", "2_days_before", "day_before", "morning_of",
+  "3h", "1h", "15min", "starting_now", "no_show",
+]);
+
+// Claims stuck 'pending' longer than this are treated as a crashed process and
+// released so the blast can resume.
+const EMAIL_PENDING_STALE_MS = 15 * 60 * 1000;
 
 /**
- * Exported function for Heartbeat HTTP cron handler.
- * Runs a single email dispatch cycle — finds due messages and sends emails.
- * This is the production email dispatch path when Heartbeat is active.
+ * Single shared implementation of scheduled email dispatch, used by BOTH the
+ * FORCE_CRON setInterval path and the heartbeat HTTP path. Concurrency safety
+ * comes from the DB, not from in-memory flags:
+ *   - each recipient's send is claimed via INSERT under the unique index
+ *     email_log_claim_uq (webinarId, registrantId, emailType) — whichever
+ *     process inserts the row owns that recipient, so overlapping dispatchers
+ *     (or two server instances) can never double-send;
+ *   - a registrantId=0 marker row records blast completion; until it exists,
+ *     later ticks keep looking for unclaimed/stranded recipients, which makes
+ *     a crash mid-blast resumable instead of silently dropping the remainder.
  */
-export async function runScheduledEmailDispatch(): Promise<{ processed: number; skipped: boolean }> {
-  // If the setInterval email dispatcher is already running (FORCE_CRON=true),
-  // let it handle dispatch to avoid double-sends
-  if (emailDispatcherInterval) {
-    console.log(`[Email Dispatch Heartbeat] setInterval dispatcher is active, delegating`);
-    return { processed: 0, skipped: true };
-  }
+async function dispatchDueEmailBlasts(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  logTag: string,
+): Promise<number> {
+  const now = new Date();
+  const staleThresholdMs = 60 * 60 * 1000; // 1 hour — emails can fire up to 1h late
 
-  if (emailDispatcherRunning) {
-    return { processed: 0, skipped: true };
-  }
-
-  emailDispatcherRunning = true;
-
-  try {
-    const db = await getDb();
-    if (!db) {
-      emailDispatcherRunning = false;
-      return { processed: 0, skipped: true };
-    }
-
-    const now = new Date();
-    const staleThresholdMs = 60 * 60 * 1000; // 1 hour
-
-    const dueMessages = await db.select().from(scheduledSmsMessages)
-      .where(
-        and(
-          lte(scheduledSmsMessages.scheduledAt, now),
-          ne(scheduledSmsMessages.status, "cancelled"),
-        )
+  const dueMessages = await db.select().from(scheduledSmsMessages)
+    .where(
+      and(
+        lte(scheduledSmsMessages.scheduledAt, now),
+        ne(scheduledSmsMessages.status, "cancelled"),
       )
-      .orderBy(scheduledSmsMessages.scheduledAt);
+    )
+    .orderBy(scheduledSmsMessages.scheduledAt);
 
-    let processed = 0;
+  let processed = 0;
 
-    for (const msg of dueMessages) {
-      const emailType = EMAIL_SEQUENCE_MAP[msg.sequenceName];
-      if (!emailType) continue;
+  for (const msg of dueMessages) {
+    const emailType = EMAIL_SEQUENCE_MAP[msg.sequenceName];
+    if (!emailType) continue;
 
-      const scheduledTime = new Date(msg.scheduledAt).getTime();
-      if (now.getTime() - scheduledTime > staleThresholdMs) continue;
+    const scheduledTime = new Date(msg.scheduledAt).getTime();
+    if (now.getTime() - scheduledTime > staleThresholdMs) continue;
 
-      const logEmailType = `post_${emailType}`;
+    const logEmailType = `post_${emailType}`;
 
-      // Check if already sent
-      const [existingLog] = await db.select({ cnt: count() })
-        .from(emailSendLog)
-        .where(and(
-          eq(emailSendLog.webinarId, msg.webinarId),
-          eq(emailSendLog.emailType, logEmailType),
-        ));
+    // Blast-completion marker (registrantId = 0). Absent → keep working.
+    const [marker] = await db.select({ cnt: count() })
+      .from(emailSendLog)
+      .where(and(
+        eq(emailSendLog.webinarId, msg.webinarId),
+        eq(emailSendLog.emailType, logEmailType),
+        eq(emailSendLog.registrantId, 0),
+      ));
+    if (marker && marker.cnt > 0) continue;
 
-      if (existingLog && existingLog.cnt > 0) continue;
+    try {
+      // Release claims stranded by a crashed process so those recipients are
+      // picked up again instead of being lost.
+      await db.delete(emailSendLog).where(and(
+        eq(emailSendLog.webinarId, msg.webinarId),
+        eq(emailSendLog.emailType, logEmailType),
+        eq(emailSendLog.status, "pending"),
+        sql`${emailSendLog.sentAt} < ${new Date(Date.now() - EMAIL_PENDING_STALE_MS)}`,
+      )).catch(() => {});
 
-      // Fire the email dispatch (same logic as the interval-based dispatcher)
-      console.log(`[Email Dispatch Heartbeat] Firing ${emailType} emails for webinar ${msg.webinarId}`);
+      const settingRows = await db.select().from(webinarSmsSettings);
+      const settings: Record<string, string> = {};
+      for (const row of settingRows) settings[row.settingKey] = row.settingValue;
+      const replayUrl = settings["replay_url"] || "";
 
+      let joinUrl = "";
+      let webinarDay = "";
+      let webinarDate = "";
+      let webinarTime = "";
       try {
-        const settingRows = await db.select().from(webinarSmsSettings);
-        const settings: Record<string, string> = {};
-        for (const row of settingRows) settings[row.settingKey] = row.settingValue;
-        const replayUrl = settings["replay_url"] || "";
+        const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
+        const perWebinarApiKey = credRow?.apiKey || undefined;
+        const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
+        joinUrl = details.direct_live_room_url || details.registration_url || "";
+        if (details.schedules?.length > 0) {
+          const schedDate = new Date(details.schedules[0].date + ":00");
+          webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
+          webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+          const hours = schedDate.getHours();
+          const minutes = schedDate.getMinutes();
+          const ampm = hours >= 12 ? "PM" : "AM";
+          const h = hours % 12 || 12;
+          webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
+        }
+      } catch (_) {}
 
-        let joinUrl = "";
-        let webinarDay = "";
-        let webinarDate = "";
-        let webinarTime = "";
+      if (EMAIL_TYPES_NEEDING_JOIN_LINK.has(emailType) && !joinUrl) {
+        console.error(`${logTag} ${emailType}: WebinarJam details unavailable — deferring to next tick rather than sending without a join link`);
+        continue;
+      }
+
+      const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";
+
+      // Get email recipients (with audience filtering)
+      const emailConditions: any[] = [
+        eq(webinarRegistrants.webinarId, msg.webinarId),
+        sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+        sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
+      ];
+      if (msg.audience === "attended") {
+        emailConditions.push(eq(webinarRegistrants.attended, 1));
+      } else if (msg.audience === "not_attended") {
+        emailConditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
+      }
+
+      const emailRecipients = await db.select({
+        id: webinarRegistrants.id,
+        name: webinarRegistrants.name,
+        email: webinarRegistrants.email,
+      }).from(webinarRegistrants).where(and(...emailConditions));
+
+      if (emailRecipients.length === 0) {
+        // ZERO-RECIPIENT RETRY for attended/not_attended audiences
+        if (msg.audience === "attended" || msg.audience === "not_attended") {
+          const elapsed = Date.now() - scheduledTime;
+          const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
+          if (elapsed < MAX_RETRY_WINDOW) {
+            console.log(`${logTag} ${emailType}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
+            continue;
+          }
+        }
+        console.log(`${logTag} ${emailType}: 0 recipients, skipping`);
+        // Marker row (registrantId=0) so we don't re-check this blast
+        await db.insert(emailSendLog).values({
+          webinarId: msg.webinarId,
+          registrantId: 0,
+          recipientEmail: "__no_recipients__",
+          recipientName: null,
+          channel: "hubspot_smtp",
+          emailType: logEmailType,
+          status: "sent",
+          errorMessage: "No recipients found",
+        }).catch(() => {});
+        continue;
+      }
+
+      // ═══ ATOMIC PER-RECIPIENT CLAIM (unique index email_log_claim_uq) ═══
+      // The INSERT is the lock: only recipients whose row this process created
+      // are ours to email. Everyone already claimed/sent is skipped for free.
+      const claimed: typeof emailRecipients = [];
+      for (const r of emailRecipients) {
         try {
-          const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, msg.webinarId));
-          const perWebinarApiKey = credRow?.apiKey || undefined;
-          const details = await fetchWebinarJamDetails(msg.webinarId, perWebinarApiKey);
-          joinUrl = details.direct_live_room_url || details.registration_url || "";
-          if (details.schedules?.length > 0) {
-            const schedDate = new Date(details.schedules[0].date + ":00");
-            webinarDay = schedDate.toLocaleDateString("en-US", { weekday: "long" });
-            webinarDate = schedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-            const hours = schedDate.getHours();
-            const minutes = schedDate.getMinutes();
-            const ampm = hours >= 12 ? "PM" : "AM";
-            const h = hours % 12 || 12;
-            webinarTime = `${h}:${minutes.toString().padStart(2, "0")} ${ampm} ET`;
-          }
-        } catch (_) {}
-
-        const utmJoinUrl = joinUrl ? `${joinUrl}${joinUrl.includes("?") ? "&" : "?"}utm_source=email&utm_medium=${emailType}&utm_campaign=webinar_${emailType}` : "";
-
-        const emailConditions: any[] = [
-          eq(webinarRegistrants.webinarId, msg.webinarId),
-          sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
-          sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`,
-        ];
-        if (msg.audience === "attended") {
-          emailConditions.push(eq(webinarRegistrants.attended, 1));
-        } else if (msg.audience === "not_attended") {
-          emailConditions.push(sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`);
-        }
-
-        const emailRecipients = await db.select({
-          id: webinarRegistrants.id,
-          name: webinarRegistrants.name,
-          email: webinarRegistrants.email,
-        }).from(webinarRegistrants).where(and(...emailConditions));
-
-        if (emailRecipients.length === 0) {
-          // ZERO-RECIPIENT RETRY for attended/not_attended audiences
-          if (msg.audience === "attended" || msg.audience === "not_attended") {
-            const scheduledTime = new Date(msg.scheduledAt).getTime();
-            const elapsed = Date.now() - scheduledTime;
-            const MAX_RETRY_WINDOW = 60 * 60 * 1000; // 1 hour
-            if (elapsed < MAX_RETRY_WINDOW) {
-              console.log(`[Email Dispatcher] ${logEmailType}: 0 recipients for "${msg.audience}" — retrying (${Math.round(elapsed / 60000)}min / 60min max)`);
-              continue;
-            }
-          }
-          await db.insert(emailSendLog).values({
+          const res = await db.insert(emailSendLog).values({
             webinarId: msg.webinarId,
-            registrantId: 0,
-            recipientEmail: "__no_recipients__",
-            recipientName: null,
-            channel: "hubspot_smtp",
+            registrantId: r.id,
+            recipientEmail: r.email!,
+            recipientName: r.name,
+            channel: "hubspot_smtp" as const,
             emailType: logEmailType,
-            status: "sent",
-            errorMessage: "No recipients found",
-          }).catch(() => {});
-          continue;
-        }
+            status: "pending" as const,
+          }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
+          if (((res as any)[0]?.affectedRows ?? 0) === 1) claimed.push(r);
+        } catch (_) { /* lost the claim */ }
+      }
 
-        // Optimistic lock
-        for (let i = 0; i < emailRecipients.length; i += 500) {
-          const batch = emailRecipients.slice(i, i + 500);
-          await db.insert(emailSendLog).values(
-            batch.map(r => ({
-              webinarId: msg.webinarId,
-              registrantId: r.id,
-              recipientEmail: r.email!,
-              recipientName: r.name,
-              channel: "hubspot_smtp" as const,
-              emailType: logEmailType,
-              status: "pending" as const,
-            }))
-          ).catch(() => {});
-        }
+      if (claimed.length > 0) {
+        console.log(`${logTag} Firing ${emailType} emails for webinar ${msg.webinarId} — ${claimed.length}/${emailRecipients.length} recipients claimed by this process`);
 
+        // Send emails — PARALLEL batches of 10 concurrent SMTP sends
         let sent = 0;
         let failed = 0;
-
-        // ═══════════════════════════════════════════════════════════════════
-        // PARALLEL SENDING: Batches of 10 concurrent SMTP sends
-        // SMTP is slower than REST API, so smaller concurrency to avoid
-        // overwhelming HubSpot SMTP relay. 1000 recipients ÷ 10 = 100 batches
-        // At ~2s per send, 10 concurrent = ~200 seconds total (vs 2000s sequential)
-        // ═══════════════════════════════════════════════════════════════════
+        const errors: string[] = [];
         const EMAIL_BATCH_SIZE = 10;
 
-        for (let i = 0; i < emailRecipients.length; i += EMAIL_BATCH_SIZE) {
-          const batch = emailRecipients.slice(i, i + EMAIL_BATCH_SIZE);
+        for (let i = 0; i < claimed.length; i += EMAIL_BATCH_SIZE) {
+          const batch = claimed.slice(i, i + EMAIL_BATCH_SIZE);
 
           const batchResults = await Promise.all(batch.map(async (recipient) => {
             const emailContent = buildWebinarEmail(emailType, {
@@ -4863,33 +4747,96 @@ export async function runScheduledEmailDispatch(): Promise<{ processed: number; 
                 eq(emailSendLog.status, "pending"),
               ));
 
-            if (result.success) sent++;
-            else failed++;
+            if (result.success) {
+              sent++;
+            } else {
+              failed++;
+              errors.push(`${recipient.email}: ${result.error}`);
+            }
           }
         }
 
-        console.log(`[Email Dispatch Heartbeat] ${emailType}: ${sent} sent, ${failed} failed`);
+        console.log(`${logTag} ${emailType}: ${sent} sent, ${failed} failed (${claimed.length} claimed)`);
         processed++;
 
+        // Alert on failures
         if (failed > 0) {
           notifyOwner({
             title: `⚠️ Email Failures: ${msg.sequenceName}`,
-            content: `${failed}/${emailRecipients.length} HubSpot emails failed for "${emailType}".`,
+            content: `${failed}/${claimed.length} HubSpot emails failed for "${emailType}".\nErrors: ${errors.slice(0, 3).join("; ")}`,
           }).catch(() => {});
         }
-      } catch (err: any) {
-        console.error(`[Email Dispatch Heartbeat] Error sending ${emailType}:`, err.message);
-        notifyOwner({
-          title: `🚨 Email Dispatch Failed: ${msg.sequenceName}`,
-          content: `Failed to send ${emailType} emails: ${err.message}`,
+
+        // Alert on success
+        if (sent > 0 && failed === 0) {
+          notifyOwner({
+            title: `✅ Emails Sent: ${msg.sequenceName}`,
+            content: `Successfully sent ${sent} ${emailType} emails via HubSpot SMTP.`,
+          }).catch(() => {});
+        }
+      }
+
+      // Mark the blast done once no in-flight claims remain (ours or another
+      // process's). Until then, later ticks keep checking for stragglers —
+      // this is what makes a crash mid-blast resumable.
+      const [pendingLeft] = await db.select({ cnt: count() })
+        .from(emailSendLog)
+        .where(and(
+          eq(emailSendLog.webinarId, msg.webinarId),
+          eq(emailSendLog.emailType, logEmailType),
+          eq(emailSendLog.status, "pending"),
+        ));
+      if ((pendingLeft?.cnt ?? 0) === 0) {
+        await db.insert(emailSendLog).values({
+          webinarId: msg.webinarId,
+          registrantId: 0,
+          recipientEmail: "__blast_done__",
+          recipientName: null,
+          channel: "hubspot_smtp",
+          emailType: logEmailType,
+          status: "sent",
+          errorMessage: null,
         }).catch(() => {});
       }
+    } catch (err: any) {
+      console.error(`${logTag} Error sending ${emailType} emails: ${err.message}`);
+      notifyOwner({
+        title: `🚨 Email Dispatch Failed: ${msg.sequenceName}`,
+        content: `Failed to send ${emailType} emails: ${err.message}`,
+      }).catch(() => {});
     }
+  }
 
-    emailDispatcherRunning = false;
+  return processed;
+}
+
+/**
+ * Exported function for Heartbeat HTTP cron handler.
+ * Runs a single email dispatch cycle — finds due messages and sends emails.
+ * This is the production email dispatch path when Heartbeat is active.
+ */
+export async function runScheduledEmailDispatch(): Promise<{ processed: number; skipped: boolean }> {
+  // If the setInterval email dispatcher is already running (FORCE_CRON=true),
+  // let it handle dispatch. Per-recipient DB claims make an overlap harmless,
+  // but there is no point scanning twice in one process.
+  if (emailDispatcherInterval) {
+    console.log(`[Email Dispatch Heartbeat] setInterval dispatcher is active, delegating`);
+    return { processed: 0, skipped: true };
+  }
+
+  if (emailDispatcherRunning) {
+    return { processed: 0, skipped: true };
+  }
+
+  emailDispatcherRunning = true;
+  try {
+    const db = await getDb();
+    if (!db) {
+      return { processed: 0, skipped: true };
+    }
+    const processed = await dispatchDueEmailBlasts(db, "[Email Dispatch Heartbeat]");
     return { processed, skipped: false };
-  } catch (err: any) {
+  } finally {
     emailDispatcherRunning = false;
-    throw err;
   }
 }
