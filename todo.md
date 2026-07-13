@@ -13410,11 +13410,11 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Exact-Time Dispatcher Rewrite (Jul 12)
 - [x] Add claimedAt column to scheduled_sms_messages schema
-- [ ] Implement look-ahead scheduler with setTimeout arming (replaces polling)
-- [ ] Implement atomic per-message claim (replaces global mutex)
-- [ ] Implement 50-worker sliding-window blast with concurrent flusher
-- [ ] Implement watchdog for crashed blasts (10min timeout on claimedAt)
-- [ ] Add AbortSignal.timeout(10s) to sendSms fetch
-- [ ] Collapse FORCE_CRON path onto same core
-- [ ] Delete old mutex, sequential loop, batch-of-50 loop
+- [x] Implement look-ahead scheduler with setTimeout arming (replaces polling)
+- [x] Implement atomic per-message claim (replaces global mutex)
+- [x] Implement 50-worker sliding-window blast with concurrent flusher
+- [x] Implement watchdog for crashed blasts (10min timeout on claimedAt)
+- [x] Add AbortSignal.timeout(10s) to sendSms fetch
+- [x] Collapse FORCE_CRON path onto same core
+- [x] Delete old mutex, sequential loop, batch-of-50 loop
 - [x] Apply same exact-time pattern to email dispatcher (parallel batches of 10 for SMTP)
