@@ -2057,7 +2057,7 @@ export const webinarSmsRouter = router({
       timing: z.object({
         twoDaysBefore: z.number().default(-2880),        // -2 days
         dayBefore: z.number().default(-1440),             // -1 day
-        morningOf: z.number().default(-720),              // -12 hours (morning of webinar day)
+        morningOf: z.number().default(-420),              // -7 hours (noon ET / 9am PT for a 7pm ET webinar — avoids the old 4am-Pacific send)
         threeHoursBefore: z.number().default(-180),       // -3 hours
         oneHourWarning: z.number().default(-60),          // -1 hour
         fifteenMinBefore: z.number().default(-15),         // -15 min
@@ -2080,7 +2080,7 @@ export const webinarSmsRouter = router({
       const t = {
         twoDaysBefore: input.timing?.twoDaysBefore ?? -2880,
         dayBefore: input.timing?.dayBefore ?? -1440,
-        morningOf: input.timing?.morningOf ?? -720,  // 12 hours before (morning of webinar day)
+        morningOf: input.timing?.morningOf ?? -420,  // 7 hours before (noon ET / 9am PT — day-of reminder that isn't 4am Pacific)
         threeHoursBefore: input.timing?.threeHoursBefore ?? -180, // 3 hours before
         oneHourWarning: input.timing?.oneHourWarning ?? -60,
         fifteenMinBefore: input.timing?.fifteenMinBefore ?? -15,
@@ -2115,7 +2115,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Morning Of",
           sequenceOrder: 3,
-          messageBody: `Morning %FIRST_NAME%, it's Inayah. Tonight we're live for your Airbnb Masterclass. If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist. Worth being there.`,
+          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live for your Airbnb Masterclass. If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist. Worth being there.`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },

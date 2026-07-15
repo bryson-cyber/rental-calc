@@ -224,7 +224,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
       return {
         subject: "Tonight: 90 minutes that could change your next 6 months",
         html: wrap(`
-          ${h2(`Good morning ${name},`)}
+          ${h2(`${name}, today's the day.`)}
           ${p(`Tonight at <strong>${time}</strong> is your Airbnb Masterclass.`)}
           ${p("Here's my promise:")}
           ${p("If you bring a notebook and focus for 90 minutes, you'll walk away knowing:")}
