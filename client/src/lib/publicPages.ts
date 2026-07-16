@@ -26,3 +26,18 @@ export function isPublicPage(pathname?: string): boolean {
   const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
   return PUBLIC_PATH_PREFIXES.some(prefix => path.startsWith(prefix));
 }
+
+/**
+ * Admin tooling pages: blocking overlays (onboarding modals etc.) must never
+ * render here — a full-screen overlay silently swallowing clicks locked up
+ * the Webinar Campaign Manager during a live webinar (Jul 15 2026).
+ */
+const ADMIN_PATH_PREFIXES = [
+  '/admin',
+  '/webinar-campaigns',
+];
+
+export function isAdminPage(pathname?: string): boolean {
+  const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+  return ADMIN_PATH_PREFIXES.some(prefix => path.startsWith(prefix));
+}

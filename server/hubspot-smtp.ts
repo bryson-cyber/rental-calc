@@ -53,6 +53,47 @@ export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ suc
   }
 }
 
+/**
+ * Convert admin-typed plain text (from the AI email composer) into minimal
+ * personal-style HTML: escaped, paragraphs on blank lines, bare URLs linked.
+ * Deliberately no branded wrapper — heavy layouts land in Gmail Promotions.
+ *
+ * URLs are detected in the RAW text (before escaping) so surrounding
+ * punctuation like <https://…> can't leak escaped entities into the href.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Split-capture: odd-indexed tokens are URLs. Excludes whitespace and the
+// delimiters commonly wrapped around pasted links.
+const URL_TOKEN = /(https?:\/\/[^\s<>"'）)\]]+)/g;
+
+export function plainTextToEmailHtml(text: string): string {
+  const linked = text
+    .split(URL_TOKEN)
+    .map((token, i) => {
+      if (i % 2 === 1) {
+        // Trim trailing punctuation that's almost never part of the URL
+        const url = token.replace(/[.,!?;:]+$/, "");
+        const trailing = token.slice(url.length);
+        return `<a href="${escapeHtml(url)}" style="color:#1a56db;">${escapeHtml(url)}</a>${escapeHtml(trailing)}`;
+      }
+      return escapeHtml(token);
+    })
+    .join("");
+  const paragraphs = linked
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#1e293b;">${p.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${paragraphs}</body></html>`;
+}
+
 /** Verify SMTP connection is working */
 export async function verifyHubSpotSmtp(): Promise<{ connected: boolean; error?: string }> {
   try {

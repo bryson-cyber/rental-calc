@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useReportMode, ReportMode } from '@/contexts/ReportModeContext';
 import { BarChart3, BookOpen, Check, Sparkles, TrendingUp, MessageCircle } from 'lucide-react';
-import { isPublicPage } from '@/lib/publicPages';
+import { isPublicPage, isAdminPage } from '@/lib/publicPages';
 
 /**
  * First-time onboarding modal for report mode selection.
@@ -16,11 +17,16 @@ import { isPublicPage } from '@/lib/publicPages';
  */
 export function ReportModeOnboarding() {
   const { needsOnboarding, completeOnboarding } = useReportMode();
+  // useLocation (not window.location) so SPA navigations re-evaluate this —
+  // otherwise the overlay can stay mounted over a page it should hide on.
+  const [location] = useLocation();
   const [selected, setSelected] = useState<ReportMode | null>(null);
   const [hoveredMode, setHoveredMode] = useState<ReportMode | null>(null);
 
-  // Don't show onboarding modal on shared/public report pages
-  if (!needsOnboarding || isPublicPage()) return null;
+  // Never on shared/public report pages, and never on admin tooling — the
+  // full-screen overlay silently swallows every click, which locked up the
+  // Webinar Campaign Manager during a live webinar.
+  if (!needsOnboarding || isPublicPage(location) || isAdminPage(location)) return null;
 
   const handleContinue = () => {
     if (selected) {

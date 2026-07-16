@@ -11,8 +11,9 @@
  * 6. API status indicators
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
+import { getWebinarPhase, parseWebinarScheduleDate } from "@shared/webinar-schedule";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
@@ -433,34 +434,67 @@ function WebinarHeader({
 // SECTION 2: Attendance Dashboard — Split View
 // ═══════════════════════════════════════════════════════════════════════════
 
-function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
-  // Determine if the webinar has already happened
-  // WebinarJam schedule dates are typically in format like "February 25, 2026 8:00 PM" or ISO
-  const webinarHasEnded = useMemo(() => {
-    if (!scheduleDate) return false; // If no date, we can't tell — assume not ended
-    try {
-      const scheduledTime = new Date(scheduleDate);
-      if (isNaN(scheduledTime.getTime())) return false;
-      // Add 2 hours buffer for webinar duration
-      const endTime = new Date(scheduledTime.getTime() + 2 * 60 * 60 * 1000);
-      return new Date() > endTime;
-    } catch {
-      return false;
-    }
-  }, [scheduleDate]);
+// Cross-component throttle: tab switches remount these components, and each
+// mount would otherwise kick off a fresh full WebinarJam sync. Module-scoped
+// so the Dashboard and Live tabs share one budget.
+let lastAttendanceSyncStartedAt = 0;
+const AUTO_SYNC_MIN_GAP_MS = 120_000;
+const AUTO_SYNC_INTERVAL_MS = 180_000;
 
-  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
-  const attended = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 1, pageSize: 100 });
-  const noShows = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 0, pageSize: 100 });
+/**
+ * Shared live-webinar plumbing: a ticking clock, the webinar phase (parsed
+ * from the Eastern wall-clock schedule string — correct in any browser
+ * timezone), and a background attendance auto-sync that runs every 3 minutes
+ * while the webinar is live. Background sync is silent; manual buttons pass
+ * their own per-call toasts.
+ */
+function useLiveWebinar(webinarId: string, scheduleDate: string | null) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const { phase, start } = getWebinarPhase(scheduleDate, now);
+
+  const utils = trpc.useUtils();
   const refreshAttendance = trpc.webinarSms.refreshAttendance.useMutation({
-    onSuccess: (data) => {
-      toast.success(data.message);
-      summary.refetch();
-      attended.refetch();
-      noShows.refetch();
+    onSuccess: () => {
+      utils.webinarSms.getAttendanceSummary.invalidate();
+      utils.webinarSms.listRegistrantsByAttendance.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => console.warn("[LiveWebinar] Background attendance sync failed:", err.message),
   });
+
+  const refreshMutate = refreshAttendance.mutate;
+  const refreshPendingRef = useRef(false);
+  refreshPendingRef.current = refreshAttendance.isPending;
+  useEffect(() => {
+    if (phase !== "live") return;
+    const tick = () => {
+      if (refreshPendingRef.current) return;
+      if (Date.now() - lastAttendanceSyncStartedAt < AUTO_SYNC_MIN_GAP_MS) return;
+      lastAttendanceSyncStartedAt = Date.now();
+      refreshMutate({ webinarId });
+    };
+    tick();
+    const interval = setInterval(tick, AUTO_SYNC_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [phase, webinarId, refreshMutate]);
+
+  return { now, phase, webinarStart: start, refreshAttendance };
+}
+
+function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
+  const { phase, refreshAttendance } = useLiveWebinar(webinarId, scheduleDate);
+  const webinarIsLive = phase === "live";
+  const webinarHasEnded = phase === "ended";
+
+  // While live, keep the view fresh without manual refreshes
+  const pollInterval = webinarIsLive ? 60_000 : false;
+  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId }, { refetchInterval: pollInterval });
+  const attended = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 1, pageSize: 100 }, { refetchInterval: pollInterval });
+  const noShows = trpc.webinarSms.listRegistrantsByAttendance.useQuery({ webinarId, attended: 0, pageSize: 100 }, { refetchInterval: pollInterval });
   const triggerImport = trpc.webinarSms.triggerManualImport.useMutation({
     onSuccess: (data) => {
       toast.success(`Imported ${data.imported} registrants (${data.skipped} skipped)`);
@@ -504,18 +538,18 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${webinarHasEnded ? 'bg-amber-50' : 'bg-slate-50'}`}>
-                {webinarHasEnded ? (
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${webinarHasEnded || webinarIsLive ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                {webinarHasEnded || webinarIsLive ? (
                   <UserX className="w-5 h-5 text-amber-600" />
                 ) : (
                   <Clock className="w-5 h-5 text-slate-400" />
                 )}
               </div>
               <div>
-                {webinarHasEnded ? (
+                {webinarHasEnded || webinarIsLive ? (
                   <>
                     <p className="text-2xl font-bold text-amber-700">{summary.data?.noShow ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">No-Shows</p>
+                    <p className="text-xs text-muted-foreground">{webinarIsLive ? "Not Joined Yet" : "No-Shows"}</p>
                   </>
                 ) : (
                   <>
@@ -569,12 +603,21 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refreshAttendance.mutate({ webinarId })}
+          onClick={() => refreshAttendance.mutate({ webinarId }, {
+            onSuccess: (data) => toast.success(data.message),
+            onError: (err) => toast.error(err.message),
+          })}
           disabled={refreshAttendance.isPending}
         >
           {refreshAttendance.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
           Refresh Attendance
         </Button>
+        {webinarIsLive && (
+          <span className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+            Live — attendance auto-refreshes every 3 minutes
+          </span>
+        )}
       </div>
 
       {/* Split view: Attended vs No-Shows */}
@@ -597,7 +640,11 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : attended.data?.registrants?.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No attendees yet. Click "Refresh Attendance" after your webinar ends.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  {webinarIsLive
+                    ? "No attendees detected yet — updating automatically while the webinar is live."
+                    : "No attendees yet. Attendance updates automatically during the webinar, or click \"Refresh Attendance\"."}
+                </p>
               ) : (
                 attended.data?.registrants?.map((r: any) => (
                   <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
@@ -633,27 +680,27 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {webinarHasEnded ? (
+                {webinarHasEnded || webinarIsLive ? (
                   <UserX className="w-5 h-5 text-amber-600" />
                 ) : (
                   <Clock className="w-5 h-5 text-slate-400" />
                 )}
-                <CardTitle className="text-base">No-Shows</CardTitle>
-                {webinarHasEnded && <Badge variant="secondary" className="ml-1">{noShows.data?.total ?? 0}</Badge>}
+                <CardTitle className="text-base">{webinarIsLive ? "Not Joined Yet" : "No-Shows"}</CardTitle>
+                {(webinarHasEnded || webinarIsLive) && <Badge variant="secondary" className="ml-1">{noShows.data?.total ?? 0}</Badge>}
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {!webinarHasEnded ? (
+            {!(webinarHasEnded || webinarIsLive) ? (
               <div className="text-center py-12">
                 <Clock className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">Webinar hasn't happened yet</p>
+                <p className="text-sm font-medium text-slate-500">Webinar hasn't started yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  No-shows will be available after the webinar ends and you click "Refresh Attendance".
+                  Once the webinar goes live, this list shows who hasn't joined and updates automatically.
                 </p>
                 {scheduleDate && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Scheduled: {scheduleDate}
+                    Scheduled: {scheduleDate} ET
                   </p>
                 )}
               </div>
@@ -664,7 +711,9 @@ function AttendanceDashboard({ webinarId, scheduleDate }: { webinarId: string; s
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : noShows.data?.registrants?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No no-shows recorded yet. Click "Refresh Attendance" to pull data.</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {webinarIsLive ? "Everyone who registered is in the room. 🎉" : "No no-shows recorded yet. Click \"Refresh Attendance\" to pull data."}
+                  </p>
                 ) : (
                   noShows.data?.registrants?.map((r: any) => (
                     <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-100 bg-amber-50/30">
@@ -2228,7 +2277,7 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
               <div>
                 <p className="text-sm font-medium">Multi-Channel Tracking</p>
                 <p className="text-xs text-muted-foreground">
-                  {scheduleDate ? `Webinar: ${new Date(scheduleDate).toLocaleString()}` : "No schedule date selected"}
+                  {scheduleDate ? `Webinar: ${(parseWebinarScheduleDate(scheduleDate) ?? new Date(scheduleDate)).toLocaleString()}` : "No schedule date selected"}
                   {" "}&mdash; Tracks Calendar + Gmail delivery alongside SMS
                 </p>
               </div>
@@ -2238,7 +2287,10 @@ function CalendarInvitePanel({ webinarId, scheduleDate }: { webinarId: string; s
                 onClick={() => {
                   enableAutoReminders.mutate({
                     webinarId,
-                    webinarStartTime: scheduleDate!,
+                    // Send a real UTC instant — the raw Eastern wall-clock
+                    // string would be parsed in the SERVER's local zone and
+                    // schedule reminders hours off.
+                    webinarStartTime: (parseWebinarScheduleDate(scheduleDate) ?? new Date(scheduleDate!)).toISOString(),
                     enabled: !reminderSchedule.data?.enabled,
                     webinarName: settings.data?.calendarEventName || undefined,
                     joinUrl: undefined,
@@ -3070,6 +3122,13 @@ function EmailNoShows({ webinarId }: { webinarId: string }) {
   const [step, setStep] = useState<"compose" | "review" | "sending" | "done">("compose");
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
 
+  // Show who this will reach BEFORE anything is sent
+  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
+  const noShowCount = summary.data?.noShow ?? null;
+  const audienceLabel = noShowCount === null
+    ? "Loading recipient count…"
+    : `Goes to ${noShowCount} no-shows (anyone opted out or without an email is skipped automatically)`;
+
   const compose = trpc.webinarSms.composeEmail.useMutation({
     onSuccess: (data) => {
       setSubject(data.subject);
@@ -3083,7 +3142,10 @@ function EmailNoShows({ webinarId }: { webinarId: string }) {
     onSuccess: (data) => {
       setSendResult({ sent: data.sent, failed: data.failed, total: data.total ?? 0 });
       setStep("done");
-      toast.success(`Sent ${data.sent} emails`);
+      const skipped = (data as { skipped?: number }).skipped ?? 0;
+      toast.success(skipped > 0
+        ? `Sent ${data.sent} emails (${skipped} already got this email earlier)`
+        : `Sent ${data.sent} emails`);
     },
     onError: (err) => {
       toast.error(err.message);
@@ -3115,6 +3177,12 @@ function EmailNoShows({ webinarId }: { webinarId: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {(step === "compose" || step === "review") && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-200/50">
+              <Users className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-800">{audienceLabel}</p>
+            </div>
+          )}
           {step === "compose" && (
             <>
               <div>
@@ -3150,9 +3218,9 @@ function EmailNoShows({ webinarId }: { webinarId: string }) {
                 <p className="text-xs text-muted-foreground mt-1">Variables: %FIRST_NAME%, %FULL_NAME%, %EMAIL%</p>
               </div>
               <div className="flex gap-3">
-                <Button onClick={handleSend} disabled={sendEmails.isPending}>
+                <Button onClick={handleSend} disabled={sendEmails.isPending || noShowCount === 0}>
                   <Send className="w-4 h-4 mr-2" />
-                  Send to All No-Shows
+                  Send to All No-Shows{noShowCount !== null ? ` (${noShowCount})` : ""}
                 </Button>
                 <Button variant="outline" onClick={() => setStep("compose")}>
                   Back to Compose
@@ -3341,29 +3409,26 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
     },
     onError: (err) => toast.error(err.message),
   });
-  const summary = trpc.webinarSms.getAttendanceSummary.useQuery({ webinarId });
+  // Shared live-webinar plumbing (Eastern-aware phase + background attendance
+  // sync) — identical logic to the Audience tab so the two never disagree.
+  const { now, phase, webinarStart } = useLiveWebinar(webinarId, scheduleDate);
+  // Nudge unlocks once the webinar is 10+ minutes in
+  const webinarIsLive = phase === "live" && webinarStart !== null
+    && now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000;
 
-  // Live-updating clock so webinarIsLive re-evaluates every 30 seconds
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Determine if webinar has been live for 10+ minutes
-  // scheduleDate may be "2026-03-01 19:00" (no timezone) — treat as UTC to be safe
-  const webinarStart = scheduleDate
-    ? new Date(scheduleDate.includes('T') || scheduleDate.includes('Z') ? scheduleDate : scheduleDate.replace(' ', 'T') + 'Z')
-    : null;
-  const webinarIsLive = webinarStart
-    ? now.getTime() >= webinarStart.getTime() + 10 * 60 * 1000 // At least 10 min in (no upper bound)
-    : false;
+  const summary = trpc.webinarSms.getAttendanceSummary.useQuery(
+    { webinarId },
+    { refetchInterval: phase === "live" ? 30_000 : false }
+  );
 
   const minutesIn = webinarStart
     ? Math.floor((now.getTime() - webinarStart.getTime()) / (60 * 1000))
     : 0;
 
   const noShowCount = (summary.data?.total ?? 0) - (summary.data?.attended ?? 0) - (summary.data?.optedOut ?? 0);
+  // The server rejects messages still containing this placeholder — block it
+  // client-side too so the live-moment send never fails on the first try.
+  const hasPlaceholder = nudgeMessage.includes("[WEBINAR_LINK]") || nudgeMessage.includes("[REPLAY_LINK]");
 
   return (
     <>
@@ -3386,9 +3451,11 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
                 <p className="text-xs text-muted-foreground">
                   {webinarIsLive
                     ? `${noShowCount} registrants haven't joined yet`
-                    : scheduleDate
-                      ? `Available once webinar is 10+ minutes in`
-                      : "Set a webinar schedule date first"}
+                    : phase === "ended"
+                      ? "Webinar has ended — use the Send tab to message no-shows"
+                      : scheduleDate
+                        ? `Available once the webinar is 10+ minutes in`
+                        : "Set a webinar schedule date first"}
                 </p>
               </div>
             </div>
@@ -3425,8 +3492,10 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
                 rows={4}
                 placeholder="Hey %FIRST_NAME%! We started without you..."
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use %FIRST_NAME% for personalization. Replace [WEBINAR_LINK] with your actual link.
+              <p className={`text-xs mt-1 ${hasPlaceholder ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+                {hasPlaceholder
+                  ? "Replace [WEBINAR_LINK] with your actual live-room link before sending."
+                  : "Use %FIRST_NAME% for personalization."}
               </p>
             </div>
           </div>
@@ -3434,7 +3503,7 @@ function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleD
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              disabled={!nudgeMessage.trim() || sendNudge.isPending}
+              disabled={!nudgeMessage.trim() || hasPlaceholder || sendNudge.isPending}
               onClick={() => sendNudge.mutate({ webinarId, message: nudgeMessage })}
             >
               {sendNudge.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}

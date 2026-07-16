@@ -40,7 +40,7 @@ import { TRPCError } from "@trpc/server";
 import { sendCalendarInvite, sendBulkCalendarInvites, checkCalendarHealth, sendCalendarReminderUpdates } from "../google-calendar";
 import { notifyOwner } from "../_core/notification";
 import { sendBulkReminderEmails, sendReminderEmail, checkGmailHealth, buildWebinarReminderEmail, buildPostWebinarEmail } from "../gmail-reminders";
-import { sendWebinarEmail, buildWebinarEmail, verifyHubSpotSmtp } from "../hubspot-smtp";
+import { sendWebinarEmail, buildWebinarEmail, verifyHubSpotSmtp, plainTextToEmailHtml } from "../hubspot-smtp";
 import {
   initDispatcherV2,
   runScheduledDispatchV2,
@@ -1768,53 +1768,19 @@ export const webinarSmsRouter = router({
       const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
       const perWebinarApiKey = credRow?.apiKey || undefined;
 
-      // Fetch all registrants from WebinarJam
-      let allRegistrants: any[] = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore && page <= 100) {
-        const result = await fetchWebinarJamRegistrants(input.webinarId, undefined, page, perWebinarApiKey);
-        allRegistrants = allRegistrants.concat(result.registrants);
-        hasMore = result.hasMore;
-        page++;
-      }
-
-      // Build phone -> attendance map
-      const attendanceMap = new Map<string, number>();
-      for (const r of allRegistrants) {
-        // API returns phone_number (not phone) and phone_country_code
-        const rawPhone = r.phone_number || r.phone || "";
-        const fullPhone = (r.phone_country_code || "") + rawPhone;
-        const phone = normalizePhone(fullPhone);
-        if (phone.length >= 7) {
-          // attended_live is a string "Yes"/"No" (not integer 1/0)
-          const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
-          attendanceMap.set(phone, attendedLive ? 1 : 0);
-        }
-      }
-
-      // Get existing registrants for this webinar
-      const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
-        .from(webinarRegistrants)
-        .where(eq(webinarRegistrants.webinarId, input.webinarId));
-
-      let updated = 0;
-      for (const row of existing) {
-        const normalizedPhone = normalizePhone(row.phone);
-        const attended = attendanceMap.get(normalizedPhone);
-        if (attended !== undefined) {
-          await db.update(webinarRegistrants)
-            .set({ attended })
-            .where(eq(webinarRegistrants.id, row.id));
-          updated++;
-        }
+      // Same sync the scheduled dispatcher and manual send paths use — one
+      // implementation of the matching rules (phone + email fallback,
+      // changed-rows-only writes).
+      const sync = await syncWebinarAttendanceForEmail(db, input.webinarId, perWebinarApiKey);
+      if (!sync.success) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Attendance refresh failed: ${sync.error}` });
       }
 
       return {
         success: true,
-        message: `Refreshed attendance for ${updated} of ${existing.length} registrants (${allRegistrants.length} found in WebinarJam)`,
-        updated,
-        total: existing.length,
+        message: `Attendance refreshed — ${sync.updated} of ${sync.total} registrants changed status`,
+        updated: sync.updated,
+        total: sync.total,
       };
     }),
 
@@ -2481,113 +2447,143 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
       body: z.string().min(1),
     }))
     .mutation(async ({ input }) => {
-      const hubspotKey = ENV.hubspotApiKey;
-      if (!hubspotKey) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "HubSpot API key not configured. Add it in Settings > Secrets." });
+      // Sends go through the same HubSpot SMTP relay as the scheduled reminder
+      // emails — the transactional single-send API needs a published template
+      // id, which we don't have, and its old fallback here silently counted
+      // contact-creations as "sent" emails.
+      if (!ENV.hubspotSmtpUser || !ENV.hubspotSmtpPass) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "HubSpot SMTP credentials not configured. Add them in Settings > Secrets." });
       }
 
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      // Get all no-shows with email addresses
+      // Fresh attendance first — a stale snapshot would email people who are
+      // in the room right now. Same stance as the scheduled email dispatcher.
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const sync = await syncWebinarAttendanceForEmail(db, input.webinarId, credRow?.apiKey || undefined);
+      if (!sync.success) {
+        // If attendance was synced at some point (any attendees on record),
+        // the stored data is usable — e.g. the day-after replay email when
+        // WebinarJam is down. Only hard-block when we have NO attendance data.
+        const [attendedRow] = await db.select({ cnt: count() }).from(webinarRegistrants)
+          .where(and(eq(webinarRegistrants.webinarId, input.webinarId), eq(webinarRegistrants.attended, 1)));
+        if (Number(attendedRow?.cnt ?? 0) === 0) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Could not refresh attendance from WebinarJam (${sync.error}) and no attendance data exists yet. Emails NOT sent — try again in a minute.`,
+          });
+        }
+        console.warn(`[EmailNoShows] Attendance sync failed (${sync.error}); proceeding with stored attendance data.`);
+      }
+
+      // Same audience filter as the scheduled no-show email blast
       const noShows = await db.select()
         .from(webinarRegistrants)
         .where(
           and(
             eq(webinarRegistrants.webinarId, input.webinarId),
-            eq(webinarRegistrants.attended, 0),
-            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`
+            sql`(${webinarRegistrants.attended} = 0 OR ${webinarRegistrants.attended} IS NULL)`,
+            sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+            sql`(${webinarRegistrants.optedOut} = 0 OR ${webinarRegistrants.optedOut} IS NULL)`
           )
         );
 
       if (noShows.length === 0) {
-        return { sent: 0, failed: 0, message: "No no-shows with email addresses found." };
+        return { sent: 0, failed: 0, total: 0, message: "No no-shows with email addresses found." };
       }
 
-      let sent = 0;
-      let failed = 0;
+      // The emailType is a hash of the email content, NOT a timestamp: if the
+      // request times out mid-blast and the admin retries the SAME email, the
+      // unique claim index (email_log_claim_uq) makes the retry skip everyone
+      // already handled instead of double-emailing ~1,300 people. A different
+      // subject/body hashes to a new type and sends normally.
+      let contentHash = 5381;
+      const hashInput = `${input.subject}\n${input.body}`;
+      for (let i = 0; i < hashInput.length; i++) {
+        contentHash = ((contentHash * 33) ^ hashInput.charCodeAt(i)) >>> 0;
+      }
+      const blastEmailType = `manual_no_show_${contentHash.toString(16)}`;
 
-      for (const registrant of noShows) {
+      const sendToRegistrant = async (registrant: typeof noShows[number]): Promise<"sent" | "failed" | "skipped"> => {
+        const nameParts = (registrant.name || "Friend").split(" ");
+        const firstName = nameParts[0] || "Friend";
+        const fullName = registrant.name || "Friend";
+
+        const personalizedBody = input.body
+          .replace(/%FIRST_NAME%/g, firstName)
+          .replace(/%FULL_NAME%/g, fullName)
+          .replace(/%EMAIL%/g, registrant.email || "");
+        const personalizedSubject = input.subject
+          .replace(/%FIRST_NAME%/g, firstName)
+          .replace(/%FULL_NAME%/g, fullName);
+
+        // Atomic claim under email_log_claim_uq — a duplicate means a prior
+        // attempt already handled (or is handling) this recipient.
+        let claimId: number | null = null;
         try {
-          const nameParts = (registrant.name || "Friend").split(" ");
-          const firstName = nameParts[0] || "Friend";
-          const fullName = registrant.name || "Friend";
-
-          // Personalize the email
-          const personalizedBody = input.body
-            .replace(/%FIRST_NAME%/g, firstName)
-            .replace(/%FULL_NAME%/g, fullName)
-            .replace(/%EMAIL%/g, registrant.email || "");
-
-          const personalizedSubject = input.subject
-            .replace(/%FIRST_NAME%/g, firstName)
-            .replace(/%FULL_NAME%/g, fullName);
-
-          // Create or update contact in HubSpot, then send email
-          // Using HubSpot's Single Send API (transactional)
-          const emailRes = await fetch("https://api.hubapi.com/marketing/v3/transactional/single-email/send", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${hubspotKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              emailId: 0, // Will use custom properties
-              message: {
-                to: registrant.email,
-                from: ENV.ownerOpenId ? undefined : undefined, // Let HubSpot use default sender
-                subject: personalizedSubject,
-                body: personalizedBody,
-              },
-              contactProperties: {
-                email: registrant.email,
-                firstname: firstName,
-                lastname: nameParts.slice(1).join(" ") || "",
-              },
-            }),
+          const [claim] = await db.insert(emailSendLog).values({
+            webinarId: input.webinarId,
+            registrantId: registrant.id,
+            recipientEmail: registrant.email!,
+            recipientName: registrant.name,
+            emailType: blastEmailType,
+            subject: personalizedSubject,
+            channel: "hubspot_smtp",
+            status: "pending",
           });
-
-          if (emailRes.ok) {
-            sent++;
-          } else {
-            // Fallback: Use HubSpot's email send via SMTP API / Marketing email
-            // Try the simpler contacts + email approach
-            const contactRes = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${hubspotKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                properties: {
-                  email: registrant.email,
-                  firstname: firstName,
-                  lastname: nameParts.slice(1).join(" ") || "",
-                  webinar_status: "no_show",
-                },
-              }),
-            });
-
-            // Even if contact creation fails (duplicate), count as processed
-            if (contactRes.ok || contactRes.status === 409) {
-              sent++;
-            } else {
-              failed++;
-              console.error(`[HubSpot] Failed to process ${registrant.email}: ${contactRes.status}`);
-            }
-          }
-
-          // Rate limit: HubSpot allows 100 requests per 10 seconds
-          if ((sent + failed) % 50 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        } catch (err: any) {
-          failed++;
-          console.error(`[HubSpot] Error sending to ${registrant.email}:`, err.message);
+          claimId = claim.insertId;
+        } catch {
+          // Already claimed by an earlier attempt of this same email. Re-claim
+          // only recipients whose earlier attempt FAILED.
+          const [existing] = await db.select({ id: emailSendLog.id, status: emailSendLog.status })
+            .from(emailSendLog)
+            .where(and(
+              eq(emailSendLog.webinarId, input.webinarId),
+              eq(emailSendLog.registrantId, registrant.id),
+              eq(emailSendLog.emailType, blastEmailType),
+            ));
+          if (!existing || existing.status !== "failed") return "skipped";
+          claimId = existing.id;
+          await db.update(emailSendLog).set({ status: "pending", errorMessage: null }).where(eq(emailSendLog.id, claimId));
         }
+
+        const result = await sendWebinarEmail({
+          to: registrant.email!,
+          subject: personalizedSubject,
+          html: plainTextToEmailHtml(personalizedBody),
+        });
+
+        if (claimId !== null) {
+          await db.update(emailSendLog).set({
+            status: result.success ? "sent" : "failed",
+            messageId: result.messageId || null,
+            errorMessage: result.error || null,
+          }).where(eq(emailSendLog.id, claimId)).catch(() => {});
+        }
+
+        return result.success ? "sent" : "failed";
+      };
+
+      // Modest concurrency keeps a ~1,300-recipient blast inside the request
+      // window without hammering the SMTP relay.
+      const CONCURRENCY = 8;
+      const outcomes: Array<"sent" | "failed" | "skipped"> = [];
+      for (let i = 0; i < noShows.length; i += CONCURRENCY) {
+        const chunk = await Promise.all(noShows.slice(i, i + CONCURRENCY).map((r) =>
+          sendToRegistrant(r).catch((err: any): "failed" => {
+            console.error(`[EmailNoShows] Error sending to ${r.email}:`, err?.message);
+            return "failed";
+          })
+        ));
+        outcomes.push(...chunk);
       }
 
-      return { sent, failed, total: noShows.length };
+      const sent = outcomes.filter((o) => o === "sent").length;
+      const failed = outcomes.filter((o) => o === "failed").length;
+      const skipped = outcomes.filter((o) => o === "skipped").length;
+
+      return { sent, failed, skipped, total: noShows.length };
     }),
 
   // ─── SMS Replies Inbox ─────────────────────────────────────────────────────
@@ -2697,6 +2693,23 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Same guard as campaign sends: never blast a literal placeholder
+      const unfilled = hasUnfilledPlaceholders(input.message);
+      if (unfilled) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Message still contains ${unfilled} — replace it with the real link before sending.` });
+      }
+
+      // Fresh attendance first — a stale snapshot would text people who are
+      // already in the room ("your seat is empty" mid-webinar is a bad look).
+      const [credRow] = await db.select().from(webinarCredentials).where(eq(webinarCredentials.webinarId, input.webinarId));
+      const sync = await syncWebinarAttendanceForEmail(db, input.webinarId, credRow?.apiKey || undefined);
+      if (!sync.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Could not refresh attendance from WebinarJam (${sync.error}). Nudge NOT sent — try again in a minute.`,
+        });
+      }
 
       // Get all registrants who haven't attended and haven't opted out
       const noShows = await db.select()
@@ -4668,7 +4681,7 @@ async function syncWebinarAttendanceForEmail(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   webinarId: string,
   overrideApiKey?: string,
-): Promise<{ success: boolean; error?: string; updated: number }> {
+): Promise<{ success: boolean; error?: string; updated: number; total: number }> {
   try {
     let allRegistrants: any[] = [];
     let page = 1;
@@ -4681,30 +4694,46 @@ async function syncWebinarAttendanceForEmail(
     }
 
     const attendanceMap = new Map<string, number>();
+    const attendanceByEmail = new Map<string, number>();
     for (const r of allRegistrants) {
+      const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
       const rawPhone = r.phone_number || r.phone || "";
       const fullPhone = (r.phone_country_code || "") + rawPhone;
       const phone = normalizePhone(fullPhone);
       if (phone.length >= 7) {
-        const attendedLive = r.attended_live === "Yes" || r.attended_live === 1 || r.attended_live === true;
         attendanceMap.set(phone, attendedLive ? 1 : 0);
+      }
+      // Email fallback so registrants without a usable phone still get their
+      // attendance flipped — otherwise a live attendee stays "no-show".
+      const email = String(r.email || "").trim().toLowerCase();
+      if (email) {
+        attendanceByEmail.set(email, attendedLive ? 1 : 0);
       }
     }
 
-    const existing = await db.select({ id: webinarRegistrants.id, phone: webinarRegistrants.phone })
-      .from(webinarRegistrants).where(eq(webinarRegistrants.webinarId, webinarId));
+    const existing = await db.select({
+      id: webinarRegistrants.id,
+      phone: webinarRegistrants.phone,
+      email: webinarRegistrants.email,
+      attended: webinarRegistrants.attended,
+    }).from(webinarRegistrants).where(eq(webinarRegistrants.webinarId, webinarId));
 
     let updated = 0;
     for (const row of existing) {
-      const attended = attendanceMap.get(normalizePhone(row.phone));
-      if (attended !== undefined) {
+      let attended = attendanceMap.get(normalizePhone(row.phone));
+      if (attended === undefined && row.email) {
+        attended = attendanceByEmail.get(row.email.trim().toLowerCase());
+      }
+      // Skip no-op writes — this runs every few minutes during a live webinar
+      // and ~1,400 unchanged UPDATEs per tick would hammer the production DB.
+      if (attended !== undefined && attended !== row.attended) {
         await db.update(webinarRegistrants).set({ attended }).where(eq(webinarRegistrants.id, row.id));
         updated++;
       }
     }
-    return { success: true, updated };
+    return { success: true, updated, total: existing.length };
   } catch (err: any) {
-    return { success: false, error: err?.message || "Unknown sync error", updated: 0 };
+    return { success: false, error: err?.message || "Unknown sync error", updated: 0, total: 0 };
   }
 }
 
