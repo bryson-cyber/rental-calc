@@ -2581,54 +2581,31 @@ export async function exploreListingsInRadius(
 export async function getRentalizerEstimate(
   request: RentalizerRequest
 ): Promise<RentalizerResponse | null> {
-  // Generate cache key
-  const cacheKey = apiCache.generateKey('rentalizer', {
-    address: request.address,
-    bedrooms: request.bedrooms,
-    bathrooms: request.bathrooms,
-    accommodates: request.accommodates
-  });
+  // ============================================
+  // BNB CALC API (replaces AirDNA Rentalizer)
+  // ============================================
+  const { getBnbCalcEstimate } = await import('./bnbcalc');
   
-  // Check cache first (async for DB fallback)
-  const cached = await apiCache.getAsync<RentalizerResponse>(cacheKey);
-  if (cached) {
-    logCacheHit('rentalizer');
-    return cached;
-  }
-  
-  // Try the request with fallback bathroom counts if it fails
-  // AirDNA API sometimes returns 500 errors for certain bed/bath combinations
-  const bathroomOptions = [
-    request.bathrooms,
-    request.bathrooms === 1 ? 2 : request.bathrooms, // Try 2 baths if 1 fails
-    request.bathrooms === 1 ? 1.5 : request.bathrooms, // Try 1.5 baths if 1 fails
-    Math.max(1, (request.bedrooms ?? 2) - 1), // Try bedrooms - 1 baths
-  ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
-  
-  for (const bathrooms of bathroomOptions) {
-    try {
-      const result = await tryRentalizerRequest({
-        ...request,
-        bathrooms
-      });
-      if (result) {
-        // Cache and return the successful result
-        apiCache.set(cacheKey, result, 'rentalizer');
-        return result;
-      }
-    } catch (error) {
-      // Re-throw rate limit errors immediately — don't try other bathroom options
-      if (error instanceof AirDNARateLimitError) {
-        console.warn(`[Rentalizer] Rate limit hit — not retrying with different bathrooms`);
-        throw error;
-      }
-      // Continue to next bathroom option for other errors
-      console.log(`Rentalizer failed for ${request.bedrooms} bed / ${bathrooms} bath, trying next option...`);
+  try {
+    const result = await getBnbCalcEstimate({
+      address: request.address,
+      bedrooms: request.bedrooms,
+      bathrooms: request.bathrooms,
+      accommodates: request.accommodates,
+      currency: request.currency,
+    });
+    
+    if (result) {
+      return result;
     }
+    
+    // If BNB Calc fails, log and return null (no AirDNA fallback)
+    console.error(`[Rentalizer] BNB Calc returned no data for: ${request.address}`);
+    return null;
+  } catch (error) {
+    console.error(`[Rentalizer] BNB Calc error for ${request.address}:`, error);
+    return null;
   }
-  
-  console.error("Error getting rentalizer estimate: All bathroom configurations failed");
-  return null;
 }
 
 async function tryRentalizerRequest(

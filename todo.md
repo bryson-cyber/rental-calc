@@ -13418,3 +13418,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Collapse FORCE_CRON path onto same core
 - [x] Delete old mutex, sequential loop, batch-of-50 loop
 - [x] Apply same exact-time pattern to email dispatcher (parallel batches of 10 for SMTP)
+
+## BNB Calc API Migration (Jul 21, 2026)
+
+- [x] Store BNB Calc API key as BNBCALC_API_KEY secret
+- [x] Add BNBCALC_API_KEY to env.ts
+- [x] Create server/bnbcalc.ts module with BNB Calc API integration
+- [x] Replace getRentalizerEstimate internals to call BNB Calc instead of AirDNA
+- [x] Map BNB Calc response to existing RentalizerResponse format
+- [x] Map monthly forecast from BNB Calc revenueData (real monthly data, not synthetic)
+- [x] Apply REVENUE_BOOST_FACTOR to BNB Calc data (revenue + ADR boosted, occupancy NOT boosted)
+- [x] Write vitest test for the new BNB Calc integration (4/4 passing)
+- [x] Verify integration works end-to-end (Denver, Florida, Miami Beach tested)
