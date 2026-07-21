@@ -958,10 +958,10 @@ export const rentalRouter = router({
       }),
 
     // Get comprehensive property report with market data
-    getPropertyReport: adminProcedure
+    getPropertyReport: publicProcedure
       .input(propertyReportInputSchema)
       .mutation(async ({ input, ctx }) => {
-        // Wrap entire handler in request context so the AirDNA rate limiter
+        // Wrap entire handler in request context so the rate limiter
         // can detect admin status deep in the call chain
         const isAdmin = ctx.user?.role === 'admin';
         const ctxUserId = ctx.user?.id;

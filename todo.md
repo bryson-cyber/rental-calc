@@ -13463,3 +13463,16 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Verify BNB Calc API returns valid data (49 comps, 12 months revenue, quartiles)
 - [x] Verify server starts clean with no esbuild/transform errors
 - [x] All migration-related TS errors resolved (remaining errors are pre-existing in unrelated files)
+
+## Step 2 Property Analysis Fix (Jul 21, 2026)
+
+- [ ] Fix Step 2 "Define the Property" to use BNB Calc instead of AirDNA redirect
+- [ ] Add 10/day rate limit for non-admin users on property analysis
+- [ ] Verify revenue boost (REVENUE_BOOST_FACTOR) is applied to BNB Calc results
+
+## Step 2 Property Analysis Fix (July 21, 2025)
+- [x] Change getPropertyReport from adminProcedure to publicProcedure (non-admin users can now access)
+- [x] Update rate limits: 10 property analyses/day, 10 validate analyses/day for non-admin users (was 5/20)
+- [x] Bump API calls limit to 100/day (was 75)
+- [x] Verify REVENUE_BOOST_FACTOR (30%) is applied to all BNB Calc results (annual revenue, monthly revenue, ADR, comps)
+- [x] Confirm getPropertyReport → getComprehensivePropertyReport → getRentalizerEstimate → BNB Calc API chain is working

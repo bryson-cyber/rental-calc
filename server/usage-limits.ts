@@ -5,10 +5,10 @@
  * Admins bypass all limits.
  * 
  * Default limits:
- * - Property analyses (Step 2): 5/day
- * - Validate analyses (Step 5): 20/day (displayed as "unlimited" to users)
+ * - Property analyses (Step 2): 10/day
+ * - Validate analyses (Step 5): 10/day
  * - Market researches: 3/day
- * - API calls: 75/day (counts user actions, not internal sub-calls)
+ * - API calls: 100/day (counts user actions, not internal sub-calls)
  */
 
 import { getDb } from './db';
@@ -17,10 +17,10 @@ import { eq, and, sql } from 'drizzle-orm';
 
 // Default limits (can be overridden via config)
 const DEFAULT_LIMITS = {
-  propertyAnalyses: 5,
-  validateAnalyses: 20,
+  propertyAnalyses: 10,
+  validateAnalyses: 10,
   marketResearches: 3,
-  apiCalls: 75,
+  apiCalls: 100,
 };
 
 interface UsageStatus {
