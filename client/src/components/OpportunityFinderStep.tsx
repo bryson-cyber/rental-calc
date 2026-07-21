@@ -2371,80 +2371,52 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                           
                           {/* ACTION BUTTONS */}
                           {!validation ? (
-                            // Before analysis - open AirDNA Rentalizer + copy address
+                            // Before analysis - run BNB Calc analysis inline
                             <Button
-                              onClick={async () => {
-                                const cityState = `${property.city}, ${property.state}`;
-                                const fullAddress = property.address.includes(cityState) ? property.address : `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
-                                try {
-                                  if (navigator.clipboard && navigator.clipboard.writeText) {
-                                    await navigator.clipboard.writeText(fullAddress);
-                                  } else {
-                                    const textArea = document.createElement('textarea');
-                                    textArea.value = fullAddress;
-                                    textArea.style.position = 'fixed';
-                                    textArea.style.left = '-9999px';
-                                    textArea.style.top = '-9999px';
-                                    document.body.appendChild(textArea);
-                                    textArea.focus();
-                                    textArea.select();
-                                    document.execCommand('copy');
-                                    document.body.removeChild(textArea);
-                                  }
-                                  toast.success('Address copied — paste it in AirDNA\'s search');
-                                } catch (err) {
-                                  console.error('Clipboard copy failed:', err);
-                                  toast.error('Could not copy address. Please copy it manually.');
-                                }
-                                window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
-                              }}
-                              className="w-full h-10 text-sm"
+                              onClick={() => handleValidate(property)}
+                              disabled={isValidating}
+                              className="w-full h-10 text-sm text-white"
                               style={{
-                                backgroundColor: 'oklch(0.55 0.14 75)',
+                                backgroundColor: isValidating ? 'oklch(0.55 0.14 75 / 0.7)' : 'oklch(0.55 0.14 75)',
                                 borderRadius: '980px',
                               }}
                             >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Analyze Property
+                              {isValidating ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUp className="w-4 h-4 mr-2" />
+                                  Analyze Property
+                                </>
+                              )}
                             </Button>
                           ) : (
                             // After analysis - show action buttons with clean layout
                             <div className="space-y-2">
-                              {/* Primary Action - Analyze on AirDNA (full width) */}
+                              {/* Primary Action - Re-analyze or View Full Report */}
                               <Button
-                                className="w-full h-11 text-xs font-semibold px-3"
+                                className="w-full h-11 text-xs font-semibold px-3 text-white"
                                 style={{
                                   backgroundColor: 'oklch(0.55 0.14 75)',
                                   borderRadius: '0.75rem',
                                 }}
-                                onClick={async () => {
-                                  const cityState2 = `${property.city}, ${property.state}`;
-                                  const fullAddress = property.address.includes(cityState2) ? property.address : `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
-                                  try {
-                                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                                      await navigator.clipboard.writeText(fullAddress);
-                                    } else {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = fullAddress;
-                                      textArea.style.position = 'fixed';
-                                      textArea.style.left = '-9999px';
-                                      textArea.style.top = '-9999px';
-                                      document.body.appendChild(textArea);
-                                      textArea.focus();
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                    }
-                                    toast.success('Address copied \u2014 paste it in AirDNA\'s search');
-                                  } catch (err) {
-                                    console.error('Clipboard copy failed:', err);
-                                    toast.error('Could not copy address. Please copy it manually.');
-                                  }
-                                  window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
-                                }}
+                                onClick={() => handleValidate(property)}
+                                disabled={isValidating}
                               >
-                                <ExternalLink className="w-4 h-4 mr-1.5 flex-shrink-0" />
-                                <span className="truncate">Full Analysis on AirDNA</span>
+                                {isValidating ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5 flex-shrink-0" />
+                                    <span className="truncate">Re-analyzing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <RotateCcw className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                                    <span className="truncate">Re-Analyze Property</span>
+                                  </>
+                                )}
                               </Button>
                               
                               {/* Secondary Action - View Listing */}

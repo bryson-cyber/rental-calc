@@ -122,6 +122,9 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
     }
   );
   
+  const validatePropertyMutation = trpc.opportunityFinder.validateProperty.useMutation();
+  const [analyzingFavId, setAnalyzingFavId] = useState<number | null>(null);
+  
   const removeFavoriteMutation = trpc.favorites.remove.useMutation({
     onSuccess: () => {
       favoritesQuery.refetch();
@@ -506,35 +509,34 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                       variant="outline" 
                       size="sm" 
                       className="mt-2 w-full h-7 text-xs bg-amber-100 border-amber-300 hover:bg-amber-200 text-amber-800"
+                      disabled={analyzingFavId === fav.id}
                       onClick={async (e) => {
                         e.stopPropagation();
-                        const cityStateCheck = `${fav.city}, ${fav.state}`;
-                        const fullAddress = fav.address.includes(cityStateCheck) ? fav.address : `${fav.address}, ${fav.city}, ${fav.state} ${fav.zipCode}`;
+                        setAnalyzingFavId(fav.id);
                         try {
-                          if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(fullAddress);
-                          } else {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = fullAddress;
-                            textArea.style.position = 'fixed';
-                            textArea.style.left = '-9999px';
-                            textArea.style.top = '-9999px';
-                            document.body.appendChild(textArea);
-                            textArea.focus();
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                          }
-                          toast.success('Address copied \u2014 paste it in AirDNA\'s search');
+                          const cityStateCheck = `${fav.city}, ${fav.state}`;
+                          const fullAddress = fav.address.includes(cityStateCheck) ? fav.address : `${fav.address}, ${fav.city}, ${fav.state} ${fav.zipCode}`;
+                          await validatePropertyMutation.mutateAsync({
+                            address: fullAddress,
+                            rent: Number(fav.monthlyRent) || 0,
+                            bedrooms: Number(fav.bedrooms) || 2,
+                            bathrooms: Number(fav.bathrooms) || 1,
+                          });
+                          toast.success('Analysis complete! Refresh to see updated revenue.');
+                          favoritesQuery.refetch();
                         } catch (err) {
-                          console.error('Clipboard copy failed:', err);
-                          toast.error('Could not copy address. Please copy it manually.');
+                          console.error('Analysis failed:', err);
+                          toast.error('Could not analyze property. Please try again.');
+                        } finally {
+                          setAnalyzingFavId(null);
                         }
-                        window.open('https://app.airdna.co/data/my-rentalizer', '_blank');
                       }}
                     >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      Analyze Property
+                      {analyzingFavId === fav.id ? (
+                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Analyzing...</>
+                      ) : (
+                        <><TrendingUp className="w-3 h-3 mr-1" />Analyze Property</>
+                      )}
                     </Button>
                   </div>
                 )}

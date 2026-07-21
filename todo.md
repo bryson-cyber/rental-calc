@@ -13476,3 +13476,10 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Bump API calls limit to 100/day (was 75)
 - [x] Verify REVENUE_BOOST_FACTOR (30%) is applied to all BNB Calc results (annual revenue, monthly revenue, ADR, comps)
 - [x] Confirm getPropertyReport → getComprehensivePropertyReport → getRentalizerEstimate → BNB Calc API chain is working
+
+## Fix "Analyze Property" Button - Remove AirDNA External Links (July 21, 2025)
+- [x] Replace "Analyze Property" button in OpportunityFinderStep (before analysis) - now calls handleValidate() inline with BNB Calc
+- [x] Replace "Full Analysis on AirDNA" button in OpportunityFinderStep (after analysis) - now shows "Re-Analyze Property" button
+- [x] Replace "Analyze Property" button in CompareFavoritesSection - now calls validateProperty mutation inline
+- [x] Remove all AirDNA external links (app.airdna.co) from user-facing frontend code
+- [x] Add loading/spinner states to all Analyze buttons while BNB Calc runs
