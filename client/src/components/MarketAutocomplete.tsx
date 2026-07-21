@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level component disabled (AirDNA removed)
 import { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Building2, Loader2, Navigation } from 'lucide-react';
 import { trpc } from '@/lib/trpc';

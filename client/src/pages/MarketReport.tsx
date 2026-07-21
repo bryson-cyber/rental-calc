@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level component disabled (AirDNA removed)
 /**
  * Market Report Page
  * Shows comprehensive market data for cities, submarkets, and zip codes

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { personalizedLinks } from "../../drizzle/schema";
-import { getListingsInRadius } from "../airdna";
 
 export const webhookRouter = router({
     // Track tool usage events - sends data to Zapier webhook for HubSpot sync

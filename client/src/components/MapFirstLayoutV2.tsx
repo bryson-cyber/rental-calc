@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level component disabled (AirDNA removed)
 /**
  * MapFirstLayoutV2 - Premium Tesla-inspired two-column layout
  * 

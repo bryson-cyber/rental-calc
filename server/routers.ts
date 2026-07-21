@@ -12,9 +12,9 @@ import { getUsageStatus } from "./usage-limits";
 import { getRateLimitStatus } from "./rate-limiter";
 
 // External routers (already separate files before refactoring)
-import { marketResearchRouter } from "./market-research-v2";
+// REMOVED: import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
-import { marketResearchSimpleRouter } from "./market-research-simple";
+// REMOVED: import { marketResearchSimpleRouter } from "./market-research-simple";
 import { adminRouter } from "./admin-router";
 import { adminSettingsRouter } from "./routers/admin-settings";
 import { newsletterRouter } from "./newsletter-router";
@@ -23,7 +23,7 @@ import { slackAdminRouter } from "./slack-admin-router";
 // All extracted feature routers (barrel import)
 import {
   rentalRouter,
-  advancedRouter,
+  // advancedRouter, // Removed - AirDNA market features
   sharedReportsRouter,
   regulationTrackerRouter,
   savedSearchesRouter,
@@ -31,16 +31,16 @@ import {
   favoriteListingsRouter,
   exportRouter,
   deepAnalysisRouter,
-  listingsByAreaRouter,
-  compDataRouter,
+  //   listingsByAreaRouter,
+  // compDataRouter, // Removed - AirDNA market features
   bulkSummaryRouter,
-  marketComparisonRouter,
-  marketDiscoveryRouter,
-  favoriteMarketsRouter,
-  marketAlertsRouter,
+  //   marketComparisonRouter,
+  //   marketDiscoveryRouter,
+  //   favoriteMarketsRouter,
+  //   marketAlertsRouter,
   notificationsRouter,
   rentometerRouter,
-  marketExplorerRouter,
+  //   marketExplorerRouter,
   zillowRouter,
   redfinRouter,
   webhookRouter,
@@ -60,7 +60,7 @@ import {
   leaseReaderRouter,
   webinarEnvRouter,
   tosRouter,
-  publicExploreRouter,
+  // publicExploreRouter, // Removed - market features
 } from "./routers/index";
 
 export const appRouter = router({
@@ -127,28 +127,28 @@ export const appRouter = router({
 
   // Core feature routers
   rental: rentalRouter,
-  advanced: advancedRouter,
+  // advanced: advancedRouter, // Removed - AirDNA market features
 
   // Saved & favorites
   savedSearches: savedSearchesRouter,
   favorites: favoritesRouter,
   favoriteListings: favoriteListingsRouter,
-  favoriteMarkets: favoriteMarketsRouter,
+  // REMOVED: favoriteMarkets: favoriteMarketsRouter,
 
   // Export & analysis
   export: exportRouter,
   deepAnalysis: deepAnalysisRouter,
-  listingsByArea: listingsByAreaRouter,
-  compData: compDataRouter,
+  // REMOVED: listingsByArea: listingsByAreaRouter,
+  // compData: compDataRouter, // Removed - AirDNA market features
   bulkSummary: bulkSummaryRouter,
 
   // Market research & discovery
-  marketResearch: marketResearchRouter,
-  marketResearchSimple: marketResearchSimpleRouter,
-  marketComparison: marketComparisonRouter,
-  marketDiscovery: marketDiscoveryRouter,
-  marketExplorer: marketExplorerRouter,
-  marketAlerts: marketAlertsRouter,
+  // REMOVED: marketResearch: marketResearchRouter,
+  // REMOVED: marketResearchSimple: marketResearchSimpleRouter,
+  // REMOVED: marketComparison: marketComparisonRouter,
+  // REMOVED: marketDiscovery: marketDiscoveryRouter,
+  // REMOVED: marketExplorer: marketExplorerRouter,
+  // REMOVED: marketAlerts: marketAlertsRouter,
 
   // External data integrations
   rentometer: rentometerRouter,
@@ -201,7 +201,7 @@ export const appRouter = router({
   tos: tosRouter,
 
   // Public explore page (no auth required)
-  publicExplore: publicExploreRouter,
+  // publicExplore: publicExploreRouter, // Removed - market features
 });
 
 export type AppRouter = typeof appRouter;

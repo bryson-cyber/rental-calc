@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level component disabled (AirDNA removed)
 /**
  * AI Investment Advisor - Dynamic Data Fetching
  * 

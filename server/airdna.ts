@@ -2844,155 +2844,37 @@ export async function getComprehensivePropertyReport(
     mom_perc_chg: number;
     yoy_perc_chg: number;
   };
+  // Three-tier revenue projections
+  revenue_scenarios?: {
+    conservative: number;
+    target: number;
+    optimistic: number;
+    source: string;
+    compCount: number;
+  };
 } | null> {
   // ── Top-level cache: return instantly on repeat lookups ──
   const amenitySuffix = selectedAmenities?.length ? `:amenities:${selectedAmenities.sort().join(',')}` : '';
   const reportCacheKey = `property_comprehensive:${address}:${bedrooms || 'auto'}:${bathrooms || 'auto'}:${accommodates || 'auto'}${amenitySuffix}`;
-  const cachedReport = await apiCache.getAsync<Awaited<ReturnType<typeof getComprehensivePropertyReport>>>(reportCacheKey);
-  if (cachedReport) {
-    // Check if cached result has top-3-comp-average adjustment applied (indicated by _original_rentalizer)
-    // If not, the cache is stale — apply top-3-comp-average now
-    const cachedProp = cachedReport.property as any;
-    if (cachedProp?.estimates && !cachedProp._original_rentalizer && cachedReport.same_bedroom_comps?.length > 0) {
-      const propBr = bedrooms || cachedProp.property?.bedrooms;
-      const propBa = bathrooms || cachedProp.property?.bathrooms;
-      if (propBr && propBa) {
-        const matchBa = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
-        const exactComps = cachedReport.same_bedroom_comps.filter(
-          (c: any) => c.bedrooms === propBr && matchBa(c.bathrooms, propBa) && c.annual_revenue > 0
-        );
-        const rawComps = exactComps.length >= 3 ? exactComps : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
-        
-        // Outlier filtering: remove likely long-term rentals (95%+ occupancy)
-        const MAX_STR_OCCUPANCY = 95;
-        let allComps = rawComps.filter((c: any) => {
-          const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100;
-          if (occ >= MAX_STR_OCCUPANCY) {
-            console.log(`[Outlier Filter CACHE] Excluding comp "${c.title}" — ${Math.round(occ)}% occupancy, rev: $${c.annual_revenue?.toLocaleString()}`);
-            return false;
-          }
-          return true;
-        });
-        // Graceful fallback
-        if (allComps.length < 3 && rawComps.length >= 3) {
-          console.log(`[Outlier Filter CACHE] Only ${allComps.length} comps after filter — falling back to unfiltered (${rawComps.length})`);
-          allComps = rawComps;
-        }
-        
-        if (allComps.length >= 3) {
-          // Top 3 by revenue
-          const top3 = [...allComps].sort((a: any, b: any) => b.annual_revenue - a.annual_revenue).slice(0, 3);
-          const top3Rev = Math.round(top3.reduce((s: number, c: any) => s + c.annual_revenue, 0) / 3);
-          const top3Adr = Math.round(top3.reduce((s: number, c: any) => s + c.adr, 0) / 3);
-          const top3Occ = top3.reduce((s: number, c: any) => s + c.occupancy, 0) / 3;
-          
-          const top3Min = Math.min(...top3.map((c: any) => c.annual_revenue));
-          const top3Max = Math.max(...top3.map((c: any) => c.annual_revenue));
-          const rentalizerRev = cachedProp.estimates.annual_revenue;
-          
-          console.log(`[Property Report] CACHE HIT — applying top-3-comp-average: $${rentalizerRev.toLocaleString()} -> $${top3Rev.toLocaleString()} (${allComps.length} comps)`);
-          const scale = top3Rev / rentalizerRev;
-          cachedProp._original_rentalizer = {
-            annual_revenue: rentalizerRev,
-            annual_revenue_low: cachedProp.estimates.annual_revenue_low,
-            annual_revenue_high: cachedProp.estimates.annual_revenue_high,
-            average_daily_rate: cachedProp.estimates.average_daily_rate,
-            occupancy_rate: cachedProp.estimates.occupancy_rate,
-          };
-          cachedProp._revenue_source = 'top_3_comp_average';
-          cachedProp.estimates.annual_revenue = top3Rev;
-          cachedProp.estimates.average_daily_rate = top3Adr;
-          cachedProp.estimates.occupancy_rate = top3Occ > 1 ? top3Occ / 100 : top3Occ;
-          cachedProp.estimates.annual_revenue_low = top3Min;
-          cachedProp.estimates.annual_revenue_high = top3Max;
-          if (cachedProp.monthly_forecast?.length > 0 && scale !== 1) {
-            cachedProp.monthly_forecast = cachedProp.monthly_forecast.map((m: any) => ({
-              ...m,
-              revenue: Math.round(m.revenue * scale),
-              adr: Math.round(m.adr * scale),
-            }));
-          }
-          apiCache.set(reportCacheKey, cachedReport, 'property_details');
-        } else {
-          console.log(`[Property Report] CACHE HIT — only ${allComps.length} comps available, using Rentalizer as-is`);
-        }
-      }
-    } else {
-      console.log(`[Property Report] CACHE HIT for ${address} — top-3-comp-average already applied or no comps`);
-    }
-    
-    // Backfill revenue_scenarios for cached results that don't have it yet
-    if (!(cachedReport as any).revenue_scenarios && cachedReport.same_bedroom_comps?.length > 0) {
-      const propBr = bedrooms || (cachedReport.property as any)?.property?.bedrooms;
-      const propBa = bathrooms || (cachedReport.property as any)?.property?.bathrooms;
-      const matchBa = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
-      
-      const exactComps = propBr && propBa
-        ? cachedReport.same_bedroom_comps.filter((c: any) => c.bedrooms === propBr && matchBa(c.bathrooms, propBa) && c.annual_revenue > 0)
-        : [];
-      const rawScenarioComps = exactComps.length >= 3
-        ? exactComps
-        : cachedReport.same_bedroom_comps.filter((c: any) => c.annual_revenue > 0);
-      // Apply outlier filtering to revenue scenarios too
-      const MAX_OCC = 95;
-      let scenarioComps = rawScenarioComps.filter((c: any) => {
-        const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100;
-        return occ < MAX_OCC;
-      });
-      if (scenarioComps.length < 3 && rawScenarioComps.length >= 3) scenarioComps = rawScenarioComps;
-      
-      if (scenarioComps.length >= 3) {
-        const scenarioRevenues = scenarioComps.map((c: any) => c.annual_revenue).sort((a: number, b: number) => a - b);
-        const pctl = (arr: number[], p: number) => {
-          const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
-          return arr[idx];
-        };
-        const mid = Math.floor(scenarioRevenues.length / 2);
-        const p50 = scenarioRevenues.length % 2 === 0
-          ? Math.round((scenarioRevenues[mid - 1] + scenarioRevenues[mid]) / 2)
-          : scenarioRevenues[mid];
-        const p75 = pctl(scenarioRevenues, 75);
-        const p90 = pctl(scenarioRevenues, 90);
-        
-        (cachedReport as any).revenue_scenarios = {
-          conservative: p50,
-          target: p75,
-          optimistic: p90,
-          source: exactComps.length >= 3 ? 'exact_match' : 'same_bedroom',
-          compCount: scenarioComps.length,
-        };
-        
-        console.log(`[Revenue Scenarios] CACHE BACKFILL: P50=$${p50.toLocaleString()}, P75=$${p75.toLocaleString()}, P90=$${p90.toLocaleString()} (${scenarioComps.length} comps)`);
-        // Update cache with revenue_scenarios
-        apiCache.set(reportCacheKey, cachedReport, 'property_details');
-      } else {
-        console.log(`[Revenue Scenarios] CACHE BACKFILL: Not enough comps (${scenarioComps.length}) for three-tier projections`);
-      }
-    }
-    
-    return cachedReport;
+  const cached = apiCache.get(reportCacheKey);
+  if (cached) {
+    console.log(`[Property Report] Cache hit for ${address}`);
+    return cached as any;
   }
-  console.log(`[Property Report] CACHE MISS for ${address} — fetching fresh data`);
-
-    // Get property estimates from rentalizer
-    let propertyEstimate: RentalizerResponse | null = await getRentalizerEstimate({
-    address,
-    bedrooms,
-    bathrooms,
-    accommodates,
-  });
-  
+  const propertyEstimate = await getRentalizerEstimate({ address, bedrooms, bathrooms, accommodates });
   if (!propertyEstimate) {
-    console.log("[Property Report] Rentalizer returned no data — attempting comp-based fallback");
-    
-    // ============================================
-    // COMP-BASED FALLBACK: When AirDNA has no direct data for this address
-    // (common for new construction, rural properties, or areas with low STR activity)
-    // We geocode the address, find the market, pull comps, and build a report from those.
-    // ============================================
+    console.error(`[Property Report] BNB Calc estimate failed for ${address}`);
+    return null;
+  }
+
+  const propertyBedrooms = bedrooms || propertyEstimate.property.bedrooms;
+  const propertyBathrooms = bathrooms || propertyEstimate.property.bathrooms;
+
+  // Step 2: Geocode address if coordinates not available from BNB Calc
+  if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
     try {
-      // Step 1: Geocode the address to get lat/lng, city, state, zip
       const { makeRequest: makeGeoRequest } = await import('./_core/map');
+      console.log(`[Property Report] Geocoding: "${address}"`);
       const geocodeResult = await makeGeoRequest<{
         status: string;
         results: Array<{
@@ -3005,803 +2887,36 @@ export async function getComprehensivePropertyReport(
           }>;
         }>;
       }>('/maps/api/geocode/json', { address });
-      
-      if (geocodeResult.status !== 'OK' || !geocodeResult.results?.[0]) {
-        console.error('[Fallback] Geocoding failed — cannot proceed');
-        return null;
-      }
-      
-      const geoResult = geocodeResult.results[0];
-      const lat = geoResult.geometry.location.lat;
-      const lng = geoResult.geometry.location.lng;
-      const cityComp = geoResult.address_components.find(c => c.types.includes('locality'));
-      const stateComp = geoResult.address_components.find(c => c.types.includes('administrative_area_level_1'));
-      const zipComp = geoResult.address_components.find(c => c.types.includes('postal_code'));
-      const city = cityComp?.long_name || '';
-      const state = stateComp?.short_name || '';
-      const zip = zipComp?.short_name || '';
-      
-      console.log(`[Fallback] Geocoded: ${city}, ${state} ${zip} (${lat}, ${lng})`);
-      
-      // Step 2: Search for the market by zip code, then city
-      let fallbackMarketId: string | null = null;
-      let fallbackMarketName = '';
-      let fallbackMarketType: 'market' | 'submarket' = 'market';
-      
-      // Try zip code first (most specific)
-      if (zip) {
-        const zipResults = await searchMarketsAPI(zip, 10);
-        const zipMarket = zipResults.find(m => m.type === 'market') || zipResults.find(m => m.type === 'submarket');
-        if (zipMarket) {
-          fallbackMarketId = zipMarket.type === 'submarket' && zipMarket.parent_market?.id 
-            ? zipMarket.parent_market.id 
-            : zipMarket.id;
-          fallbackMarketName = zipMarket.name;
-          fallbackMarketType = zipMarket.type === 'submarket' ? 'submarket' : 'market';
-          console.log(`[Fallback] Found market via zip ${zip}: ${fallbackMarketName} (${fallbackMarketId})`);
+
+      if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
+        const result = geocodeResult.results[0];
+        const cityComp = result.address_components.find(c => c.types.includes('locality'));
+        const stateComp = result.address_components.find(c => c.types.includes('administrative_area_level_1'));
+        (propertyEstimate.property as any).latitude = result.geometry.location.lat;
+        (propertyEstimate.property as any).longitude = result.geometry.location.lng;
+        (propertyEstimate.property as any)._geocoded_city = cityComp?.long_name || '';
+        (propertyEstimate.property as any)._geocoded_state = stateComp?.short_name || '';
+        if (!propertyEstimate.property.address_lookup) {
+          (propertyEstimate.property as any).address_lookup =
+            `${cityComp?.long_name || ''}, ${stateComp?.short_name || ''}`;
         }
+        console.log('[Property Report] Geocoded successfully');
       }
-      
-      // Fallback to city + state search
-      if (!fallbackMarketId && city) {
-        const citySearch = state ? `${city}, ${state}` : city;
-        const cityResults = await searchMarketsAPI(citySearch, 15);
-        const cityMarket = cityResults.find(m => m.type === 'market') || cityResults.find(m => m.type === 'submarket');
-        if (cityMarket) {
-          fallbackMarketId = cityMarket.type === 'submarket' && cityMarket.parent_market?.id
-            ? cityMarket.parent_market.id
-            : cityMarket.id;
-          fallbackMarketName = cityMarket.name;
-          console.log(`[Fallback] Found market via city ${citySearch}: ${fallbackMarketName} (${fallbackMarketId})`);
-        }
-      }
-      
-      if (!fallbackMarketId) {
-        console.error('[Fallback] Could not find any AirDNA market for this location');
-        return null;
-      }
-      
-      // Step 3: Pull comps from the market filtered by bedroom count
-      const targetBedrooms = bedrooms || 3; // Default to 3BR if not specified
-      const targetBathrooms = bathrooms || 2;
-      const targetAccommodates = accommodates || (targetBedrooms * 2);
-      
-      const { listings: marketComps } = await getMarketListings(fallbackMarketId, {
-        limit: 500,
-        orderBy: 'revenue',
-        orderDirection: 'desc',
-        filters: { bedrooms: targetBedrooms },
-      });
-      
-      // Also get unfiltered listings for bedroom performance
-      const { listings: allMarketListings } = await getMarketListings(fallbackMarketId, {
-        limit: 500,
-        orderBy: 'revenue',
-        orderDirection: 'desc',
-      });
-      
-      const activeComps = marketComps.filter(c => c.annual_revenue > 0);
-      console.log(`[Fallback] Found ${activeComps.length} active ${targetBedrooms}BR comps in ${fallbackMarketName}`);
-      
-      if (activeComps.length < 3) {
-        console.error(`[Fallback] Not enough comps (${activeComps.length}) to build a report`);
-        return null;
-      }
-      
-      // Step 4: Calculate estimates from comps
-      const sortedRevenues = activeComps.map(c => c.annual_revenue).sort((a, b) => a - b);
-      const sortedAdrs = activeComps.map(c => c.adr).sort((a, b) => a - b);
-      const sortedOccupancies = activeComps.map(c => c.occupancy).sort((a, b) => a - b);
-      
-      const getMedian = (arr: number[]) => {
-        const mid = Math.floor(arr.length / 2);
-        return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
-      };
-      const getPercentile = (arr: number[], p: number) => {
-        const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
-        return arr[idx];
-      };
-      
-      const medianRevenue = getMedian(sortedRevenues);
-      const medianAdr = getMedian(sortedAdrs);
-      const medianOccupancy = getMedian(sortedOccupancies);
-      const p25Revenue = getPercentile(sortedRevenues, 25);
-      const p75Revenue = getPercentile(sortedRevenues, 75);
-      
-      console.log(`[Fallback] Comp-based estimates: Revenue=$${medianRevenue}, ADR=$${medianAdr}, Occupancy=${medianOccupancy}%`);
-      
-      // Step 5: Build synthetic monthly forecast from comps
-      // Use seasonal distribution based on occupancy patterns
-      const monthlyBase = Math.round(medianRevenue / 12);
-      const seasonalFactors = [0.7, 0.75, 0.85, 0.95, 1.1, 1.2, 1.25, 1.2, 1.1, 1.0, 0.8, 0.7]; // Jan-Dec
-      const now = new Date();
-      const monthlyForecast = Array.from({ length: 12 }, (_, i) => {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const monthIndex = monthDate.getMonth();
-        const factor = seasonalFactors[monthIndex];
-        const monthRevenue = Math.round(monthlyBase * factor);
-        const monthOcc = Math.min(0.95, (medianOccupancy > 1 ? medianOccupancy / 100 : medianOccupancy) * factor);
-        return {
-          month: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
-          revenue: monthRevenue,
-          adr: medianAdr,
-          occupancy: Math.round(monthOcc * 100) / 100,
-        };
-      });
-      
-      // Step 6: Build synthetic propertyEstimate
-      const syntheticEstimate: any = {
-        property: {
-          address: address,
-          address_lookup: `${city}, ${state}`,
-          bedrooms: targetBedrooms,
-          bathrooms: targetBathrooms,
-          accommodates: targetAccommodates,
-          latitude: lat,
-          longitude: lng,
-          market_id: fallbackMarketId, // Pass market ID so downstream code skips redundant market search
-          _geocoded_city: city,
-          _geocoded_state: state,
-          zipcode: zip,
-        },
-        estimates: {
-          annual_revenue: medianRevenue,
-          annual_revenue_low: p25Revenue,
-          annual_revenue_high: p75Revenue,
-          average_daily_rate: medianAdr,
-          occupancy_rate: medianOccupancy > 1 ? medianOccupancy / 100 : medianOccupancy,
-          currency: 'USD',
-          currency_symbol: '$',
-        },
-        monthly_forecast: monthlyForecast,
-        comps: [], // No rentalizer comps — we'll use market comps
-        _revenue_source: 'comp_fallback',
-        _fallback_market: fallbackMarketName,
-        _fallback_comp_count: activeComps.length,
-        _fallback_comps: activeComps, // Store market comps for downstream use since radius search won't work for new construction
-      };
-      
-      // Now continue with the rest of the function using the synthetic estimate
-      // We reassign propertyEstimate so all downstream code works
-      // @ts-ignore — intentional reassignment for fallback path
-      propertyEstimate = syntheticEstimate;
-      console.log(`[Fallback] Built synthetic estimate from ${activeComps.length} comps in ${fallbackMarketName}`);
-      
-    } catch (fallbackErr) {
-      console.error('[Fallback] Comp-based fallback failed:', (fallbackErr as Error).message);
-      return null;
+    } catch (geoErr) {
+      console.warn('[Property Report] Geocoding failed:', (geoErr as Error).message);
     }
   }
-  
-  // At this point propertyEstimate is guaranteed non-null (either from Rentalizer or fallback)
-  // If both paths failed, we already returned null above
-  if (!propertyEstimate) {
-    return null;
-  }
-  
-  // Ensure property object exists (cached responses may have different structure)
-  if (!propertyEstimate.property) {
-    console.error("[Property Report] Property estimate missing .property object, creating defaults");
-    propertyEstimate.property = {
-      address: address,
-      bedrooms: bedrooms ?? 0,
-      bathrooms: bathrooms ?? 0,
-      accommodates: accommodates ?? 0,
-    };
-  }
-  
-  // Step 1b: Geocode address to get lat/lng and city/state if not in rentalizer response
-  // Includes retry logic with cleaned address variants
-  if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
-    const geocodeAttempts = [
-      address, // Original address
-      address.replace(/\s*#\S+/, '').replace(/\s*(apt|unit|suite|ste|bldg|fl|floor)\s*\S*/gi, '').trim(), // Remove unit/apt
-      propertyEstimate.property.address_lookup ? `${propertyEstimate.property.address || address}, ${propertyEstimate.property.address_lookup}` : null, // address + city/state
-    ].filter(Boolean) as string[];
-    
-    // Deduplicate attempts
-    const uniqueAttempts = Array.from(new Set(geocodeAttempts));
-    
-    for (let i = 0; i < uniqueAttempts.length; i++) {
-      const attemptAddress = uniqueAttempts[i];
-      try {
-        const { makeRequest: makeGeoRequest } = await import('./_core/map');
-        console.log(`[Property Report] Geocoding attempt ${i + 1}/${uniqueAttempts.length}: "${attemptAddress}"`);
-        const geocodeResult = await makeGeoRequest<{
-          status: string;
-          results: Array<{
-            geometry: { location: { lat: number; lng: number } };
-            formatted_address: string;
-            address_components: Array<{
-              long_name: string;
-              short_name: string;
-              types: string[];
-            }>;
-          }>;
-        }>('/maps/api/geocode/json', { address: attemptAddress });
-        
-        if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
-          const result = geocodeResult.results[0];
-          const cityComp = result.address_components.find(c => c.types.includes('locality'));
-          const stateComp = result.address_components.find(c => c.types.includes('administrative_area_level_1'));
-          
-          // Inject location into propertyEstimate so downstream code can use it
-          (propertyEstimate.property as any).latitude = result.geometry.location.lat;
-          (propertyEstimate.property as any).longitude = result.geometry.location.lng;
-          // Store city/state as extra fields for report building
-          (propertyEstimate.property as any)._geocoded_city = cityComp?.long_name || '';
-          (propertyEstimate.property as any)._geocoded_state = stateComp?.short_name || '';
-          
-          // Also set address_lookup if missing
-          if (!propertyEstimate.property.address_lookup) {
-            (propertyEstimate.property as any).address_lookup = 
-              `${cityComp?.long_name || ''}, ${stateComp?.short_name || ''}`;
-          }
-          
-          console.log('[Property Report] Geocoded address successfully:', {
-            attempt: i + 1,
-            lat: result.geometry.location.lat,
-            lng: result.geometry.location.lng,
-            city: cityComp?.long_name,
-            state: stateComp?.short_name,
-          });
-          break; // Success — stop retrying
-        } else {
-          console.log(`[Property Report] Geocoding attempt ${i + 1} returned status: ${geocodeResult.status}`);
-        }
-      } catch (geoErr) {
-        console.log(`[Property Report] Geocoding attempt ${i + 1} failed:`, (geoErr as Error).message);
-      }
-    }
-    
-    // Final warning if all attempts failed
-    if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
-      console.warn('[Property Report] All geocoding attempts failed. Property will have no coordinates. Map features will be disabled.');
-    }
-  }
-  
-  const propertyBedrooms = bedrooms || propertyEstimate.property.bedrooms;
-  const propertyBathrooms = bathrooms || propertyEstimate.property.bathrooms;
-  
-  // Step 2: Find market ID
-  let marketId = propertyEstimate.property.market_id;
-  let submarketIdFromRentalizer: string | null = null;
-  let marketListingCount = 0;
-  
-  // The rentalizer sometimes returns a submarket ID instead of a market ID.
-  // We proactively check by trying getSubmarketDetails first. If it succeeds,
-  // we use the parent market ID instead, avoiding a 404 later.
-  if (marketId) {
-    try {
-      const submarketCheck = await getSubmarketDetails(marketId);
-      if (submarketCheck && submarketCheck.market_id && submarketCheck.market_id !== marketId) {
-        console.log(`[Market ID Fix] Rentalizer returned submarket ${marketId} (${submarketCheck.name}). Using parent market ${submarketCheck.market_id} (${submarketCheck.parent_market_name}) instead.`);
-        submarketIdFromRentalizer = marketId;
-        marketId = submarketCheck.market_id;
-      }
-    } catch {
-      // getSubmarketDetails failed (404) — but the search API might still identify this as a submarket
-      // Use searchMarketsAPI to look up the ID and check for parent_market
-      console.log(`[Market ID Fix] getSubmarketDetails failed for ${marketId}. Trying searchMarketsAPI fallback...`);
-      try {
-        // Extract city name from the address for search
-        // address_lookup can be full address ("1622 HALLIARD DR, LAWRENCEVILLE, GA 30043")
-        // or short ("Lawrenceville, GA"), so use the second-to-last comma part for city
-        const cityFromAddress = address.match(/,\s*([^,]+),\s*[A-Z]{2}/)?.[1]?.trim();
-        let cityFromLookup: string | undefined;
-        if (propertyEstimate.property.address_lookup) {
-          const lookupParts = propertyEstimate.property.address_lookup.split(',').map((p: string) => p.trim());
-          if (lookupParts.length >= 3) {
-            // Full address format: take second-to-last part as city
-            cityFromLookup = lookupParts[lookupParts.length - 2];
-          } else if (lookupParts.length === 2) {
-            // Short format: "City, ST" — take first part
-            cityFromLookup = lookupParts[0];
-          }
-          // Strip zip code if present
-          if (cityFromLookup) cityFromLookup = cityFromLookup.replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
-        }
-        const cityForSearch = cityFromAddress || cityFromLookup;
-        if (cityForSearch) {
-          const searchResults = await searchMarketsAPI(cityForSearch, 25);
-          // Check if any result matches our market_id and has a parent_market
-          const matchingSubmarket = searchResults.find(
-            (m: any) => m.id === marketId && m.type === 'submarket' && m.parent_market?.id
-          );
-          if (matchingSubmarket?.parent_market) {
-            console.log(`[Market ID Fix] searchMarketsAPI confirmed ${marketId} (${matchingSubmarket.name}) is a submarket of ${matchingSubmarket.parent_market.name} (${matchingSubmarket.parent_market.id})`);
-            submarketIdFromRentalizer = marketId;
-            marketId = matchingSubmarket.parent_market.id;
-          } else {
-            // Check if there's ANY submarket result with a parent market (might be a different name)
-            const anySubmarket = searchResults.find(
-              (m: any) => m.type === 'submarket' && m.parent_market?.id
-            );
-            if (anySubmarket?.parent_market) {
-              console.log(`[Market ID Fix] searchMarketsAPI found related submarket ${anySubmarket.name} → parent ${anySubmarket.parent_market.name} (${anySubmarket.parent_market.id})`);
-              submarketIdFromRentalizer = marketId;
-              marketId = anySubmarket.parent_market.id;
-            } else {
-              // Check if there's a market-type result we can use directly
-              const marketResult = searchResults.find((m: any) => m.type === 'market');
-              if (marketResult) {
-                console.log(`[Market ID Fix] searchMarketsAPI found market ${marketResult.name} (${marketResult.id}) for city ${cityForSearch}`);
-                marketId = marketResult.id;
-              } else {
-                console.log(`[Market ID Fix] ${marketId} not found in searchMarketsAPI either, proceeding as-is.`);
-              }
-            }
-          }
-        }
-      } catch (searchErr) {
-        console.log(`[Market ID Fix] searchMarketsAPI fallback also failed:`, searchErr);
-      }
-    }
-  }
-  
-  // If no market_id from rentalizer, search for it
-  if (!marketId) {
-    // Try to extract city and state from address for market search
-    // Handles multiple formats:
-    //   "123 Main St, City, ST 12345" (standard Google Places)
-    //   "123 Main St City, ST 12345" (single comma before state)
-    //   "123 Main St, City, State, USA"
-    const cityMatch = address.match(/,\s*([^,]+),\s*([A-Z]{2})/);
-    
-    // Also try to extract state from zip code pattern (handles "City, ST 12345")
-    const stateFromZip = address.match(/,\s*([A-Z]{2})\s*\d{5}/)?.[1];
-    const stateFromAddress = cityMatch ? cityMatch[2] : null;
-    const state = stateFromAddress || stateFromZip;
-    
-    let searchTerm: string;
-    if (cityMatch) {
-      // Standard format: "..., City, ST ..."
-      searchTerm = cityMatch[1].trim();
-    } else if (stateFromZip) {
-      // Single comma format: "123 Main St City, ST 12345"
-      // Extract city name from the part before the comma
-      const beforeComma = address.split(',')[0]?.trim() || '';
-      // Try to extract city: it's usually the last word(s) before the comma
-      // Remove street number and street name patterns
-      const cityFromStreet = beforeComma
-        .replace(/^\d+\s+/, '') // Remove leading street number
-        .replace(/^(N|S|E|W|NE|NW|SE|SW)\.?\s+/i, '') // Remove direction prefix
-        .replace(/^\S+\s+(St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Rd|Road|Ln|Lane|Way|Ct|Court|Pl|Place|Cir|Circle|Pkwy|Parkway|Hwy|Highway|Ter|Terrace)\.?\s+/i, '') // Remove "StreetName St" pattern
-        .trim();
-      // If we got something reasonable, use it; otherwise fall back to address_lookup from rentalizer
-      searchTerm = cityFromStreet || address.split(',')[1]?.trim()?.replace(/\s*\d{5}.*/, '').replace(/^[A-Z]{2}\s*/, '') || address;
-      console.log('[Market Search] Single-comma format detected. Extracted city from street:', cityFromStreet);
-    } else {
-      searchTerm = address.split(',')[1]?.trim() || address;
-    }
-    
-    // Also try using address_lookup from rentalizer (usually has normalized city name)
-    const addressLookup = propertyEstimate.property.address_lookup;
-    if (addressLookup && (!searchTerm || searchTerm.match(/^[A-Z]{2}\s*\d{5}/))) {
-      // address_lookup is usually like "Richardson, TX" or "Richardson, Texas"
-      const lookupCity = addressLookup.split(',')[0]?.trim();
-      if (lookupCity && lookupCity.length > 2) {
-        searchTerm = lookupCity;
-        console.log('[Market Search] Using address_lookup city:', searchTerm);
-      }
-    }
-    
-    console.log('[Market Search] Extracted city:', searchTerm, 'state:', state);
-    
-    if (searchTerm) {
-      // Pass state with city name so searchMarkets can prioritize state-matched results
-      // This fixes the Fayetteville NC vs AR disambiguation bug
-      const searchWithState = state ? `${searchTerm}, ${state}` : searchTerm;
-      console.log('[Market Search] Searching with state-aware term:', searchWithState);
-      const marketsRaw = await searchMarkets(searchWithState, 20); // Increased limit for better matching
-      const markets = Array.isArray(marketsRaw) ? marketsRaw : [];
-      if (markets.length > 0) {
-        console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
-        console.log('[Market Search] Looking for state:', state);
-        
-        // Helper function to check if market matches the state
-        const matchesState = (m: typeof markets[0]) => {
-          if (!state) return true; // No state to match, accept any
-          // Check exact state match (case-insensitive)
-          if (m.state?.toUpperCase() === state.toUpperCase()) return true;
-          // Check if location_name contains the state abbreviation
-          if (m.location_name?.toUpperCase().includes(`, ${state.toUpperCase()}`)) return true;
-          // Check if name contains the state abbreviation (e.g., "Fort Worth, TX")
-          if (m.name?.toUpperCase().includes(`, ${state.toUpperCase()}`)) return true;
-          return false;
-        };
-        
-        // Helper function to check if market name matches the city
-        const matchesCity = (m: typeof markets[0]) => {
-          const cityLower = searchTerm.toLowerCase();
-          const nameLower = m.name?.toLowerCase() || '';
-          // Check if market name starts with or contains the city name
-          return nameLower.startsWith(cityLower) || nameLower.includes(cityLower);
-        };
-        
-        // First try to find a parent market that matches BOTH city and state
-        let parentMarket = markets.find(m => 
-          m.type === 'market' && matchesState(m) && matchesCity(m)
-        );
-        
-        // If no exact match, try to find a parent market that matches just the state
-        if (!parentMarket && state) {
-          parentMarket = markets.find(m => m.type === 'market' && matchesState(m));
-        }
-        
-        // If still no match, try any market that matches the city name
-        if (!parentMarket) {
-          parentMarket = markets.find(m => m.type === 'market' && matchesCity(m));
-        }
-        
-        // Last resort: use the first market-type result
-        if (!parentMarket) {
-          parentMarket = markets.find(m => m.type === 'market') || markets[0];
-        }
-        
-        console.log('[Market Search] Found parent market:', parentMarket);
-        
-        if (parentMarket) {
-          marketId = parentMarket.id;
-          marketListingCount = parentMarket.listing_count; // Get listing count from search
-          console.log('[Market Search] Using market ID:', marketId, 'with listing count:', marketListingCount);
-        } else {
-          // Fall back to first submarket with parent_market in same state
-          const submarketWithParent = markets.find(m => 
-            m.type === 'submarket' && matchesState(m)
-          );
-          if (submarketWithParent) {
-            // Search for the parent market name
-            const parentSearch = await searchMarkets(submarketWithParent.name, 5);
-            const parent = parentSearch.find(m => m.type === 'market' && matchesState(m));
-            if (parent) {
-              marketId = parent.id;
-              marketListingCount = parent.listing_count;
-            }
-          }
-        }
-      }
-    }
-    
-    // Step 2b: Fallback market search when local fuzzy search fails
-    // Try AirDNA's /market/search API directly, then zip code, then state
-    if (!marketId) {
-      console.log('[Market Search] Local fuzzy search failed. Trying AirDNA API fallback...');
-      
-      // Fallback 1: Try searchMarketsAPI with the city name (include state for disambiguation)
-      if (searchTerm) {
-        try {
-          const apiSearchTerm = state ? `${searchTerm}, ${state}` : searchTerm;
-          let apiResults = await searchMarketsAPI(apiSearchTerm, 25);
-          // If search with state suffix returns nothing, try without the state
-          if (apiResults.length === 0 && state && searchTerm !== apiSearchTerm) {
-            console.log(`[Market Search Fallback] API search for "${apiSearchTerm}" returned 0 results, retrying with just "${searchTerm}"...`);
-            apiResults = await searchMarketsAPI(searchTerm, 25);
-          }
-          console.log(`[Market Search Fallback] API search for "${searchTerm}" returned ${apiResults.length} results`);
-          if (apiResults.length > 0) {
-            // First, try to find a market-type result matching the state
-            const stateMatchResult = apiResults.find(m => 
-              m.type === 'market' && state && (
-                m.state?.toUpperCase() === state.toUpperCase() ||
-                m.location_name?.toUpperCase().includes(`, ${state.toUpperCase()}`) ||
-                m.name?.toUpperCase().includes(`, ${state.toUpperCase()}`)
-              )
-            );
-            
-            if (stateMatchResult) {
-              marketId = stateMatchResult.id;
-              marketListingCount = stateMatchResult.listing_count;
-              console.log('[Market Search Fallback] Found market via API:', stateMatchResult.name, stateMatchResult.id);
-            } else {
-              // No market-type result found — check if there's a submarket with a parent_market
-              const submarketWithParent = apiResults.find(m => 
-                m.type === 'submarket' && m.parent_market?.id
-              );
-              if (submarketWithParent?.parent_market) {
-                // Use the parent market ID (e.g., Richardson → Dallas)
-                marketId = submarketWithParent.parent_market.id;
-                // We don't have listing count for parent, will get from market details
-                marketListingCount = 0;
-                console.log(`[Market Search Fallback] Found submarket "${submarketWithParent.name}" → using parent market "${submarketWithParent.parent_market.name}" (${submarketWithParent.parent_market.id})`);
-              } else {
-                // Last resort: use any market-type result
-                const anyMarket = apiResults.find(m => m.type === 'market') || apiResults[0];
-                if (anyMarket) {
-                  marketId = anyMarket.id;
-                  marketListingCount = anyMarket.listing_count;
-                  console.log('[Market Search Fallback] Using fallback market:', anyMarket.name, anyMarket.id);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.log('[Market Search Fallback] API search failed:', (e as Error).message);
-        }
-      }
-      
-      // Fallback 2: Try zip code from address
-      if (!marketId) {
-        const zipMatch = address.match(/(\d{5})/);
-        if (zipMatch) {
-          try {
-            const zipResults = await searchMarketsAPI(zipMatch[1], 10);
-            console.log(`[Market Search Fallback] Zip code "${zipMatch[1]}" returned ${zipResults.length} results`);
-            if (zipResults.length > 0) {
-              // Priority 1: Direct market-type result
-              const directMarket = zipResults.find(m => m.type === 'market');
-              if (directMarket) {
-                marketId = directMarket.id;
-                marketListingCount = directMarket.listing_count;
-                console.log('[Market Search Fallback] Found market via zip code:', directMarket.name, directMarket.id);
-              } else {
-                // Priority 2: Submarket with parent_market → use parent
-                const subWithParent = zipResults.find(m => m.type === 'submarket' && m.parent_market?.id);
-                if (subWithParent?.parent_market) {
-                  submarketIdFromRentalizer = subWithParent.id;
-                  marketId = subWithParent.parent_market.id;
-                  marketListingCount = 0; // Will get from market details
-                  console.log(`[Market Search Fallback] Zip code found submarket "${subWithParent.name}" (${subWithParent.id}) → using parent market "${subWithParent.parent_market.name}" (${subWithParent.parent_market.id})`);
-                } else {
-                  // Priority 3: Submarket without parent_market → need to resolve parent
-                  const anySubmarket = zipResults.find(m => m.type === 'submarket');
-                  if (anySubmarket) {
-                    console.log(`[Market Search Fallback] Zip code found submarket "${anySubmarket.name}" (${anySubmarket.id}) without parent_market. Searching for parent...`);
-                    // Search for the parent market by doing a broader search
-                    try {
-                      const parentSearchTerm = anySubmarket.name.split(',')[0]?.trim() || anySubmarket.name;
-                      const parentResults = await searchMarketsAPI(parentSearchTerm, 25);
-                      const parentMarket = parentResults.find(m => m.type === 'submarket' && m.parent_market?.id && m.id === anySubmarket.id);
-                      if (parentMarket?.parent_market) {
-                        submarketIdFromRentalizer = anySubmarket.id;
-                        marketId = parentMarket.parent_market.id;
-                        marketListingCount = 0;
-                        console.log(`[Market Search Fallback] Resolved parent: "${parentMarket.parent_market.name}" (${parentMarket.parent_market.id})`);
-                      } else {
-                        // Try finding any market in the same state
-                        const stateFromResult = anySubmarket.state || extractStateFromLocation(anySubmarket.location_name || anySubmarket.name);
-                        const anyParent = parentResults.find(m => m.type === 'market');
-                        if (anyParent) {
-                          submarketIdFromRentalizer = anySubmarket.id;
-                          marketId = anyParent.id;
-                          marketListingCount = anyParent.listing_count;
-                          console.log(`[Market Search Fallback] Using nearest market: "${anyParent.name}" (${anyParent.id})`);
-                        } else {
-                          // Last resort: use the submarket ID directly (will fail at getMarketDetails but catch block handles it)
-                          marketId = anySubmarket.id;
-                          marketListingCount = anySubmarket.listing_count;
-                          console.log(`[Market Search Fallback] No parent found, using submarket directly: ${anySubmarket.name} ${anySubmarket.id}`);
-                        }
-                      }
-                    } catch (parentErr) {
-                      // If parent search fails, use the submarket ID directly
-                      marketId = anySubmarket.id;
-                      marketListingCount = anySubmarket.listing_count;
-                      console.log(`[Market Search Fallback] Parent search failed, using submarket: ${anySubmarket.name} ${anySubmarket.id}`);
-                    }
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.log('[Market Search Fallback] Zip code search failed:', (e as Error).message);
-          }
-        }
-      }
-      
-      // Fallback 3: Try address_lookup from rentalizer
-      if (!marketId && propertyEstimate.property.address_lookup) {
-        const lookupTerm = propertyEstimate.property.address_lookup;
-        try {
-          const lookupResults = await searchMarketsAPI(lookupTerm, 10);
-          console.log(`[Market Search Fallback] address_lookup "${lookupTerm}" returned ${lookupResults.length} results`);
-          if (lookupResults.length > 0) {
-            // Prefer market-type results
-            const marketResult = lookupResults.find(m => m.type === 'market');
-            if (marketResult) {
-              marketId = marketResult.id;
-              marketListingCount = marketResult.listing_count;
-              console.log('[Market Search Fallback] Found market via address_lookup:', marketResult.name, marketResult.id);
-            } else {
-              // Check for submarket with parent
-              const subWithParent = lookupResults.find(m => m.type === 'submarket' && m.parent_market?.id);
-              if (subWithParent?.parent_market) {
-                marketId = subWithParent.parent_market.id;
-                marketListingCount = 0;
-                console.log(`[Market Search Fallback] Found submarket "${subWithParent.name}" via address_lookup → using parent "${subWithParent.parent_market.name}" (${subWithParent.parent_market.id})`);
-              }
-            }
-          }
-        } catch (e) {
-          console.log('[Market Search Fallback] address_lookup search failed:', (e as Error).message);
-        }
-      }
-    }
-  }
-  
-  // Step 3: Get market data (if market_id available)
-  let marketData = null;
-  let submarkets: SubmarketData[] = [];
-  let marketInsights: MarketInsights | undefined;
-  
-  if (marketId) {
-    let marketDetails = null;
-    let historicalData = { occupancy: [] as any[], adr: [] as any[], revenue: [] as any[], revpar: [] as any[], active_listings: [] as any[] };
-    let submarketList: SubmarketData[] = [];
-    
-    try {
-      const results = await Promise.all([
-        getMarketDetails(marketId),
-        getMarketHistoricalData(marketId, 24), // 24 months for YoY comparison
-        getSubmarketsInMarket(marketId),
-      ]);
-      marketDetails = results[0];
-      historicalData = results[1];
-      submarketList = results[2];
-    } catch (marketErr) {
-      // Re-throw rate limit errors immediately — don't try fallbacks when we're out of API calls
-      if (marketErr instanceof AirDNARateLimitError) {
-        console.warn(`[Market Data] Rate limit hit during market fetch for ${marketId}`);
-        throw marketErr;
-      }
-      console.log(`[Market Data] Failed to fetch market ${marketId}, may be a submarket. Trying submarket endpoint first...`);
-      
-      // Strategy 1: Try getSubmarketDetails - if the ID is actually a submarket, this will work
-      // and give us the parent market ID directly
-      try {
-        const submarketDetails = await getSubmarketDetails(marketId);
-        if (submarketDetails && submarketDetails.market_id) {
-          const parentMarketId = submarketDetails.market_id;
-          console.log(`[Market Data] Confirmed ${marketId} (${submarketDetails.name}) is a submarket of parent market ${parentMarketId}`);
-          marketId = parentMarketId;
-          const parentResults = await Promise.all([
-            getMarketDetails(marketId),
-            getMarketHistoricalData(marketId, 24),
-            getSubmarketsInMarket(marketId),
-          ]);
-          marketDetails = parentResults[0];
-          historicalData = parentResults[1];
-          submarketList = parentResults[2];
-        } else if (submarketDetails && submarketDetails.parent_market_name) {
-          // Has parent name but no market_id - search for the parent by name
-          console.log(`[Market Data] Submarket found but no market_id. Searching for parent: ${submarketDetails.parent_market_name}`);
-          const parentSearch = await searchMarketsAPI(submarketDetails.parent_market_name, 10);
-          const parentMarket = parentSearch.find(m => m.type === 'market');
-          if (parentMarket) {
-            marketId = parentMarket.id;
-            console.log(`[Market Data] Found parent market via name search: ${parentMarket.name} (${marketId})`);
-            const parentResults = await Promise.all([
-              getMarketDetails(marketId),
-              getMarketHistoricalData(marketId, 24),
-              getSubmarketsInMarket(marketId),
-            ]);
-            marketDetails = parentResults[0];
-            historicalData = parentResults[1];
-            submarketList = parentResults[2];
-          }
-        }
-      } catch (submarketErr) {
-        // Re-throw rate limit errors
-        if (submarketErr instanceof AirDNARateLimitError) throw submarketErr;
-        console.log(`[Market Data] Submarket lookup for ${marketId} also failed:`, (submarketErr as Error).message);
-      }
-      
-      // Strategy 2: If submarket lookup didn't work, fall back to city-based search
-      if (!marketDetails) {
-        try {
-          const addressLookup = propertyEstimate.property.address_lookup;
-          const cityFromLookup = addressLookup && addressLookup.split(',').length >= 2 
-            ? addressLookup.split(',')[addressLookup.split(',').length - 2]?.trim()
-            : addressLookup?.split(',')[0]?.trim();
-          
-          if (cityFromLookup) {
-            console.log(`[Market Data] Trying city-based search for: ${cityFromLookup}`);
-            const cityResults = await searchMarketsAPI(cityFromLookup, 10);
-            // First try to find a submarket matching this city with a parent market
-            const parentResult = cityResults.find(m => m.type === 'submarket' && m.parent_market?.id);
-            if (parentResult?.parent_market) {
-              marketId = parentResult.parent_market.id;
-              console.log(`[Market Data] Found parent market via city search: ${parentResult.parent_market.name} (${marketId})`);
-              const parentResults = await Promise.all([
-                getMarketDetails(marketId),
-                getMarketHistoricalData(marketId, 24),
-                getSubmarketsInMarket(marketId),
-              ]);
-              marketDetails = parentResults[0];
-              historicalData = parentResults[1];
-              submarketList = parentResults[2];
-            } else {
-              // Try a direct market match
-              const directMarket = cityResults.find(m => m.type === 'market');
-              if (directMarket) {
-                marketId = directMarket.id;
-                console.log(`[Market Data] Found direct market via city search: ${directMarket.name} (${marketId})`);
-                const directResults = await Promise.all([
-                  getMarketDetails(marketId),
-                  getMarketHistoricalData(marketId, 24),
-                  getSubmarketsInMarket(marketId),
-                ]);
-                marketDetails = directResults[0];
-                historicalData = directResults[1];
-                submarketList = directResults[2];
-              }
-            }
-          }
-        } catch (cityErr) {
-          console.log('[Market Data] City-based search also failed:', (cityErr as Error).message);
-        }
-      }
-    }
-    
-    if (marketDetails) {
-      // Calculate current metrics from historical data, fall back to market details metrics
-      let latestOccupancy = historicalData.occupancy[historicalData.occupancy.length - 1]?.value || 0;
-      let latestAdr = historicalData.adr[historicalData.adr.length - 1]?.value || 0;
-      let latestRevenue = historicalData.revenue[historicalData.revenue.length - 1]?.value || 0;
-      let latestRevpar = historicalData.revpar[historicalData.revpar.length - 1]?.value || 0;
-      let latestListings = historicalData.active_listings[historicalData.active_listings.length - 1]?.value || marketDetails.listing_count;
-      
-      // If historical data is empty, use market details metrics
-      if (latestOccupancy === 0 && marketDetails.metrics) {
-        latestOccupancy = Math.round(marketDetails.metrics.booked * 100); // Convert decimal to percentage
-        latestAdr = Math.round(marketDetails.metrics.daily_rate * REVENUE_BOOST_FACTOR);
-        latestRevenue = Math.round(marketDetails.metrics.revenue * REVENUE_BOOST_FACTOR);
-        latestRevpar = Math.round(marketDetails.metrics.revpar * REVENUE_BOOST_FACTOR);
-        console.log('[Market Data] Using market details metrics (15% boosted):', { latestOccupancy, latestAdr, latestRevenue, latestRevpar });
-      }
-      
-      marketData = {
-        id: marketId,
-        name: marketDetails.name,
-        listing_count: marketListingCount || marketDetails.listing_count || latestListings,
-        metrics: {
-          occupancy: latestOccupancy,
-          adr: latestAdr,
-          revenue: latestRevenue,
-          revpar: latestRevpar,
-          active_listings: marketListingCount || latestListings,
-          market_score: marketDetails.metrics?.market_score,
-        },
-        historical: historicalData,
-      };
-      
-      // Get market insights from BEDROOM-FILTERED listings for apples-to-apples comparison
-      try {
-        const { listings } = await getMarketListings(marketId, { 
-          limit: 500,
-          filters: { bedrooms: propertyBedrooms } // Filter by same bedroom count
-        });
-        if (listings.length > 0) {
-          marketInsights = calculateMarketInsights(listings);
-          console.log(`[Market Insights] Calculated from ${listings.length} ${propertyBedrooms}BR listings`);
-        } else {
-          // Fallback to all listings if no bedroom-filtered results
-          const allListings = await getMarketListings(marketId, { limit: 500 });
-          if (allListings.listings.length > 0) {
-            marketInsights = calculateMarketInsights(allListings.listings);
-            console.log(`[Market Insights] Fallback: calculated from ${allListings.listings.length} total listings (no ${propertyBedrooms}BR found)`);
-          }
-        }
-      } catch (e) {
-        console.error('[Market Insights] Error calculating insights:', e);
-      }
-    }
-    
-    submarkets = submarketList;
-  }
-  
-  // Step 4: Get same-bedroom comps - prioritize rentalizer comps (which have images)
-  // Then supplement with radius comps for more comprehensive analysis
-  
-  // First, get comps from the rentalizer API (these have images!)
-  const rentalizerComps: ListingData[] = (propertyEstimate.comps || []).map(comp => ({
-    // Use airbnb_listing_id with 'abnb_' prefix for consistent ID format with radius comps
-    id: comp.airbnb_listing_id ? `abnb_${comp.airbnb_listing_id}` : String(Math.random()),
-    title: comp.title || 'Untitled Listing',
+
+  // Step 3: Map BNB Calc comps to ListingData format
+  const matchesBathrooms = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
+
+  const allComps: ListingData[] = (propertyEstimate.comps || []).map((comp) => ({
+    id: comp.airbnb_listing_id ? `abnb_${comp.airbnb_listing_id}` : `bnb_${Math.random().toString(36).slice(2)}`,
+    title: comp.title || 'Comparable Property',
     airbnb_url: comp.airbnb_url || '',
-    image_url: comp.image_url || '', // This has the real image URL from rentalizer API
-    bedrooms: comp.bedrooms ?? 0,
-    bathrooms: comp.bathrooms ?? 0,
+    image_url: comp.image_url || '',
+    bedrooms: comp.bedrooms ?? propertyBedrooms,
+    bathrooms: comp.bathrooms ?? propertyBathrooms,
     accommodates: comp.accommodates || 0,
     property_type: comp.property_type || 'Unknown',
     rating: comp.rating ?? null,
@@ -3813,130 +2928,16 @@ export async function getComprehensivePropertyReport(
     superhost: false,
     professionally_managed: false,
     host_size: 'unknown',
-    latitude: null,
-    longitude: null,
+    latitude: comp.latitude ?? null,
+    longitude: comp.longitude ?? null,
     zipcode: '',
     distance_meters: comp.distance_meters,
+    amenities: undefined,
   }));
-  
-  // Filter to same bedroom count AND same bathroom count for apples-to-apples comparison
-  // Bathroom match uses a tolerance of ±0.5 to handle half-bath differences (e.g., 1 BA matches 1.5 BA)
-  const matchesBathrooms = (compBa: number, targetBa: number) => Math.abs(compBa - targetBa) <= 0.5;
-  
-  const exactMatchRentalizerComps = rentalizerComps.filter(
-    c => c.bedrooms === propertyBedrooms && matchesBathrooms(c.bathrooms, propertyBathrooms)
-  );
-  const sameBedroomOnlyRentalizerComps = rentalizerComps.filter(
-    c => c.bedrooms === propertyBedrooms && !matchesBathrooms(c.bathrooms, propertyBathrooms)
-  );
-  
-  console.log(`[Comps] Rentalizer: ${exactMatchRentalizerComps.length} exact BR+BA match, ${sameBedroomOnlyRentalizerComps.length} same-BR only (${propertyBedrooms}BR/${propertyBathrooms}BA)`);
-  
-  // Get additional comps from radius search (these don't have images but may have more listings)
-  // For high-BR properties (5+), expand radius since they're rarer
-  const compSearchRadius = propertyBedrooms >= 5 ? 8000 : propertyBedrooms >= 4 ? 5000 : 3000;
-  
-  // First try: search with BOTH bedroom AND bathroom filter for exact matches
-  // Also apply amenity filters if user selected amenities for apples-to-apples comparison
-  let radiusComps = await exploreListingsInRadius(address, compSearchRadius, {
-    bedrooms: propertyBedrooms,
-    bathrooms: propertyBathrooms,
-    minRevenue: 5000,
-    amenities: selectedAmenities,
-  }, 50);
-  
-  const hasAmenityFilter = selectedAmenities && selectedAmenities.length > 0;
-  if (hasAmenityFilter) {
-    console.log(`[Comps] Amenity filter active: ${selectedAmenities!.join(', ')} — ${radiusComps.length} amenity-matched comps found`);
-  }
-  
-  // If exact match yields too few results, fall back to bedroom-only search
-  // and filter bathrooms client-side with tolerance
-  let radiusCompsBedroomOnly: ListingData[] = [];
-  if (radiusComps.length < 10) {
-    console.log(`[Comps] Only ${radiusComps.length} exact BR+BA radius comps, fetching bedroom-only to supplement`);
-    const allBedroomRadiusComps = await exploreListingsInRadius(address, compSearchRadius, {
-      bedrooms: propertyBedrooms,
-      minRevenue: 5000,
-      amenities: selectedAmenities,
-    }, 50);
-    
-    // Separate into exact BA match and different BA
-    const exactRadiusIds = new Set(radiusComps.map(c => c.id));
-    const additionalExact: ListingData[] = [];
-    const differentBa: ListingData[] = [];
-    
-    for (const c of allBedroomRadiusComps) {
-      if (exactRadiusIds.has(c.id)) continue; // Already in exact results
-      if (matchesBathrooms(c.bathrooms, propertyBathrooms)) {
-        additionalExact.push(c);
-      } else {
-        differentBa.push(c);
-      }
-    }
-    
-    radiusComps = [...radiusComps, ...additionalExact];
-    radiusCompsBedroomOnly = differentBa; // Keep as fallback, tagged differently
-    console.log(`[Comps] After BR-only supplement: ${radiusComps.length} exact BA match, ${radiusCompsBedroomOnly.length} different BA`);
-  }
-  
-  // For high-BR properties, also search for adjacent bedroom counts to supplement
-  let adjacentBrComps: ListingData[] = [];
-  if (propertyBedrooms >= 4 && radiusComps.length < 10) {
-    // Search for BR-1 and BR+1 to supplement sparse results
-    const adjacentBrs = [propertyBedrooms - 1, propertyBedrooms + 1].filter(br => br >= 1);
-    const adjResults = await Promise.all(
-      adjacentBrs.map(async (adjBr) => {
-        try {
-          return await exploreListingsInRadius(address, compSearchRadius, {
-            bedrooms: adjBr,
-            minRevenue: 5000,
-            amenities: selectedAmenities,
-          }, 15);
-        } catch (e) {
-          console.log(`[Comps] Adjacent BR search failed for ${adjBr}BR`);
-          return [];
-        }
-      })
-    );
-    adjacentBrComps = adjResults.flat();
-    console.log(`[Comps] Found ${adjacentBrComps.length} adjacent BR comps to supplement ${radiusComps.length} same-BR comps`);
-  }
-  
-  // Merge: prioritize exact BR+BA matches first, then same-BR-only, then adjacent-BR
-  // Use rentalizer comps with exact match as the base (they have images)
-  const seenIds = new Set(exactMatchRentalizerComps.map(c => c.id));
-  const seenTitles = new Set(exactMatchRentalizerComps.map(c => c.title.toLowerCase().trim()));
-  const seenUrls = new Set(exactMatchRentalizerComps.map(c => c.airbnb_url).filter(Boolean));
-  
-  const dedup = (c: ListingData) => {
-    const isDuplicateById = seenIds.has(c.id);
-    const isDuplicateByTitle = seenTitles.has(c.title.toLowerCase().trim());
-    const isDuplicateByUrl = c.airbnb_url && seenUrls.has(c.airbnb_url);
-    if (isDuplicateById || isDuplicateByTitle || isDuplicateByUrl) return false;
-    seenIds.add(c.id);
-    seenTitles.add(c.title.toLowerCase().trim());
-    if (c.airbnb_url) seenUrls.add(c.airbnb_url);
-    return true;
-  };
-  
-  // Layer 1: Exact BR+BA radius comps
-  const dedupedRadiusExact = radiusComps.filter(dedup);
-  // Layer 2: Same-BR-only rentalizer comps (different BA, but from rentalizer so they have images)
-  const dedupedSameBrOnly = sameBedroomOnlyRentalizerComps.filter(dedup);
-  // Layer 3: Same-BR-only radius comps (different BA)
-  const dedupedRadiusBrOnly = radiusCompsBedroomOnly.filter(dedup);
-  // Layer 4: Adjacent BR comps (tagged)
-  const dedupedAdjacentBr = adjacentBrComps.map(c => ({ ...c, is_adjacent_br: true })).filter(dedup);
-  
-  // Combine in priority order: exact match first, then same-BR, then adjacent
-  let sameBedroomComps = [
-    ...exactMatchRentalizerComps,
-    ...dedupedRadiusExact,
-    ...dedupedSameBrOnly,
-    ...dedupedRadiusBrOnly,
-    ...dedupedAdjacentBr,
-  ]
+
+  // Filter to same bedroom comps (exact BR+BA match first, then same BR only)
+  const sameBedroomComps = allComps
+    .filter(c => c.bedrooms === propertyBedrooms)
     .sort((a, b) => {
       // Primary sort: exact BA match first
       const aExact = matchesBathrooms(a.bathrooms, propertyBathrooms) ? 0 : 1;
@@ -3946,443 +2947,89 @@ export async function getComprehensivePropertyReport(
       return b.annual_revenue - a.annual_revenue;
     })
     .slice(0, 30);
-  
-  console.log(`[Comps] Final: ${sameBedroomComps.filter(c => matchesBathrooms(c.bathrooms, propertyBathrooms)).length} exact BA match, ${sameBedroomComps.filter(c => !matchesBathrooms(c.bathrooms, propertyBathrooms)).length} different BA out of ${sameBedroomComps.length} total`);
-  
-  // ── AMENITY FILTER FALLBACK ──
-  // If amenity filtering returned too few comps (<3), fall back to unfiltered search
-  // so the user still gets a meaningful report, but flag that amenity filter was relaxed
-  let amenityFilterApplied = hasAmenityFilter && sameBedroomComps.length >= 3;
-  let amenityFilterRelaxed = false;
-  if (hasAmenityFilter && sameBedroomComps.length < 3) {
-    console.log(`[Comps] Amenity filter too restrictive — only ${sameBedroomComps.length} comps. Falling back to unfiltered search.`);
-    amenityFilterRelaxed = true;
-    amenityFilterApplied = false;
-    
-    // Re-fetch without amenity filters
-    const unfilteredRadiusComps = await exploreListingsInRadius(address, compSearchRadius, {
-      bedrooms: propertyBedrooms,
-      bathrooms: propertyBathrooms,
-      minRevenue: 5000,
-    }, 50);
-    
-    // Rebuild sameBedroomComps from unfiltered results
-    const unfilteredSeenIds = new Set(exactMatchRentalizerComps.map(c => c.id));
-    const unfilteredDedup = (c: ListingData) => {
-      if (unfilteredSeenIds.has(c.id)) return false;
-      unfilteredSeenIds.add(c.id);
-      return true;
-    };
-    sameBedroomComps = [
-      ...exactMatchRentalizerComps,
-      ...unfilteredRadiusComps.filter(unfilteredDedup),
-    ]
-      .sort((a, b) => {
-        const aExact = matchesBathrooms(a.bathrooms, propertyBathrooms) ? 0 : 1;
-        const bExact = matchesBathrooms(b.bathrooms, propertyBathrooms) ? 0 : 1;
-        if (aExact !== bExact) return aExact - bExact;
-        return b.annual_revenue - a.annual_revenue;
-      })
-      .slice(0, 30);
-    console.log(`[Comps] Unfiltered fallback: ${sameBedroomComps.length} comps`);
-  }
-  
-  // ── FALLBACK COMP INJECTION ──
-  // When in comp_fallback mode (new construction / no AirDNA data), the radius search
-  // and rentalizer comps will both be empty. Inject the market comps we fetched during fallback.
-  if (sameBedroomComps.length === 0 && (propertyEstimate as any)._fallback_comps?.length > 0) {
-    const fallbackComps: ListingData[] = (propertyEstimate as any)._fallback_comps;
-    console.log(`[Comps] Injecting ${fallbackComps.length} fallback market comps (comp_fallback mode)`);
-    sameBedroomComps = fallbackComps
-      .sort((a, b) => b.annual_revenue - a.annual_revenue)
-      .slice(0, 30);
-  }
-  
-  // Enrich listings that don't have images (radius comps)
-  // Uses /listing/batch endpoint (100 per request) instead of individual calls
-  sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 5);
-  
-  // ── AMENITY ENRICHMENT ──
-  // Radius comps from /listing/comps/area don't include amenities.
-  // Cross-reference from market listings (which DO have amenities) by property_id.
-  // Market listings are cached, so this is typically zero additional API cost.
-  const compsNeedingAmenities = sameBedroomComps.filter(c => !c.amenities || c.amenities.length === 0);
-  if (compsNeedingAmenities.length > 0 && marketId) {
-    try {
-      const { listings: amenitySourceListings } = await getMarketListings(marketId, {
-        limit: 500,
-        orderBy: 'revenue',
-        orderDirection: 'desc',
-      });
-      
-      // Build amenity map: property_id → amenities[]
-      const amenityMap = new Map<string, string[]>();
-      amenitySourceListings.forEach(l => {
-        if (l.id && l.amenities && l.amenities.length > 0) {
-          amenityMap.set(l.id, l.amenities);
-        }
-      });
-      
-      if (amenityMap.size > 0) {
-        let enrichedCount = 0;
-        sameBedroomComps = sameBedroomComps.map(comp => {
-          if ((!comp.amenities || comp.amenities.length === 0) && amenityMap.has(comp.id)) {
-            enrichedCount++;
-            return { ...comp, amenities: amenityMap.get(comp.id)! };
-          }
-          return comp;
-        });
-        console.log(`[Amenity Enrichment] Enriched ${enrichedCount}/${compsNeedingAmenities.length} comps with amenities from ${amenityMap.size} market listings`);
-      } else {
-        console.log('[Amenity Enrichment] No amenities found in market listings');
-      }
-    } catch (e) {
-      console.log('[Amenity Enrichment] Failed to fetch market listings for amenity cross-reference:', (e as Error).message);
-    }
-  }
-  
-  // Step 5: Get bedroom performance data
-  // OPTIMIZED: Single radius call for ALL bedrooms, then group by BR count
-  // This replaces 5-6 separate radius calls (each paginating 2-4 times = 10-24 API calls)
-  // with just 1 call (max 8 pages = 200 listings)
-  let bedroomPerformance: Array<{
-    bedrooms: number;
-    occupancy: number;
-    adr: number;
-    revenue: number;
-    listing_count: number;
-  }> = [];
-  
-  try {
-    // Single call: get ALL listings in radius (no bedroom filter), then group by BR
-    const allRadiusListings = await exploreListingsInRadius(address, 5000, {}, 200);
-    if (allRadiusListings.length > 0) {
-      const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
-      allRadiusListings.forEach(l => {
-        const br = l.bedrooms;
-        if (br >= 1 && br <= 8) {
-          const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
-          brMap.set(br, {
-            count: existing.count + 1,
-            totalRev: existing.totalRev + l.annual_revenue,
-            totalAdr: existing.totalAdr + l.adr,
-            totalOcc: existing.totalOcc + l.occupancy,
-          });
-        }
-      });
-      
-      bedroomPerformance = Array.from(brMap.entries())
-        .map(([br, data]) => ({
-          bedrooms: br,
-          occupancy: Math.round(data.totalOcc / data.count),
-          adr: Math.round(data.totalAdr / data.count),
-          revenue: Math.round(data.totalRev / data.count),
-          listing_count: data.count,
-        }))
-        .sort((a, b) => a.bedrooms - b.bedrooms);
-      
-      console.log(`[Bedroom Performance] OPTIMIZED: Grouped ${allRadiusListings.length} radius listings into ${bedroomPerformance.length} bedroom types (1 API call instead of ${Math.max(5, propertyBedrooms + 1)})`);
-    }
-  } catch (e) {
-    console.log('[Bedroom Performance] Optimized radius search failed, will use fallback');
-  }
-  
-  // Fallback: If radius search returned no bedroom performance data, calculate from available comps
-  if (bedroomPerformance.length === 0) {
-    console.log('[Bedroom Performance] Radius search returned no data, using rentalizer comps + market listings fallback');
-    
-    // Combine all available comps (rentalizer + radius)
-    const allComps = [...rentalizerComps, ...sameBedroomComps];
-    
-    // Also try market listings if we have a market ID
-    if (marketId) {
-      try {
-        const { listings: marketListings } = await getMarketListings(marketId, { 
-          limit: 500, 
-          orderBy: 'revenue', 
-          orderDirection: 'desc' 
-        });
-        if (marketListings.length > 0) {
-          // Group market listings by bedroom count
-          const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
-          marketListings.forEach(l => {
-            const br = l.bedrooms;
-            if (br >= 1 && br <= 8) {
-              const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
-              brMap.set(br, {
-                count: existing.count + 1,
-                totalRev: existing.totalRev + l.annual_revenue,
-                totalAdr: existing.totalAdr + l.adr,
-                totalOcc: existing.totalOcc + l.occupancy,
-              });
-            }
-          });
-          
-          bedroomPerformance = Array.from(brMap.entries())
-            .map(([br, data]) => ({
-              bedrooms: br,
-              occupancy: Math.round(data.totalOcc / data.count),
-              adr: Math.round(data.totalAdr / data.count),
-              revenue: Math.round(data.totalRev / data.count),
-              listing_count: data.count,
-            }))
-            .sort((a, b) => a.bedrooms - b.bedrooms);
-          
-          console.log(`[Bedroom Performance] Calculated from ${marketListings.length} market listings: ${bedroomPerformance.length} bedroom types`);
-        }
-      } catch (e) {
-        console.log('[Bedroom Performance] Market listings fallback also failed');
-      }
-    }
-    
-    // Last resort: calculate from all available comps
-    if (bedroomPerformance.length === 0 && allComps.length > 0) {
-      const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
-      allComps.forEach(l => {
-        const br = l.bedrooms;
-        if (br >= 1 && br <= 8) {
-          const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
-          brMap.set(br, {
-            count: existing.count + 1,
-            totalRev: existing.totalRev + l.annual_revenue,
-            totalAdr: existing.totalAdr + l.adr,
-            totalOcc: existing.totalOcc + l.occupancy,
-          });
-        }
-      });
-      
-      bedroomPerformance = Array.from(brMap.entries())
-        .map(([br, data]) => ({
-          bedrooms: br,
-          occupancy: Math.round(data.totalOcc / data.count),
-          adr: Math.round(data.totalAdr / data.count),
-          revenue: Math.round(data.totalRev / data.count),
-          listing_count: data.count,
-        }))
-        .sort((a, b) => a.bedrooms - b.bedrooms);
-      
-      console.log(`[Bedroom Performance] Calculated from ${allComps.length} available comps: ${bedroomPerformance.length} bedroom types`);
-    }
-  }
-  
-  // Calculate YoY change from market historical data
-  let yoyPercentChange: number | undefined;
-  if (marketData?.historical?.revenue && marketData.historical.revenue.length >= 12) {
-    const revenueData = marketData.historical.revenue;
-    const latestRevenue = revenueData[revenueData.length - 1]?.value || 0;
-    const yearAgoRevenue = revenueData[0]?.value || 0;
-    if (yearAgoRevenue > 0) {
-      yoyPercentChange = Math.round(((latestRevenue - yearAgoRevenue) / yearAgoRevenue) * 100);
-    }
-  }
-  
-  // ============================================
-  // ============================================
-  // COMP-MEDIAN REVENUE ADJUSTMENT
-  // Use the median of exact-match (same BR+BA) comps as the headline revenue.
-  // This shows what real operators with the same property type are actually earning.
-  // Rentalizer is kept as fallback when insufficient comps exist.
-  // ============================================
-  console.log(`\n\n>>> COMP-MEDIAN ADJUSTMENT BLOCK REACHED <<<`);
-  console.log(`sameBedroomComps count: ${sameBedroomComps.length}`);
-  console.log(`propertyBedrooms: ${propertyBedrooms} (type: ${typeof propertyBedrooms}), propertyBathrooms: ${propertyBathrooms} (type: ${typeof propertyBathrooms})`);
-  console.log(`Sample comp BR/BA:`, sameBedroomComps.slice(0, 3).map(c => `${c.bedrooms}BR/${c.bathrooms}BA (types: ${typeof c.bedrooms}/${typeof c.bathrooms}), rev: $${c.annual_revenue}`));
-  
-  const exactMatchComps = sameBedroomComps.filter(
-    c => c.bedrooms === propertyBedrooms && matchesBathrooms(c.bathrooms, propertyBathrooms) && c.annual_revenue > 0
-  );
-  console.log(`exactMatchComps count: ${exactMatchComps.length}`);
-  console.log(`Rentalizer revenue: $${propertyEstimate.estimates.annual_revenue}`);
-  
-  // ============================================
-  // OUTLIER FILTERING — Remove likely long-term rentals
-  // Comps with 95%+ occupancy year-round are almost certainly monthly/long-term rentals,
-  // not true short-term rental comps. These inflate the top-3 average unrealistically.
-  // ============================================
-  const filterOutlierComps = (comps: ListingData[]): ListingData[] => {
-    const MAX_STR_OCCUPANCY = 95; // 95%+ occupancy = likely long-term rental
-    const filtered = comps.filter(c => {
-      const occ = c.occupancy > 1 ? c.occupancy : c.occupancy * 100; // Normalize to percentage
-      if (occ >= MAX_STR_OCCUPANCY) {
-        console.log(`[Outlier Filter] Excluding comp "${c.title}" — ${Math.round(occ)}% occupancy (likely long-term rental), rev: $${c.annual_revenue.toLocaleString()}`);
-        return false;
-      }
-      return true;
-    });
-    // Graceful fallback: if filtering removed too many, return original
-    if (filtered.length < 3 && comps.length >= 3) {
-      console.log(`[Outlier Filter] Only ${filtered.length} comps remain after filtering — falling back to unfiltered (${comps.length} comps)`);
-      return comps;
-    }
-    console.log(`[Outlier Filter] ${comps.length - filtered.length} outliers removed, ${filtered.length} comps remain`);
-    return filtered;
-  };
 
-  // ============================================
-  // TOP-3 COMP AVERAGE — Headline Revenue
-  // Use the average revenue of the top 3 comps (by revenue) as the projected headline.
-  // This reflects what the best-performing comparable properties actually earn.
-  // ============================================
-  const rawCompsForHeadline = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
-  const allCompsForHeadline = filterOutlierComps(rawCompsForHeadline);
-  
-  if (allCompsForHeadline.length >= 3) {
-    // Sort comps by revenue descending and take top 3
-    const top3Comps = [...allCompsForHeadline].sort((a, b) => b.annual_revenue - a.annual_revenue).slice(0, 3);
-    const top3Revenue = Math.round(top3Comps.reduce((sum, c) => sum + c.annual_revenue, 0) / 3);
-    const top3Adr = Math.round(top3Comps.reduce((sum, c) => sum + c.adr, 0) / 3);
-    const top3Occupancy = top3Comps.reduce((sum, c) => sum + c.occupancy, 0) / 3;
-    
-    // Use the top-3 comps' min/max for the revenue range so it's consistent with the headline
-    const top3Min = Math.min(...top3Comps.map(c => c.annual_revenue));
-    const top3Max = Math.max(...top3Comps.map(c => c.annual_revenue));
-    
-    const rentalizerRevenue = propertyEstimate.estimates.annual_revenue;
-    const targetRevenue = top3Revenue;
-    
-    console.log(`[Top-3 Comp Average] Top 3 comps: ${top3Comps.map(c => '$' + c.annual_revenue.toLocaleString()).join(', ')}`);
-    console.log(`[Top-3 Comp Average] Average: $${top3Revenue.toLocaleString()}, Rentalizer: $${rentalizerRevenue.toLocaleString()}, Range: $${top3Min.toLocaleString()} - $${top3Max.toLocaleString()} (top 3 of ${allCompsForHeadline.length} comps)`);
-    
-    const scaleFactor = targetRevenue / rentalizerRevenue;
-    
-    // Store original Rentalizer values for reference
-    (propertyEstimate as any)._original_rentalizer = {
-      annual_revenue: rentalizerRevenue,
-      annual_revenue_low: propertyEstimate.estimates.annual_revenue_low,
-      annual_revenue_high: propertyEstimate.estimates.annual_revenue_high,
-      average_daily_rate: propertyEstimate.estimates.average_daily_rate,
-      occupancy_rate: propertyEstimate.estimates.occupancy_rate,
-    };
-    (propertyEstimate as any)._revenue_source = 'top_3_comp_average';
-    (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
-    (propertyEstimate as any)._top_3_comps = top3Comps.map(c => ({
-      title: c.title,
-      annual_revenue: c.annual_revenue,
-      adr: c.adr,
-      occupancy: c.occupancy,
-    }));
-    
-    // Update headline estimates with top-3 average values
-    propertyEstimate.estimates.annual_revenue = targetRevenue;
-    propertyEstimate.estimates.average_daily_rate = top3Adr > 1 ? top3Adr : Math.round(top3Adr);
-    // Normalize occupancy: if comp occupancy is > 1, it's already a percentage (e.g., 73), convert to decimal
-    propertyEstimate.estimates.occupancy_rate = top3Occupancy > 1 ? top3Occupancy / 100 : top3Occupancy;
-    propertyEstimate.estimates.annual_revenue_low = top3Min; // Lowest of top 3 comps
-    propertyEstimate.estimates.annual_revenue_high = top3Max; // Highest of top 3 comps
-    
-    console.log(`[Top-3 Comp Average] Setting revenue: $${rentalizerRevenue.toLocaleString()} → $${targetRevenue.toLocaleString()} (scale: ${scaleFactor.toFixed(2)}x)`);
-    
-    // Scale monthly forecast to match new annual total while preserving seasonal shape
-    if (propertyEstimate.monthly_forecast.length > 0 && scaleFactor !== 1) {
-      propertyEstimate.monthly_forecast = propertyEstimate.monthly_forecast.map(m => ({
-        ...m,
-        revenue: Math.round(m.revenue * scaleFactor),
-        adr: Math.round(m.adr * scaleFactor),
-      }));
-    }
-  } else {
-    console.log(`[Top-3 Comp Average] Skipped — only ${allCompsForHeadline.length} comps available (need >= 3), using Rentalizer as-is`);
-    (propertyEstimate as any)._revenue_source = 'rentalizer';
-    (propertyEstimate as any)._exact_match_comp_count = exactMatchComps.length;
-  }
-  
-  // ============================================
-  // THREE-TIER REVENUE SCENARIOS (P50 / P75 / P90)
-  // Based on real comp data percentiles
-  // ============================================
-  const rawScenarioComps = exactMatchComps.length >= 3 ? exactMatchComps : sameBedroomComps.filter(c => c.annual_revenue > 0);
-  // Apply same outlier filtering to revenue scenarios
-  const filteredScenarioComps = filterOutlierComps(rawScenarioComps);
-  const scenarioComps = filteredScenarioComps;
-  let revenueScenarios: { conservative: number; target: number; optimistic: number; source: string; compCount: number } | undefined;
-  
-  if (scenarioComps.length >= 3) {
-    const scenarioRevenues = scenarioComps.map(c => c.annual_revenue).sort((a, b) => a - b);
-    const pctl = (arr: number[], p: number) => {
-      const idx = Math.max(0, Math.ceil((p / 100) * arr.length) - 1);
-      return arr[idx];
-    };
-    const median = (arr: number[]) => {
-      const mid = Math.floor(arr.length / 2);
-      return arr.length % 2 === 0 ? Math.round((arr[mid - 1] + arr[mid]) / 2) : arr[mid];
-    };
-    
-    const p50 = median(scenarioRevenues);
-    const p75 = pctl(scenarioRevenues, 75);
-    const p90 = pctl(scenarioRevenues, 90);
-    
-    revenueScenarios = {
-      conservative: p50,  // Median performer (P50)
-      target: p75,        // Top quarter performer (P75)
-      optimistic: p90,    // Top 10% performer (P90)
-      source: exactMatchComps.length >= 3 ? 'exact_match' : 'same_bedroom',
-      compCount: scenarioComps.length,
-    };
-    
-    console.log(`[Revenue Scenarios] P50=$${p50.toLocaleString()}, P75=$${p75.toLocaleString()}, P90=$${p90.toLocaleString()} (${scenarioComps.length} comps, source: ${revenueScenarios.source})`);
-  } else {
-    console.log(`[Revenue Scenarios] Not enough comps (${scenarioComps.length}) for three-tier projections`);
-  }
-  
-  // ============================================
-  // DISTANCE CALCULATION (Haversine)
-  // Calculate distance from subject property to each comp
-  // ============================================
-  const subjectLat = propertyEstimate.property?.latitude;
-  const subjectLng = propertyEstimate.property?.longitude;
-  
+  console.log(`[Property Report] ${sameBedroomComps.length} same-bedroom comps (${allComps.length} total from BNB Calc)`);
+
+  // Step 4: Calculate distance from subject property to each comp
+  const subjectLat = propertyEstimate.property.latitude;
+  const subjectLng = propertyEstimate.property.longitude;
   if (subjectLat && subjectLng) {
-    const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number | null | undefined, lng2: number | null | undefined): number | undefined => {
-      if (!lat2 || !lng2) return undefined;
-      const R = 6371000; // Earth's radius in meters
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return Math.round(R * c);
-    };
-    
-    sameBedroomComps = sameBedroomComps.map(c => ({
-      ...c,
-      distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
-    }));
-    
-    const compsWithDistance = sameBedroomComps.filter(c => c.distance_meters !== undefined).length;
-    console.log(`[Distance] Calculated distance for ${compsWithDistance}/${sameBedroomComps.length} comps from subject (${subjectLat}, ${subjectLng})`);
-  } else {
-    console.log(`[Distance] No subject coordinates available — skipping distance calculation`);
+    sameBedroomComps.forEach(comp => {
+      if (comp.latitude && comp.longitude && comp.distance_meters === undefined) {
+        const R = 6371000; // Earth radius in meters
+        const dLat = (comp.latitude - subjectLat) * Math.PI / 180;
+        const dLng = (comp.longitude - subjectLng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(subjectLat * Math.PI / 180) * Math.cos(comp.latitude * Math.PI / 180) *
+          Math.sin(dLng / 2) ** 2;
+        comp.distance_meters = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+      }
+    });
   }
-  
+
+  // Step 5: Derive bedroom_performance from all comps
+  const bedroomMap = new Map<number, { revenues: number[]; adrs: number[]; occupancies: number[] }>();
+  allComps.forEach(comp => {
+    if (!bedroomMap.has(comp.bedrooms)) {
+      bedroomMap.set(comp.bedrooms, { revenues: [], adrs: [], occupancies: [] });
+    }
+    const bucket = bedroomMap.get(comp.bedrooms)!;
+    if (comp.annual_revenue > 0) bucket.revenues.push(comp.annual_revenue);
+    if (comp.adr > 0) bucket.adrs.push(comp.adr);
+    if (comp.occupancy > 0) bucket.occupancies.push(comp.occupancy);
+  });
+
+  const bedroomPerformance = Array.from(bedroomMap.entries())
+    .map(([br, data]) => ({
+      bedrooms: br,
+      revenue: data.revenues.length > 0
+        ? Math.round(data.revenues.reduce((a, b) => a + b, 0) / data.revenues.length)
+        : 0,
+      adr: data.adrs.length > 0
+        ? Math.round(data.adrs.reduce((a, b) => a + b, 0) / data.adrs.length)
+        : 0,
+      occupancy: data.occupancies.length > 0
+        ? Math.round((data.occupancies.reduce((a, b) => a + b, 0) / data.occupancies.length) * 100) / 100
+        : 0,
+      listing_count: data.revenues.length,
+    }))
+    .sort((a, b) => a.bedrooms - b.bedrooms);
+
+  // Step 6: Derive revenue_scenarios from same-bedroom comps
+  let revenueScenarios: { conservative: number; target: number; optimistic: number; source: string; compCount: number } | undefined;
+  const revenueValues = sameBedroomComps
+    .map(c => c.annual_revenue)
+    .filter(r => r > 0)
+    .sort((a, b) => a - b);
+
+  if (revenueValues.length >= 3) {
+    const p25Idx = Math.floor(revenueValues.length * 0.25);
+    const p50Idx = Math.floor(revenueValues.length * 0.50);
+    const p75Idx = Math.floor(revenueValues.length * 0.75);
+    revenueScenarios = {
+      conservative: revenueValues[p25Idx],
+      target: revenueValues[p50Idx],
+      optimistic: revenueValues[p75Idx],
+      source: 'bnbcalc_comps',
+      compCount: revenueValues.length,
+    };
+  }
+
   const result = {
-    property: propertyEstimate!,
-    market: marketData,
-    submarkets,
+    property: propertyEstimate,
+    market: null,
+    submarkets: [] as SubmarketData[],
     same_bedroom_comps: sameBedroomComps,
     bedroom_performance: bedroomPerformance,
-    insights: marketInsights,
+    insights: undefined,
     generated_at: new Date().toISOString(),
-    // YoY data calculated from market historical revenue
-    historical_valuation: yoyPercentChange !== undefined ? {
-      mom_perc_chg: 0, // Not calculated
-      yoy_perc_chg: yoyPercentChange,
-    } : undefined,
-    // Three-tier revenue projections from real comp data
+    historical_valuation: undefined,
     revenue_scenarios: revenueScenarios,
-    // Amenity filter metadata
-    amenity_filter: hasAmenityFilter ? {
-      applied: amenityFilterApplied,
-      relaxed: amenityFilterRelaxed,
-      selected_amenities: selectedAmenities || [],
-      comp_count: sameBedroomComps.length,
-    } : undefined,
   };
 
   // Cache the full report for instant repeat lookups (7 days)
   apiCache.set(reportCacheKey, result, 'property_details');
   console.log(`[Property Report] Cached full report for ${address}`);
-
   return result;
 }
 
@@ -7777,11 +6424,9 @@ export interface BulkSummaryResponse {
 export async function getRentalizerBulkSummary(
   queries: BulkSummaryQuery[]
 ): Promise<BulkSummaryResponse | null> {
-  // Limit to 25 queries as per API spec
+  // Limit to 25 queries
   const limitedQueries = queries.slice(0, 25);
-  
   const cacheKey = `bulk-summary:${JSON.stringify(limitedQueries)}`;
-  
   const cached = await apiCache.getAsync<BulkSummaryResponse>(cacheKey);
   if (cached) {
     console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
@@ -7789,56 +6434,47 @@ export async function getRentalizerBulkSummary(
     return cached;
   }
   console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
-
   try {
-    const requestBody = {
-      queries: limitedQueries.map(q => ({
-        address: q.address,
-        bedrooms: q.bedrooms || null,
-        bathrooms: q.bathrooms || null,
-        accommodates: q.accommodates || null,
-        currency: 'usd',
-      })),
-    };
-
-    const response = await makeApiRequest<{
-      payload: {
-        results?: Array<{
-          address?: string;
-          adr?: number;
-          revenue?: number;
-          occupancy?: number;
-          currency?: string;
-          error?: string;
-        }>;
-      };
-    }>('/rentalizer/bulk_summary', 'POST', requestBody);
-
-    const results: BulkSummaryResult[] = (response.payload.results || []).map((r, i) => ({
-      address: r.address || limitedQueries[i]?.address || '',
-      adr: Math.round((r.adr || 0) * REVENUE_BOOST_FACTOR),
-      revenue: Math.round((r.revenue || 0) * REVENUE_BOOST_FACTOR),
-      occupancy: r.occupancy || 0,
-      currency: r.currency || 'USD',
-      success: !r.error,
-      error: r.error,
-    }));
-
+    // Use individual BNB Calc calls via getRentalizerEstimate (no AirDNA bulk endpoint)
+    const results: BulkSummaryResult[] = await Promise.all(
+      limitedQueries.map(async (q) => {
+        try {
+          const estimate = await getRentalizerEstimate({
+            address: q.address,
+            bedrooms: q.bedrooms,
+            bathrooms: q.bathrooms,
+            accommodates: q.accommodates,
+            currency: 'usd',
+          });
+          if (!estimate) {
+            return { address: q.address, adr: 0, revenue: 0, occupancy: 0, currency: 'USD', success: false, error: 'No estimate returned' };
+          }
+          return {
+            address: q.address,
+            adr: estimate.estimates.average_daily_rate,
+            revenue: estimate.estimates.annual_revenue,
+            occupancy: estimate.estimates.occupancy_rate,
+            currency: estimate.estimates.currency_symbol === '$' ? 'USD' : 'USD',
+            success: true,
+            error: undefined,
+          };
+        } catch (err: any) {
+          return { address: q.address, adr: 0, revenue: 0, occupancy: 0, currency: 'USD', success: false, error: err.message || 'Failed' };
+        }
+      })
+    );
     const result: BulkSummaryResponse = {
       results,
       successful_count: results.filter(r => r.success).length,
       failed_count: results.filter(r => !r.success).length,
     };
-
-    apiCache.set(cacheKey, result, 'rentalizer'); // 15 min cache
-
+    apiCache.set(cacheKey, result, 'rentalizer');
     return result;
   } catch (error) {
     console.error('Error fetching bulk summary:', error);
     return null;
   }
 }
-
 
 // ============================================
 // STANDALONE MARKET ADVISOR - COMPREHENSIVE DATA FETCH

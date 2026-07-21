@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level page disabled (AirDNA removed)
 /**
  * Market Advisor Page
  * 

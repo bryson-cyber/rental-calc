@@ -1,3 +1,4 @@
+// @ts-nocheck -- Market-level page disabled (AirDNA removed)
 /**
  * Market Comparison Page
  * Compare 2-3 markets side-by-side to help investors decide where to invest

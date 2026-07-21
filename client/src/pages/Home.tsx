@@ -348,8 +348,8 @@ export default function RentalEstimator() {
   // Progress tracking for real-time updates
   const { sessionId, progress, startTracking, stopTracking } = useAnalysisProgress();
 
-  // tRPC mutations - use analyzeProperty for full analysis with progress tracking
-  const analyzePropertyMutation = trpc.advanced.analyzeProperty.useMutation();
+  // tRPC mutations - use getPropertyReport for full analysis
+  const analyzePropertyMutation = trpc.rental.getPropertyReport.useMutation();
   const submitLeadMutation = trpc.rental.submitLead.useMutation();
 
   const handleZillowParse = () => {
@@ -403,28 +403,27 @@ export default function RentalEstimator() {
         zillow_url: zillowUrl || undefined,
       });
 
-      // Run comprehensive analysis with progress tracking
+      // Run comprehensive analysis
       const result = await analyzePropertyMutation.mutateAsync({
         address: formData.address,
-        monthly_rent: formData.monthlyRent,
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
-        sessionId: trackingSessionId, // Enable real-time progress updates
+        accommodates: formData.accommodates,
         reportMode: reportMode,
+        leadName: leadData.name,
+        leadEmail: leadData.email,
+        leadPhone: leadData.phone || undefined,
       });
 
       // Stop progress tracking
       stopTracking();
 
       if (result.success && result.data) {
-        // Transform the analysis result to match ComprehensiveReportData
-        const analysisData = result.data as any;
-        const propEst = analysisData.property_estimate as any;
-        const percentiles = analysisData.percentiles as any;
-        const competitors = analysisData.competitors as any[] || [];
+        // getPropertyReport returns getComprehensivePropertyReport shape directly
+        const reportResult = result.data as any;
         
         const reportData: ComprehensiveReportData = {
-          property: propEst || {
+          property: reportResult.property || {
             property: {
               address: formData.address,
               bedrooms: formData.bedrooms,
@@ -432,35 +431,22 @@ export default function RentalEstimator() {
               accommodates: formData.bedrooms * 2,
             },
             estimates: {
-              annual_revenue: percentiles?.p50 || 0,
-              annual_revenue_low: percentiles?.p25 || 0,
-              annual_revenue_high: percentiles?.p75 || 0,
-              average_daily_rate: propEst?.estimates?.average_daily_rate || 0,
-              occupancy_rate: propEst?.estimates?.occupancy_rate || 0,
+              annual_revenue: 0,
+              annual_revenue_low: 0,
+              annual_revenue_high: 0,
+              average_daily_rate: 0,
+              occupancy_rate: 0,
             },
-            monthly_forecast: propEst?.monthly_forecast || [],
-            comps: competitors.map((c: any) => ({
-              title: c.name,
-              bedrooms: c.bedrooms,
-              bathrooms: c.bathrooms,
-              rating: c.rating,
-              reviews: c.reviews,
-              annual_revenue: c.annual_revenue,
-              adr: c.adr,
-              occupancy: c.occupancy,
-              distance_meters: 0,
-              airbnb_url: c.airbnb_url,
-              image_url: c.image_url,
-              property_type: c.property_type,
-            })),
+            monthly_forecast: [],
+            comps: [],
           },
-          market: null,
-          submarkets: [],
-          same_bedroom_comps: competitors.map((c: any) => ({
+          market: reportResult.market || null,
+          submarkets: reportResult.submarkets || [],
+          same_bedroom_comps: (reportResult.same_bedroom_comps || []).map((c: any) => ({
             id: c.id || '',
-            title: c.name,
-            airbnb_url: c.airbnb_url,
-            image_url: c.image_url,
+            title: c.title || c.name || 'Comparable Property',
+            airbnb_url: c.airbnb_url || '',
+            image_url: c.image_url || '',
             bedrooms: c.bedrooms,
             bathrooms: c.bathrooms,
             accommodates: c.accommodates || 0,
@@ -471,10 +457,10 @@ export default function RentalEstimator() {
             adr: c.adr,
             occupancy: c.occupancy,
           })),
-          bedroom_performance: [],
-          generated_at: new Date().toISOString(),
-          enhanced_narrative_report: analysisData.enhanced_narrative_report as EnhancedNarrativeReport | undefined,
-          rentometer_data: analysisData.rentometer_data || null,
+          bedroom_performance: reportResult.bedroom_performance || [],
+          generated_at: reportResult.generated_at || new Date().toISOString(),
+          enhanced_narrative_report: reportResult.enhanced_narrative_report as EnhancedNarrativeReport | undefined,
+          rentometer_data: reportResult.rentometer_data || null,
         };
         setReportData(reportData);
         setStep('results');

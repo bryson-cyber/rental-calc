@@ -4,7 +4,7 @@
  */
 
 export { rentalRouter } from "./rental";
-export { advancedRouter } from "./advanced";
+// export { advancedRouter } from "./advanced"; // Removed - AirDNA market features
 export { sharedReportsRouter } from "./shared-reports";
 export { regulationTrackerRouter } from "./regulation-tracker";
 export { savedSearchesRouter } from "./saved-searches";
@@ -12,16 +12,16 @@ export { favoritesRouter } from "./favorites";
 export { favoriteListingsRouter } from "./favorite-listings";
 export { exportRouter } from "./export";
 export { deepAnalysisRouter } from "./deep-analysis";
-export { listingsByAreaRouter } from "./listings-by-area";
-export { compDataRouter } from "./comp-data";
+// REMOVED: export { listingsByAreaRouter } from "./listings-by-area";
+// export { compDataRouter } from "./comp-data"; // Removed - AirDNA market features
 export { bulkSummaryRouter } from "./bulk-summary";
-export { marketComparisonRouter } from "./market-comparison";
-export { marketDiscoveryRouter } from "./market-discovery";
-export { favoriteMarketsRouter } from "./favorite-markets";
-export { marketAlertsRouter } from "./market-alerts";
+// REMOVED: export { marketComparisonRouter } from "./market-comparison";
+// REMOVED: export { marketDiscoveryRouter } from "./market-discovery";
+// REMOVED: export { favoriteMarketsRouter } from "./favorite-markets";
+// REMOVED: export { marketAlertsRouter } from "./market-alerts";
 export { notificationsRouter } from "./notifications";
 export { rentometerRouter } from "./rentometer";
-export { marketExplorerRouter } from "./market-explorer";
+// REMOVED: export { marketExplorerRouter } from "./market-explorer";
 export { zillowRouter } from "./zillow";
 export { redfinRouter } from "./redfin";
 export { webhookRouter } from "./webhook";
@@ -41,4 +41,4 @@ export { webinarSmsRouter } from "./webinar-sms";
 export { leaseReaderRouter } from "./lease-reader";
 export { webinarEnvRouter } from "./webinar-env";
 export { tosRouter } from "./tos";
-export { publicExploreRouter } from "./public-explore";
+// export { publicExploreRouter } from "./public-explore"; // Removed - market features

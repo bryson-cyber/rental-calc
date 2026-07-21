@@ -265,7 +265,7 @@ export async function getBnbCalcEstimate(
     }));
 
     // Map comparables to existing Comp format
-    const comps = (data.comparables || []).slice(0, 25).map((comp) => {
+    const comps = (data.comparables || []).slice(0, 49).map((comp) => {
       // Use TTM metrics if available, otherwise fall back to LTM fields
       const compRevenue = comp.metrics?.ttm?.revenue ?? comp.annual_revenue_ltm ?? 0;
       const compAdr = comp.metrics?.ttm?.adr ?? comp.average_daily_rate_ltm ?? 0;
@@ -292,6 +292,9 @@ export async function getBnbCalcEstimate(
         image_url: comp.thumbnail_url,
         property_type: comp.property_type,
         accommodates: comp.accommodates,
+        superhost: comp.superhost ?? false,
+        professionally_managed: comp.professional_management ?? false,
+        amenities: comp.amenities_raw ?? (comp.amenities ? Object.keys(comp.amenities).filter(k => comp.amenities![k]) : undefined),
         // BNB Calc doesn't provide per-comp monthly metrics in the same format
         monthly_metrics: undefined as Array<{ date: string; occupancy: number; adr: number; revenue: number; revenue_potential: number }> | undefined,
       };

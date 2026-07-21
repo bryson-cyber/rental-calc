@@ -410,6 +410,8 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
+// Note: prove/find/market/advisor/explore are kept in the type for backward compatibility
+// but are NOT included in TAB_ORDER so they never render in the UI
 type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease';
 
 export default function LeadMagnet() {
@@ -457,10 +459,9 @@ export default function LeadMagnet() {
   // Swipe gesture state for mobile navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
-  // Tabs that require admin access (AirDNA-heavy features)
-  const ADMIN_ONLY_TABS: TabType[] = ['prove', 'find', 'market', 'advisor'];
-  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'lease'];
-  const TAB_ORDER: TabType[] = isAdmin ? ALL_TABS : ALL_TABS.filter(t => !ADMIN_ONLY_TABS.includes(t));
+  // All available tabs (market-level features removed - now BNB Calc property-only)
+  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease'];
+  const TAB_ORDER: TabType[] = ALL_TABS;
   
   // Swipe handlers for mobile navigation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
