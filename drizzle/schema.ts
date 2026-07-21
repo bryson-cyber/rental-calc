@@ -1,4 +1,4 @@
-import { int, tinyint, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { boolean, int, tinyint, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -2840,3 +2840,190 @@ export const adminSettings = mysqlTable("admin_settings", {
 
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertAdminSetting = typeof adminSettings.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LLC FORMATION MODULE (white-label filing-provider reseller; ported from the
+// standalone LLC-formation app). Plain int id columns with indexes only — no
+// foreign keys, matching the rest of this schema. Schema is applied in
+// production via drizzle-kit migrations (pnpm db:push), same as every other
+// table in this file.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const llcRegistrations = mysqlTable(
+  "llc_registrations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    status: mysqlEnum("status", [
+      "draft",
+      "ready",
+      "submitting",
+      "payment_required",
+      "processing",
+      "completed",
+      "action_required",
+      "failed",
+    ])
+      .default("draft")
+      .notNull(),
+    currentStep: int("currentStep").default(1).notNull(),
+    legalName: varchar("legalName", { length: 160 }),
+    entitySuffix: mysqlEnum("entitySuffix", [
+      "LLC",
+      "L.L.C",
+      "L.L.C.",
+      "Limited Liability Company",
+    ])
+      .default("LLC")
+      .notNull(),
+    formationState: varchar("formationState", { length: 2 }),
+    businessType: varchar("businessType", { length: 128 }),
+    industryGroup: varchar("industryGroup", { length: 128 }),
+    industryType: varchar("industryType", { length: 128 }),
+    businessPhone: varchar("businessPhone", { length: 32 }),
+    website: text("website"),
+    useRegisteredAgent: boolean("useRegisteredAgent").default(false).notNull(),
+    companyAddressLine1: varchar("companyAddressLine1", { length: 255 }),
+    companyAddressLine2: varchar("companyAddressLine2", { length: 255 }),
+    companyAddressCity: varchar("companyAddressCity", { length: 120 }),
+    companyAddressState: varchar("companyAddressState", { length: 64 }),
+    companyAddressPostalCode: varchar("companyAddressPostalCode", { length: 24 }),
+    companyAddressCountry: varchar("companyAddressCountry", { length: 2 })
+      .default("US")
+      .notNull(),
+    expediteEin: boolean("expediteEin").default(false).notNull(),
+    accuracyAttested: boolean("accuracyAttested").default(false).notNull(),
+    whopAccountId: varchar("whopAccountId", { length: 64 }),
+    accountEmailAlias: varchar("accountEmailAlias", { length: 320 }),
+    checkoutSessionId: varchar("checkoutSessionId", { length: 64 }),
+    checkoutUrl: text("checkoutUrl"),
+    checkoutTotal: int("checkoutTotal"),
+    checkoutCurrency: varchar("checkoutCurrency", { length: 3 }),
+    retailPriceCents: int("retailPriceCents"),
+    opsNotifiedAt: timestamp("opsNotifiedAt"),
+    providerStatus: json("providerStatus").$type<Record<string, unknown> | null>(),
+    lastProviderSyncAt: timestamp("lastProviderSyncAt"),
+    lastErrorType: varchar("lastErrorType", { length: 128 }),
+    lastErrorMessage: varchar("lastErrorMessage", { length: 500 }),
+    retryable: boolean("retryable").default(false).notNull(),
+    submissionKey: varchar("submissionKey", { length: 64 }),
+    submittedAt: timestamp("submittedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("llc_registration_user_idx").on(table.userId),
+    uniqueIndex("llc_registration_whop_account_unique").on(table.whopAccountId),
+    uniqueIndex("llc_registration_checkout_unique").on(table.checkoutSessionId),
+    index("llc_registration_status_idx").on(table.status),
+  ],
+);
+
+export const llcFounders = mysqlTable(
+  "llc_founders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    isPrimary: boolean("isPrimary").default(false).notNull(),
+    firstName: varchar("firstName", { length: 100 }),
+    lastName: varchar("lastName", { length: 100 }),
+    email: varchar("email", { length: 320 }),
+    phone: varchar("phone", { length: 32 }),
+    /** AES-256-GCM envelope (v1:iv:tag:ct); never stored in plaintext. */
+    ssnEncrypted: varchar("ssnEncrypted", { length: 512 }),
+    ownershipBasisPoints: int("ownershipBasisPoints"),
+    addressLine1: varchar("addressLine1", { length: 255 }),
+    addressLine2: varchar("addressLine2", { length: 255 }),
+    addressCity: varchar("addressCity", { length: 120 }),
+    addressState: varchar("addressState", { length: 64 }),
+    addressPostalCode: varchar("addressPostalCode", { length: 24 }),
+    addressCountry: varchar("addressCountry", { length: 2 }).default("US").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("llc_founder_registration_idx").on(table.registrationId),
+    index("llc_founder_primary_idx").on(table.registrationId, table.isPrimary),
+  ],
+);
+
+export const llcSubmissionAttempts = mysqlTable(
+  "llc_submission_attempts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    attemptNumber: int("attemptNumber").notNull(),
+    submissionKey: varchar("submissionKey", { length: 64 }).notNull(),
+    phase: mysqlEnum("phase", [
+      "account_creation",
+      "llc_registration",
+      "status_refresh",
+    ]).notNull(),
+    outcome: mysqlEnum("outcome", [
+      "started",
+      "succeeded",
+      "retryable_failure",
+      "action_required",
+      "uncertain",
+    ])
+      .default("started")
+      .notNull(),
+    httpStatus: int("httpStatus"),
+    whopRequestId: varchar("whopRequestId", { length: 128 }),
+    providerObjectId: varchar("providerObjectId", { length: 128 }),
+    errorType: varchar("errorType", { length: 128 }),
+    safeMessage: varchar("safeMessage", { length: 500 }),
+    retryable: boolean("retryable").default(false).notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    finishedAt: timestamp("finishedAt"),
+  },
+  (table) => [
+    index("llc_attempt_registration_idx").on(table.registrationId),
+    uniqueIndex("llc_attempt_number_unique").on(
+      table.registrationId,
+      table.attemptNumber,
+      table.phase,
+    ),
+  ],
+);
+
+export const llcStatusHistory = mysqlTable(
+  "llc_status_history",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    fromStatus: mysqlEnum("fromStatus", [
+      "draft",
+      "ready",
+      "submitting",
+      "payment_required",
+      "processing",
+      "completed",
+      "action_required",
+      "failed",
+    ]),
+    toStatus: mysqlEnum("toStatus", [
+      "draft",
+      "ready",
+      "submitting",
+      "payment_required",
+      "processing",
+      "completed",
+      "action_required",
+      "failed",
+    ]).notNull(),
+    source: mysqlEnum("source", ["user", "system", "whop"]).notNull(),
+    note: varchar("note", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => [index("llc_status_history_registration_idx").on(table.registrationId)],
+);
+
+export type LlcRegistrationRecord = typeof llcRegistrations.$inferSelect;
+export type InsertLlcRegistrationRecord = typeof llcRegistrations.$inferInsert;
+export type LlcFounderRecord = typeof llcFounders.$inferSelect;
+export type InsertLlcFounderRecord = typeof llcFounders.$inferInsert;
+export type LlcSubmissionAttempt = typeof llcSubmissionAttempts.$inferSelect;
+export type LlcStatusHistoryRecord = typeof llcStatusHistory.$inferSelect;

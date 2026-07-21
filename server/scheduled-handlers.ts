@@ -175,3 +175,46 @@ export async function emailDispatchHandler(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * POST /api/scheduled/llc-status-poll
+ *
+ * Heartbeat-driven LLC filing-status poll. Runs one sweep of the LLC
+ * status poller (provider status refresh for submitted registrations).
+ * Safe to call at any interval: the sweep is single-flight and a no-op
+ * when no registrations are awaiting provider updates.
+ */
+export async function llcStatusPollHandler(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const isAuthed = await verifyCronAuth(req);
+    if (!isAuthed) {
+      return res.status(403).json({ error: "cron-only" });
+    }
+
+    // Dynamically import to avoid circular dependencies
+    const { runStatusPollOnce } = await import("./ops/poller");
+    const result = await runStatusPollOnce();
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[Scheduled] llc-status-poll completed in ${elapsed}ms:`, result);
+
+    return res.json({ ok: true, elapsed, ...result });
+  } catch (err: any) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[Scheduled] llc-status-poll FAILED after ${elapsed}ms:`, err.message);
+
+    // Alert the owner
+    notifyOwner({
+      title: "🚨 Scheduled LLC Status Poll Failed",
+      content: `The scheduled LLC status poll handler failed.\n\nError: ${err.message}\n\nThis may mean LLC filing statuses are not being refreshed automatically.`,
+    }).catch(() => {});
+
+    return res.status(500).json({
+      error: err.message,
+      stack: err.stack?.split("\n").slice(0, 5).join("\n"),
+      context: { url: req.url },
+      timestamp: new Date().toISOString(),
+    });
+  }
+}

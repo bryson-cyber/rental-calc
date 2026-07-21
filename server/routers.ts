@@ -17,6 +17,7 @@ import { opportunityFinderRouter } from "./opportunity-finder";
 // REMOVED: import { marketResearchSimpleRouter } from "./market-research-simple";
 import { adminRouter } from "./admin-router";
 import { adminSettingsRouter } from "./routers/admin-settings";
+import { llcRouter, llcOpsRouter } from "./llc/router";
 import { newsletterRouter } from "./newsletter-router";
 import { slackAdminRouter } from "./slack-admin-router";
 
@@ -193,6 +194,10 @@ export const appRouter = router({
 
   // Step 8: Lease Reader & Addendum Maker
   leaseReader: leaseReaderRouter,
+
+  // LLC formation (account-required filing flow) + ops dashboard procedures
+  llc: llcRouter,
+  llcOps: llcOpsRouter,
 
   // Webinar Environment (admin toggle for demo mode)
   webinarEnv: webinarEnvRouter,

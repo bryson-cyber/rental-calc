@@ -1135,10 +1135,16 @@ async function startServer() {
   // ─── Heartbeat HTTP Cron Handlers ───────────────────────────────────────
   // These MUST be mounted before tRPC and Vite fallthrough.
   // Platform POSTs to these endpoints on a schedule.
-  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler } = await import("../scheduled-handlers");
+  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler, llcStatusPollHandler } = await import("../scheduled-handlers");
   app.post("/api/scheduled/webinar-import", webinarImportHandler);
   app.post("/api/scheduled/sms-dispatch", smsDispatchHandler);
   app.post("/api/scheduled/email-dispatch", emailDispatchHandler);
+  app.post("/api/scheduled/llc-status-poll", llcStatusPollHandler);
+
+  // LLC formation status poll trigger for external schedulers (GET /api/poll,
+  // disabled unless POLL_SECRET is configured)
+  const { registerPollEndpoint, startStatusPoller } = await import("../ops/poller");
+  registerPollEndpoint(app);
 
   // tRPC API
   app.use(
@@ -1224,6 +1230,11 @@ async function startServer() {
       // Start background recovery cron (checks failed videos every 5 min)
       startBackgroundRecovery();
     }).catch(() => { /* content-hub-pipeline module not critical */ });
+
+    // In-process LLC filing-status poller. A no-op unless POLL_INTERVAL_MINUTES
+    // is set, so it cannot misfire in dev; production scheduling normally runs
+    // through the /api/scheduled/llc-status-poll heartbeat instead.
+    startStatusPoller();
   });
 }
 

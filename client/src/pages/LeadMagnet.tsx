@@ -81,6 +81,7 @@ import {
   Heart,
   HeartOff,
   Building,
+  Building2,
   Calculator,
   Award,
   Share2,
@@ -108,6 +109,7 @@ const TeslaDashboard = lazy(() => import('@/components/TeslaDashboard').then(m =
 const StandaloneMarketAdvisor = lazy(() => import('@/components/StandaloneMarketAdvisor').then(m => ({ default: m.StandaloneMarketAdvisor })));
 const OpportunityFinderStep = lazy(() => import('@/components/OpportunityFinderStep'));
 const LeaseReaderStep = lazy(() => import('@/components/LeaseReaderStep'));
+const LLCFormationStep = lazy(() => import('@/components/LLCFormationStep'));
 import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
@@ -412,7 +414,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // Note: prove/find/market/advisor/explore are kept in the type for backward compatibility
 // but are NOT included in TAB_ORDER so they never render in the UI
-type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease';
+type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease' | 'llc';
 
 export default function LeadMagnet() {
   // Report mode
@@ -460,7 +462,7 @@ export default function LeadMagnet() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
   // All available tabs (market-level features removed - now BNB Calc property-only)
-  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease'];
+  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease', 'llc'];
   const TAB_ORDER: TabType[] = ALL_TABS;
   
   // Swipe handlers for mobile navigation
@@ -719,6 +721,7 @@ export default function LeadMagnet() {
       'opportunity': 'opportunity',
       'ebook': 'ebook',
       'regulations': 'regulations',
+      'llc': 'llc',
     };
     
     // Map step numbers to internal tab names (for HubSpot email deep links)
@@ -2358,6 +2361,13 @@ export default function LeadMagnet() {
       job: "Answer: Can I use this property for Airbnb arbitrage?",
       icon: FileText,
       color: "from-amber-500 to-orange-500"
+    },
+    llc: {
+      title: "Form Your LLC",
+      subtitle: "Make it official — state filing, registered agent, and EIN handled for you",
+      job: "Answer: How do I make my rental business official?",
+      icon: Building2,
+      color: "from-emerald-500 to-teal-500"
     }
   };
 
@@ -2776,7 +2786,7 @@ export default function LeadMagnet() {
                         <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                       </div>
                       <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'lease' ? 'Step 6' : `Step ${index}`}
+                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'lease' ? 'Step 6' : tab === 'llc' ? 'Step 7' : `Step ${index}`}
                       </span>
                     </div>
                     <h3 className={`font-semibold text-sm mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -2826,7 +2836,8 @@ export default function LeadMagnet() {
                 {/* Share Button - appears on all tools except ebook */}
                 {/* When validate tab has results, use UniversalShareButton for cached /share/ links.
                     Otherwise fall back to ShareToolButton deep-links (which require login to re-run). */}
-                {activeTab !== 'ebook' && (
+                {/* LLC tab is a personal filing flow — no share deep-link */}
+                {activeTab !== 'ebook' && activeTab !== 'llc' && (
                   activeTab === 'validate' && result ? (
                     <UniversalShareButton
                       reportType="validator"
@@ -4096,6 +4107,31 @@ export default function LeadMagnet() {
                 />
                 <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
                   <LeaseReaderStep />
+                </Suspense>
+              </div>
+            )}
+
+            {/* ============================================ */}
+            {/* LLC FORMATION TAB (Step 7) */}
+            {/* ============================================ */}
+            {activeTab === 'llc' && (
+              <div className="space-y-8" data-tool-panel="llc">
+                <HelpSection
+                  title="How This Tool Helps You"
+                  description="Make your rental business official. We file your LLC with the state, provide a registered agent, and retrieve your federal EIN — all handled for you."
+                  example="You've validated a deal and you're ready to sign a lease or open a business bank account. Form your LLC here so everything runs under your company's name."
+                  steps={[
+                    'Sign in (or create a free account) so your application is saved',
+                    'Answer a guided 6-step application — about 10 minutes',
+                    'Review and submit; our team files with the state',
+                    'We retrieve your federal EIN from the IRS',
+                    'Track every confirmed step on your status page'
+                  ]}
+                  isOpen={showHelp === 'llc'}
+                  onToggle={() => setShowHelp(showHelp === 'llc' ? null : 'llc')}
+                />
+                <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <LLCFormationStep />
                 </Suspense>
               </div>
             )}

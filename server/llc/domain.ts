@@ -1,0 +1,185 @@
+import { isRegistrationEditable } from "./store";
+import type { getLlcRegistrationById, listLlcRegistrationsForUser } from "./store";
+import { decryptPii, maskSsn } from "./pii";
+import type { LlcDraft } from "../../shared/llc";
+import { LLC_CLIENT_STATUS_LABELS, LLC_STATUS_LABELS } from "../../shared/llc";
+import type { WhopFormationSnapshot } from "./whop";
+
+type RegistrationBundle = NonNullable<
+  Awaited<ReturnType<typeof getLlcRegistrationById>>
+>;
+
+type RegistrationRow = Awaited<
+  ReturnType<typeof listLlcRegistrationsForUser>
+>[number];
+
+function text(value: string | null | undefined): string {
+  return value ?? "";
+}
+
+/**
+ * Belt-and-braces for rows written before the white-label conversion: any
+ * stored error text naming the provider is replaced with neutral copy before
+ * it can reach a client.
+ */
+function clientSafeErrorMessage(message: string | null): string | null {
+  if (!message) return message;
+  return /whop/i.test(message)
+    ? "Our team is reviewing this filing. No action is needed from you right now."
+    : message;
+}
+
+export function bundleToDraft(bundle: RegistrationBundle): LlcDraft {
+  const { registration, founders } = bundle;
+
+  return {
+    currentStep: Math.min(6, Math.max(1, registration.currentStep)),
+    legalName: text(registration.legalName),
+    entitySuffix: registration.entitySuffix,
+    formationState: text(registration.formationState),
+    businessType: text(registration.businessType),
+    industryGroup: text(registration.industryGroup),
+    industryType: text(registration.industryType),
+    businessPhone: text(registration.businessPhone),
+    website: text(registration.website),
+    useRegisteredAgent: registration.useRegisteredAgent,
+    companyAddress: {
+      line1: text(registration.companyAddressLine1),
+      line2: text(registration.companyAddressLine2),
+      city: text(registration.companyAddressCity),
+      state: text(registration.companyAddressState),
+      postalCode: text(registration.companyAddressPostalCode),
+      country: registration.companyAddressCountry || "US",
+    },
+    expediteEin: registration.expediteEin,
+    accuracyAttested: registration.accuracyAttested,
+    founders: founders.map((founder) => ({
+      isPrimary: founder.isPrimary,
+      firstName: text(founder.firstName),
+      lastName: text(founder.lastName),
+      email: text(founder.email),
+      phone: text(founder.phone),
+      ssn: decryptPii(founder.ssnEncrypted) ?? "",
+      ownershipPercentage:
+        founder.ownershipBasisPoints === null
+          ? undefined
+          : founder.ownershipBasisPoints / 100,
+      address: {
+        line1: text(founder.addressLine1),
+        line2: text(founder.addressLine2),
+        city: text(founder.addressCity),
+        state: text(founder.addressState),
+        postalCode: text(founder.addressPostalCode),
+        country: founder.addressCountry || "US",
+      },
+    })),
+  };
+}
+
+/**
+ * Client-facing view. Deliberately excludes everything about the wholesale
+ * leg: the provider's name, checkout URL, wholesale total, provider IDs, and
+ * internal history notes. Clients see their order reference and clean labels.
+ */
+export function bundleToRegistrationView(bundle: RegistrationBundle) {
+  const { registration, history } = bundle;
+
+  return {
+    id: registration.id,
+    orderRef: `NF-${String(registration.id).padStart(4, "0")}`,
+    draft: bundleToDraft(bundle),
+    status: registration.status,
+    statusLabel: LLC_CLIENT_STATUS_LABELS[registration.status],
+    canEdit: isRegistrationEditable(registration),
+    canRetry: registration.retryable,
+    safeErrorMessage: clientSafeErrorMessage(registration.lastErrorMessage),
+    submittedAt: registration.submittedAt?.getTime() ?? null,
+    updatedAt: registration.updatedAt.getTime(),
+    history: history.map((item) => ({
+      id: item.id,
+      fromStatus: item.fromStatus,
+      toStatus: item.toStatus,
+      label: LLC_CLIENT_STATUS_LABELS[item.toStatus],
+      createdAt: item.createdAt.getTime(),
+    })),
+  };
+}
+
+export function registrationRowToSummary(row: RegistrationRow) {
+  return {
+    id: row.id,
+    orderRef: `NF-${String(row.id).padStart(4, "0")}`,
+    legalName: text(row.legalName),
+    entitySuffix: row.entitySuffix,
+    formationState: text(row.formationState),
+    status: row.status,
+    statusLabel: LLC_CLIENT_STATUS_LABELS[row.status],
+    canEdit: isRegistrationEditable(row),
+    currentStep: row.currentStep,
+    updatedAt: row.updatedAt.getTime(),
+  };
+}
+
+/**
+ * Operations view. Includes the wholesale checkout, costs, margin, provider
+ * identifiers, the sanitized provider snapshot (documents, signatures, EIN and
+ * state flags), and the full history with internal notes.
+ */
+export function bundleToOpsView(bundle: RegistrationBundle) {
+  const { registration, history } = bundle;
+  const snapshot =
+    (registration.providerStatus as WhopFormationSnapshot | null) ?? null;
+  const margin =
+    registration.retailPriceCents !== null && registration.checkoutTotal !== null
+      ? registration.retailPriceCents - registration.checkoutTotal
+      : null;
+
+  const draft = bundleToDraft(bundle);
+  return {
+    id: registration.id,
+    orderRef: `NF-${String(registration.id).padStart(4, "0")}`,
+    userId: registration.userId,
+    draft: {
+      ...draft,
+      founders: draft.founders.map((founder) => ({
+        ...founder,
+        ssn: maskSsn(founder.ssn) ?? "",
+      })),
+    },
+    status: registration.status,
+    statusLabel: LLC_STATUS_LABELS[registration.status],
+    safeErrorMessage: registration.lastErrorMessage,
+    lastErrorType: registration.lastErrorType,
+    canRetry: registration.retryable,
+    whopAccountId: registration.whopAccountId,
+    accountEmailAlias: registration.accountEmailAlias,
+    checkout:
+      registration.checkoutUrl && registration.checkoutSessionId
+        ? {
+            url: registration.checkoutUrl,
+            sessionId: registration.checkoutSessionId,
+            total: registration.checkoutTotal,
+            currency: registration.checkoutCurrency,
+          }
+        : null,
+    retailPriceCents: registration.retailPriceCents,
+    marginCents: margin,
+    einRegistered: snapshot?.ein_registered === true,
+    stateRegistered: snapshot?.state_registered === true,
+    documents: snapshot?.documents ?? [],
+    signatures: snapshot?.signatures ?? [],
+    submittedAt: registration.submittedAt?.getTime() ?? null,
+    lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
+    opsNotifiedAt: registration.opsNotifiedAt?.getTime() ?? null,
+    updatedAt: registration.updatedAt.getTime(),
+    history: history.map((item) => ({
+      id: item.id,
+      fromStatus: item.fromStatus,
+      toStatus: item.toStatus,
+      label: LLC_STATUS_LABELS[item.toStatus],
+      source: item.source,
+      note: item.note,
+      createdAt: item.createdAt.getTime(),
+    })),
+  };
+}

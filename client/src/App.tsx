@@ -61,6 +61,8 @@ const WebinarCampaignManager = lazy(() => import('./pages/WebinarCampaignManager
 const AdminViewReport = lazy(() => import('./pages/AdminViewReport'));
 const VideoLandingPage = lazy(() => import('./pages/VideoLandingPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
+const LLCFormationWizard = lazy(() => import('./pages/llc/FormationWizard'));
+const LLCFormationStatus = lazy(() => import('./pages/llc/FormationStatus'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 
@@ -172,6 +174,10 @@ function Router() {
         {/* Webinar Campaign Manager - Standalone SMS hub */}
         <Route path="/webinar-campaigns" component={WebinarCampaignManager} />
         
+        {/* LLC formation - account-required wizard + status tracker */}
+        <Route path="/llc/register/:id" component={LLCFormationWizard} />
+        <Route path="/llc/status/:id" component={LLCFormationStatus} />
+
         {/* Analysis routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />
         <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
