@@ -67,10 +67,14 @@ describe("authorizeStorageKey ACL", () => {
   });
 
   it("never treats a lookalike prefix as the owner namespace", () => {
-    // "pdfsx/7/..." and "pdfs/7x/..." must not match user 7's namespace rule,
-    // but still require a session.
+    // "pdfsx/7/..." is outside the protected namespaces (still needs a
+    // session); "pdfs/7x/..." is INSIDE pdfs/ but malformed, so it is denied
+    // by default rather than opened to any signed-in user.
     expect(authorizeStorageKey("pdfsx/7/file.pdf", makeUser(9))).toEqual({ allowed: true });
-    expect(authorizeStorageKey("pdfs/7x/file.pdf", makeUser(9))).toEqual({ allowed: true });
+    expect(authorizeStorageKey("pdfs/7x/file.pdf", makeUser(9))).toMatchObject({
+      allowed: false,
+      status: 403,
+    });
     expect(authorizeStorageKey("pdfsx/7/file.pdf", null)).toMatchObject({
       allowed: false,
       status: 401,
@@ -181,5 +185,27 @@ describe("storage proxy route handler", () => {
     await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
     expect(res.statusCode).toBe(502);
     expect(String(res.body)).not.toContain("forge down");
+  });
+});
+
+describe("storage proxy traversal and deny-by-default hardening", () => {
+  const admin = { id: 1, role: "admin" } as never;
+  const owner7 = { id: 7, role: "user" } as never;
+
+  it("rejects traversal sequences for everyone, including admins", () => {
+    for (const key of [
+      "pdfs/7/../8/articles.pdf",
+      "generated/../pdfs/7/articles.pdf",
+      "pdfs/7/llc/..\\secret",
+    ]) {
+      expect(authorizeStorageKey(key, admin)).toMatchObject({ allowed: false, status: 400 });
+    }
+  });
+
+  it("denies malformed protected-namespace keys instead of opening them", () => {
+    for (const key of ["pdfs/x7/file.pdf", "pdfs/", "photos/abc/file.jpg"]) {
+      const decision = authorizeStorageKey(key, owner7);
+      expect(decision).toMatchObject({ allowed: false, status: 403 });
+    }
   });
 });

@@ -23,12 +23,19 @@ const OWNER_NAMESPACE_PATTERN = /^(?:photos|audio|pdfs)\/(\d+)\//;
 
 export type StorageAccessDecision =
   | { allowed: true }
-  | { allowed: false; status: 401 | 403; message: string };
+  | { allowed: false; status: 400 | 401 | 403; message: string };
 
 export function authorizeStorageKey(
   key: string,
   user: Pick<User, "id" | "role"> | null,
 ): StorageAccessDecision {
+  // Traversal sequences are rejected before ANY namespace logic so a key can
+  // never authorize under one path and resolve under another (including
+  // "generated/../pdfs/7/x" abusing the open namespace).
+  if (key.includes("..") || key.includes("\\")) {
+    return { allowed: false, status: 400, message: "Invalid storage key" };
+  }
+
   if (key.startsWith("generated/")) return { allowed: true };
 
   if (!user) {
@@ -36,6 +43,15 @@ export function authorizeStorageKey(
   }
 
   const owner = key.match(OWNER_NAMESPACE_PATTERN);
+  // Deny-by-default inside protected namespaces: a malformed pdfs|photos|audio
+  // key that doesn't match the exact owner pattern is refused, not opened.
+  if (!owner && /^(?:photos|audio|pdfs)\//.test(key) && user.role !== "admin") {
+    return {
+      allowed: false,
+      status: 403,
+      message: "You don't have access to this file",
+    };
+  }
   if (owner && user.role !== "admin" && String(user.id) !== owner[1]) {
     return {
       allowed: false,
