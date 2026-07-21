@@ -19,6 +19,32 @@ const submission = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 
+const documents = vi.hoisted(() => ({
+  list: vi.fn(),
+  listAll: vi.fn(),
+  listOps: vi.fn(),
+  mirror: vi.fn(),
+  findById: vi.fn(),
+  setReleased: vi.fn(),
+  upload: vi.fn(),
+  remove: vi.fn(),
+}));
+
+vi.mock("./documents", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./documents")>();
+  return {
+    ...actual,
+    listFormationDocuments: documents.list,
+    listAllFormationDocuments: documents.listAll,
+    listOpsDocuments: documents.listOps,
+    mirrorFormationDocuments: documents.mirror,
+    findLlcDocumentById: documents.findById,
+    setDocumentReleased: documents.setReleased,
+    uploadOpsDocument: documents.upload,
+    deleteLlcDocument: documents.remove,
+  };
+});
+
 vi.mock("./store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./store")>();
   return {
@@ -213,6 +239,170 @@ beforeEach(() => {
   database.transition.mockResolvedValue({ changed: true, registration: bundle.registration });
   submission.submit.mockResolvedValue({ outcome: "in_progress", registration: null });
   submission.refresh.mockResolvedValue({ refreshed: false, registration: null, message: "no change" });
+  documents.list.mockResolvedValue([
+    {
+      id: 1,
+      registrationId: 41,
+      name: "Articles of Organization",
+      documentType: "articles_of_organization",
+      releasedAt: Date.now(),
+      createdAt: Date.now(),
+      url: "/manus-storage/pdfs/7/llc/41/articles-of-organization.pdf",
+    },
+  ]);
+  documents.listAll.mockResolvedValue([]);
+  documents.listOps.mockResolvedValue([]);
+  documents.mirror.mockResolvedValue({ mirrored: 0, skipped: 0 });
+  documents.findById.mockResolvedValue({
+    id: 1,
+    registrationId: 41,
+    userId: 7,
+    name: "Articles of Organization",
+    label: null,
+    documentType: "articles_of_organization",
+    source: "provider",
+    storageKey: "pdfs/7/llc/41/articles-of-organization.pdf",
+    releasedAt: null,
+    createdAt: new Date(),
+  });
+  documents.setReleased.mockResolvedValue({ releasedAt: new Date() });
+  documents.upload.mockResolvedValue({
+    id: 2,
+    registrationId: 41,
+    userId: 7,
+    name: "Operating agreement",
+    label: null,
+    documentType: "operating_agreement",
+    source: "ops_upload",
+    storageKey: "pdfs/7/llc/41/operating-agreement-x.pdf",
+    releasedAt: new Date(),
+    createdAt: new Date(),
+  });
+  documents.remove.mockResolvedValue(undefined);
+});
+
+describe("LLC formation documents procedures (client vault)", () => {
+  it("lists released documents only after confirming the caller owns the registration", async () => {
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.documents({ id: 41 });
+    expect(database.get).toHaveBeenCalledWith(7, 41);
+    expect(documents.list).toHaveBeenCalledWith(7, 41);
+    expect(result).toHaveLength(1);
+    expect(result[0].url).toMatch(/^\/manus-storage\/pdfs\/7\/llc\/41\//);
+  });
+
+  it("returns NOT_FOUND for another user's registration without listing documents", async () => {
+    database.get.mockResolvedValue(null);
+    const caller = appRouter.createCaller(makeContext(9));
+    await expect(caller.llc.documents({ id: 41 })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(database.get).toHaveBeenCalledWith(9, 41);
+    expect(documents.list).not.toHaveBeenCalled();
+  });
+
+  it("rejects unauthenticated document access", async () => {
+    const caller = appRouter.createCaller(makeContext(null));
+    await expect(caller.llc.documents({ id: 41 })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    await expect(caller.llc.allDocuments()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(documents.list).not.toHaveBeenCalled();
+    expect(documents.listAll).not.toHaveBeenCalled();
+  });
+
+  it("scopes allDocuments to the authenticated user", async () => {
+    const caller = appRouter.createCaller(makeContext(7));
+    await caller.llc.allDocuments();
+    expect(documents.listAll).toHaveBeenCalledWith(7);
+  });
+});
+
+describe("LLC ops document management authorization", () => {
+  const pdfBase64 = Buffer.from("pdf-bytes").toString("base64");
+
+  it("forbids non-admin users from every document-management procedure", async () => {
+    const caller = appRouter.createCaller(makeContext(7, "user"));
+    await expect(caller.llcOps.documents({ id: 41 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.llcOps.releaseDocument({ documentId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.llcOps.unreleaseDocument({ documentId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.llcOps.uploadDocument({
+        registrationId: 41,
+        name: "Operating agreement",
+        documentType: "operating_agreement",
+        mimeType: "application/pdf",
+        dataBase64: pdfBase64,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.llcOps.deleteDocument({ documentId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(documents.listOps).not.toHaveBeenCalled();
+    expect(documents.setReleased).not.toHaveBeenCalled();
+    expect(documents.upload).not.toHaveBeenCalled();
+    expect(documents.remove).not.toHaveBeenCalled();
+  });
+
+  it("lets admins list every document, including unreleased", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    await caller.llcOps.documents({ id: 41 });
+    expect(database.findOwner).toHaveBeenCalledWith(41);
+    expect(documents.listOps).toHaveBeenCalledWith(41);
+  });
+
+  it("releases and unreleases documents by id", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const released = await caller.llcOps.releaseDocument({ documentId: 1 });
+    expect(released.released).toBe(true);
+    expect(documents.setReleased).toHaveBeenCalledWith(1, true);
+
+    const hidden = await caller.llcOps.unreleaseDocument({ documentId: 1 });
+    expect(hidden.released).toBe(false);
+    expect(documents.setReleased).toHaveBeenCalledWith(1, false);
+  });
+
+  it("uploads through the owner-resolved registration", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const result = await caller.llcOps.uploadDocument({
+      registrationId: 41,
+      name: "Operating agreement",
+      documentType: "operating_agreement",
+      mimeType: "application/pdf",
+      dataBase64: pdfBase64,
+    });
+    expect(database.findOwner).toHaveBeenCalledWith(41);
+    expect(documents.upload).toHaveBeenCalledWith(
+      expect.objectContaining({ registrationId: 41, ownerUserId: 7 }),
+    );
+    expect(result.source).toBe("ops_upload");
+  });
+
+  it("rejects disallowed upload mime types at the input boundary", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    await expect(
+      caller.llcOps.uploadDocument({
+        registrationId: 41,
+        name: "Malware",
+        documentType: "other",
+        mimeType: "text/html" as never,
+        dataBase64: pdfBase64,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(documents.upload).not.toHaveBeenCalled();
+  });
+
+  it("deletes documents by id and 404s unknown ids", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const result = await caller.llcOps.deleteDocument({ documentId: 1 });
+    expect(result.deleted).toBe(true);
+    expect(documents.remove).toHaveBeenCalledWith(1);
+
+    documents.findById.mockResolvedValue(null);
+    await expect(caller.llcOps.deleteDocument({ documentId: 999 })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
 });
 
 describe("LLC protected router ownership", () => {

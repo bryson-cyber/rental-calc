@@ -31,6 +31,17 @@ import {
   refreshLlcRegistrationStatus,
   submitLlcRegistration,
 } from "./submission";
+import {
+  OPS_UPLOAD_MIME_TYPES,
+  OpsUploadValidationError,
+  deleteLlcDocument,
+  findLlcDocumentById,
+  listAllFormationDocuments,
+  listFormationDocuments,
+  listOpsDocuments,
+  setDocumentReleased,
+  uploadOpsDocument,
+} from "./documents";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 
@@ -227,6 +238,20 @@ export const llcRouter = router({
       }
     }),
 
+  documents: protectedProcedure
+    .input(registrationIdInput)
+    .query(async ({ ctx, input }) => {
+      // Ownership check via the store: the registration must belong to the
+      // caller before any document rows are listed. Released documents only.
+      await requireRegistrationBundle(ctx.user.id, input.id);
+      return listFormationDocuments(ctx.user.id, input.id);
+    }),
+
+  allDocuments: protectedProcedure.query(async ({ ctx }) => {
+    // Released documents across every registration the caller owns.
+    return listAllFormationDocuments(ctx.user.id);
+  }),
+
   refreshStatus: protectedProcedure
     .input(registrationIdInput)
     .mutation(async ({ ctx, input }) => {
@@ -338,5 +363,99 @@ export const llcOpsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
       }
       return { refreshed: result.refreshed, message: result.message, registration: bundleToOpsView(bundle) };
+    }),
+
+  // ─── Document vault management ───
+
+  documents: adminProcedure
+    .input(registrationIdInput)
+    .query(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      return listOpsDocuments(input.id);
+    }),
+
+  releaseDocument: adminProcedure
+    .input(z.object({ documentId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const existing = await findLlcDocumentById(input.documentId);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Document not found." });
+      }
+      const updated = await setDocumentReleased(input.documentId, true);
+      return { released: true as const, documentId: input.documentId, releasedAt: updated?.releasedAt?.getTime() ?? null };
+    }),
+
+  unreleaseDocument: adminProcedure
+    .input(z.object({ documentId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const existing = await findLlcDocumentById(input.documentId);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Document not found." });
+      }
+      await setDocumentReleased(input.documentId, false);
+      return { released: false as const, documentId: input.documentId };
+    }),
+
+  uploadDocument: adminProcedure
+    .input(
+      z.object({
+        registrationId: z.number().int().positive(),
+        name: z.string().trim().min(1).max(200),
+        label: z.string().trim().max(200).optional(),
+        documentType: z.string().trim().min(1).max(128),
+        mimeType: z.enum(OPS_UPLOAD_MIME_TYPES),
+        dataBase64: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.registrationId);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      try {
+        const document = await uploadOpsDocument({
+          registrationId: input.registrationId,
+          ownerUserId: owner.userId,
+          name: input.name,
+          label: input.label ?? null,
+          documentType: input.documentType,
+          dataBase64: input.dataBase64,
+          mimeType: input.mimeType,
+        });
+        if (!document) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "The uploaded document could not be reloaded.",
+          });
+        }
+        return {
+          id: document.id,
+          registrationId: document.registrationId,
+          name: document.name,
+          label: document.label,
+          documentType: document.documentType,
+          source: document.source,
+          releasedAt: document.releasedAt?.getTime() ?? null,
+        };
+      } catch (error) {
+        if (error instanceof OpsUploadValidationError) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+        }
+        throw error;
+      }
+    }),
+
+  deleteDocument: adminProcedure
+    .input(z.object({ documentId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const existing = await findLlcDocumentById(input.documentId);
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Document not found." });
+      }
+      await deleteLlcDocument(input.documentId);
+      return { deleted: true as const, documentId: input.documentId };
     }),
 });

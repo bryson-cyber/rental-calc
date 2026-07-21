@@ -1,0 +1,589 @@
+/**
+ * LLC operations dashboard — /admin/llc (admin only).
+ *
+ * Internal white-label surface: filing orders with the wholesale checkout
+ * (pay link), retail price + margin tracking, provider sync, and the
+ * per-order client document vault (release / unrelease / upload / delete).
+ * Clients never see this page or anything on it.
+ *
+ * DESIGN: Matches Coach Inayah light theme (white, slate, gold accents).
+ */
+import { useAuth } from '@/_core/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { trpc } from '@/lib/trpc';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  FileText,
+  Home,
+  Loader2,
+  RefreshCw,
+  Shield,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+import { Fragment, useRef, useState } from 'react';
+import { Link } from 'wouter';
+import { toast } from 'sonner';
+
+function formatCents(value: number | null) {
+  if (value === null) return '—';
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value / 100);
+}
+
+function formatDate(value: number | null) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function statusBadgeClass(status: string) {
+  if (status === 'payment_required') return 'bg-slate-900 text-white';
+  if (status === 'action_required' || status === 'failed') return 'bg-red-100 text-red-700';
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-700';
+  return 'bg-amber-100 text-amber-700';
+}
+
+function RetailPriceCell({
+  registrationId,
+  retailPriceCents,
+}: {
+  registrationId: number;
+  retailPriceCents: number | null;
+}) {
+  const utils = trpc.useUtils();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(
+    retailPriceCents === null ? '' : (retailPriceCents / 100).toFixed(2),
+  );
+  const mutation = trpc.llcOps.setRetailPrice.useMutation({
+    onSuccess: () => {
+      void utils.llcOps.listAll.invalidate();
+      setEditing(false);
+      toast.success('Retail price saved.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="text-left text-sm font-medium text-slate-900 underline-offset-4 hover:underline"
+        onClick={() => setEditing(true)}
+      >
+        {retailPriceCents === null ? 'Set price' : formatCents(retailPriceCents)}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const parsed = value.trim() === '' ? null : Math.round(Number(value) * 100);
+        if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
+          toast.error('Enter a valid dollar amount.');
+          return;
+        }
+        mutation.mutate({ id: registrationId, retailPriceCents: parsed });
+      }}
+    >
+      <Input
+        autoFocus
+        inputMode="decimal"
+        className="h-8 w-24 text-sm"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder="0.00"
+      />
+      <Button type="submit" size="sm" className="h-8 rounded-lg px-3 text-xs" disabled={mutation.isPending}>
+        {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
+      </Button>
+    </form>
+  );
+}
+
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: 'articles_of_organization', label: 'Articles of Organization' },
+  { value: 'ein_letter', label: 'EIN confirmation letter' },
+  { value: 'operating_agreement', label: 'Operating agreement' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+const ACCEPTED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
+type AcceptedMime = (typeof ACCEPTED_MIME_TYPES)[number];
+
+function DocumentsPanel({ registrationId }: { registrationId: number }) {
+  const utils = trpc.useUtils();
+  const documentsQuery = trpc.llcOps.documents.useQuery(
+    { id: registrationId },
+    { retry: 1, refetchOnWindowFocus: false },
+  );
+  const invalidate = () => void utils.llcOps.documents.invalidate({ id: registrationId });
+
+  const releaseMutation = trpc.llcOps.releaseDocument.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Document released to the client vault.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const unreleaseMutation = trpc.llcOps.unreleaseDocument.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Document hidden from the client vault.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const deleteMutation = trpc.llcOps.deleteDocument.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Document deleted.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const uploadMutation = trpc.llcOps.uploadDocument.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Document uploaded and released to the client vault.');
+      setLabel('');
+      setDocumentType('other');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [documentType, setDocumentType] = useState<string>('other');
+  const [label, setLabel] = useState('');
+
+  const handleUpload = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      toast.error('Choose a PDF, PNG, or JPG file first.');
+      return;
+    }
+    if (!(ACCEPTED_MIME_TYPES as readonly string[]).includes(file.type)) {
+      toast.error('Only PDF, PNG, or JPG documents can be uploaded.');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 20MB.');
+      return;
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    let binary = '';
+    const bytes = new Uint8Array(arrayBuffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(
+        null,
+        Array.from(bytes.subarray(i, i + chunkSize)),
+      );
+    }
+    uploadMutation.mutate({
+      registrationId,
+      name: file.name.slice(0, 200),
+      label: label.trim() || undefined,
+      documentType,
+      mimeType: file.type as AcceptedMime,
+      dataBase64: btoa(binary),
+    });
+  };
+
+  const documents = documentsQuery.data ?? [];
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+      <div className="flex items-center gap-2">
+        <FileText className="w-4 h-4 text-amber-600" />
+        <h4 className="text-sm font-semibold text-slate-900">Client document vault</h4>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Clients see only <span className="font-semibold">released</span> documents. Provider
+        mirrors arrive unreleased; review, label, and release them — or upload directly.
+      </p>
+
+      {documentsQuery.isLoading ? (
+        <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+          Loading documents…
+        </div>
+      ) : documents.length === 0 ? (
+        <p className="py-4 text-sm text-slate-500">No documents for this order yet.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+          {documents.map((document) => (
+            <li key={document.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-900">
+                  {document.label ?? document.name ?? document.documentType ?? 'Document'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {document.documentType ?? 'document'} ·{' '}
+                  {document.source === 'ops_upload' ? 'ops upload' : 'provider mirror'} · added{' '}
+                  {formatDate(document.createdAt)}
+                </p>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    document.releasedAt
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {document.releasedAt ? 'Released' : 'Hidden'}
+                </span>
+                <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
+                  <a href={document.url} target="_blank" rel="noreferrer">
+                    View
+                  </a>
+                </Button>
+                {document.releasedAt ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs"
+                    disabled={unreleaseMutation.isPending}
+                    onClick={() => unreleaseMutation.mutate({ documentId: document.id })}
+                  >
+                    <EyeOff className="w-3.5 h-3.5 mr-1" />
+                    Unrelease
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    disabled={releaseMutation.isPending}
+                    onClick={() => releaseMutation.mutate({ documentId: document.id })}
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    Release
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm('Delete this document from the vault?')) {
+                      deleteMutation.mutate({ documentId: document.id });
+                    }
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+        <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Upload a document (released immediately)
+        </h5>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div>
+            <label htmlFor={`doc-type-${registrationId}`} className="mb-1 block text-xs font-medium text-slate-600">
+              Document type
+            </label>
+            <select
+              id={`doc-type-${registrationId}`}
+              value={documentType}
+              onChange={(event) => setDocumentType(event.target.value)}
+              className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
+            >
+              {DOCUMENT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`doc-label-${registrationId}`} className="mb-1 block text-xs font-medium text-slate-600">
+              Client-facing label (optional)
+            </label>
+            <Input
+              id={`doc-label-${registrationId}`}
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder="Articles of Organization"
+              className="h-9 text-sm"
+              maxLength={200}
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,image/png,image/jpeg"
+              className="block w-full max-w-[14rem] text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-amber-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-amber-700 hover:file:bg-amber-200"
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-9"
+              disabled={uploadMutation.isPending}
+              onClick={() => void handleUpload()}
+            >
+              {uploadMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              <span className="ml-1.5">Upload</span>
+            </Button>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-500">PDF, PNG, or JPG · up to 20MB.</p>
+      </div>
+    </div>
+  );
+}
+
+export default function LlcOpsPage() {
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const listQuery = trpc.llcOps.listAll.useQuery(undefined, {
+    enabled: isAdmin,
+    retry: 1,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
+  const refreshMutation = trpc.llcOps.refresh.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listAll.invalidate();
+      toast.success(result.message);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="mt-8 h-96 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="pt-8 pb-8">
+            <Shield className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-6">
+              You don't have permission to access the LLC operations dashboard.
+            </p>
+            <Link href="/">
+              <Button className="w-full">
+                <Home className="w-4 h-4 mr-2" />
+                Go to Home
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const orders = listQuery.data ?? [];
+  const needsPayment = orders.filter((order) => order.status === 'payment_required');
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="container max-w-[1400px] mx-auto px-4 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-semibold text-slate-900">LLC filing orders</h1>
+          </div>
+          <Link href="/admin/dashboard">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Admin dashboard
+            </Button>
+          </Link>
+        </div>
+
+        {needsPayment.length > 0 ? (
+          <section role="alert" className="mt-6 rounded-2xl bg-slate-900 p-5 text-white">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 w-5 h-5 flex-shrink-0" />
+              <div>
+                <h2 className="font-semibold">
+                  {needsPayment.length} wholesale checkout{needsPayment.length === 1 ? '' : 's'} waiting for payment
+                </h2>
+                <p className="mt-1 text-sm text-white/70">
+                  The provider submits each filing to the state only after its checkout is paid with the company card.
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {listQuery.isLoading ? (
+          <div className="mt-8">
+            <Skeleton className="h-96 w-full rounded-2xl" />
+          </div>
+        ) : (
+          <section className="mt-6 overflow-x-auto apple-card p-2 sm:p-4">
+            <table className="w-full min-w-[70rem] border-separate border-spacing-0 text-left">
+              <thead>
+                <tr>
+                  {[
+                    'Order',
+                    'Client',
+                    'Company',
+                    'Status',
+                    'Wholesale (COGS)',
+                    'Retail',
+                    'Margin',
+                    'Last sync',
+                    'Actions',
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="border-b border-slate-200 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">
+                      No orders yet. New client submissions appear here automatically.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map((order) => (
+                    <Fragment key={order.id}>
+                      <tr className="align-top">
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <p className="font-mono text-xs font-bold text-slate-900">{order.orderRef}</p>
+                          <p className="mt-1 text-[11px] text-slate-500">{order.formationState ?? '—'}</p>
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <p className="text-sm font-medium text-slate-900">{order.clientName ?? '—'}</p>
+                          <p className="mt-1 break-all text-[11px] text-slate-500">{order.clientEmail ?? '—'}</p>
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4 text-sm font-medium text-slate-900">
+                          {order.legalName ? `${order.legalName} ${order.entitySuffix}` : 'Untitled draft'}
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusBadgeClass(order.status)}`}
+                          >
+                            {order.status.replaceAll('_', ' ')}
+                          </span>
+                          {order.lastErrorMessage ? (
+                            <p className="mt-2 max-w-[18rem] text-[11px] leading-4 text-slate-500">
+                              {order.lastErrorMessage}
+                            </p>
+                          ) : null}
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4 text-sm tabular-nums text-slate-900">
+                          {formatCents(order.checkoutTotal)}
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <RetailPriceCell registrationId={order.id} retailPriceCents={order.retailPriceCents} />
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4 text-sm tabular-nums text-slate-900">
+                          {formatCents(order.marginCents)}
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4 text-xs text-slate-500">
+                          {formatDate(order.lastProviderSyncAt)}
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {order.status === 'payment_required' && order.checkoutUrl ? (
+                              <Button asChild size="sm" className="h-8 rounded-lg px-3 text-xs font-bold">
+                                <a href={order.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                                  Pay checkout
+                                  <ArrowUpRight className="ml-1 w-3 h-3" />
+                                </a>
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 rounded-lg px-3 text-xs"
+                              disabled={refreshMutation.isPending}
+                              onClick={() => refreshMutation.mutate({ id: order.id })}
+                            >
+                              {refreshMutation.isPending && refreshMutation.variables?.id === order.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-3 h-3" />
+                              )}
+                              <span className="ml-1">Sync</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 rounded-lg px-3 text-xs"
+                              onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span className="ml-1">Documents</span>
+                              {expandedId === order.id ? (
+                                <ChevronUp className="ml-1 w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="ml-1 w-3 h-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedId === order.id ? (
+                        <tr>
+                          <td colSpan={9} className="border-b border-slate-100 px-4 pb-6 pt-1">
+                            <DocumentsPanel registrationId={order.id} />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        <p className="mt-6 max-w-3xl text-xs leading-5 text-slate-500">
+          This dashboard is internal. Clients never see the provider, the wholesale checkout, or
+          costs — their status pages show only branded progress updates and released documents.
+          Status also refreshes automatically in the background, and every change lands in the
+          ops inbox.
+        </p>
+      </div>
+    </div>
+  );
+}

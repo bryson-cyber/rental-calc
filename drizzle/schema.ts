@@ -3027,3 +3027,44 @@ export type LlcFounderRecord = typeof llcFounders.$inferSelect;
 export type InsertLlcFounderRecord = typeof llcFounders.$inferInsert;
 export type LlcSubmissionAttempt = typeof llcSubmissionAttempts.$inferSelect;
 export type LlcStatusHistoryRecord = typeof llcStatusHistory.$inferSelect;
+
+/**
+ * Formation documents in the client vault. Rows come from two sources:
+ * provider mirroring (source "provider", unreleased until ops releases them)
+ * and direct ops uploads (source "ops_upload", released immediately).
+ * Files live in the ACL'd pdfs/{userId}/llc/{registrationId}/ namespace and
+ * are served through the authenticated /manus-storage proxy only. The unique
+ * (registrationId, documentType, name) key makes provider re-mirroring
+ * idempotent. Clients see a document only once releasedAt is set.
+ */
+export const llcDocuments = mysqlTable(
+  "llc_documents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    userId: int("userId").notNull(),
+    name: varchar("name", { length: 200 }),
+    /** Ops-provided display label shown to the client instead of `name`. */
+    label: varchar("label", { length: 200 }),
+    documentType: varchar("documentType", { length: 128 }),
+    source: mysqlEnum("source", ["provider", "ops_upload"])
+      .default("provider")
+      .notNull(),
+    storageKey: varchar("storageKey", { length: 512 }).notNull(),
+    /** Null = hidden from the client; set when ops releases the document. */
+    releasedAt: timestamp("releasedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => [
+    index("llc_document_registration_idx").on(table.registrationId),
+    index("llc_document_user_idx").on(table.userId),
+    uniqueIndex("llc_document_mirror_unique").on(
+      table.registrationId,
+      table.documentType,
+      table.name,
+    ),
+  ],
+);
+
+export type LlcDocument = typeof llcDocuments.$inferSelect;
+export type InsertLlcDocument = typeof llcDocuments.$inferInsert;

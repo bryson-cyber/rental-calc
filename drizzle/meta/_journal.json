@@ -169,6 +169,13 @@
       "when": 1784674398725,
       "tag": "0023_rare_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1784676028327,
+      "tag": "0024_burly_magdalene",
+      "breakpoints": true
     }
   ]
 }

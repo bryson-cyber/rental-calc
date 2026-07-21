@@ -17,6 +17,7 @@ import {
   submissionProblemAlert,
 } from "../ops/notify";
 import { bundleToDraft, bundleToRegistrationView } from "./domain";
+import { mirrorFormationDocuments } from "./documents";
 import {
   WhopApiError,
   WhopConfigurationError,
@@ -672,9 +673,14 @@ export async function refreshLlcRegistrationStatus(params: {
       providerObjectId: registration.whopAccountId,
     });
 
-    // NOTE (rental-calc port): provider documents are NOT mirrored into member
-    // storage here — this app has no per-user ACL'd storage proxy, so document
-    // links stay ops-side only (they arrive in the ops status-change emails).
+    // Fire-and-forget: mirroring provider documents into the member's ACL'd
+    // storage is best-effort and must never affect the refresh result.
+    // Mirrored rows land UNRELEASED; ops releases them to the client vault.
+    void mirrorFormationDocuments({
+      userId: params.userId,
+      registrationId: params.registrationId,
+      snapshot: normalized.snapshot,
+    }).catch(() => {});
 
     let inferredStatus =
       normalized.localStatus ??

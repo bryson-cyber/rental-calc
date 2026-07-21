@@ -1146,6 +1146,11 @@ async function startServer() {
   const { registerPollEndpoint, startStatusPoller } = await import("../ops/poller");
   registerPollEndpoint(app);
 
+  // Authenticated storage proxy with per-user ACL (GET /manus-storage/{key}).
+  // Client document downloads (LLC vault) go through this route only.
+  const { registerStorageProxy } = await import("./storageProxy");
+  registerStorageProxy(app);
+
   // tRPC API
   app.use(
     "/api/trpc",

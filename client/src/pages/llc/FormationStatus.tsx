@@ -2,9 +2,9 @@
  * LLC formation status — /llc/status/:id
  *
  * Confirmed-progress tracker for a submitted registration. Adapted from the
- * standalone LLC-formation app into rental-calc's native design. Formation
- * documents are delivered by our team directly (no in-app document storage
- * in this deployment).
+ * standalone LLC-formation app into rental-calc's native design. Released
+ * formation documents appear in the "Your documents" vault below (served
+ * through the authenticated /manus-storage proxy).
  */
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,9 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  Download,
   FileCheck2,
+  FileText,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -74,7 +76,7 @@ const STATUS_COPY = {
   completed: {
     eyebrow: "Formation completed",
     title: "Your LLC formation is complete.",
-    body: "Congratulations — your company is official. Our team will send your formation documents (Articles and EIN letter) directly, and we’re here if you need anything for your bank or registrations.",
+    body: "Congratulations — your company is official. Your formation documents appear below as our team delivers them, and your saved details are always available here.",
   },
   action_required: {
     eyebrow: "In review",
@@ -88,6 +90,21 @@ const STATUS_COPY = {
   },
 } as const;
 
+/** Friendly labels for well-known document types (fallback: stored name). */
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  articles_of_organization: "Articles of Organization",
+  ein_letter: "EIN confirmation letter",
+  ein_confirmation: "EIN confirmation letter",
+  operating_agreement: "Operating agreement",
+};
+
+function documentDisplayName(document: { name: string; documentType: string | null }) {
+  if (document.documentType && DOCUMENT_TYPE_LABELS[document.documentType]) {
+    return DOCUMENT_TYPE_LABELS[document.documentType];
+  }
+  return document.name;
+}
+
 function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
@@ -95,9 +112,14 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
     { id: registrationId },
     { retry: 1, refetchOnWindowFocus: false },
   );
+  const documentsQuery = trpc.llc.documents.useQuery(
+    { id: registrationId },
+    { retry: 1, refetchOnWindowFocus: false },
+  );
   const refreshMutation = trpc.llc.refreshStatus.useMutation({
     onSuccess: (result) => {
       utils.llc.get.setData({ id: registrationId }, result.registration);
+      void utils.llc.documents.invalidate({ id: registrationId });
       toast.success(result.message);
     },
   });
@@ -209,6 +231,43 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           </div>
         </div>
       ) : null}
+
+      <div className="apple-card p-6">
+        <div className="flex items-center gap-2.5">
+          <FileText className="size-4 text-primary" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-foreground">Your documents</h3>
+        </div>
+        <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
+          Stored securely in your account — download them any time for your bank,
+          leases, and registrations.
+        </p>
+        {(documentsQuery.data ?? []).length > 0 ? (
+          <ul className="mt-4 divide-y divide-border">
+            {(documentsQuery.data ?? []).map((document) => (
+              <li key={document.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {documentDisplayName(document)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Delivered {formatDate(document.releasedAt ?? document.createdAt)}
+                  </p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <a href={document.url} target="_blank" rel="noreferrer">
+                    <Download className="mr-1.5 size-3.5" aria-hidden="true" />
+                    Download
+                  </a>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 rounded-lg bg-muted/60 px-4 py-3 text-[13px] leading-5 text-muted-foreground">
+            Your formation documents will appear here as our team delivers them.
+          </p>
+        )}
+      </div>
 
       <div className="apple-card p-6">
         <div className="flex items-center gap-2.5">

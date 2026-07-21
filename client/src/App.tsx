@@ -63,6 +63,7 @@ const VideoLandingPage = lazy(() => import('./pages/VideoLandingPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const LLCFormationWizard = lazy(() => import('./pages/llc/FormationWizard'));
 const LLCFormationStatus = lazy(() => import('./pages/llc/FormationStatus'));
+const LlcOpsPage = lazy(() => import('./pages/admin/LlcOpsPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 
@@ -184,6 +185,9 @@ function Router() {
         
         {/* Admin View Report - view a specific report by ID */}
         <Route path="/admin/report/:id" component={AdminViewReport} />
+
+        {/* LLC operations dashboard (admin only; must precede /admin/:rest* catch-all) */}
+        <Route path="/admin/llc" component={LlcOpsPage} />
         
         {/* Unified Admin Dashboard - all admin functionality in one place */}
         <Route path={"/admin/dashboard"} component={UnifiedAdmin} />
