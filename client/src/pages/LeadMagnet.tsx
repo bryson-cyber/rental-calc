@@ -90,7 +90,7 @@ import {
 } from 'lucide-react';
 const MapView = lazy(() => import('@/components/Map').then(m => ({ default: m.MapView })));
 const MapViewContent = lazy(() => import('@/components/MapViewContent').then(m => ({ default: m.MapViewContent })));
-const MapFirstLayoutV2 = lazy(() => import('@/components/MapFirstLayoutV2').then(m => ({ default: m.MapFirstLayoutV2 })));
+const PropertyMapView = lazy(() => import('@/components/PropertyMapView').then(m => ({ default: m.PropertyMapView })));
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -722,17 +722,18 @@ export default function LeadMagnet() {
     };
     
     // Map step numbers to internal tab names (for HubSpot email deep links)
-    // Step 1: Check Regulations, Step 2: Find a Property, Step 3: See Real Revenue, etc.
+    // Step 1: Check Regulations, Step 2: Find a Property, Step 3: Validate the Deal, etc.
     const stepMapping: Record<string, TabType> = {
       '1': 'regulations',    // Check Regulations
       '2': 'opportunity',    // Find a Property
-      '3': 'prove',          // See Real Revenue
-      '4': 'find',           // Explore Listings
-      '5': 'validate',       // Validate the Deal
-      '6': 'compare',        // Compare Favorites
-      '7': 'map',            // See the Map
-      '8': 'market',         // Market Advisor
-      '9': 'advisor',        // AI Advisor
+      '3': 'validate',       // Validate the Deal
+      '4': 'compare',        // Compare Favorites
+      '5': 'map',            // See the Map
+      '6': 'lease',          // Read Your Lease
+      // Legacy mappings for backward compatibility with old HubSpot emails
+      '7': 'map',
+      '8': 'validate',
+      '9': 'validate',
     };
     
     // Determine target tab from either ?tab= or ?step= parameter
@@ -806,7 +807,7 @@ export default function LeadMagnet() {
         }
       }
       
-      // For map tab, set myProperty context - coordinates are optional, MapFirstLayoutV2 will geocode if missing
+      // For map tab, set myProperty context - coordinates are optional, PropertyMapView will geocode if missing
       if (targetTab === 'map' && urlAddress) {
         const latitude = lat ? parseFloat(lat) : undefined;
         const longitude = lng ? parseFloat(lng) : undefined;
@@ -899,7 +900,7 @@ export default function LeadMagnet() {
               console.log('[AutoTrigger] Button not found');
             }
           } else if (tab === 'map' && triggerAddress) {
-            // For map tab, the MapFirstLayoutV2 component handles its own auto-search
+            // For map tab, the PropertyMapView component handles its own geocoding
             // We just need to ensure the address is set in the explore field
             setExploreAddress(triggerAddress);
           } else if (tab === 'opportunity' && triggerAddress) {
@@ -2775,7 +2776,7 @@ export default function LeadMagnet() {
                         <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                       </div>
                       <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'prove' ? 'Step 3' : tab === 'find' ? 'Step 4' : tab === 'validate' ? 'Step 5' : tab === 'compare' ? 'Step 6' : tab === 'map' ? 'Step 7' : tab === 'market' ? 'Step 8' : tab === 'advisor' ? 'Step 9' : `Step ${index}`}
+                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'lease' ? 'Step 6' : `Step ${index}`}
                       </span>
                     </div>
                     <h3 className={`font-semibold text-sm mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -2848,7 +2849,7 @@ export default function LeadMagnet() {
                     />
                   ) : (
                     <ShareToolButton
-                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : activeTab === 'lease' ? 10 : 1}
+                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'validate' ? 3 : activeTab === 'compare' ? 4 : activeTab === 'map' ? 5 : activeTab === 'lease' ? 6 : 1}
                       city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
                       state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
                       zipCode={myProperty?.zipCode}
@@ -4059,7 +4060,14 @@ export default function LeadMagnet() {
                     setBathrooms(String(property.bathrooms));
                     setMonthlyRent(String(property.monthlyRent));
                     // Don't switch tabs - let user see action buttons on the card
-                    // setActiveTab('validate');
+                  }}
+                  onNavigateToValidate={(property) => {
+                    // Pre-fill validate tab AND switch to it for full analysis
+                    setAddress(property.address);
+                    setBedrooms(String(property.bedrooms));
+                    setBathrooms(String(property.bathrooms));
+                    setMonthlyRent(String(property.monthlyRent));
+                    setActiveTab('validate');
                   }}
                 />
                 </Suspense>
@@ -4101,7 +4109,7 @@ export default function LeadMagnet() {
       {activeTab === 'map' && (
         <section className="bg-slate-50" data-tool-panel="map" data-tour="map-container">
           <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
-          <MapFirstLayoutV2 
+          <PropertyMapView 
             key={`map-${myProperty?.address || 'no-property'}`}
             embedded={false} 
             className="min-h-[600px]" 
@@ -6978,46 +6986,11 @@ export default function LeadMagnet() {
               Go Deeper with Advanced Analysis
             </h2>
             <p className="text-[oklch(0.45_0_0)] text-lg max-w-xl mx-auto">
-              Let AI do the heavy lifting — evaluate entire markets in one click or get automatic deal alerts.
+              Let AI do the heavy lifting — get automatic deal alerts when properties meet your investment criteria.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Market Evaluation Card */}
-            <button
-              onClick={() => window.location.href = '/evaluate-market'}
-              className="group text-left apple-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-[oklch(0.55_0.14_75)]/20"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.14_75)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Brain className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-1 group-hover:text-[oklch(0.55_0.14_75)] transition-colors">
-                    One-Click Market Evaluation
-                  </h3>
-                  <p className="text-sm text-[oklch(0.50_0_0)]">
-                    AI Investment Memo in 60 seconds
-                  </p>
-                </div>
-              </div>
-              <p className="text-[oklch(0.40_0_0)] text-sm leading-relaxed mb-5">
-                Enter a city and get a comprehensive analysis — revenue potential across bedroom types, 
-                seasonality trends, competitive landscape, top performers, and an AI-generated investment memo 
-                with a market score. All powered by Coach Inayah market data.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-5">
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Revenue Analysis</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Market Score</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">AI Memo</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Top Performers</span>
-              </div>
-              <div className="flex items-center gap-2 text-[oklch(0.55_0.14_75)] font-medium text-sm group-hover:gap-3 transition-all">
-                Evaluate a Market
-                <ArrowRight className="w-4 h-4" />
-              </div>
-            </button>
-            
+          <div className="grid md:grid-cols-1 gap-6 max-w-lg mx-auto">
             {/* Deal Alerts Card */}
             <button
               onClick={() => window.location.href = '/deal-alerts'}

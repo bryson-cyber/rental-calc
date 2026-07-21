@@ -164,6 +164,12 @@ interface OpportunityFinderStepProps {
     bathrooms: number;
     monthlyRent: number;
   }) => void;
+  onNavigateToValidate?: (property: {
+    address: string;
+    bedrooms: number;
+    bathrooms: number;
+    monthlyRent: number;
+  }) => void;
   initialLocation?: string; // For pre-filling from URL params (HubSpot emails)
   onLocationChange?: (location: { city?: string; state?: string }) => void;
   initialCity?: string;
@@ -304,7 +310,7 @@ function saveState(state: { location: string; searchType: 'forRent' | 'forSale';
   }
 }
 
-export default function OpportunityFinderStep({ onSelectProperty, initialLocation, onLocationChange, initialCity, initialState, isAdmin = false }: OpportunityFinderStepProps) {
+export default function OpportunityFinderStep({ onSelectProperty, onNavigateToValidate, initialLocation, onLocationChange, initialCity, initialState, isAdmin = false }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
   
@@ -2419,6 +2425,28 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 )}
                               </Button>
                               
+                              {/* View Full Analysis - Navigate to Validate tab */}
+                              <Button
+                                className="w-full h-11 text-xs font-semibold px-3 text-white"
+                                style={{
+                                  backgroundColor: 'oklch(0.30 0.10 150)',
+                                  borderRadius: '0.75rem',
+                                }}
+                                onClick={() => {
+                                  if (onNavigateToValidate) {
+                                    onNavigateToValidate({
+                                      address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                      bedrooms: property.bedrooms || 1,
+                                      bathrooms: property.bathrooms || 1,
+                                      monthlyRent: property.price || 0,
+                                    });
+                                  }
+                                }}
+                              >
+                                <Target className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                                <span className="truncate">View Full Analysis</span>
+                                <ArrowRight className="w-3.5 h-3.5 ml-1.5 flex-shrink-0" />
+                              </Button>
                               {/* Secondary Action - View Listing */}
                               <a 
                                 href={property.url}
@@ -2439,7 +2467,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                               </a>
                               
                               {/* Research Tools - Compact grid layout with tooltips */}
-                              <div className="grid grid-cols-5 gap-0.5 pt-2 border-t border-slate-100">
+                              <div className="grid grid-cols-4 gap-0.5 pt-2 border-t border-slate-100">
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -2553,32 +2581,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   </Tooltip>
                                 </TooltipProvider>
                                 
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button 
-                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
-                                        onClick={() => {
-                                          const toolData = {
-                                            tab: 'market-advisor',
-                                            location: `${property.city}, ${property.state}`,
-                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
-                                            zipCode: property.zipCode,
-                                            timestamp: Date.now()
-                                          };
-                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
-                                          window.location.href = '/?tab=market-advisor';
-                                        }}
-                                      >
-                                        <TrendingUp className="w-4 h-4 mb-0.5" />
-                                        <span className="text-[9px] font-medium">Trends</span>
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-[200px] text-center">
-                                      <p className="text-xs">See market trends and investment outlook for this area</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+
                               </div>
                               
                               {/* Save for Comparison Button */}

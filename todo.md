@@ -13483,3 +13483,17 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Replace "Analyze Property" button in CompareFavoritesSection - now calls validateProperty mutation inline
 - [x] Remove all AirDNA external links (app.airdna.co) from user-facing frontend code
 - [x] Add loading/spinner states to all Analyze buttons while BNB Calc runs
+
+## Step 2 & Navigation Fixes (July 21, 2025)
+- [ ] Add "View Full Analysis" button after property analysis in Step 2 that navigates to Step 5 (validate) with property pre-filled
+- [ ] Fix step ordering labels (currently shows 1,2,5,6,7,6 - needs to be sequential based on ALL_TABS)
+- [ ] Remove "One-Click Market Evaluation" from the "Go Deeper with Advanced Analysis" section
+- [ ] Remove "Trends" tab from bottom navigation on property cards
+- [ ] Fix Map tab not working when clicked from property cards
+
+## Step 2 and Navigation Fixes (July 21, 2026)
+- [x] Fix step ordering: renumbered to sequential 1-6 (regulations, opportunity, validate, compare, map, lease)
+- [x] Add "View Full Analysis" button in Step 2 that navigates to Step 3 (validate) with property data pre-filled
+- [x] Remove "One-click Market Evaluation" from advanced analysis section (AirDNA data no longer available)
+- [x] Remove "Trends" tab from bottom navigation on property cards
+- [x] Fix Map tab: replaced broken MapFirstLayoutV2 (depended on removed marketExplorer) with PropertyMapView (geocodes address and shows on Google Maps)
