@@ -714,10 +714,6 @@ export function FundingReadinessStep() {
           </p>
         )}
 
-        <Button variant="outline" className="w-full" onClick={() => setShowForm(true)}>
-          <RefreshCcw className="size-4 mr-2" aria-hidden />
-          Update My Info
-        </Button>
       </Card>
 
       <FundingReportSection />
@@ -766,6 +762,43 @@ export function FundingReadinessStep() {
     return renderFailed();
   };
 
+  // Once an analysis exists, the member can swap between starting a new
+  // intake and reviewing their previous results at any time.
+  const hasPrevious =
+    !statusQuery.isLoading && (status === "connected" || status === "gated" || status === "failed");
+
+  const renderViewToggle = () => (
+    <div className="flex justify-center">
+      <div
+        className="inline-flex rounded-xl border border-border bg-card p-1 gap-1"
+        role="tablist"
+        aria-label="Funding analysis view"
+      >
+        {[
+          { label: "New Analysis", form: true, icon: RefreshCcw },
+          { label: "Previous Analysis", form: false, icon: FileText },
+        ].map(({ label, form, icon: Icon }) => {
+          const active = showForm === form;
+          return (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setShowForm(form)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="size-4" aria-hidden />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
@@ -775,6 +808,7 @@ export function FundingReadinessStep() {
           actually access for your first rental property — before you spend a dollar.
         </p>
       </div>
+      {hasPrevious && renderViewToggle()}
       {renderBody()}
     </div>
   );
