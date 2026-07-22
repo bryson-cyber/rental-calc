@@ -103,10 +103,13 @@ describe("demo PDF builder", () => {
   });
 
   it("records correct xref byte offsets for every object", () => {
+    const declaredCount = Number(text.match(/xref\n0 (\d+)/)?.[1]);
     const xrefEntries = [...text.matchAll(/^(\d{10}) 00000 n /gm)].map((match) =>
       Number(match[1]),
     );
-    expect(xrefEntries).toHaveLength(5);
+    // One entry per object (the declared size includes the free object 0).
+    expect(xrefEntries).toHaveLength(declaredCount - 1);
+    expect(xrefEntries.length).toBeGreaterThanOrEqual(8);
     xrefEntries.forEach((offset, index) => {
       expect(text.slice(offset).startsWith(`${index + 1} 0 obj`)).toBe(true);
     });
