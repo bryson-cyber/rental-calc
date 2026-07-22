@@ -82,9 +82,10 @@ describe("authorizeStorageKey ACL", () => {
   });
 });
 
-function makeReq(key: string): Request {
+function makeReq(key: string, query: Record<string, string> = {}): Request {
   return {
     params: { "0": key },
+    query,
     headers: {},
   } as unknown as Request;
 }
@@ -118,8 +119,31 @@ function makeRes() {
 }
 
 describe("storage proxy route handler", () => {
+  const PDF_BYTES = new TextEncoder().encode("%PDF-1.4 fake").buffer;
+
+  function mockUpstream(
+    responses: Array<{ ok: boolean; status?: number; contentType?: string }>,
+  ) {
+    const fetchMock = vi.fn();
+    for (const spec of responses) {
+      fetchMock.mockResolvedValueOnce({
+        ok: spec.ok,
+        status: spec.status ?? (spec.ok ? 200 : 403),
+        headers: {
+          get: (name: string) =>
+            name.toLowerCase() === "content-type" ? (spec.contentType ?? null) : null,
+        },
+        arrayBuffer: async () => PDF_BYTES,
+        text: async () => (spec.ok ? "" : "<Error><Code>AccessDenied</Code></Error>"),
+      });
+    }
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     storage.get.mockResolvedValue({
       key: "pdfs/7/llc/41/articles.pdf",
       url: "https://signed.example.com/articles.pdf?sig=abc",
@@ -132,15 +156,67 @@ describe("storage proxy route handler", () => {
     expect(get).toHaveBeenCalledWith("/manus-storage/*", handleStorageProxyRequest);
   });
 
-  it("redirects the owner to a short-lived signed URL with no-store caching", async () => {
+  it("streams the owner's file inline from the app origin with no-store caching", async () => {
     auth.authenticateRequest.mockResolvedValue(makeUser(7));
+    const fetchMock = mockUpstream([{ ok: true, contentType: "application/pdf" }]);
     const res = makeRes();
     await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
 
     expect(storage.get).toHaveBeenCalledWith("pdfs/7/llc/41/articles.pdf");
-    expect(res.redirectStatus).toBe(307);
-    expect(res.redirectedTo).toBe("https://signed.example.com/articles.pdf?sig=abc");
+    expect(fetchMock).toHaveBeenCalledWith("https://signed.example.com/articles.pdf?sig=abc");
+    // The client is never redirected to the signed CDN URL.
+    expect(res.redirectedTo).toBeUndefined();
     expect(res.headers["Cache-Control"]).toBe("no-store");
+    expect(res.headers["Content-Type"]).toBe("application/pdf");
+    expect(res.headers["Content-Disposition"]).toBe('inline; filename="articles.pdf"');
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+  });
+
+  it("switches to attachment disposition for ?download=1", async () => {
+    auth.authenticateRequest.mockResolvedValue(makeUser(7));
+    mockUpstream([{ ok: true, contentType: "application/pdf" }]);
+    const res = makeRes();
+    await handleStorageProxyRequest(
+      makeReq("pdfs/7/llc/41/articles.pdf", { download: "1" }),
+      res,
+    );
+    expect(res.headers["Content-Disposition"]).toBe('attachment; filename="articles.pdf"');
+  });
+
+  it("infers the content type from the key when upstream is generic", async () => {
+    auth.authenticateRequest.mockResolvedValue(makeUser(7));
+    mockUpstream([{ ok: true, contentType: "application/octet-stream" }]);
+    const res = makeRes();
+    await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
+    expect(res.headers["Content-Type"]).toBe("application/pdf");
+  });
+
+  it("retries with a fresh signed URL once when the CDN denies the first fetch", async () => {
+    auth.authenticateRequest.mockResolvedValue(makeUser(7));
+    const fetchMock = mockUpstream([
+      { ok: false, status: 403 },
+      { ok: true, contentType: "application/pdf" },
+    ]);
+    const res = makeRes();
+    await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
+
+    expect(storage.get).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(res.headers["Content-Type"]).toBe("application/pdf");
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+  });
+
+  it("returns a clean 502 when both signed fetches are denied", async () => {
+    auth.authenticateRequest.mockResolvedValue(makeUser(7));
+    mockUpstream([
+      { ok: false, status: 403 },
+      { ok: false, status: 403 },
+    ]);
+    const res = makeRes();
+    await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
+
+    expect(res.statusCode).toBe(502);
+    expect(String(res.body)).not.toContain("AccessDenied");
   });
 
   it("returns 403 for another user's file without contacting storage", async () => {
@@ -149,16 +225,16 @@ describe("storage proxy route handler", () => {
     await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
 
     expect(res.statusCode).toBe(403);
-    expect(res.redirectedTo).toBeUndefined();
     expect(storage.get).not.toHaveBeenCalled();
   });
 
   it("lets an admin fetch any user's file", async () => {
     auth.authenticateRequest.mockResolvedValue(makeUser(1, "admin"));
+    mockUpstream([{ ok: true, contentType: "application/pdf" }]);
     const res = makeRes();
     await handleStorageProxyRequest(makeReq("pdfs/7/llc/41/articles.pdf"), res);
 
-    expect(res.redirectStatus).toBe(307);
+    expect(res.headers["Content-Type"]).toBe("application/pdf");
     expect(storage.get).toHaveBeenCalledWith("pdfs/7/llc/41/articles.pdf");
   });
 

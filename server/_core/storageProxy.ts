@@ -7,9 +7,14 @@ import { sdk } from "./sdk";
  * Authenticated storage proxy with a per-user ACL.
  *
  * Client-facing file URLs use /manus-storage/{key}; the proxy authorizes the
- * session against the key namespace and then redirects to a short-lived
- * signed URL from the Forge storage backend. Files are therefore never
- * addressable without a valid session that owns them.
+ * session against the key namespace, fetches the object server-side via a
+ * fresh signed URL from the Forge storage backend, and streams the bytes to
+ * the client from the app's own origin. Files are therefore never addressable
+ * without a valid session that owns them, and the client never touches the
+ * CDN's signed URLs (whose expiry/signature quirks used to surface as raw
+ * AccessDenied XML). `?download=1` switches the disposition to attachment;
+ * the default renders inline so PDFs open in the browser and in the in-app
+ * viewer.
  *
  * Authorization by key namespace:
  *  - generated/*                  → non-sensitive generated assets, readable
@@ -75,6 +80,63 @@ async function resolveSessionUser(req: Request): Promise<User | null> {
   }
 }
 
+const EXTENSION_CONTENT_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  webm: "audio/webm",
+  mp3: "audio/mpeg",
+  txt: "text/plain",
+};
+
+function inferContentType(key: string): string {
+  const extension = key.split(".").pop()?.toLowerCase() ?? "";
+  return EXTENSION_CONTENT_TYPES[extension] ?? "application/octet-stream";
+}
+
+/**
+ * Presign + fetch the object server-side. The signed URL is consumed within
+ * milliseconds of being issued, so expiry can never race the client; one
+ * fresh presign retry covers transient signature/propagation hiccups. Returns
+ * null (with the upstream status logged) when both attempts fail.
+ */
+async function fetchStorageObject(
+  key: string,
+): Promise<{ body: Buffer; contentType: string } | null> {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const { url } = await storageGet(key);
+    if (!url) {
+      console.error("[StorageProxy] empty signed URL from storage backend", { key, attempt });
+      continue;
+    }
+    const upstream = await fetch(url);
+    if (upstream.ok) {
+      const upstreamType = upstream.headers.get("content-type");
+      const contentType =
+        upstreamType && upstreamType !== "application/octet-stream"
+          ? upstreamType
+          : inferContentType(key);
+      return { body: Buffer.from(await upstream.arrayBuffer()), contentType };
+    }
+    const detail = await upstream.text().catch(() => "");
+    console.error("[StorageProxy] upstream fetch failed", {
+      key,
+      attempt,
+      status: upstream.status,
+      detail: detail.slice(0, 300),
+    });
+  }
+  return null;
+}
+
+/** Filename for Content-Disposition: last key segment, quote-safe. */
+function dispositionFileName(key: string): string {
+  const base = key.split("/").pop() || "file";
+  return base.replace(/[^\w.\- ]/g, "").slice(0, 120) || "file";
+}
+
 export async function handleStorageProxyRequest(req: Request, res: Response) {
   const key = (req.params as Record<string, string | undefined>)["0"];
   if (!key) {
@@ -90,14 +152,21 @@ export async function handleStorageProxyRequest(req: Request, res: Response) {
   }
 
   try {
-    // Reuses this repo's Forge presign helper (v1/storage/downloadUrl).
-    const { url } = await storageGet(key);
-    if (!url) {
-      res.status(502).send("Empty signed URL from storage backend");
+    const object = await fetchStorageObject(key);
+    if (!object) {
+      res
+        .status(502)
+        .send("The file could not be retrieved right now. Please try again.");
       return;
     }
+    const download = (req.query as Record<string, unknown> | undefined)?.download === "1";
     res.set("Cache-Control", "no-store");
-    res.redirect(307, url);
+    res.set("Content-Type", object.contentType);
+    res.set(
+      "Content-Disposition",
+      `${download ? "attachment" : "inline"}; filename="${dispositionFileName(key)}"`,
+    );
+    res.send(object.body);
   } catch (error) {
     console.error("[StorageProxy] failed:", error);
     res.status(502).send("Storage proxy error");

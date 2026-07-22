@@ -28,6 +28,14 @@ import {
  * Price panel for the selected formation state. Shown only when the owner
  * has published a retail price; inactive states get a friendly blocker.
  */
+/** Live-format SSN input to XXX-XX-XXXX as the user types digits. */
+function formatSsnInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 9);
+  if (digits.length > 5) return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+  if (digits.length > 3) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return digits;
+}
+
 function StatePricePanel({ state }: { state: string | null | undefined }) {
   const pricingQuery = useStatePricing(state);
   const pricing = pricingQuery.data;
@@ -48,7 +56,20 @@ function StatePricePanel({ state }: { state: string | null | undefined }) {
     );
   }
 
-  if (pricing.retailPriceCents === null) return null;
+  if (pricing.retailPriceCents === null) {
+    if (pricing.stateFeeCents === null) return null;
+    return (
+      <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <p className="text-sm font-semibold text-foreground">
+          {stateDisplayName(state)} state filing fee: {formatUsdFromCents(pricing.stateFeeCents)}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          We'll confirm your all-in total (state fee + our filing service) with
+          your secure payment link after you submit.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -493,7 +514,9 @@ export function FoundersStep({ draft, errors, onChange }: StepProps) {
                 autoComplete="off"
                 placeholder="123-45-6789"
                 value={founder.ssn ?? ""}
-                onChange={(event) => replaceFounder(index, { ...founder, ssn: event.target.value })}
+                onChange={(event) =>
+                  replaceFounder(index, { ...founder, ssn: formatSsnInput(event.target.value) })
+                }
                 error={errors[`founders.${index}.ssn`]}
                 help="US residents only — speeds up your EIN. Encrypted and never shown to our staff. Non-US founders leave this blank."
                 optional
@@ -785,9 +808,15 @@ export function ReviewStep({
             }
             aria-invalid={Boolean(errors.accuracyAttested)}
             aria-describedby={errors.accuracyAttested ? "accuracyAttested-error" : undefined}
+            className={`mt-0.5 size-6 shrink-0 rounded-md border-2 bg-white shadow-sm data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground ${
+              errors.accuracyAttested ? "border-destructive" : "border-primary/60"
+            }`}
           />
           <div>
-            <Label htmlFor="accuracyAttested" className="text-sm font-medium leading-6 text-foreground">
+            <Label
+              htmlFor="accuracyAttested"
+              className="cursor-pointer text-sm font-medium leading-6 text-foreground"
+            >
               I confirm that the information above is accurate and that I am authorized to submit it for this business.
             </Label>
             {errors.accuracyAttested ? (

@@ -8,6 +8,12 @@
  */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import {
@@ -20,6 +26,7 @@ import {
   CreditCard,
   Download,
   FileCheck2,
+  Eye,
   FileText,
   FlaskConical,
   Loader2,
@@ -29,7 +36,7 @@ import {
   Trash2,
   Trophy,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
 import {
@@ -116,11 +123,18 @@ function documentDisplayName(document: { name: string; documentType: string | nu
   return document.name;
 }
 
+type VaultDocument = {
+  name: string;
+  documentType: string | null;
+  url: string;
+};
+
 function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const [viewerDocument, setViewerDocument] = useState<VaultDocument | null>(null);
   const registrationQuery = trpc.llc.get.useQuery(
     { id: registrationId },
     {
@@ -412,12 +426,22 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                     Delivered {formatDate(document.releasedAt ?? document.createdAt)}
                   </p>
                 </div>
-                <Button asChild variant="outline" size="sm" className="shrink-0">
-                  <a href={document.url} target="_blank" rel="noreferrer">
-                    <Download className="mr-1.5 size-3.5" aria-hidden="true" />
-                    Download
-                  </a>
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setViewerDocument(document)}
+                  >
+                    <Eye className="mr-1.5 size-3.5" aria-hidden="true" />
+                    View
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={`${document.url}?download=1`}>
+                      <Download className="mr-1.5 size-3.5" aria-hidden="true" />
+                      Download
+                    </a>
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -582,6 +606,38 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           end. You’ll hear from us the moment anything needs your attention.
         </p>
       </div>
+
+      <Dialog
+        open={viewerDocument !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewerDocument(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {viewerDocument ? documentDisplayName(viewerDocument) : "Document"}
+            </DialogTitle>
+          </DialogHeader>
+          {viewerDocument ? (
+            <>
+              <iframe
+                src={viewerDocument.url}
+                title={documentDisplayName(viewerDocument)}
+                className="h-[70vh] w-full rounded-lg border border-border bg-white"
+              />
+              <div className="flex justify-end">
+                <Button asChild variant="outline" size="sm">
+                  <a href={`${viewerDocument.url}?download=1`}>
+                    <Download className="mr-1.5 size-3.5" aria-hidden="true" />
+                    Download
+                  </a>
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
