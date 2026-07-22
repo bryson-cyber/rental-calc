@@ -1144,6 +1144,7 @@ async function startServer() {
   // LLC formation status poll trigger for external schedulers (GET /api/poll,
   // disabled unless POLL_SECRET is configured)
   const { registerPollEndpoint, startStatusPoller } = await import("../ops/poller");
+  const { ensureLlcTables } = await import("../llc/ensure-tables");
   registerPollEndpoint(app);
 
   // Authenticated storage proxy with per-user ACL (GET /manus-storage/{key}).
@@ -1239,7 +1240,8 @@ async function startServer() {
     // In-process LLC filing-status poller. A no-op unless POLL_INTERVAL_MINUTES
     // is set, so it cannot misfire in dev; production scheduling normally runs
     // through the /api/scheduled/llc-status-poll heartbeat instead.
-    startStatusPoller();
+    void ensureLlcTables();
+  startStatusPoller();
   });
 }
 
