@@ -596,20 +596,32 @@ export function FundingReadinessStep() {
             </div>
           </fieldset>
 
-          {/* Soft-pull consent — same copy and layout as the 0percentfunded intake form */}
-          <div className="rounded-xl bg-muted/50 p-4">
+          {/* Soft-pull consent — same copy as the 0percentfunded intake form.
+              Styled state-aware so the required checkbox is unmissable. */}
+          <div
+            className={`rounded-xl border-2 p-4 transition-colors ${
+              consentAccepted ? "border-emerald-300 bg-emerald-50/60" : "border-primary/60 bg-primary/5"
+            }`}
+          >
             <div className="flex items-start gap-3">
               <Checkbox
                 id="funding-consent"
                 checked={consentAccepted}
                 onCheckedChange={(v) => setConsentAccepted(v === true)}
-                className="mt-0.5"
+                className="mt-0.5 size-5 border-2 border-primary bg-white"
                 aria-required="true"
               />
-              <Label htmlFor="funding-consent" className="text-sm font-normal leading-snug cursor-pointer text-muted-foreground">
-                I authorize a soft credit inquiry that will not affect my credit score, and agree to receive my
-                funding analysis results. Soft pull only — never impacts your score.
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="funding-consent" className="text-sm font-normal leading-snug cursor-pointer text-foreground">
+                  I authorize a soft credit inquiry that will not affect my credit score, and agree to receive my
+                  funding analysis results. Soft pull only — never impacts your score.
+                </Label>
+                {!consentAccepted && (
+                  <p className="text-xs font-medium text-primary mt-1.5">
+                    Check this box to authorize your soft credit check
+                  </p>
+                )}
+              </div>
               <span className="text-destructive text-sm" aria-hidden>*</span>
             </div>
           </div>
@@ -623,7 +635,9 @@ export function FundingReadinessStep() {
               )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              No impact to your credit score · results appear right on this page
+              {consentAccepted
+                ? "No impact to your credit score · results appear right on this page"
+                : "Check the authorization box above to enable your soft credit check"}
             </p>
           </div>
         </form>
