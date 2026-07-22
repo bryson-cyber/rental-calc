@@ -455,6 +455,17 @@ export const llcCompleteSchema = z
           });
         }
       }
+
+      // Provider contract: business_phone is required unless the registered
+      // agent supplies the contact details — enforced here so an own-address
+      // order can never be rejected downstream for a missing phone.
+      if (!value.businessPhone) {
+        context.addIssue({
+          code: "custom",
+          path: ["businessPhone"],
+          message: "A business phone is required when using your own company address",
+        });
+      }
     }
 
     const primaryCount = value.founders.filter((founder) => founder.isPrimary).length;

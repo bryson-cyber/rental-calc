@@ -17,6 +17,10 @@ import {
   submissionProblemAlert,
 } from "../ops/notify";
 import { bundleToDraft, bundleToRegistrationView } from "./domain";
+import {
+  sendApplicationReceivedEmail,
+  sendFormationCompleteEmail,
+} from "./clientEmails";
 import { mirrorFormationDocuments } from "./documents";
 import { getInactiveStateError, getStatePricing } from "./pricing";
 import {
@@ -295,6 +299,12 @@ export async function submitLlcRegistration(params: {
         params.registrationId,
       );
       if (!recovered) throw new Error("LLC registration could not be reloaded");
+      // Client receipt for the recovered checkout too — fire-and-forget, and
+      // the send-once claim dedupes against the original submission.
+      void sendApplicationReceivedEmail({
+        userId: params.userId,
+        registrationId: params.registrationId,
+      }).catch(() => {});
       return {
         outcome: "checkout_ready" as const,
         registration: bundleToRegistrationView(recovered),
@@ -547,6 +557,13 @@ export async function submitLlcRegistration(params: {
       );
     }
 
+    // Client-facing receipt (same seam as the ops checkout alert):
+    // fire-and-forget so an email failure can never affect the filing.
+    void sendApplicationReceivedEmail({
+      userId: params.userId,
+      registrationId: params.registrationId,
+    }).catch(() => {});
+
     return {
       outcome: "checkout_ready" as const,
       registration: bundleToRegistrationView(current),
@@ -748,6 +765,16 @@ export async function refreshLlcRegistrationStatus(params: {
       // tool_states/member_progress equivalents.
 
       if (transition.changed) {
+        // Confirmed completion → branded client congratulations email.
+        // Fire-and-forget: a send failure can never affect the refresh, and
+        // the send-once claim guarantees exactly one email per registration.
+        if (inferredStatus === "completed") {
+          void sendFormationCompleteEmail({
+            userId: params.userId,
+            registrationId: params.registrationId,
+          }).catch(() => {});
+        }
+
         const delivered = await sendOpsAlert(
           statusChangeAlert({
             registrationId: params.registrationId,

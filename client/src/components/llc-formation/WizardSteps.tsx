@@ -127,7 +127,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           autoComplete="tel"
           inputMode="tel"
           error={errors.businessPhone}
-          help="Use international format, beginning with +1 for US numbers."
+          help="Use international format, beginning with +1 for US numbers. Required if you use your own company address instead of our registered agent."
           optional
         />
         <TextField

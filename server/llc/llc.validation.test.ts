@@ -72,6 +72,29 @@ describe("LLC step validation", () => {
     expect(incompleteOwnership.success).toBe(false);
   });
 
+  it("requires a business phone only when not using the registered-agent service", () => {
+    // Provider contract: business_phone is required unless use_registered_agent
+    // is true (the agent supplies the contact details).
+    const withoutPhone = { ...validDraft, businessPhone: "" };
+
+    const ownAddress = llcCompleteSchema.safeParse({
+      ...withoutPhone,
+      useRegisteredAgent: false,
+    });
+    expect(ownAddress.success).toBe(false);
+    if (!ownAddress.success) {
+      expect(issuesByField(ownAddress.error).businessPhone).toMatch(
+        /business phone is required when using your own company address/i,
+      );
+    }
+
+    const withAgent = llcCompleteSchema.safeParse({
+      ...withoutPhone,
+      useRegisteredAgent: true,
+    });
+    expect(withAgent.success).toBe(true);
+  });
+
   it("blocks final submission until the accuracy attestation is accepted", () => {
     const result = llcCompleteSchema.safeParse({
       ...validDraft,

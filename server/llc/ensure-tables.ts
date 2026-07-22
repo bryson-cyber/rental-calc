@@ -162,6 +162,18 @@ export async function ensureLlcTables(): Promise<void> {
       )
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`llc_email_log\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`registrationId\` int NOT NULL,
+        \`emailType\` varchar(64) NOT NULL,
+        \`sentAt\` timestamp NOT NULL DEFAULT (now()),
+        CONSTRAINT \`llc_email_log_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`llc_email_log_once_unique\` UNIQUE(\`registrationId\`,\`emailType\`),
+        INDEX \`llc_email_log_registration_idx\` (\`registrationId\`)
+      )
+    `);
+
     // Column additions for tables that already exist on deployed databases
     // (CREATE TABLE IF NOT EXISTS cannot add columns). Each ALTER is
     // idempotent-by-catch: it fails harmlessly with a duplicate-column error

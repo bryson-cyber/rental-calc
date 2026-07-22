@@ -3126,3 +3126,28 @@ export const fundingConnections = mysqlTable(
 );
 export type FundingConnection = typeof fundingConnections.$inferSelect;
 export type InsertFundingConnection = typeof fundingConnections.$inferInsert;
+
+/**
+ * Send log for client-facing LLC lifecycle emails. The unique
+ * (registrationId, emailType) key is the send-once claim for the lifecycle
+ * types (application_received, payment_confirmed, formation_complete): the
+ * sender claims by inserting first, and a duplicate-key failure means the
+ * email already went out. documents_released sends store a unique-suffixed
+ * emailType ("documents_released@…") so every batch send keeps its own row;
+ * the latest sentAt drives the 10-minute batching window.
+ */
+export const llcEmailLog = mysqlTable(
+  "llc_email_log",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    emailType: varchar("emailType", { length: 64 }).notNull(),
+    sentAt: timestamp("sentAt").defaultNow().notNull(),
+  },
+  (table) => [
+    index("llc_email_log_registration_idx").on(table.registrationId),
+    uniqueIndex("llc_email_log_once_unique").on(table.registrationId, table.emailType),
+  ],
+);
+
+export type LlcEmailLogRecord = typeof llcEmailLog.$inferSelect;

@@ -56,6 +56,11 @@ import {
   deleteDemoFiling,
   isDemoSubmissionKey,
 } from "./demo";
+import {
+  sendDemoLifecycleEmails,
+  sendDocumentsReleasedEmail,
+  sendPaymentConfirmedEmail,
+} from "./clientEmails";
 import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
@@ -451,6 +456,12 @@ export const llcOpsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Document not found." });
       }
       const updated = await setDocumentReleased(input.documentId, true);
+      // Client notification (10-minute batching lives in the sender).
+      // Fire-and-forget: an email failure can never affect the release.
+      void sendDocumentsReleasedEmail({
+        userId: existing.userId,
+        registrationId: existing.registrationId,
+      }).catch(() => {});
       return { released: true as const, documentId: input.documentId, releasedAt: updated?.releasedAt?.getTime() ?? null };
     }),
 
@@ -600,6 +611,42 @@ export const llcOpsRouter = router({
       }
     }),
 
+  sendDemoEmails: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ ctx, input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      const bundle = await getLlcRegistrationById(owner.userId, input.id);
+      if (!bundle) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      // Hard guard: rehearsal sends exist ONLY for demo filings — a real
+      // client registration can never be replayed through this procedure.
+      if (!isDemoSubmissionKey(bundle.registration.submissionKey)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only demo filings can send demo emails",
+        });
+      }
+      const to = ctx.user.email?.trim();
+      if (!to) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Your admin account has no email address on file.",
+        });
+      }
+      // All four lifecycle emails go to the CALLING ADMIN (never a client),
+      // bypassing the send-once log so rehearsals are repeatable.
+      const result = await sendDemoLifecycleEmails({
+        userId: owner.userId,
+        registrationId: input.id,
+        to,
+      });
+      return { sent: result.sent };
+    }),
+
   // ─── Retail payment tracking ───
 
   markPaid: adminProcedure
@@ -612,6 +659,12 @@ export const llcOpsRouter = router({
       await updateLlcRegistrationProviderFields(owner.userId, input.id, {
         retailPaidAt: new Date(),
       });
+      // Client payment confirmation — fire-and-forget so an email failure
+      // can never affect the ops action; send-once via the email log claim.
+      void sendPaymentConfirmedEmail({
+        userId: owner.userId,
+        registrationId: input.id,
+      }).catch(() => {});
       return { id: input.id, paid: true as const };
     }),
 

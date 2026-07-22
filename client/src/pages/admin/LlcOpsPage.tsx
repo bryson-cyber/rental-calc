@@ -25,6 +25,7 @@ import {
   FileText,
   Home,
   Loader2,
+  Mail,
   RefreshCw,
   Shield,
   Sparkles,
@@ -176,6 +177,37 @@ function RemoveDemoButton({ registrationId }: { registrationId: number }) {
         <Trash2 className="w-3 h-3" />
       )}
       <span className="ml-1">Remove</span>
+    </Button>
+  );
+}
+
+function SendDemoEmailsButton({ registrationId }: { registrationId: number }) {
+  const mutation = trpc.llcOps.sendDemoEmails.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        result.sent > 0
+          ? `Sent ${result.sent} demo email${result.sent === 1 ? '' : 's'} to your inbox.`
+          : 'No demo emails could be sent — check the email relay configuration.',
+      );
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-8 rounded-lg px-3 text-xs"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate({ id: registrationId })}
+      title="Sends all four client lifecycle emails (application received, payment confirmed, formation complete, documents released) rendered from this demo filing to YOUR email — nothing goes to a client."
+    >
+      {mutation.isPending ? (
+        <Loader2 className="w-3 h-3 animate-spin" />
+      ) : (
+        <Mail className="w-3 h-3" />
+      )}
+      <span className="ml-1">Send demo emails to me</span>
     </Button>
   );
 }
@@ -938,7 +970,12 @@ export default function LlcOpsPage() {
                                 <ChevronDown className="ml-1 w-3 h-3" />
                               )}
                             </Button>
-                            {order.isDemo ? <RemoveDemoButton registrationId={order.id} /> : null}
+                            {order.isDemo ? (
+                              <>
+                                <SendDemoEmailsButton registrationId={order.id} />
+                                <RemoveDemoButton registrationId={order.id} />
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
