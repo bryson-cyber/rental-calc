@@ -103,6 +103,10 @@ export const fundingRouter = router({
         fundingTimeline: input.fundingTimeline,
         consentIP: consentIp,
         consentAt: consentAt.toISOString(),
+        // An already-connected member resubmitting the form ("New Analysis")
+        // explicitly wants a fresh soft pull — without this the funding
+        // system's 30-day match window would just link the old analysis back.
+        forceRefresh: current?.status === "connected" ? true : undefined,
       });
 
       const base = {
