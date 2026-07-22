@@ -435,7 +435,7 @@ describe("demo lifecycle sends (rehearsals)", () => {
   const demoRegistration = makeRegistrationRow({
     id: 88,
     userId: 3,
-    legalName: "Amara Rose Apparel",
+    legalName: "Amara Rose Stays",
     formationState: "GA",
     retailPriceCents: 59900,
     submissionKey: "demo-abc123",
@@ -493,8 +493,8 @@ describe("demo lifecycle sends (rehearsals)", () => {
     expect(subjects).toEqual([
       "Your LLC application is in — one step left",
       "Payment received — your Georgia filing is underway",
-      "Amara Rose Apparel LLC is officially formed",
-      "New documents for Amara Rose Apparel LLC",
+      "Amara Rose Stays LLC is officially formed",
+      "New documents for Amara Rose Stays LLC",
     ]);
 
     for (const call of smtp.sendMail.mock.calls) {

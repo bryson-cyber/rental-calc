@@ -123,11 +123,11 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           label="Business phone"
           value={draft.businessPhone ?? ""}
           onChange={(event) => patch({ businessPhone: event.target.value })}
-          placeholder="+12125550100"
+          placeholder="(702) 555-0100"
           autoComplete="tel"
           inputMode="tel"
           error={errors.businessPhone}
-          help="Use international format, beginning with +1 for US numbers. Required if you use your own company address instead of our registered agent."
+          help="US numbers work as-is — just type the 10 digits. International numbers need their + country code. Required if you use your own company address instead of our registered agent."
           optional
         />
         <TextField
@@ -481,7 +481,7 @@ export function FoundersStep({ draft, errors, onChange }: StepProps) {
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
-                placeholder="+12125550100"
+                placeholder="(702) 555-0100"
                 value={founder.phone ?? ""}
                 onChange={(event) => replaceFounder(index, { ...founder, phone: event.target.value })}
                 error={errors[`founders.${index}.phone`]}

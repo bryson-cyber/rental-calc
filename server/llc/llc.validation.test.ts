@@ -72,6 +72,19 @@ describe("LLC step validation", () => {
     expect(incompleteOwnership.success).toBe(false);
   });
 
+  it("normalizes plain US phone digits to E.164", () => {
+    for (const typed of ["7025218792", "(702) 521-8792", "1-702-521-8792"]) {
+      const result = llcCompleteSchema.safeParse({
+        ...validDraft,
+        businessPhone: typed,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.businessPhone).toBe("+17025218792");
+      }
+    }
+  });
+
   it("requires a business phone only when not using the registered-agent service", () => {
     // Provider contract: business_phone is required unless use_registered_agent
     // is true (the agent supplies the contact details).

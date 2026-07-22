@@ -165,12 +165,12 @@ export const LLC_CLIENT_STATUS_LABELS: Record<
  */
 export const LLC_ACTIVITY_PRESETS = [
   {
-    key: "clothing_brand",
-    label: "Clothing brand",
-    description: "Apparel, streetwear, boutique, or custom clothing",
-    businessType: "physical_product",
-    industryGroup: "clothing_and_apparel",
-    industryType: "casual_everyday_clothing",
+    key: "short_term_rental",
+    label: "Short-term rental",
+    description: "Airbnb, vacation rental, or rental property business",
+    businessType: "brick_and_mortar",
+    industryGroup: "hospitality_and_lodging",
+    industryType: "vacation_rental_property",
   },
 ] as const;
 
@@ -259,10 +259,30 @@ export const llcDraftSchema = z.object({
   founders: z.array(llcDraftFounderSchema).max(10, "A maximum of 10 founders is supported"),
 });
 
+/**
+ * Accepts US numbers exactly as people type them (7025550100,
+ * (702) 555-0100, 1-702-555-0100) by normalizing to E.164; numbers from
+ * other countries must carry their + country code.
+ */
 const e164PhoneSchema = z
   .string()
   .trim()
-  .regex(/^\+[1-9]\d{7,14}$/, "Use international format, for example +12125550100");
+  .transform((value) => {
+    const hasPlus = value.startsWith("+");
+    const digits = value.replace(/\D/g, "");
+    if (hasPlus) return `+${digits}`;
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+    return value;
+  })
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^\+[1-9]\d{7,14}$/,
+        "Enter a 10-digit US number, or include a + country code for international numbers",
+      ),
+  );
 
 const completeAddressSchema = z.object({
   line1: requiredTrimmedString("Street address", 255),

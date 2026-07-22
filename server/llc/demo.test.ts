@@ -82,7 +82,7 @@ beforeEach(() => {
 describe("demo PDF builder", () => {
   const pdf = buildDemoPdf({
     title: "Articles of Organization",
-    lines: ["Amara Rose Apparel LLC", "State of Georgia"],
+    lines: ["Amara Rose Stays LLC", "State of Georgia"],
     footnote: "SAMPLE DOCUMENT — FOR DEMONSTRATION ONLY",
   });
   const text = pdf.toString("latin1");
@@ -139,12 +139,12 @@ describe("createDemoFiling", () => {
       userId: 7,
       status: "completed",
       currentStep: 6,
-      legalName: "Amara Rose Apparel",
+      legalName: "Amara Rose Stays",
       entitySuffix: "LLC",
       formationState: "GA",
-      businessType: "physical_product",
-      industryGroup: "clothing_and_apparel",
-      industryType: "casual_everyday_clothing",
+      businessType: "brick_and_mortar",
+      industryGroup: "hospitality_and_lodging",
+      industryType: "vacation_rental_property",
       useRegisteredAgent: true,
       expediteEin: false,
       accuracyAttested: true,
@@ -311,7 +311,7 @@ describe("demo filing client view", () => {
     expect(view.canRetry).toBe(false);
     expect(view.safeErrorMessage).toBeNull();
     expect(view.submittedAt).toBeTypeOf("number");
-    expect(view.draft.legalName).toBe("Amara Rose Apparel");
+    expect(view.draft.legalName).toBe("Amara Rose Stays");
     expect(view.draft.entitySuffix).toBe("LLC");
     expect(view.draft.formationState).toBe("GA");
     expect(view.draft.founders).toHaveLength(1);

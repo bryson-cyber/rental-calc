@@ -63,12 +63,12 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     userId: ownerUserId,
     status: "completed",
     currentStep: 6,
-    legalName: "Amara Rose Apparel",
+    legalName: "Amara Rose Stays",
     entitySuffix: "LLC",
     formationState: "GA",
-    businessType: "physical_product",
-    industryGroup: "clothing_and_apparel",
-    industryType: "casual_everyday_clothing",
+    businessType: "brick_and_mortar",
+    industryGroup: "hospitality_and_lodging",
+    industryType: "vacation_rental_property",
     useRegisteredAgent: true,
     expediteEin: false,
     accuracyAttested: true,
@@ -176,7 +176,7 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
   const articlesPdf = buildDemoPdf({
     title: "Articles of Organization",
     lines: [
-      "Amara Rose Apparel LLC",
+      "Amara Rose Stays LLC",
       "State of Georgia — Secretary of State, Corporations Division",
       `Filed and effective: ${filedOn}`,
       "",
@@ -202,7 +202,7 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
   const einPdf = buildDemoPdf({
     title: "EIN Confirmation Letter",
     lines: [
-      "Amara Rose Apparel LLC",
+      "Amara Rose Stays LLC",
       "Formation state: Georgia",
       `Issued: ${filedOn}`,
       "",
