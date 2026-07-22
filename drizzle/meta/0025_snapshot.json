@@ -1617,7 +1617,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'⚡'"
+          "default": "'\u26a1'"
         },
         "format": {
           "name": "format",
@@ -4791,6 +4791,13 @@
           "autoincrement": false,
           "onUpdate": true,
           "default": "(now())"
+        },
+        "paymentLinkUrl": {
+          "name": "paymentLinkUrl",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {

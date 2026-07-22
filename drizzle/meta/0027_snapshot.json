@@ -2,7 +2,7 @@
   "version": "5",
   "dialect": "mysql",
   "id": "424e5db6-4a45-4281-835e-8b384af42b6a",
-  "prevId": "63427209-5513-4b23-8528-c25043f79b61",
+  "prevId": "d2f5501b-fa0e-4d79-b3de-c845f585f1e1",
   "tables": {
     "activity_logs": {
       "name": "activity_logs",
@@ -1617,7 +1617,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'⚡'"
+          "default": "'\u26a1'"
         },
         "format": {
           "name": "format",
@@ -4848,6 +4848,13 @@
           "autoincrement": false,
           "onUpdate": true,
           "default": "(now())"
+        },
+        "retailPaidAt": {
+          "name": "retailPaidAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -10976,6 +10983,83 @@
           ]
         }
       },
+      "checkConstraint": {}
+    },
+    "llc_state_pricing": {
+      "name": "llc_state_pricing",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "retailPriceCents": {
+          "name": "retailPriceCents",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "stateFeeCents": {
+          "name": "stateFeeCents",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "paymentLinkUrl": {
+          "name": "paymentLinkUrl",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "llc_state_pricing_state_unique": {
+          "name": "llc_state_pricing_state_unique",
+          "columns": [
+            "state"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "llc_state_pricing_id": {
+          "name": "llc_state_pricing_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "checkConstraint": {}
     }
   },
