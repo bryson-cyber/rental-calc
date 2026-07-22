@@ -10,7 +10,7 @@ import { getDb } from "../db";
 import { getOpsConfig } from "../ops/config";
 import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getStatePricing } from "./pricing";
-import { isDemoSubmissionKey } from "./demo";
+import { isDemoSubmissionKey } from "./demoMarker";
 
 /**
  * Client-facing transactional emails for the LLC filing lifecycle.

@@ -1,5 +1,5 @@
 import { isRegistrationEditable } from "./store";
-import { isDemoSubmissionKey } from "./demo";
+import { isDemoSubmissionKey } from "./demoMarker";
 import type { getLlcRegistrationById, listLlcRegistrationsForUser } from "./store";
 import { decryptPii, maskSsn } from "./pii";
 import type { LlcDraft } from "../../shared/llc";

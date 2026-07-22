@@ -42,6 +42,9 @@ function makeFakeDb(selectResults: unknown[][]) {
         where: () => ({
           limit: async () => nextRows(),
           orderBy: async () => nextRows(),
+          // Bare `await ...where(...)` (sample-registration lookup) also
+          // yields rows.
+          then: (resolve: (rows: unknown[]) => void) => resolve(nextRows()),
         }),
       }),
     })),
@@ -188,7 +191,12 @@ describe("client document listing", () => {
   };
 
   it("serves member URLs through the /manus-storage proxy path and prefers the ops label", async () => {
-    const { db } = makeFakeDb([[releasedRow]]);
+    // Second select: the sample-registration lookup finds no demo/test
+    // marker, so the URL stays on the storage proxy.
+    const { db } = makeFakeDb([
+      [releasedRow],
+      [{ id: 41, submissionKey: "a1b2c3d4", isTest: false }],
+    ]);
     database.getDb.mockResolvedValue(db);
 
     const rows = await listFormationDocuments(7, 41);
@@ -206,7 +214,13 @@ describe("client document listing", () => {
   });
 
   it("lists all released documents across a member's registrations", async () => {
-    const { db } = makeFakeDb([[releasedRow, { ...releasedRow, id: 2, registrationId: 42 }]]);
+    const { db } = makeFakeDb([
+      [releasedRow, { ...releasedRow, id: 2, registrationId: 42 }],
+      [
+        { id: 41, submissionKey: "a1b2c3d4", isTest: false },
+        { id: 42, submissionKey: "a1b2c3d4", isTest: false },
+      ],
+    ]);
     database.getDb.mockResolvedValue(db);
     const rows = await listAllFormationDocuments(7);
     expect(rows).toHaveLength(2);

@@ -1152,6 +1152,11 @@ async function startServer() {
   const { registerStorageProxy } = await import("./storageProxy");
   registerStorageProxy(app);
 
+  // Demo/test LLC sample deliverables are regenerated in-process on demand —
+  // never dependent on the storage backend (GET /api/llc/sample-documents/:id).
+  const { registerLlcSampleDocumentRoute } = await import("../llc/sampleDocumentRoute");
+  registerLlcSampleDocumentRoute(app);
+
   // Funding Readiness — streams the member's credit-report PDF from the
   // funding system (credentials stay server-side)
   const { registerFundingPdfProxy } = await import("../fundingPdfProxy");

@@ -342,7 +342,13 @@ describe("demo filing client view", () => {
   it("lists the four released sample deliverables exactly like real ones", async () => {
     const { documentRows } = await buildClientView();
 
-    const { db } = makeFakeDb([documentRows]);
+    // Second select: the sample-registration lookup sees the demo marker, so
+    // document URLs point at the in-process regeneration route instead of
+    // external storage.
+    const { db } = makeFakeDb([
+      documentRows,
+      [{ id: 41, submissionKey: "demo-a1b2c3d4e5f60718", isTest: false }],
+    ]);
     database.getDb.mockResolvedValue(db);
     const documents = await listFormationDocuments(7, 41);
 
@@ -355,7 +361,9 @@ describe("demo filing client view", () => {
     ]);
     for (const doc of documents) {
       expect(doc.releasedAt).toBeTypeOf("number");
-      expect(doc.url).toMatch(/^\/manus-storage\/pdfs\/7\/llc\/41\//);
+      // Sample documents are served by in-process regeneration — the vault
+      // never depends on the storage backend for the webinar demo.
+      expect(doc.url).toMatch(/^\/api\/llc\/sample-documents\/\d+$/);
     }
     expect(JSON.stringify(documents)).not.toMatch(/demo/i);
   });

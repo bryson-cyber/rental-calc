@@ -1,5 +1,6 @@
-import { and, asc, eq, isNotNull } from "drizzle-orm";
-import { llcDocuments } from "../../drizzle/schema";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
+import { llcDocuments, llcRegistrations } from "../../drizzle/schema";
+import { isTestRegistration } from "./demoMarker";
 import { getDb } from "../db";
 import { storagePut } from "../storage";
 import type { WhopFormationSnapshot } from "./whop";
@@ -158,7 +159,11 @@ export async function mirrorFormationDocuments(params: {
   return { mirrored, skipped };
 }
 
-function toClientDocument(row: typeof llcDocuments.$inferSelect) {
+function toClientDocument(
+  row: typeof llcDocuments.$inferSelect,
+  options?: { sampleRegistrationIds?: Set<number> },
+) {
+  const isSampleDocument = options?.sampleRegistrationIds?.has(row.registrationId) ?? false;
   return {
     id: row.id,
     registrationId: row.registrationId,
@@ -166,10 +171,31 @@ function toClientDocument(row: typeof llcDocuments.$inferSelect) {
     documentType: row.documentType,
     releasedAt: row.releasedAt?.getTime() ?? null,
     createdAt: row.createdAt.getTime(),
-    // URLs use the /manus-storage/{key} proxy path; its ACL restricts
+    // Demo/test sample documents are regenerated in-process on demand, so
+    // the webinar vault never depends on the storage backend. Real provider
+    // documents use the /manus-storage/{key} proxy, whose ACL restricts
     // pdfs/{userId}/* to that user or an admin.
-    url: `/manus-storage/${row.storageKey}`,
+    url: isSampleDocument
+      ? `/api/llc/sample-documents/${row.id}`
+      : `/manus-storage/${row.storageKey}`,
   };
+}
+
+/** Registration ids (of the given rows) that carry the demo/test marker. */
+async function findSampleRegistrationIds(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  registrationIds: number[],
+): Promise<Set<number>> {
+  if (registrationIds.length === 0) return new Set();
+  const rows = await db
+    .select({
+      id: llcRegistrations.id,
+      submissionKey: llcRegistrations.submissionKey,
+      isTest: llcRegistrations.isTest,
+    })
+    .from(llcRegistrations)
+    .where(inArray(llcRegistrations.id, Array.from(new Set(registrationIds))));
+  return new Set(rows.filter((row) => isTestRegistration(row)).map((row) => row.id));
 }
 
 /**
@@ -191,7 +217,11 @@ export async function listFormationDocuments(userId: number, registrationId: num
     )
     .orderBy(asc(llcDocuments.createdAt), asc(llcDocuments.id));
 
-  return rows.map(toClientDocument);
+  const sampleRegistrationIds = await findSampleRegistrationIds(
+    db,
+    rows.map((row) => row.registrationId),
+  );
+  return rows.map((row) => toClientDocument(row, { sampleRegistrationIds }));
 }
 
 /** All RELEASED documents across every registration the member owns. */
@@ -204,7 +234,11 @@ export async function listAllFormationDocuments(userId: number) {
     .where(and(eq(llcDocuments.userId, userId), isNotNull(llcDocuments.releasedAt)))
     .orderBy(asc(llcDocuments.createdAt), asc(llcDocuments.id));
 
-  return rows.map(toClientDocument);
+  const sampleRegistrationIds = await findSampleRegistrationIds(
+    db,
+    rows.map((row) => row.registrationId),
+  );
+  return rows.map((row) => toClientDocument(row, { sampleRegistrationIds }));
 }
 
 /** Ops view: every document for a registration, including unreleased. */
