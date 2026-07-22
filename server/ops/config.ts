@@ -37,10 +37,12 @@ export function getOpsConfig(env: NodeJS.ProcessEnv = process.env): OpsConfig {
     );
   }
 
-  // HubSpot (or any) SMTP relay: all four core values must be present.
-  const smtpHost = env.SMTP_HOST?.trim();
-  const smtpUser = env.SMTP_USER?.trim();
-  const smtpPass = env.SMTP_PASS?.trim();
+  // HubSpot (or any) SMTP relay. Falls back to HUBSPOT_SMTP_* env vars
+  // (used by the rest of the app for webinar emails) when SMTP_HOST is not set.
+  const smtpHost = env.SMTP_HOST?.trim() || (env.HUBSPOT_SMTP_USER?.trim() ? "smtp.hubapi.com" : "");
+  const smtpUser = env.SMTP_USER?.trim() || env.HUBSPOT_SMTP_USER?.trim();
+  const smtpPass = env.SMTP_PASS?.trim() || env.HUBSPOT_SMTP_PASS?.trim();
+  const smtpFrom = env.SMTP_FROM?.trim() || env.HUBSPOT_SMTP_FROM?.trim() || opsEmail;
   const smtp: SmtpConfig | null =
     smtpHost && smtpUser && smtpPass
       ? {
@@ -48,7 +50,7 @@ export function getOpsConfig(env: NodeJS.ProcessEnv = process.env): OpsConfig {
           port: Number(env.SMTP_PORT?.trim() || "587"),
           user: smtpUser,
           pass: smtpPass,
-          from: env.SMTP_FROM?.trim() || opsEmail,
+          from: smtpFrom,
         }
       : null;
 
