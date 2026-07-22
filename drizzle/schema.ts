@@ -2841,7 +2841,6 @@ export const adminSettings = mysqlTable("admin_settings", {
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertAdminSetting = typeof adminSettings.$inferInsert;
 
-
 // ═══════════════════════════════════════════════════════════════════════════
 // LLC FORMATION MODULE (white-label filing-provider reseller; ported from the
 // standalone LLC-formation app). Plain int id columns with indexes only — no
@@ -3072,6 +3071,7 @@ export type LlcDocument = typeof llcDocuments.$inferSelect;
 export type InsertLlcDocument = typeof llcDocuments.$inferInsert;
 
 /**
+/**
  * Per-state retail pricing for LLC formation. `stateFeeCents` is editable
  * REFERENCE data (published Secretary-of-State filing fees at seed time —
  * not legal advice and not guaranteed current); the owner sets
@@ -3093,5 +3093,36 @@ export const llcStatePricing = mysqlTable(
   },
   (table) => [uniqueIndex("llc_state_pricing_state_unique").on(table.state)],
 );
-
 export type LlcStatePricingRecord = typeof llcStatePricing.$inferSelect;
+
+/**
+ * Funding Readiness — per-member linkage to the funding system
+ * (0percentfunded.com partner API). Only linkage + consent data is stored
+ * here; credit data stays in the funding system and is fetched live,
+ * never persisted on this platform.
+ */
+export const fundingConnections = mysqlTable(
+  "funding_connections",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    firstName: varchar("firstName", { length: 100 }),
+    lastName: varchar("lastName", { length: 100 }),
+    phone: varchar("phone", { length: 20 }),
+    fundingTimeline: varchar("fundingTimeline", { length: 32 }),
+    status: mysqlEnum("status", ["pending", "connected", "gated", "failed"]).default("pending").notNull(),
+    fundingJobId: varchar("fundingJobId", { length: 64 }),
+    fundingAnalysisId: int("fundingAnalysisId"),
+    resultsToken: varchar("resultsToken", { length: 64 }),
+    error: text("error"),
+    consentAt: timestamp("consentAt"),
+    consentIp: varchar("consentIp", { length: 64 }),
+    connectedAt: timestamp("connectedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [uniqueIndex("funding_connections_user_idx").on(table.userId)],
+);
+export type FundingConnection = typeof fundingConnections.$inferSelect;
+export type InsertFundingConnection = typeof fundingConnections.$inferInsert;

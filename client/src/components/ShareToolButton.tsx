@@ -132,18 +132,19 @@ export function ShareToolButton({
     setOpen(false);
   };
 
-  // Get tool name based on step
+  // Get tool name based on step (matches the ?step= deep-link contract in
+  // LeadMagnet's stepMapping, not the visible step labels)
   const getToolName = (step: number): string => {
     const toolNames: Record<number, string> = {
+      0: 'Funding Readiness',
       1: 'Check Regulations',
       2: 'Find a Property',
-      3: 'See Real Revenue',
-      4: 'Explore Listings',
-      5: 'Validate the Deal',
-      6: 'Compare Favorites',
-      7: 'See the Map',
-      8: 'Market Advisor',
-      9: 'AI Advisor',
+      3: 'Validate the Deal',
+      4: 'Compare Favorites',
+      5: 'See the Map',
+      6: 'Read Your Lease',
+      8: 'Validate the Deal',
+      9: 'Validate the Deal',
     };
     return toolNames[step] || 'Tool';
   };

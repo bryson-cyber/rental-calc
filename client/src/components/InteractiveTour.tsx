@@ -9,15 +9,19 @@
  * 
  * CORRECT TAB IDs (from LeadMagnet.tsx TabType):
  * - 'ebook' = Read the Guide (GUIDE)
- * - 'regulations' = Check Regulations (STEP 1)
- * - 'opportunity' = Find a Property (STEP 2)
- * - 'prove' = See Real Revenue (STEP 3) - has MarketAutocomplete
- * - 'find' = Explore Listings (STEP 4)
+ * - 'llc' = Form Your LLC (STEP 1)
+ * - 'funding' = Funding Readiness (STEP 2)
+ * - 'regulations' = Check Regulations (STEP 3)
+ * - 'opportunity' = Find a Property (STEP 4)
  * - 'validate' = Validate the Deal (STEP 5) - has address input, property details
  * - 'compare' = Compare Favorites (STEP 6)
  * - 'map' = See the Map (STEP 7)
- * - 'market' = Market Advisor (STEP 8)
- * - 'advisor' = AI Advisor (STEP 9)
+ * - 'lease' = Read Your Lease (STEP 8)
+ * Hidden tabs (kept in TabType but not in TAB_ORDER):
+ * - 'prove' = See Real Revenue - has MarketAutocomplete
+ * - 'find' = Explore Listings
+ * - 'market' = Market Advisor
+ * - 'advisor' = AI Advisor
  */
 
 import { useState, useEffect, useCallback } from 'react';

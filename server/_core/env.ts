@@ -27,4 +27,7 @@ export const ENV = {
   googleCalendarServiceAccountJson: process.env.GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON ?? "",
   googleCalendarImpersonateEmail: process.env.GOOGLE_CALENDAR_IMPERSONATE_EMAIL ?? "",
   devMockApi: process.env.DEV_MOCK_API === "true",
+  // Funding system (0percentfunded.com) partner API — server-side only
+  fundingSystemUrl: process.env.FUNDING_SYSTEM_URL ?? "",
+  fundingSystemApiKey: process.env.FUNDING_SYSTEM_API_KEY ?? "",
 };

@@ -61,6 +61,7 @@ import {
   leaseReaderRouter,
   webinarEnvRouter,
   tosRouter,
+  fundingRouter,
   // publicExploreRouter, // Removed - market features
 } from "./routers/index";
 
@@ -204,6 +205,9 @@ export const appRouter = router({
 
   // Terms of Service acceptance tracking
   tos: tosRouter,
+
+  // Funding Readiness (0percentfunded.com partner integration)
+  funding: fundingRouter,
 
   // Public explore page (no auth required)
   // publicExplore: publicExploreRouter, // Removed - market features
