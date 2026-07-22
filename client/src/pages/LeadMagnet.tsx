@@ -464,7 +464,7 @@ export default function LeadMagnet() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
   // All available tabs (market-level features removed - now BNB Calc property-only)
-  const ALL_TABS: TabType[] = ['ebook', 'funding', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease', 'llc'];
+  const ALL_TABS: TabType[] = ['ebook', 'llc', 'funding', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease'];
   const TAB_ORDER: TabType[] = ALL_TABS;
   
   // Swipe handlers for mobile navigation

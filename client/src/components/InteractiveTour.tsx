@@ -9,14 +9,14 @@
  * 
  * CORRECT TAB IDs (from LeadMagnet.tsx TabType):
  * - 'ebook' = Read the Guide (GUIDE)
- * - 'funding' = Funding Readiness (STEP 1)
- * - 'regulations' = Check Regulations (STEP 2)
- * - 'opportunity' = Find a Property (STEP 3)
- * - 'validate' = Validate the Deal (STEP 4) - has address input, property details
- * - 'compare' = Compare Favorites (STEP 5)
- * - 'map' = See the Map (STEP 6)
- * - 'lease' = Read Your Lease (STEP 7)
- * - 'llc' = Form Your LLC (STEP 8)
+ * - 'llc' = Form Your LLC (STEP 1)
+ * - 'funding' = Funding Readiness (STEP 2)
+ * - 'regulations' = Check Regulations (STEP 3)
+ * - 'opportunity' = Find a Property (STEP 4)
+ * - 'validate' = Validate the Deal (STEP 5) - has address input, property details
+ * - 'compare' = Compare Favorites (STEP 6)
+ * - 'map' = See the Map (STEP 7)
+ * - 'lease' = Read Your Lease (STEP 8)
  * Hidden tabs (kept in TabType but not in TAB_ORDER):
  * - 'prove' = See Real Revenue - has MarketAutocomplete
  * - 'find' = Explore Listings

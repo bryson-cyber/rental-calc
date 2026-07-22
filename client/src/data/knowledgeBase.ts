@@ -14,58 +14,58 @@ Airbnb arbitrage is a real estate investment strategy where you lease a property
 
 ## The 8-Step Analysis Process
 
-### Step 1: Business Funding Readiness
-Before anything else, know how much startup capital you can actually access. Run a soft credit pull (no impact to your score) through our funding system to see:
+### Step 1: Form Your LLC
+Make your rental business official with a guided state filing:
+- State filing, registered agent, and EIN handled for you
+- Protects your personal assets from business liability
+- Required by many banks for business credit and funding
+
+### Step 2: Business Funding Readiness
+With your business entity underway, know how much startup capital you can actually access. Run a soft credit pull (no impact to your score) through our funding system to see:
 - Your estimated funding range
 - Your funding readiness score and rating
 - Which banks you're pre-qualified with
 - What's working for you and what's holding you back
 
-### Step 2: Check Regulations
+### Step 3: Check Regulations
 Before investing time in any market, verify that short-term rentals are legally allowed. Many cities have restrictions or outright bans. Key things to check:
 - Is a permit required? What's the cost?
 - Are there zoning restrictions?
 - What taxes must be collected?
 - Are there occupancy limits?
 
-### Step 3: Find a Property
+### Step 4: Find a Property
 Search for rental listings that could work for arbitrage using the Opportunity Finder. Look for:
 - Properties in STR-friendly zones
 - Rent under $2,000/month for best margins
 - 2-3 bedrooms (sweet spot for most markets)
 - Good location near attractions/downtown
 
-### Step 4: Validate the Deal
+### Step 5: Validate the Deal
 Run the numbers on a specific property. A good deal should have:
 - Projected profit margin of 30%+ after all expenses
 - Break-even occupancy under 50%
 - Revenue at least 2x the monthly rent
 - Positive cash flow even in slow months
 
-### Step 5: Compare Favorites
+### Step 6: Compare Favorites
 Compare your saved property options side-by-side. Consider:
 - Total profit potential
 - Risk factors (location, competition)
 - Startup costs
 - Management complexity
 
-### Step 6: See the Map
+### Step 7: See the Map
 Visualize competition and property locations on an interactive map:
 - See where successful Airbnbs are clustered
 - Identify underserved areas with less competition
 - Understand location advantages and proximity to attractions
 
-### Step 7: Read Your Lease
+### Step 8: Read Your Lease
 Before signing anything, analyze the lease with the AI lease reader:
 - Does the lease allow (or prohibit) short-term subletting?
 - What clauses need a landlord addendum?
 - Generate an Airbnb-arbitrage addendum to propose
-
-### Step 8: Form Your LLC
-Make your rental business official with a guided state filing:
-- State filing, registered agent, and EIN handled for you
-- Protects your personal assets from business liability
-- Required by many banks for business credit and funding
 
 ## Additional Analysis Concepts
 
@@ -139,45 +139,45 @@ export const TOOL_DOCUMENTATION = `
 **How to use:** Read through the chapters to understand the business model, key metrics, and how to analyze deals.
 **What you'll learn:** The complete arbitrage methodology, from finding markets to scaling your portfolio.
 
-## Step 1: Funding Readiness
+## Step 1: Form Your LLC
+**Purpose:** Make your rental business official — state filing, registered agent, and EIN handled for you.
+**How to use:** Follow the guided filing wizard to choose your state and entity details, then track your filing status.
+**What you'll learn:** How to legally structure your rental business and what an LLC protects you from.
+
+## Step 2: Funding Readiness
 **Purpose:** See how much startup capital you can actually access before you spend a dollar.
 **How to use:** Fill in your name, email, phone, and funding timeline, then authorize a soft credit inquiry (no impact to your credit score). Results appear right on the page in 2-3 minutes.
 **What you'll learn:** Your estimated funding range, readiness score and rating, bank pre-qualifications, a credit snapshot, and what's working for you vs. holding you back.
 
-## Step 2: Check Regulations
+## Step 3: Check Regulations
 **Purpose:** Verify if short-term rentals are allowed in your target market.
 **How to use:** Enter a city or address to see local STR regulations, permit requirements, and restrictions.
 **What you'll learn:** Whether you can legally operate, what permits are needed, and any restrictions to be aware of.
 
-## Step 3: Find a Property (Opportunity Finder)
+## Step 4: Find a Property (Opportunity Finder)
 **Purpose:** Browse available rental listings and validate their STR potential.
 **How to use:** Search by city or zip code to see available listings. Click "Analyze" on any property to see projected revenue.
 **What you'll learn:** What properties are available in your target market and their profit potential.
 
-## Step 4: Validate the Deal
+## Step 5: Validate the Deal
 **Purpose:** Run detailed numbers on a specific property.
 **How to use:** Enter the property address (with Google Places autocomplete), bedrooms, bathrooms, and monthly rent.
 **What you'll learn:** Projected revenue, profit margin, break-even occupancy, rent tier analysis, and comparison to nearby properties.
 
-## Step 5: Compare Favorites
+## Step 6: Compare Favorites
 **Purpose:** Compare multiple saved properties side-by-side.
 **How to use:** Save properties from other steps, then view them here in a comparison table sorted by profit potential.
 **What you'll learn:** Which of your saved properties has the best profit potential, with metrics like monthly profit, ROI, and rent-to-revenue ratio.
 
-## Step 6: See the Map
+## Step 7: See the Map
 **Purpose:** Visualize competition and property locations on an interactive map.
 **How to use:** Search for a market using the hierarchy picker, then browse the map to see where successful Airbnbs are located.
 **What you'll learn:** Competition density, location advantages, market hotspots, and geographic patterns.
 
-## Step 7: Read Your Lease
+## Step 8: Read Your Lease
 **Purpose:** Analyze a lease for Airbnb-arbitrage compatibility before you sign.
 **How to use:** Upload or paste the lease to get an AI-powered analysis and generate a landlord addendum.
 **What you'll learn:** Whether the lease allows short-term subletting, which clauses are risky, and what addendum to propose.
-
-## Step 8: Form Your LLC
-**Purpose:** Make your rental business official — state filing, registered agent, and EIN handled for you.
-**How to use:** Follow the guided filing wizard to choose your state and entity details, then track your filing status.
-**What you'll learn:** How to legally structure your rental business and what an LLC protects you from.
 `;
 
 export const MARKET_BENCHMARKS = `
@@ -751,7 +751,7 @@ export const FAQ_KNOWLEDGE = `
 ## Getting Started
 
 **Q: Where should I start if I'm completely new?**
-A: Start with the Guide (ebook) to learn the fundamentals, then use Step 1 (Funding Readiness) to see how much startup capital you can access with a soft credit pull. From there, follow the 8-step process: check regulations (Step 2), find properties (Step 3), validate specific deals (Step 4), compare favorites (Step 5), visualize on the map (Step 6), analyze your lease before signing (Step 7), and form your LLC to make it official (Step 8). Don't skip the education phase - understanding the business model is crucial.
+A: Start with the Guide (ebook) to learn the fundamentals, then use Step 1 (Form Your LLC) to make your business official and Step 2 (Funding Readiness) to see how much startup capital you can access with a soft credit pull. From there, follow the 8-step process: check regulations (Step 3), find properties (Step 4), validate specific deals (Step 5), compare favorites (Step 6), visualize on the map (Step 7), and analyze your lease before signing (Step 8). Don't skip the education phase - understanding the business model is crucial.
 
 **Q: How much money do I need to start?**
 A: Typically $7,000-15,000 for your first property, including first month's rent, security deposit, furnishing, and supplies. Have an additional 3-6 months of rent in reserves.
@@ -799,10 +799,10 @@ A: This is a real risk. Stay informed about local politics, diversify across mar
 ## Using the Tools
 
 **Q: Can I save my analyses?**
-A: Yes! Use the Save button to bookmark properties and markets. Your saved items appear in the Saved Items panel and can be used in Step 5 (Compare Favorites) for side-by-side comparison.
+A: Yes! Use the Save button to bookmark properties and markets. Your saved items appear in the Saved Items panel and can be used in Step 6 (Compare Favorites) for side-by-side comparison.
 
 **Q: How do I compare multiple properties?**
-A: Save properties from Find a Property (Step 3) or Validate the Deal (Step 4), then go to Step 5 (Compare Favorites) to see them side-by-side in a comparison table sorted by profit potential.
+A: Save properties from Find a Property (Step 4) or Validate the Deal (Step 5), then go to Step 6 (Compare Favorites) to see them side-by-side in a comparison table sorted by profit potential.
 
 **Q: What does "Training Mode" do?**
 A: It loads sample data so you can practice using the tools without entering real property information. Great for learning the platform.

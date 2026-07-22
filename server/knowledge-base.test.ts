@@ -25,14 +25,14 @@ describe('AI Knowledge Base', () => {
     it('should contain the 8-step analysis process', async () => {
       const { COACH_INAYAH_METHODOLOGY } = await import('../client/src/data/knowledgeBase');
 
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 1: Business Funding Readiness');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 2: Check Regulations');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 3: Find a Property');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 4: Validate the Deal');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 5: Compare Favorites');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 6: See the Map');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 7: Read Your Lease');
-      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 8: Form Your LLC');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 1: Form Your LLC');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 2: Business Funding Readiness');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 3: Check Regulations');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 4: Find a Property');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 5: Validate the Deal');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 6: Compare Favorites');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 7: See the Map');
+      expect(COACH_INAYAH_METHODOLOGY).toContain('Step 8: Read Your Lease');
     });
 
     it('should contain key metrics definitions', async () => {
@@ -59,14 +59,14 @@ describe('AI Knowledge Base', () => {
       const { TOOL_DOCUMENTATION } = await import('../client/src/data/knowledgeBase');
 
       expect(TOOL_DOCUMENTATION).toContain('Guide: Read the Guide');
-      expect(TOOL_DOCUMENTATION).toContain('Step 1: Funding Readiness');
-      expect(TOOL_DOCUMENTATION).toContain('Step 2: Check Regulations');
-      expect(TOOL_DOCUMENTATION).toContain('Step 3: Find a Property');
-      expect(TOOL_DOCUMENTATION).toContain('Step 4: Validate the Deal');
-      expect(TOOL_DOCUMENTATION).toContain('Step 5: Compare Favorites');
-      expect(TOOL_DOCUMENTATION).toContain('Step 6: See the Map');
-      expect(TOOL_DOCUMENTATION).toContain('Step 7: Read Your Lease');
-      expect(TOOL_DOCUMENTATION).toContain('Step 8: Form Your LLC');
+      expect(TOOL_DOCUMENTATION).toContain('Step 1: Form Your LLC');
+      expect(TOOL_DOCUMENTATION).toContain('Step 2: Funding Readiness');
+      expect(TOOL_DOCUMENTATION).toContain('Step 3: Check Regulations');
+      expect(TOOL_DOCUMENTATION).toContain('Step 4: Find a Property');
+      expect(TOOL_DOCUMENTATION).toContain('Step 5: Validate the Deal');
+      expect(TOOL_DOCUMENTATION).toContain('Step 6: Compare Favorites');
+      expect(TOOL_DOCUMENTATION).toContain('Step 7: See the Map');
+      expect(TOOL_DOCUMENTATION).toContain('Step 8: Read Your Lease');
     });
 
     it('should include purpose and how-to for each tool', async () => {
