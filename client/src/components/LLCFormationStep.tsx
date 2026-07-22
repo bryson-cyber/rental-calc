@@ -202,7 +202,8 @@ export default function LLCFormationStep() {
             </Button>
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-500">
               <ShieldCheck className="h-3.5 w-3.5" />
-              No card details collected here. SSNs are optional and stored encrypted.
+              You'll receive your total and payment link after you submit. No card details
+              are entered here. SSNs are optional and stored encrypted.
             </p>
           </div>
         </div>

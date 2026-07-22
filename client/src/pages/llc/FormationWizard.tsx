@@ -30,6 +30,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
+import {
+  formatUsdFromCents,
+  stateDisplayName,
+  useStatePricing,
+} from "@/components/llc-formation/useStatePricing";
 import { LlcPageShell } from "./LlcPageShell";
 
 const EMPTY_DRAFT: LlcDraft = {
@@ -201,6 +206,13 @@ function RegistrationWorkspace({ registrationId }: { registrationId: number }) {
     return "Saved securely";
   }, [saveMutation.isPending, saveMutation.isError]);
 
+  const pricingQuery = useStatePricing(draft.formationState);
+  const pricing = pricingQuery.data;
+  const publishedPriceCents =
+    pricing && pricing.active && pricing.retailPriceCents !== null
+      ? pricing.retailPriceCents
+      : null;
+
   if (registrationQuery.isLoading || !hydrated) return <WizardSkeleton />;
   if (registrationQuery.isError || !registrationQuery.data) {
     return (
@@ -278,7 +290,7 @@ function RegistrationWorkspace({ registrationId }: { registrationId: number }) {
 
       utils.llc.get.setData({ id: registrationId }, submission.registration);
       if (submission.outcome === "checkout_ready") {
-        toast.success("Your registration was submitted. We’re preparing your filing.");
+        toast.success("Almost done — complete your payment to start the filing.");
       } else if (submission.outcome === "failed") {
         toast.error(submission.message);
       }
@@ -439,12 +451,22 @@ function RegistrationWorkspace({ registrationId }: { registrationId: number }) {
           <SummaryItem included>Federal EIN (Tax ID)</SummaryItem>
           {draft.expediteEin ? <SummaryItem addon>Expedited EIN</SummaryItem> : null}
         </ul>
+        {publishedPriceCents !== null ? (
+          <div className="mt-4 flex items-baseline justify-between gap-4 border-t border-border pt-4">
+            <span className="text-sm font-semibold text-foreground">
+              Total for {stateDisplayName(draft.formationState)}
+            </span>
+            <span className="text-sm font-semibold tabular-nums text-foreground">
+              {formatUsdFromCents(publishedPriceCents)}
+            </span>
+          </div>
+        ) : null}
         <div className="mt-4 flex items-start gap-2.5 border-t border-border pt-4">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <p className="text-xs leading-5 text-muted-foreground">
-            Card details are never collected here, and SSNs are optional and stored
-            encrypted. After you submit, our team files with the state and your status
-            page tracks every step.
+            {publishedPriceCents !== null
+              ? `Total for ${stateDisplayName(draft.formationState)}: ${formatUsdFromCents(publishedPriceCents)}. We'll send your secure payment link after you submit — no card details are entered here. SSNs are optional and stored encrypted.`
+              : "You'll receive your total and payment link after you submit. No card details are entered here. SSNs are optional and stored encrypted."}
           </p>
         </div>
       </div>

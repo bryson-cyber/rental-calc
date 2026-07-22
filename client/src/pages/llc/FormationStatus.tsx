@@ -12,9 +12,11 @@ import { trpc } from "@/lib/trpc";
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowUpRight,
   Check,
   CheckCircle2,
   Clock3,
+  CreditCard,
   Download,
   FileCheck2,
   FileText,
@@ -27,6 +29,11 @@ import {
 import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
+import {
+  formatUsdFromCents,
+  stateDisplayName,
+  useStatePricing,
+} from "@/components/llc-formation/useStatePricing";
 import { LlcPageShell } from "./LlcPageShell";
 
 function formatDate(value: number | null) {
@@ -132,7 +139,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
       }
       utils.llc.get.setData({ id: registrationId }, result.registration);
       if (result.outcome === "checkout_ready") {
-        toast.success("Your registration was submitted. We’re preparing your filing.");
+        toast.success("Almost done — complete your payment to start the filing.");
       } else if (result.outcome === "failed") {
         toast.error(result.message);
       } else {
@@ -146,6 +153,8 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
     () => registration?.draft.founders.find((founder) => founder.isPrimary),
     [registration?.draft.founders],
   );
+  const statePricingQuery = useStatePricing(registration?.draft.formationState);
+  const statePricing = statePricingQuery.data;
 
   if (registrationQuery.isLoading) return <StatusSkeleton />;
 
@@ -173,6 +182,24 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
   );
   const isBusy = refreshMutation.isPending || retryMutation.isPending;
 
+  // Payment card: the registration has been submitted (beyond draft/ready)
+  // but the retail payment has not been confirmed yet.
+  const isSubmittedStatus = [
+    "submitting",
+    "payment_required",
+    "processing",
+    "completed",
+    "action_required",
+  ].includes(registration.status);
+  const showPaymentCard = isSubmittedStatus && !registration.paid;
+  // Prefer the price snapshotted at submit; fall back to the state's current
+  // published price.
+  const dueCents =
+    registration.retailPriceCents ??
+    (statePricing && statePricing.active ? statePricing.retailPriceCents : null);
+  const paymentLinkUrl = statePricing?.paymentLinkUrl ?? null;
+  const formationStateName = stateDisplayName(registration.draft.formationState);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -199,6 +226,37 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           {copy.body}
         </p>
       </div>
+
+      {showPaymentCard ? (
+        <div className="apple-card border-primary/30 bg-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10">
+              <CreditCard className="size-4 text-primary" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-foreground">Complete your payment</h3>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+                {dueCents !== null
+                  ? `Total for ${formationStateName}: ${formatUsdFromCents(dueCents)}. `
+                  : ""}
+                Your filing moves forward once payment is received.
+              </p>
+              {paymentLinkUrl ? (
+                <Button asChild className="mt-3">
+                  <a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">
+                    Pay now
+                    <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
+                  </a>
+                </Button>
+              ) : (
+                <p className="mt-2 text-[13px] font-medium text-foreground">
+                  We&rsquo;ll send your secure payment link right away.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {registration.status === "completed" ? (
         <div className="apple-card border-emerald-600/25 bg-emerald-600/5 p-5">

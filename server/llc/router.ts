@@ -42,6 +42,15 @@ import {
   setDocumentReleased,
   uploadOpsDocument,
 } from "./documents";
+import {
+  applyPaymentLinkToAllStates,
+  applyStateMarkup,
+  getInactiveStateError,
+  getStatePricing,
+  listStatePricingWithWholesale,
+  setStatePricing,
+} from "./pricing";
+import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 
@@ -137,6 +146,18 @@ export const llcRouter = router({
         };
       }
 
+      // Owner-controlled availability: a state switched off in pricing cannot
+      // proceed past the Business step.
+      if (input.step === 1) {
+        const inactiveError = await getInactiveStateError(input.draft.formationState);
+        if (inactiveError) {
+          return {
+            advanced: false as const,
+            fieldErrors: { formationState: inactiveError },
+          };
+        }
+      }
+
       let bundle;
       try {
         bundle = await saveLlcDraft(ctx.user.id, input.id, {
@@ -181,6 +202,14 @@ export const llcRouter = router({
         return {
           valid: false as const,
           fieldErrors: issuesByField(result.error),
+        };
+      }
+
+      const inactiveError = await getInactiveStateError(result.data.formationState);
+      if (inactiveError) {
+        return {
+          valid: false as const,
+          fieldErrors: { formationState: inactiveError },
         };
       }
 
@@ -252,6 +281,22 @@ export const llcRouter = router({
     return listAllFormationDocuments(ctx.user.id);
   }),
 
+  statePricing: protectedProcedure
+    .input(z.object({ state: z.enum(LLC_FORMATION_STATES) }))
+    .query(async ({ input }) => {
+      // Client-facing by definition: retail price + published state fee only.
+      // Wholesale totals NEVER appear in this procedure's output.
+      const pricing = await getStatePricing(input.state);
+      return {
+        state: pricing.state,
+        retailPriceCents: pricing.retailPriceCents,
+        stateFeeCents: pricing.stateFeeCents,
+        // Client-facing by design: this is the page clients are SENT to pay.
+        paymentLinkUrl: pricing.paymentLinkUrl,
+        active: pricing.active,
+      };
+    }),
+
   refreshStatus: protectedProcedure
     .input(registrationIdInput)
     .mutation(async ({ ctx, input }) => {
@@ -305,6 +350,7 @@ export const llcOpsRouter = router({
           ? registration.retailPriceCents - registration.checkoutTotal
           : null,
       lastErrorMessage: registration.lastErrorMessage,
+      retailPaidAt: registration.retailPaidAt?.getTime() ?? null,
       submittedAt: registration.submittedAt?.getTime() ?? null,
       lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
       updatedAt: registration.updatedAt.getTime(),
@@ -457,5 +503,84 @@ export const llcOpsRouter = router({
       }
       await deleteLlcDocument(input.documentId);
       return { deleted: true as const, documentId: input.documentId };
+    }),
+
+  // ─── Per-state retail pricing ───
+
+  listStatePricing: adminProcedure.query(async () => {
+    // Includes lastWholesaleCents (max provider checkout total seen per
+    // state) so the owner prices retail with real COGS in view. Ops-only.
+    return listStatePricingWithWholesale();
+  }),
+
+  setStatePricing: adminProcedure
+    .input(
+      z.object({
+        state: z.enum(LLC_FORMATION_STATES),
+        retailPriceCents: z.number().int().min(0).max(10_000_000).nullable(),
+        active: z.boolean(),
+        paymentLinkUrl: z.string().trim().url().max(1000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const updated = await setStatePricing(input);
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "State pricing row not found." });
+      }
+      return {
+        state: updated.state,
+        retailPriceCents: updated.retailPriceCents,
+        stateFeeCents: updated.stateFeeCents,
+        paymentLinkUrl: updated.paymentLinkUrl,
+        active: updated.active,
+      };
+    }),
+
+  applyStateMarkup: adminProcedure
+    .input(z.object({ markupCents: z.number().int().min(0).max(10_000_000) }))
+    .mutation(async ({ input }) => {
+      // retailPriceCents = stateFeeCents + markupCents for every ACTIVE state.
+      const result = await applyStateMarkup(input.markupCents);
+      return { updated: result.updated, markupCents: input.markupCents };
+    }),
+
+  applyPaymentLink: adminProcedure
+    .input(
+      z.object({
+        paymentLinkUrl: z.string().trim().url().max(1000).nullable(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      // One hosted payment page for every state in one action (null clears).
+      const result = await applyPaymentLinkToAllStates(input.paymentLinkUrl);
+      return { updated: result.updated };
+    }),
+
+  // ─── Retail payment tracking ───
+
+  markPaid: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      await updateLlcRegistrationProviderFields(owner.userId, input.id, {
+        retailPaidAt: new Date(),
+      });
+      return { id: input.id, paid: true as const };
+    }),
+
+  unmarkPaid: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      await updateLlcRegistrationProviderFields(owner.userId, input.id, {
+        retailPaidAt: null,
+      });
+      return { id: input.id, paid: false as const };
     }),
 });

@@ -2901,6 +2901,8 @@ export const llcRegistrations = mysqlTable(
     checkoutTotal: int("checkoutTotal"),
     checkoutCurrency: varchar("checkoutCurrency", { length: 3 }),
     retailPriceCents: int("retailPriceCents"),
+    /** When the client's retail payment was received (ops-confirmed). */
+    retailPaidAt: timestamp("retailPaidAt"),
     opsNotifiedAt: timestamp("opsNotifiedAt"),
     providerStatus: json("providerStatus").$type<Record<string, unknown> | null>(),
     lastProviderSyncAt: timestamp("lastProviderSyncAt"),
@@ -3068,3 +3070,28 @@ export const llcDocuments = mysqlTable(
 
 export type LlcDocument = typeof llcDocuments.$inferSelect;
 export type InsertLlcDocument = typeof llcDocuments.$inferInsert;
+
+/**
+ * Per-state retail pricing for LLC formation. `stateFeeCents` is editable
+ * REFERENCE data (published Secretary-of-State filing fees at seed time —
+ * not legal advice and not guaranteed current); the owner sets
+ * `retailPriceCents` (null = price not published, clients see no price).
+ * Wholesale (provider checkout) totals NEVER live here — they stay on
+ * llc_registrations and are ops-only.
+ */
+export const llcStatePricing = mysqlTable(
+  "llc_state_pricing",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    state: varchar("state", { length: 2 }).notNull(),
+    retailPriceCents: int("retailPriceCents"),
+    stateFeeCents: int("stateFeeCents").notNull(),
+    /** Owner-provided hosted payment link; clients are sent here after submit. */
+    paymentLinkUrl: varchar("paymentLinkUrl", { length: 1000 }),
+    active: boolean("active").default(true).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [uniqueIndex("llc_state_pricing_state_unique").on(table.state)],
+);
+
+export type LlcStatePricingRecord = typeof llcStatePricing.$inferSelect;

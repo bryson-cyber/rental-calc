@@ -118,6 +118,308 @@ function RetailPriceCell({
   );
 }
 
+function PaidCell({ order }: { order: { id: number; retailPaidAt: number | null } }) {
+  const utils = trpc.useUtils();
+  const invalidate = () => void utils.llcOps.listAll.invalidate();
+  const markPaid = trpc.llcOps.markPaid.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Marked as paid.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const unmarkPaid = trpc.llcOps.unmarkPaid.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success('Marked as unpaid.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const busy = markPaid.isPending || unmarkPaid.isPending;
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <span
+        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          order.retailPaidAt ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+        }`}
+      >
+        {order.retailPaidAt ? 'Paid' : 'Unpaid'}
+      </span>
+      {order.retailPaidAt ? (
+        <span className="text-[10px] text-slate-500">{formatDate(order.retailPaidAt)}</span>
+      ) : null}
+      <button
+        type="button"
+        disabled={busy}
+        className="text-[11px] font-medium text-slate-500 underline-offset-2 hover:underline disabled:opacity-50"
+        onClick={() =>
+          order.retailPaidAt
+            ? unmarkPaid.mutate({ id: order.id })
+            : markPaid.mutate({ id: order.id })
+        }
+      >
+        {busy ? 'Saving…' : order.retailPaidAt ? 'Mark unpaid' : 'Mark paid'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Per-state retail pricing manager. State fees are editable reference data
+ * (published SoS filing fees at seed time — not legal advice); the owner sets
+ * retail. lastWholesaleCents = the highest provider checkout total seen for
+ * that state, so pricing happens with real COGS in view. Ops-only.
+ */
+function StatePricingRow({
+  row,
+}: {
+  row: {
+    state: string;
+    stateFeeCents: number;
+    retailPriceCents: number | null;
+    paymentLinkUrl: string | null;
+    active: boolean;
+    lastWholesaleCents: number | null;
+    marginVsLastWholesaleCents: number | null;
+  };
+}) {
+  const utils = trpc.useUtils();
+  const [retailValue, setRetailValue] = useState(
+    row.retailPriceCents === null ? '' : (row.retailPriceCents / 100).toFixed(2),
+  );
+  const [linkValue, setLinkValue] = useState(row.paymentLinkUrl ?? '');
+  const mutation = trpc.llcOps.setStatePricing.useMutation({
+    onSuccess: () => {
+      void utils.llcOps.listStatePricing.invalidate();
+      toast.success(`${row.state} pricing saved.`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const save = (overrides?: { active?: boolean }) => {
+    const trimmed = retailValue.trim();
+    const parsed = trimmed === '' ? null : Math.round(Number(trimmed) * 100);
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
+      toast.error('Enter a valid dollar amount.');
+      return;
+    }
+    const link = linkValue.trim();
+    mutation.mutate({
+      state: row.state as never,
+      retailPriceCents: parsed,
+      active: overrides?.active ?? row.active,
+      paymentLinkUrl: link === '' ? null : link,
+    });
+  };
+
+  return (
+    <tr className={row.active ? '' : 'opacity-60'}>
+      <td className="border-b border-slate-100 px-3 py-2.5 font-mono text-xs font-bold text-slate-900">
+        {row.state}
+      </td>
+      <td className="border-b border-slate-100 px-3 py-2.5 text-sm tabular-nums text-slate-600">
+        {formatCents(row.stateFeeCents)}
+      </td>
+      <td className="border-b border-slate-100 px-3 py-2.5">
+        <Input
+          inputMode="decimal"
+          className="h-8 w-24 text-sm"
+          value={retailValue}
+          placeholder="Not set"
+          onChange={(event) => setRetailValue(event.target.value)}
+          onBlur={() => {
+            const trimmed = retailValue.trim();
+            const original =
+              row.retailPriceCents === null ? '' : (row.retailPriceCents / 100).toFixed(2);
+            if (trimmed !== original) save();
+          }}
+        />
+      </td>
+      <td className="border-b border-slate-100 px-3 py-2.5">
+        <Input
+          type="url"
+          className="h-8 w-52 text-xs"
+          value={linkValue}
+          placeholder="https://pay.example.com/…"
+          onChange={(event) => setLinkValue(event.target.value)}
+          onBlur={() => {
+            if (linkValue.trim() !== (row.paymentLinkUrl ?? '')) save();
+          }}
+        />
+      </td>
+      <td className="border-b border-slate-100 px-3 py-2.5 text-sm tabular-nums text-slate-600">
+        {formatCents(row.lastWholesaleCents)}
+      </td>
+      <td
+        className={`border-b border-slate-100 px-3 py-2.5 text-sm tabular-nums ${
+          row.marginVsLastWholesaleCents !== null && row.marginVsLastWholesaleCents < 0
+            ? 'font-semibold text-red-600'
+            : 'text-slate-900'
+        }`}
+      >
+        {formatCents(row.marginVsLastWholesaleCents)}
+      </td>
+      <td className="border-b border-slate-100 px-3 py-2.5">
+        <button
+          type="button"
+          disabled={mutation.isPending}
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+            row.active
+              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+              : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+          }`}
+          onClick={() => save({ active: !row.active })}
+          title={row.active ? 'Clients can file in this state' : 'Filing disabled for this state'}
+        >
+          {mutation.isPending ? 'Saving…' : row.active ? 'Active' : 'Inactive'}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function StatePricingSection() {
+  const utils = trpc.useUtils();
+  const pricingQuery = trpc.llcOps.listStatePricing.useQuery(undefined, {
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+  const [markupValue, setMarkupValue] = useState('');
+  const [bulkLinkValue, setBulkLinkValue] = useState('');
+  const markupMutation = trpc.llcOps.applyStateMarkup.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listStatePricing.invalidate();
+      toast.success(`Retail set to state fee + markup for ${result.updated} active states.`);
+      setMarkupValue('');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const linkMutation = trpc.llcOps.applyPaymentLink.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listStatePricing.invalidate();
+      toast.success(`Payment link applied to ${result.updated} states.`);
+      setBulkLinkValue('');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const rows = pricingQuery.data ?? [];
+
+  return (
+    <section className="mt-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">State pricing</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+            State fees are editable reference data (published filing fees at seed time —
+            not legal advice). Clients see a price only when retail is set and the state
+            is active. Wholesale figures on this table never reach clients.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const parsed = Math.round(Number(markupValue) * 100);
+              if (!Number.isFinite(parsed) || parsed < 0 || markupValue.trim() === '') {
+                toast.error('Enter a valid markup in dollars.');
+                return;
+              }
+              if (
+                window.confirm(
+                  `Set retail = state fee + ${formatCents(parsed)} for ALL active states? This overwrites existing retail prices on active states.`,
+                )
+              ) {
+                markupMutation.mutate({ markupCents: parsed });
+              }
+            }}
+          >
+            <Input
+              inputMode="decimal"
+              className="h-9 w-28 text-sm"
+              value={markupValue}
+              onChange={(event) => setMarkupValue(event.target.value)}
+              placeholder="Markup $"
+            />
+            <Button type="submit" size="sm" className="h-9" disabled={markupMutation.isPending}>
+              {markupMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply markup'}
+            </Button>
+          </form>
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const link = bulkLinkValue.trim();
+              if (link === '') {
+                toast.error('Enter a payment link URL.');
+                return;
+              }
+              if (window.confirm('Apply this payment link to ALL states?')) {
+                linkMutation.mutate({ paymentLinkUrl: link });
+              }
+            }}
+          >
+            <Input
+              type="url"
+              className="h-9 w-56 text-sm"
+              value={bulkLinkValue}
+              onChange={(event) => setBulkLinkValue(event.target.value)}
+              placeholder="Payment link for all states"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="outline"
+              className="h-9"
+              disabled={linkMutation.isPending}
+            >
+              {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply link'}
+            </Button>
+          </form>
+        </div>
+      </div>
+
+      {pricingQuery.isLoading ? (
+        <div className="mt-4">
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      ) : (
+        <div className="mt-4 overflow-x-auto apple-card p-2 sm:p-4">
+          <table className="w-full min-w-[56rem] border-separate border-spacing-0 text-left">
+            <thead>
+              <tr>
+                {['State', 'State fee', 'Retail', 'Payment link', 'Last wholesale', 'Margin vs last', 'Active'].map(
+                  (heading) => (
+                    <th
+                      key={heading}
+                      className="border-b border-slate-200 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+                    >
+                      {heading}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
+                    No pricing rows yet — they are seeded automatically at boot.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => <StatePricingRow key={row.state} row={row} />)
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 const DOCUMENT_TYPE_OPTIONS = [
   { value: 'articles_of_organization', label: 'Articles of Organization' },
   { value: 'ein_letter', label: 'EIN confirmation letter' },
@@ -452,7 +754,7 @@ export default function LlcOpsPage() {
           </div>
         ) : (
           <section className="mt-6 overflow-x-auto apple-card p-2 sm:p-4">
-            <table className="w-full min-w-[70rem] border-separate border-spacing-0 text-left">
+            <table className="w-full min-w-[76rem] border-separate border-spacing-0 text-left">
               <thead>
                 <tr>
                   {[
@@ -462,6 +764,7 @@ export default function LlcOpsPage() {
                     'Status',
                     'Wholesale (COGS)',
                     'Retail',
+                    'Retail paid',
                     'Margin',
                     'Last sync',
                     'Actions',
@@ -478,7 +781,7 @@ export default function LlcOpsPage() {
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">
+                    <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
                       No orders yet. New client submissions appear here automatically.
                     </td>
                   </tr>
@@ -514,6 +817,9 @@ export default function LlcOpsPage() {
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4">
                           <RetailPriceCell registrationId={order.id} retailPriceCents={order.retailPriceCents} />
+                        </td>
+                        <td className="border-b border-slate-100 px-4 py-4">
+                          <PaidCell order={order} />
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4 text-sm tabular-nums text-slate-900">
                           {formatCents(order.marginCents)}
@@ -564,7 +870,7 @@ export default function LlcOpsPage() {
                       </tr>
                       {expandedId === order.id ? (
                         <tr>
-                          <td colSpan={9} className="border-b border-slate-100 px-4 pb-6 pt-1">
+                          <td colSpan={10} className="border-b border-slate-100 px-4 pb-6 pt-1">
                             <DocumentsPanel registrationId={order.id} />
                           </td>
                         </tr>
@@ -577,11 +883,13 @@ export default function LlcOpsPage() {
           </section>
         )}
 
+        <StatePricingSection />
+
         <p className="mt-6 max-w-3xl text-xs leading-5 text-slate-500">
           This dashboard is internal. Clients never see the provider, the wholesale checkout, or
-          costs — their status pages show only branded progress updates and released documents.
-          Status also refreshes automatically in the background, and every change lands in the
-          ops inbox.
+          costs — their status pages show only branded progress updates, released documents, and
+          the retail price you set here. Status also refreshes automatically in the background,
+          and every change lands in the ops inbox.
         </p>
       </div>
     </div>

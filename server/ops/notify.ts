@@ -140,6 +140,7 @@ export function checkoutReadyAlert(params: {
   checkoutTotal: number | null;
   retailPriceCents: number | null;
   accountEmailAlias: string;
+  retailPaid: boolean;
 }): OpsAlert {
   const margin =
     params.retailPriceCents !== null && params.checkoutTotal !== null
@@ -158,6 +159,7 @@ export function checkoutReadyAlert(params: {
       ``,
       `Wholesale total (COGS): ${formatCents(params.checkoutTotal)}`,
       `Margin: ${margin}`,
+      `Retail collected at submit: ${params.retailPaid ? "yes" : "no"}`,
       ``,
       `Pay here: ${params.checkoutUrl}`,
     ],

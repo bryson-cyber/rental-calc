@@ -42,7 +42,21 @@ vi.mock("./whop", async () => {
   };
 });
 
-import { submitLlcRegistration } from "./submission";
+const pricingMock = vi.hoisted(() => ({
+  getStatePricing: vi.fn(),
+  getInactiveStateError: vi.fn(),
+}));
+
+vi.mock("./pricing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./pricing")>();
+  return {
+    ...actual,
+    getStatePricing: pricingMock.getStatePricing,
+    getInactiveStateError: pricingMock.getInactiveStateError,
+  };
+});
+
+import { LlcSubmissionValidationError, submitLlcRegistration } from "./submission";
 import { WhopApiError } from "./whop";
 
 type Status =
@@ -87,6 +101,8 @@ function makeBundle(status: Status = "ready") {
       checkoutUrl: null as string | null,
       checkoutTotal: null as number | null,
       checkoutCurrency: null as string | null,
+      retailPriceCents: null as number | null,
+      retailPaidAt: null as Date | null,
       providerStatus: null as Record<string, unknown> | null,
       lastProviderSyncAt: null as Date | null,
       lastErrorType: null as string | null,
@@ -177,6 +193,14 @@ function installState(initialStatus: Status = "ready") {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("OPS_EMAIL", "ops@example.com");
+  pricingMock.getInactiveStateError.mockResolvedValue(null);
+  pricingMock.getStatePricing.mockResolvedValue({
+    state: "WY",
+    retailPriceCents: null,
+    stateFeeCents: 10000,
+    paymentLinkUrl: null,
+    active: true,
+  });
   provider.findAccount.mockResolvedValue(null);
   // Retries against an existing connected account first check for an existing
   // formation; default to "no formation yet" so registration proceeds.
@@ -312,6 +336,53 @@ describe("LLC submission integration", () => {
     expect(provider.registerLlc).not.toHaveBeenCalled();
     expect(state.bundle.registration.status).toBe("action_required");
     expect(state.bundle.registration.lastErrorType).toBe("uncertain_existing_formation");
+  });
+
+  it("snapshots the state's published retail price onto the registration at submit", async () => {
+    pricingMock.getStatePricing.mockResolvedValue({
+      state: "WY",
+      retailPriceCents: 54900,
+      stateFeeCents: 10000,
+      paymentLinkUrl: "https://pay.example.com/llc",
+      active: true,
+    });
+    const state = installState();
+
+    const result = await submitLlcRegistration({ userId: 7, registrationId: 41 });
+
+    expect(result.outcome).toBe("checkout_ready");
+    expect(state.bundle.registration.retailPriceCents).toBe(54900);
+  });
+
+  it("never overwrites an already-recorded retail price at submit", async () => {
+    pricingMock.getStatePricing.mockResolvedValue({
+      state: "WY",
+      retailPriceCents: 64900,
+      stateFeeCents: 10000,
+      paymentLinkUrl: null,
+      active: true,
+    });
+    const state = installState();
+    state.bundle.registration.retailPriceCents = 49900;
+
+    const result = await submitLlcRegistration({ userId: 7, registrationId: 41 });
+
+    expect(result.outcome).toBe("checkout_ready");
+    expect(state.bundle.registration.retailPriceCents).toBe(49900);
+    expect(pricingMock.getStatePricing).not.toHaveBeenCalled();
+  });
+
+  it("refuses to hand an inactive state to the provider", async () => {
+    pricingMock.getInactiveStateError.mockResolvedValue(
+      "We're not filing in WY just yet. Choose another formation state, or check back soon.",
+    );
+    installState();
+
+    await expect(
+      submitLlcRegistration({ userId: 7, registrationId: 41 }),
+    ).rejects.toBeInstanceOf(LlcSubmissionValidationError);
+    expect(provider.createAccount).not.toHaveBeenCalled();
+    expect(provider.registerLlc).not.toHaveBeenCalled();
   });
 
   it("reuses a persisted checkout without invoking any provider mutation", async () => {

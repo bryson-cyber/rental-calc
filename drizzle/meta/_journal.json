@@ -176,6 +176,20 @@
       "when": 1784676028327,
       "tag": "0024_burly_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1784679530336,
+      "tag": "0025_magical_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1784679772772,
+      "tag": "0026_needy_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

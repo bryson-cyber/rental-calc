@@ -93,6 +93,10 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     canEdit: isRegistrationEditable(registration),
     canRetry: registration.retryable,
     safeErrorMessage: clientSafeErrorMessage(registration.lastErrorMessage),
+    // Retail is client-facing by definition (it's the price the client saw at
+    // submit); the wholesale checkout stays ops-only.
+    retailPriceCents: registration.retailPriceCents ?? null,
+    paid: Boolean(registration.retailPaidAt),
     submittedAt: registration.submittedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
     history: history.map((item) => ({
@@ -163,6 +167,7 @@ export function bundleToOpsView(bundle: RegistrationBundle) {
           }
         : null,
     retailPriceCents: registration.retailPriceCents,
+    retailPaidAt: registration.retailPaidAt?.getTime() ?? null,
     marginCents: margin,
     einRegistered: snapshot?.ein_registered === true,
     stateRegistered: snapshot?.state_registered === true,

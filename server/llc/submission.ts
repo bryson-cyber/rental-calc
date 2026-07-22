@@ -18,6 +18,7 @@ import {
 } from "../ops/notify";
 import { bundleToDraft, bundleToRegistrationView } from "./domain";
 import { mirrorFormationDocuments } from "./documents";
+import { getInactiveStateError, getStatePricing } from "./pricing";
 import {
   WhopApiError,
   WhopConfigurationError,
@@ -100,6 +101,13 @@ async function requireValidatedBundle(userId: number, registrationId: number) {
   });
   if (!parsed.success) {
     throw new LlcSubmissionValidationError(issuesByField(parsed.error));
+  }
+
+  // Owner-controlled availability: an inactive state can never be handed off
+  // to the provider, regardless of how the request reached submission.
+  const inactiveError = await getInactiveStateError(parsed.data.formationState);
+  if (inactiveError) {
+    throw new LlcSubmissionValidationError({ formationState: inactiveError });
   }
 
   return { bundle, complete: parsed.data };
@@ -432,6 +440,23 @@ export async function submitLlcRegistration(params: {
       total: checkout.data.total,
       sessionId: checkout.data.checkout_session_id,
     };
+
+    // Snapshot the state's published retail price onto the registration at
+    // submit time (only when no retail price was recorded yet), so margins
+    // are tracked against what the client actually saw — later state-price
+    // edits never rewrite history.
+    let retailSnapshot: { retailPriceCents: number } | Record<string, never> = {};
+    if (lock.registration.retailPriceCents === null) {
+      try {
+        const statePricing = await getStatePricing(validated.complete.formationState);
+        if (statePricing.retailPriceCents !== null) {
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
+        }
+      } catch {
+        // Best-effort: a pricing read failure must never fail the submission.
+      }
+    }
+
     await updateLlcRegistrationProviderFields(
       params.userId,
       params.registrationId,
@@ -441,6 +466,7 @@ export async function submitLlcRegistration(params: {
         checkoutUrl: checkout.data.checkout_url,
         checkoutTotal: checkout.data.total,
         checkoutCurrency: checkout.data.currency,
+        ...retailSnapshot,
         lastProviderSyncAt: new Date(),
         submittedAt: new Date(),
         retryable: false,
@@ -510,6 +536,7 @@ export async function submitLlcRegistration(params: {
         retailPriceCents: current.registration.retailPriceCents,
         accountEmailAlias:
           current.registration.accountEmailAlias ?? "not recorded",
+        retailPaid: Boolean(current.registration.retailPaidAt),
       }),
     );
     if (delivered) {
@@ -544,6 +571,7 @@ export async function submitLlcRegistration(params: {
           checkoutTotal: issuedCheckout.total,
           retailPriceCents: lock.registration.retailPriceCents,
           accountEmailAlias: accountAlias ?? "not recorded",
+          retailPaid: Boolean(lock.registration.retailPaidAt),
         }),
       ).catch(() => {});
       throw error;

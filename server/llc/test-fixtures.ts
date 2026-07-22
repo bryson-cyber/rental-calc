@@ -99,6 +99,8 @@ export function makePersistedBundle(status: TestLlcStatus = "ready") {
       checkoutUrl: null as string | null,
       checkoutTotal: null as number | null,
       checkoutCurrency: null as string | null,
+      retailPriceCents: null as number | null,
+      retailPaidAt: null as Date | null,
       providerStatus: null as Record<string, unknown> | null,
       lastProviderSyncAt: null as Date | null,
       lastErrorType: null as string | null,

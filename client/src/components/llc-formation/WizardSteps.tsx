@@ -8,7 +8,7 @@ import {
   WHOP_BUSINESS_TAXONOMY,
   humanizeWhopTaxonomyValue,
 } from "@shared/whop-taxonomy";
-import { ArrowUpRight, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
 import {
   AddressFields,
   FieldBlock,
@@ -18,6 +18,55 @@ import {
   SectionHeading,
   TextField,
 } from "./FormControls";
+import {
+  formatUsdFromCents,
+  stateDisplayName,
+  useStatePricing,
+} from "./useStatePricing";
+
+/**
+ * Price panel for the selected formation state. Shown only when the owner
+ * has published a retail price; inactive states get a friendly blocker.
+ */
+function StatePricePanel({ state }: { state: string | null | undefined }) {
+  const pricingQuery = useStatePricing(state);
+  const pricing = pricingQuery.data;
+  if (!state || !pricing) return null;
+
+  if (!pricing.active) {
+    return (
+      <div
+        role="alert"
+        className="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4"
+      >
+        <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
+        <p className="text-sm leading-6 text-foreground">
+          We're not filing in {stateDisplayName(state)} just yet. Choose another
+          formation state, or check back soon.
+        </p>
+      </div>
+    );
+  }
+
+  if (pricing.retailPriceCents === null) return null;
+
+  return (
+    <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
+      <p className="text-sm font-semibold text-foreground">
+        Total for {stateDisplayName(state)}: {formatUsdFromCents(pricing.retailPriceCents)}
+        {pricing.stateFeeCents !== null ? (
+          <span className="font-normal text-muted-foreground">
+            {" "}
+            — includes the {formatUsdFromCents(pricing.stateFeeCents)} state filing fee
+          </span>
+        ) : null}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        State filing, registered agent service, and your federal EIN are all included.
+      </p>
+    </div>
+  );
+}
 
 type StepProps = {
   draft: LlcDraft;
@@ -95,6 +144,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           className="sm:col-span-2"
         />
       </div>
+      <StatePricePanel state={draft.formationState} />
     </div>
   );
 }
@@ -596,6 +646,10 @@ export function ReviewStep({
   onEdit,
 }: StepProps & { onEdit: (step: number) => void }) {
   const legalDisplay = `${draft.legalName ?? ""} ${draft.entitySuffix}`.trim();
+  const pricingQuery = useStatePricing(draft.formationState);
+  const pricing = pricingQuery.data;
+  const showTotal =
+    Boolean(pricing) && pricing!.active && pricing!.retailPriceCents !== null;
   return (
     <div>
       <SectionHeading
@@ -701,6 +755,24 @@ export function ReviewStep({
             />
           </dl>
         </section>
+
+        {showTotal ? (
+          <section className="border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-sm font-semibold text-foreground">Order total</h3>
+            </div>
+            <dl className="mt-1 divide-y divide-border">
+              <SummaryLine
+                label={`Total for ${stateDisplayName(draft.formationState)}`}
+                value={`${formatUsdFromCents(pricing!.retailPriceCents!)}${
+                  pricing!.stateFeeCents !== null
+                    ? ` — includes the ${formatUsdFromCents(pricing!.stateFeeCents)} state filing fee`
+                    : ""
+                }`}
+              />
+            </dl>
+          </section>
+        ) : null}
       </div>
 
       <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-5">

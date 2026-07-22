@@ -70,6 +70,28 @@ vi.mock("./submission", async () => {
   };
 });
 
+const pricing = vi.hoisted(() => ({
+  getStatePricing: vi.fn(),
+  getInactiveStateError: vi.fn(),
+  listWithWholesale: vi.fn(),
+  setStatePricing: vi.fn(),
+  applyStateMarkup: vi.fn(),
+  applyPaymentLink: vi.fn(),
+}));
+
+vi.mock("./pricing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./pricing")>();
+  return {
+    ...actual,
+    getStatePricing: pricing.getStatePricing,
+    getInactiveStateError: pricing.getInactiveStateError,
+    listStatePricingWithWholesale: pricing.listWithWholesale,
+    setStatePricing: pricing.setStatePricing,
+    applyStateMarkup: pricing.applyStateMarkup,
+    applyPaymentLinkToAllStates: pricing.applyPaymentLink,
+  };
+});
+
 import { appRouter } from "../routers";
 
 function makeBundle(status: "draft" | "ready" = "draft") {
@@ -104,6 +126,7 @@ function makeBundle(status: "draft" | "ready" = "draft") {
       checkoutTotal: null as number | null,
       checkoutCurrency: null as string | null,
       retailPriceCents: null as number | null,
+      retailPaidAt: null as Date | null,
       opsNotifiedAt: null as Date | null,
       providerStatus: null as Record<string, unknown> | null,
       lastProviderSyncAt: null as Date | null,
@@ -279,6 +302,207 @@ beforeEach(() => {
     createdAt: new Date(),
   });
   documents.remove.mockResolvedValue(undefined);
+  pricing.getInactiveStateError.mockResolvedValue(null);
+  pricing.getStatePricing.mockResolvedValue({
+    state: "WY",
+    retailPriceCents: null,
+    stateFeeCents: 10000,
+    paymentLinkUrl: null,
+    active: true,
+  });
+  pricing.listWithWholesale.mockResolvedValue([
+    {
+      state: "WY",
+      retailPriceCents: 54900,
+      stateFeeCents: 10000,
+      paymentLinkUrl: "https://pay.example.com/llc",
+      active: true,
+      updatedAt: Date.now(),
+      lastWholesaleCents: 39900,
+      marginVsLastWholesaleCents: 15000,
+    },
+  ]);
+  pricing.setStatePricing.mockResolvedValue({
+    state: "WY",
+    retailPriceCents: 54900,
+    stateFeeCents: 10000,
+    paymentLinkUrl: "https://pay.example.com/llc",
+    active: true,
+    updatedAt: new Date(),
+  });
+  pricing.applyStateMarkup.mockResolvedValue({ updated: 51 });
+  pricing.applyPaymentLink.mockResolvedValue({ updated: 51 });
+});
+
+describe("LLC per-state pricing (client procedure)", () => {
+  it("rejects unauthenticated pricing reads", async () => {
+    const caller = appRouter.createCaller(makeContext(null));
+    await expect(caller.llc.statePricing({ state: "WY" })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("returns null-price states as unpriced (price not published)", async () => {
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.statePricing({ state: "WY" });
+    expect(result).toEqual({
+      state: "WY",
+      retailPriceCents: null,
+      stateFeeCents: 10000,
+      paymentLinkUrl: null,
+      active: true,
+    });
+  });
+
+  it("never exposes wholesale figures through the client pricing procedure", async () => {
+    // Even if the store layer somehow carried wholesale context, the client
+    // procedure output shape is fixed to retail-facing fields only.
+    pricing.getStatePricing.mockResolvedValue({
+      state: "WY",
+      retailPriceCents: 54900,
+      stateFeeCents: 10000,
+      paymentLinkUrl: "https://pay.example.com/llc",
+      active: true,
+      // Extra fields must be dropped by the procedure's explicit mapping:
+      lastWholesaleCents: 39900,
+      checkoutTotal: 39900,
+    } as never);
+
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.statePricing({ state: "WY" });
+    const serialized = JSON.stringify(result);
+    expect(result).not.toHaveProperty("lastWholesaleCents");
+    expect(result).not.toHaveProperty("checkoutTotal");
+    expect(serialized).not.toContain("39900");
+    expect(serialized.toLowerCase()).not.toContain("wholesale");
+    expect(serialized.toLowerCase()).not.toContain("whop");
+  });
+});
+
+describe("LLC inactive-state submission block", () => {
+  const inactiveMessage = "We're not filing in WY just yet. Choose another formation state, or check back soon.";
+
+  it("blocks advancing past the Business step for an inactive state", async () => {
+    pricing.getInactiveStateError.mockResolvedValue(inactiveMessage);
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.advanceStep({ id: 41, step: 1, draft: validDraft });
+    expect(result.advanced).toBe(false);
+    if (!result.advanced) {
+      expect(result.fieldErrors.formationState).toMatch(/not filing in WY just yet/);
+    }
+    expect(database.save).not.toHaveBeenCalled();
+  });
+
+  it("blocks final validation for an inactive state before any status transition", async () => {
+    pricing.getInactiveStateError.mockResolvedValue(inactiveMessage);
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.validateForSubmission({ id: 41 });
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.fieldErrors.formationState).toMatch(/not filing in WY just yet/);
+    }
+    expect(database.transition).not.toHaveBeenCalled();
+  });
+});
+
+describe("LLC ops pricing management authorization", () => {
+  it("forbids non-admin users from every pricing procedure", async () => {
+    const caller = appRouter.createCaller(makeContext(7, "user"));
+    await expect(caller.llcOps.listStatePricing()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.llcOps.setStatePricing({ state: "WY", retailPriceCents: 54900, active: true }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.llcOps.applyStateMarkup({ markupCents: 44900 }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.llcOps.applyPaymentLink({ paymentLinkUrl: "https://pay.example.com/llc" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.llcOps.markPaid({ id: 41 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.llcOps.unmarkPaid({ id: 41 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(pricing.listWithWholesale).not.toHaveBeenCalled();
+    expect(pricing.setStatePricing).not.toHaveBeenCalled();
+    expect(pricing.applyStateMarkup).not.toHaveBeenCalled();
+    expect(pricing.applyPaymentLink).not.toHaveBeenCalled();
+    expect(database.updateProvider).not.toHaveBeenCalled();
+  });
+
+  it("exposes last-wholesale context to admins for pricing decisions", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const rows = await caller.llcOps.listStatePricing();
+    expect(rows[0]).toMatchObject({
+      state: "WY",
+      lastWholesaleCents: 39900,
+      marginVsLastWholesaleCents: 15000,
+    });
+  });
+
+  it("updates one state's price, link, and availability", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const result = await caller.llcOps.setStatePricing({
+      state: "WY",
+      retailPriceCents: 54900,
+      active: true,
+      paymentLinkUrl: "https://pay.example.com/llc",
+    });
+    expect(pricing.setStatePricing).toHaveBeenCalledWith({
+      state: "WY",
+      retailPriceCents: 54900,
+      active: true,
+      paymentLinkUrl: "https://pay.example.com/llc",
+    });
+    expect(result).toMatchObject({ state: "WY", retailPriceCents: 54900 });
+    expect(result).not.toHaveProperty("lastWholesaleCents");
+  });
+
+  it("applies a bulk markup and a bulk payment link", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const markup = await caller.llcOps.applyStateMarkup({ markupCents: 44900 });
+    expect(pricing.applyStateMarkup).toHaveBeenCalledWith(44900);
+    expect(markup).toEqual({ updated: 51, markupCents: 44900 });
+
+    const link = await caller.llcOps.applyPaymentLink({
+      paymentLinkUrl: "https://pay.example.com/llc",
+    });
+    expect(pricing.applyPaymentLink).toHaveBeenCalledWith("https://pay.example.com/llc");
+    expect(link).toEqual({ updated: 51 });
+  });
+
+  it("marks and unmarks retail payment through the owner-resolved registration", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    const paid = await caller.llcOps.markPaid({ id: 41 });
+    expect(paid).toEqual({ id: 41, paid: true });
+    expect(database.updateProvider).toHaveBeenCalledWith(7, 41, {
+      retailPaidAt: expect.any(Date),
+    });
+
+    const unpaid = await caller.llcOps.unmarkPaid({ id: 41 });
+    expect(unpaid).toEqual({ id: 41, paid: false });
+    expect(database.updateProvider).toHaveBeenCalledWith(7, 41, {
+      retailPaidAt: null,
+    });
+  });
+});
+
+describe("LLC client payment payload", () => {
+  it("reports paid=false with the snapshotted retail price before payment", async () => {
+    const bundle = makeBundle("ready");
+    bundle.registration.retailPriceCents = 54900;
+    database.get.mockResolvedValue(bundle);
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.get({ id: 41 });
+    expect(result.paid).toBe(false);
+    expect(result.retailPriceCents).toBe(54900);
+  });
+
+  it("reports paid=true once ops confirms the retail payment", async () => {
+    const bundle = makeBundle("ready");
+    bundle.registration.retailPaidAt = new Date("2026-07-21T12:30:00.000Z");
+    database.get.mockResolvedValue(bundle);
+    const caller = appRouter.createCaller(makeContext(7));
+    const result = await caller.llc.get({ id: 41 });
+    expect(result.paid).toBe(true);
+  });
 });
 
 describe("LLC formation documents procedures (client vault)", () => {

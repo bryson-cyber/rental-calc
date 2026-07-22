@@ -1,12 +1,14 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db";
+import { seedStatePricing } from "./pricing";
 
 /**
  * Boot-time idempotent creation of the LLC tables (mirrors migrations
  * 0023/0024). The hosting platform pulls main and redeploys but cannot be
  * relied on to run drizzle migrations, so — like the sibling member app —
  * the LLC feature creates its own schema at startup. CREATE TABLE IF NOT
- * EXISTS only; never alters or drops anything.
+ * EXISTS plus catch-guarded ADD COLUMN statements only; never drops or
+ * rewrites anything.
  */
 export async function ensureLlcTables(): Promise<void> {
   const db = await getDb();
@@ -46,6 +48,7 @@ export async function ensureLlcTables(): Promise<void> {
         \`checkoutTotal\` int,
         \`checkoutCurrency\` varchar(3),
         \`retailPriceCents\` int,
+        \`retailPaidAt\` timestamp,
         \`opsNotifiedAt\` timestamp,
         \`providerStatus\` json,
         \`lastProviderSyncAt\` timestamp,
@@ -144,6 +147,35 @@ export async function ensureLlcTables(): Promise<void> {
         INDEX \`llc_document_user_idx\` (\`userId\`)
       )
     `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`llc_state_pricing\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`state\` varchar(2) NOT NULL,
+        \`retailPriceCents\` int,
+        \`stateFeeCents\` int NOT NULL,
+        \`paymentLinkUrl\` varchar(1000),
+        \`active\` boolean NOT NULL DEFAULT true,
+        \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`llc_state_pricing_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`llc_state_pricing_state_unique\` UNIQUE(\`state\`)
+      )
+    `);
+
+    // Column additions for tables that already exist on deployed databases
+    // (CREATE TABLE IF NOT EXISTS cannot add columns). Each ALTER is
+    // idempotent-by-catch: it fails harmlessly with a duplicate-column error
+    // once applied. Mirrors migration 0026.
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `retailPaidAt` timestamp"))
+      .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `paymentLinkUrl` varchar(1000)"))
+      .catch(() => undefined);
+
+    // Idempotent reference seed (INSERT IGNORE per state): fills state filing
+    // fees on first boot, never overwrites owner-set retail prices or flags.
+    await seedStatePricing(db);
 
     console.log("[LLC] Schema ensured");
   } catch (error) {
