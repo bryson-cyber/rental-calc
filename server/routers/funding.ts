@@ -247,7 +247,11 @@ export const fundingRouter = router({
   }),
 
   // Curated funding report — fetched live from the funding system and
-  // rendered in-platform; nothing from it is persisted here.
+  // rendered in-platform; nothing from it is persisted here. Available for
+  // any non-gated connection row (not just "connected") so a member's
+  // previous results stay visible while a fresh check is pending or after
+  // a failed retry — the funding system returns its latest analysis for
+  // the email, or nothing if none exists yet.
   report: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return null;
@@ -255,7 +259,7 @@ export const fundingRouter = router({
     const rows = await db.select().from(fundingConnections)
       .where(eq(fundingConnections.userId, ctx.user.id)).limit(1);
     const row = rows[0];
-    if (!row || row.status !== "connected") return null;
+    if (!row || row.status === "gated") return null;
 
     return getFundingReport(row.email);
   }),

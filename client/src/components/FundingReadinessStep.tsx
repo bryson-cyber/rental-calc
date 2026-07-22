@@ -448,6 +448,9 @@ export function FundingReadinessStep() {
   const [fundingTimeline, setFundingTimeline] = useState<TimelineValue | "">("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  // While a check is pending, the New Analysis side shows its progress;
+  // "start over" forces the intake form instead.
+  const [startOver, setStartOver] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -502,7 +505,9 @@ export function FundingReadinessStep() {
         fundingTimeline,
         consentAccepted: true,
       });
-      setShowForm(false);
+      // Land on the progress view for a running check; otherwise show results
+      setShowForm(result.status === "pending");
+      setStartOver(false);
       utils.funding.intakeStatus.setData(undefined, result);
       if (result.status === "connected") {
         toast.success("You're connected — your funding profile is ready.");
@@ -673,7 +678,10 @@ export function FundingReadinessStep() {
     <PendingAnalysis
       progress={state?.progress ?? 10}
       message={state?.progressMessage}
-      onStartOver={() => setShowForm(true)}
+      onStartOver={() => {
+        setStartOver(true);
+        setShowForm(true);
+      }}
     />
   );
 
@@ -750,15 +758,28 @@ export function FundingReadinessStep() {
     </Card>
   );
 
-  const renderFailed = () => (
-    <Card className="p-8 text-center">
-      <TriangleAlert className="size-8 mx-auto mb-4 text-destructive" aria-hidden />
-      <h3 className="text-lg font-semibold text-foreground mb-1">That didn't go through</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-        {state?.error || "The credit check couldn't be completed. Double-check your details and try again."}
+  // Previous results view while a fresh check runs (or after a failed
+  // retry) — the report itself is fetched live from the funding system by
+  // email, so the member's last completed analysis stays reachable.
+  const renderPreviousResults = () => (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-primary/15 bg-primary/5 p-3.5 flex gap-2.5 items-start">
+        {status === "pending" ? (
+          <Loader2 className="size-4 animate-spin text-primary shrink-0 mt-0.5" aria-hidden />
+        ) : (
+          <TriangleAlert className="size-4 text-amber-600 shrink-0 mt-0.5" aria-hidden />
+        )}
+        <p className="text-sm text-foreground leading-snug">
+          {status === "pending"
+            ? "A fresh analysis is running — here are your previous results in the meantime."
+            : "Your latest check didn't go through — here are your previous results. Switch to New Analysis to try again."}
+        </p>
+      </div>
+      <FundingReportSection />
+      <p className="text-xs text-muted-foreground text-center">
+        Report shown live from the funding system — your credit details are never stored on this platform.
       </p>
-      <Button onClick={() => setShowForm(true)}>Try Again</Button>
-    </Card>
+    </div>
   );
 
   const renderBody = () => {
@@ -769,17 +790,25 @@ export function FundingReadinessStep() {
         </Card>
       );
     }
-    if (showForm || status === "none") return renderForm();
-    if (status === "pending") return renderPending();
+    if (status === "none") return renderForm();
+
+    // "New Analysis" side of the toggle: a running check shows its
+    // progress (unless the member chose to start over); anything else
+    // shows the intake form.
+    if (showForm) return status === "pending" && !startOver ? renderPending() : renderForm();
+
+    // "Previous Analysis" side: connected shows the full results; a
+    // pending or failed check falls back to the last completed report.
     if (status === "connected") return renderConnected();
-    if (status === "gated") return renderGated();
-    return renderFailed();
+    if (status === "pending" || status === "failed") return renderPreviousResults();
+    return renderGated();
   };
 
-  // Once an analysis exists, the member can swap between starting a new
-  // intake and reviewing their previous results at any time.
+  // Once an analysis exists (or a fresh one is running), the member can
+  // swap between the new-intake side and their previous results.
   const hasPrevious =
-    !statusQuery.isLoading && (status === "connected" || status === "gated" || status === "failed");
+    !statusQuery.isLoading &&
+    (status === "connected" || status === "gated" || status === "failed" || status === "pending");
 
   const renderViewToggle = () => (
     <div className="flex justify-center">
