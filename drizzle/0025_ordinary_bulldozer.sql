@@ -1,0 +1,21 @@
+CREATE TABLE `funding_connections` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`firstName` varchar(100),
+	`lastName` varchar(100),
+	`phone` varchar(20),
+	`fundingTimeline` varchar(32),
+	`status` enum('pending','connected','gated','failed') NOT NULL DEFAULT 'pending',
+	`fundingJobId` varchar(64),
+	`fundingAnalysisId` int,
+	`resultsToken` varchar(64),
+	`error` text,
+	`consentAt` timestamp,
+	`consentIp` varchar(64),
+	`connectedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `funding_connections_id` PRIMARY KEY(`id`),
+	CONSTRAINT `funding_connections_user_idx` UNIQUE(`userId`)
+);

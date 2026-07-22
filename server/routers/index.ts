@@ -41,4 +41,5 @@ export { webinarSmsRouter } from "./webinar-sms";
 export { leaseReaderRouter } from "./lease-reader";
 export { webinarEnvRouter } from "./webinar-env";
 export { tosRouter } from "./tos";
+export { fundingRouter } from "./funding";
 // export { publicExploreRouter } from "./public-explore"; // Removed - market features

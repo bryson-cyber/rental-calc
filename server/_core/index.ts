@@ -1152,6 +1152,11 @@ async function startServer() {
   const { registerStorageProxy } = await import("./storageProxy");
   registerStorageProxy(app);
 
+  // Funding Readiness — streams the member's credit-report PDF from the
+  // funding system (credentials stay server-side)
+  const { registerFundingPdfProxy } = await import("../fundingPdfProxy");
+  registerFundingPdfProxy(app);
+
   // tRPC API
   app.use(
     "/api/trpc",

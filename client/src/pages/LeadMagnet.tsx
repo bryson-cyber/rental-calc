@@ -24,6 +24,7 @@ import { HelpSection } from '@/components/HelpSection';
 const InlineEbook = lazy(() => import('@/components/InlineEbook').then(m => ({ default: m.InlineEbook })));
 const AIAdvisorStep = lazy(() => import('@/components/AIAdvisorStep').then(m => ({ default: m.AIAdvisorStep })));
 const RegulationTrackerStep = lazy(() => import('@/components/RegulationTrackerStep').then(m => ({ default: m.RegulationTrackerStep })));
+const FundingReadinessStep = lazy(() => import('@/components/FundingReadinessStep'));
 const PropertyCard = lazy(() => import('@/components/PropertyCard'));
 const CompDataTable = lazy(() => import('@/components/CompDataTable').then(m => ({ default: m.CompDataTable })));
 const HistoricalCharts = lazy(() => import('@/components/HistoricalCharts').then(m => ({ default: m.HistoricalCharts })));
@@ -87,7 +88,8 @@ import {
   Share2,
   FileText,
   Bell,
-  Brain
+  Brain,
+  Banknote
 } from 'lucide-react';
 const MapView = lazy(() => import('@/components/Map').then(m => ({ default: m.MapView })));
 const MapViewContent = lazy(() => import('@/components/MapViewContent').then(m => ({ default: m.MapViewContent })));
@@ -414,7 +416,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // Note: prove/find/market/advisor/explore are kept in the type for backward compatibility
 // but are NOT included in TAB_ORDER so they never render in the UI
-type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease' | 'llc';
+type TabType = 'ebook' | 'funding' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore' | 'lease' | 'llc';
 
 export default function LeadMagnet() {
   // Report mode
@@ -462,7 +464,7 @@ export default function LeadMagnet() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const toolContentRef = useRef<HTMLDivElement>(null);
   // All available tabs (market-level features removed - now BNB Calc property-only)
-  const ALL_TABS: TabType[] = ['ebook', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease', 'llc'];
+  const ALL_TABS: TabType[] = ['ebook', 'funding', 'regulations', 'opportunity', 'validate', 'compare', 'map', 'lease', 'llc'];
   const TAB_ORDER: TabType[] = ALL_TABS;
   
   // Swipe handlers for mobile navigation
@@ -722,11 +724,17 @@ export default function LeadMagnet() {
       'ebook': 'ebook',
       'regulations': 'regulations',
       'llc': 'llc',
+      'funding': 'funding',
     };
     
     // Map step numbers to internal tab names (for HubSpot email deep links)
-    // Step 1: Check Regulations, Step 2: Find a Property, Step 3: Validate the Deal, etc.
+    // NOTE: these numbers are an EXTERNAL CONTRACT (already-sent HubSpot
+    // emails, deal-alert/nurture links, in-app share links) and deliberately
+    // do NOT match the visible step labels, which shifted when Funding
+    // Readiness became the visible Step 1. Funding Readiness is reachable
+    // via ?step=0 or ?tab=funding.
     const stepMapping: Record<string, TabType> = {
+      '0': 'funding',        // Business Funding Readiness
       '1': 'regulations',    // Check Regulations
       '2': 'opportunity',    // Find a Property
       '3': 'validate',       // Validate the Deal
@@ -2285,6 +2293,13 @@ export default function LeadMagnet() {
       icon: BookOpen,
       color: "from-violet-500 to-purple-500"
     },
+    funding: {
+      title: "Funding Readiness",
+      subtitle: "Run a soft credit pull and see the funding you can access",
+      job: "Answer: How much capital can I actually get?",
+      icon: Banknote,
+      color: "from-emerald-500 to-teal-500"
+    },
     regulations: {
       title: "Check Regulations",
       subtitle: "See if STRs are allowed in your target market",
@@ -2786,7 +2801,7 @@ export default function LeadMagnet() {
                         <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                       </div>
                       <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'lease' ? 'Step 6' : tab === 'llc' ? 'Step 7' : `Step ${index}`}
+                        {tab === 'ebook' ? 'Guide' : `Step ${index}`}
                       </span>
                     </div>
                     <h3 className={`font-semibold text-sm mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -2860,7 +2875,7 @@ export default function LeadMagnet() {
                     />
                   ) : (
                     <ShareToolButton
-                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'validate' ? 3 : activeTab === 'compare' ? 4 : activeTab === 'map' ? 5 : activeTab === 'lease' ? 6 : 1}
+                      step={activeTab === 'funding' ? 0 : activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'validate' ? 3 : activeTab === 'compare' ? 4 : activeTab === 'map' ? 5 : activeTab === 'lease' ? 6 : 1}
                       city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
                       state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
                       zipCode={myProperty?.zipCode}
@@ -2896,6 +2911,17 @@ export default function LeadMagnet() {
               </div>
             )}
             
+            {/* ============================================ */}
+            {/* FUNDING READINESS TAB */}
+            {/* ============================================ */}
+            {activeTab === 'funding' && (
+              <div data-tool-panel="funding">
+                <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                <FundingReadinessStep />
+                </Suspense>
+              </div>
+            )}
+
             {/* ============================================ */}
             {/* REGULATIONS TAB */}
             {/* ============================================ */}

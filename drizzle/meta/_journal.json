@@ -176,6 +176,13 @@
       "when": 1784676028327,
       "tag": "0024_burly_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1784680471095,
+      "tag": "0025_ordinary_bulldozer",
+      "breakpoints": true
     }
   ]
 }
