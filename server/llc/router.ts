@@ -50,6 +50,12 @@ import {
   listStatePricingWithWholesale,
   setStatePricing,
 } from "./pricing";
+import {
+  DemoGuardError,
+  createDemoFiling,
+  deleteDemoFiling,
+  isDemoSubmissionKey,
+} from "./demo";
 import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
@@ -361,6 +367,9 @@ export const llcOpsRouter = router({
           ? registration.retailPriceCents - registration.checkoutTotal
           : null,
       lastErrorMessage: registration.lastErrorMessage,
+      // Ops-only marker so the dashboard can badge demo rows; the client
+      // registration view never carries the submission key or this flag.
+      isDemo: isDemoSubmissionKey(registration.submissionKey),
       retailPaidAt: registration.retailPaidAt?.getTime() ?? null,
       submittedAt: registration.submittedAt?.getTime() ?? null,
       lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
@@ -565,6 +574,30 @@ export const llcOpsRouter = router({
       // One hosted payment page for every state in one action (null clears).
       const result = await applyPaymentLinkToAllStates(input.paymentLinkUrl);
       return { updated: result.updated };
+    }),
+
+  // ─── Demo filings (webinar demonstrations) ───
+
+  createDemoFiling: adminProcedure.mutation(async ({ ctx }) => {
+    // Fabricates a completed-looking registration owned by the calling admin
+    // with zero provider interaction; documents are SAMPLE-watermarked.
+    return createDemoFiling(ctx.user.id);
+  }),
+
+  deleteDemoFiling: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ input }) => {
+      try {
+        return await deleteDemoFiling(input.id);
+      } catch (error) {
+        if (error instanceof DemoGuardError) {
+          throw new TRPCError({ code: "FORBIDDEN", message: error.message });
+        }
+        if (error instanceof Error && error.message === "Registration not found") {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+        }
+        throw error;
+      }
     }),
 
   // ─── Retail payment tracking ───
