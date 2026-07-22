@@ -173,11 +173,12 @@ function toClientDocument(
     createdAt: row.createdAt.getTime(),
     // Demo/test sample documents are regenerated in-process on demand, so
     // the webinar vault never depends on the storage backend. Real provider
-    // documents use the /manus-storage/{key} proxy, whose ACL restricts
-    // pdfs/{userId}/* to that user or an admin.
+    // documents stream through the app-owned /api/llc/files proxy (the
+    // platform edge intercepts /manus-storage/* before the app sees it);
+    // its ACL restricts pdfs/{userId}/* to that user or an admin.
     url: isSampleDocument
       ? `/api/llc/sample-documents/${row.id}`
-      : `/manus-storage/${row.storageKey}`,
+      : `/api/llc/files/${row.storageKey}`,
   };
 }
 

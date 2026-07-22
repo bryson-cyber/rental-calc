@@ -4,7 +4,7 @@
  * Confirmed-progress tracker for a submitted registration. Adapted from the
  * standalone LLC-formation app into rental-calc's native design. Released
  * formation documents appear in the "Your documents" vault below (served
- * through the authenticated /manus-storage proxy).
+ * through the app's authenticated document routes).
  */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";

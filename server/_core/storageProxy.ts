@@ -174,5 +174,11 @@ export async function handleStorageProxyRequest(req: Request, res: Response) {
 }
 
 export function registerStorageProxy(app: Express) {
+  // IMPORTANT: in production, Manus's platform edge intercepts
+  // /manus-storage/* BEFORE requests reach this app (it 307-redirects to
+  // signed CDN URLs with no Express involvement), so the app-owned /api
+  // route below is the only path guaranteed to reach this handler. The
+  // /manus-storage registration is kept for local development parity.
   app.get("/manus-storage/*", handleStorageProxyRequest);
+  app.get("/api/llc/files/*", handleStorageProxyRequest);
 }

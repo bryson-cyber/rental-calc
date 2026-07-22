@@ -150,10 +150,13 @@ describe("storage proxy route handler", () => {
     });
   });
 
-  it("registers a GET route at /manus-storage/*", () => {
+  it("registers the handler on /manus-storage/* AND the app-owned /api/llc/files/*", () => {
     const get = vi.fn();
     registerStorageProxy({ get } as never);
     expect(get).toHaveBeenCalledWith("/manus-storage/*", handleStorageProxyRequest);
+    // The /api route is the one production traffic actually reaches — the
+    // platform edge intercepts /manus-storage/* before the app sees it.
+    expect(get).toHaveBeenCalledWith("/api/llc/files/*", handleStorageProxyRequest);
   });
 
   it("streams the owner's file inline from the app origin with no-store caching", async () => {

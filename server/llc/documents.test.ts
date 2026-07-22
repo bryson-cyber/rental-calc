@@ -190,7 +190,7 @@ describe("client document listing", () => {
     createdAt: now,
   };
 
-  it("serves member URLs through the /manus-storage proxy path and prefers the ops label", async () => {
+  it("serves member URLs through the app-owned files proxy and prefers the ops label", async () => {
     // Second select: the sample-registration lookup finds no demo/test
     // marker, so the URL stays on the storage proxy.
     const { db } = makeFakeDb([
@@ -208,7 +208,7 @@ describe("client document listing", () => {
         documentType: "articles_of_organization",
         releasedAt: now.getTime(),
         createdAt: now.getTime(),
-        url: "/manus-storage/pdfs/7/llc/41/articles-of-organization.pdf",
+        url: "/api/llc/files/pdfs/7/llc/41/articles-of-organization.pdf",
       },
     ]);
   });
