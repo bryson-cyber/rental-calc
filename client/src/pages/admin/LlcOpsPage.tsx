@@ -27,6 +27,7 @@ import {
   Loader2,
   RefreshCw,
   Shield,
+  Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -115,6 +116,67 @@ function RetailPriceCell({
         {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
       </Button>
     </form>
+  );
+}
+
+function CreateDemoButton() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.llcOps.createDemoFiling.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listAll.invalidate();
+      toast.success('Demo filing created — opening its client status page.');
+      window.open(`/llc/status/${result.id}`, '_blank', 'noopener');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+      title="Fabricates a completed sample filing (owned by you, no provider interaction) and opens the client status page it produces."
+    >
+      {mutation.isPending ? (
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <Sparkles className="w-4 h-4 mr-2" />
+      )}
+      Create demo filing (for presentations)
+    </Button>
+  );
+}
+
+function RemoveDemoButton({ registrationId }: { registrationId: number }) {
+  const utils = trpc.useUtils();
+  const mutation = trpc.llcOps.deleteDemoFiling.useMutation({
+    onSuccess: () => {
+      void utils.llcOps.listAll.invalidate();
+      toast.success('Demo filing removed.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-8 rounded-lg px-3 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+      disabled={mutation.isPending}
+      onClick={() => {
+        if (window.confirm('Remove this demo filing and its sample documents?')) {
+          mutation.mutate({ id: registrationId });
+        }
+      }}
+    >
+      {mutation.isPending ? (
+        <Loader2 className="w-3 h-3 animate-spin" />
+      ) : (
+        <Trash2 className="w-3 h-3" />
+      )}
+      <span className="ml-1">Remove</span>
+    </Button>
   );
 }
 
@@ -724,12 +786,15 @@ export default function LlcOpsPage() {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</p>
             <h1 className="mt-1 text-2xl sm:text-3xl font-semibold text-slate-900">LLC filing orders</h1>
           </div>
-          <Link href="/admin/dashboard">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Admin dashboard
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <CreateDemoButton />
+            <Link href="/admin/dashboard">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Admin dashboard
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {needsPayment.length > 0 ? (
@@ -792,6 +857,14 @@ export default function LlcOpsPage() {
                         <td className="border-b border-slate-100 px-4 py-4">
                           <p className="font-mono text-xs font-bold text-slate-900">{order.orderRef}</p>
                           <p className="mt-1 text-[11px] text-slate-500">{order.formationState ?? '—'}</p>
+                          {order.isDemo ? (
+                            <span
+                              className="mt-1 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700"
+                              title="Sample filing for presentations — no provider interaction. The client status page shows no demo markers."
+                            >
+                              Demo
+                            </span>
+                          ) : null}
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4">
                           <p className="text-sm font-medium text-slate-900">{order.clientName ?? '—'}</p>
@@ -865,6 +938,7 @@ export default function LlcOpsPage() {
                                 <ChevronDown className="ml-1 w-3 h-3" />
                               )}
                             </Button>
+                            {order.isDemo ? <RemoveDemoButton registrationId={order.id} /> : null}
                           </div>
                         </td>
                       </tr>
