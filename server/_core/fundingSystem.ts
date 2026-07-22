@@ -18,6 +18,11 @@ export type FundingIntakePayload = {
   consentIP: string;
   /** ISO timestamp of the member's consent action. */
   consentAt: string;
+  /**
+   * Bypass the funding system's 30-day match-first dedupe and run a fresh
+   * soft pull (still rate-limited per email upstream).
+   */
+  forceRefresh?: boolean;
 };
 
 export type FundingConnectionSummary = {
