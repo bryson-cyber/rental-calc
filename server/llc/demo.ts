@@ -2,11 +2,13 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import {
   llcDocuments,
+  llcEmailLog,
   llcFounders,
   llcRegistrations,
   llcStatusHistory,
   llcSubmissionAttempts,
 } from "../../drizzle/schema";
+import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getDb } from "../db";
 import { buildDemoPdf } from "./demo-pdf";
 import { uploadOpsDocument } from "./documents";
@@ -35,6 +37,19 @@ export const DEMO_SUBMISSION_KEY_PREFIX = "demo-";
 
 export function isDemoSubmissionKey(submissionKey: string | null | undefined): boolean {
   return Boolean(submissionKey?.startsWith(DEMO_SUBMISSION_KEY_PREFIX));
+}
+
+/**
+ * A registration that exists only for demonstrations: either an instant demo
+ * filing (demo- submissionKey) or an admin live-journey test run (isTest
+ * column — immutable, set only at creation). Every demo-only affordance
+ * (advance, delete, demo emails, ops badge) keys off this predicate.
+ */
+export function isTestRegistration(registration: {
+  submissionKey: string | null;
+  isTest: boolean;
+}): boolean {
+  return registration.isTest || isDemoSubmissionKey(registration.submissionKey);
 }
 
 function requireDb<T>(db: T | null): T {
@@ -170,18 +185,51 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
   }
 
   // Vault: two RELEASED ops-upload documents (SAMPLE-watermarked in-PDF).
-  const sampleLine = "SAMPLE DOCUMENT — FOR DEMONSTRATION ONLY";
-  const filedOn = formatLongDate(completedAt);
+  await attachSampleDocuments({
+    registrationId,
+    ownerUserId,
+    companyName: "Amara Rose Stays LLC",
+    stateName: "Georgia",
+    filedOn: completedAt,
+  });
 
+  return { id: registrationId };
+}
+
+/**
+ * Attach the two SAMPLE-watermarked vault PDFs (Articles + EIN letter) to a
+ * demonstration registration, released immediately. Shared by the instant
+ * demo filing and the moment an admin test run advances to completed.
+ */
+export async function attachSampleDocuments(params: {
+  registrationId: number;
+  ownerUserId: number;
+  companyName: string;
+  stateName: string;
+  filedOn: Date;
+}): Promise<void> {
+  const sampleLine = "SAMPLE DOCUMENT — FOR DEMONSTRATION ONLY";
+  const filedOn = formatLongDate(params.filedOn);
+
+  // Idempotent: a retried advance (e.g. after a storage hiccup) only attaches
+  // whichever of the two documents is still missing — never duplicates.
+  const db = requireDb(await getDb());
+  const existing = await db
+    .select({ documentType: llcDocuments.documentType })
+    .from(llcDocuments)
+    .where(eq(llcDocuments.registrationId, params.registrationId));
+  const existingTypes = new Set(existing.map((row) => row.documentType));
+
+  if (!existingTypes.has("articles_of_organization")) {
   const articlesPdf = buildDemoPdf({
     title: "Articles of Organization",
     lines: [
-      "Amara Rose Stays LLC",
-      "State of Georgia — Secretary of State, Corporations Division",
+      params.companyName,
+      `State of ${params.stateName} — Secretary of State, Corporations Division`,
       `Filed and effective: ${filedOn}`,
       "",
       "The undersigned, acting as organizer of a limited liability company",
-      "under the Georgia Limited Liability Company Act, certifies that the",
+      "under the state's Limited Liability Company Act, certifies that the",
       "company named above has been duly organized, that a registered agent",
       "has been designated for service of process, and that these Articles",
       "of Organization have been accepted for filing by the Secretary of",
@@ -190,20 +238,22 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     footnote: sampleLine,
   });
   await uploadOpsDocument({
-    registrationId,
-    ownerUserId,
+    registrationId: params.registrationId,
+    ownerUserId: params.ownerUserId,
     name: "Articles of Organization",
     label: "Articles of Organization",
     documentType: "articles_of_organization",
     dataBase64: articlesPdf.toString("base64"),
     mimeType: "application/pdf",
   });
+  }
 
+  if (!existingTypes.has("ein_confirmation")) {
   const einPdf = buildDemoPdf({
     title: "EIN Confirmation Letter",
     lines: [
-      "Amara Rose Stays LLC",
-      "Formation state: Georgia",
+      params.companyName,
+      `Formation state: ${params.stateName}`,
       `Issued: ${filedOn}`,
       "",
       "We have assigned this entity a federal Employer Identification",
@@ -215,22 +265,29 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     footnote: sampleLine,
   });
   await uploadOpsDocument({
-    registrationId,
-    ownerUserId,
+    registrationId: params.registrationId,
+    ownerUserId: params.ownerUserId,
     name: "EIN Confirmation Letter",
     label: "EIN Confirmation Letter",
     documentType: "ein_confirmation",
     dataBase64: einPdf.toString("base64"),
     mimeType: "application/pdf",
   });
+  }
+}
 
-  return { id: registrationId };
+/** Display name for a formation-state code in sample documents. */
+export function demoStateName(stateCode: string | null): string {
+  if (stateCode && stateCode in LLC_STATE_NAMES) {
+    return LLC_STATE_NAMES[stateCode as keyof typeof LLC_STATE_NAMES];
+  }
+  return stateCode ?? "your state";
 }
 
 /**
- * Delete a demo filing and every row attached to it. Refuses anything whose
- * submissionKey does not carry the demo marker — real registrations can
- * never be removed through this path.
+ * Delete a demo/test filing and every row attached to it. Refuses anything
+ * that is neither demo-keyed nor a test run — real registrations can never
+ * be removed through this path.
  */
 export async function deleteDemoFiling(registrationId: number): Promise<{ deleted: true; id: number }> {
   const db = requireDb(await getDb());
@@ -241,10 +298,13 @@ export async function deleteDemoFiling(registrationId: number): Promise<{ delete
     .limit(1);
   const registration = rows[0];
   if (!registration) throw new Error("Registration not found");
-  if (!isDemoSubmissionKey(registration.submissionKey)) {
+  if (!isTestRegistration(registration)) {
     throw new DemoGuardError("Only demo filings can be deleted");
   }
 
+  // Test runs create email-log rows the instant demo never does; clear them
+  // so a reused registration id can never inherit stale send-once claims.
+  await db.delete(llcEmailLog).where(eq(llcEmailLog.registrationId, registrationId));
   await db.delete(llcDocuments).where(eq(llcDocuments.registrationId, registrationId));
   await db.delete(llcStatusHistory).where(eq(llcStatusHistory.registrationId, registrationId));
   await db

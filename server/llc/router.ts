@@ -52,9 +52,12 @@ import {
 } from "./pricing";
 import {
   DemoGuardError,
+  attachSampleDocuments,
   createDemoFiling,
   deleteDemoFiling,
+  demoStateName,
   isDemoSubmissionKey,
+  isTestRegistration,
 } from "./demo";
 import {
   sendDemoLifecycleEmails,
@@ -372,9 +375,9 @@ export const llcOpsRouter = router({
           ? registration.retailPriceCents - registration.checkoutTotal
           : null,
       lastErrorMessage: registration.lastErrorMessage,
-      // Ops-only marker so the dashboard can badge demo rows; the client
-      // registration view never carries the submission key or this flag.
-      isDemo: isDemoSubmissionKey(registration.submissionKey),
+      // Ops-only marker so the dashboard can badge demo/test rows; the
+      // client registration view never carries the submission key.
+      isDemo: isTestRegistration(registration),
       retailPaidAt: registration.retailPaidAt?.getTime() ?? null,
       submittedAt: registration.submittedAt?.getTime() ?? null,
       lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
@@ -595,6 +598,95 @@ export const llcOpsRouter = router({
     return createDemoFiling(ctx.user.id);
   }),
 
+  /**
+   * Start an admin live-journey test run: a normal draft owned by the calling
+   * admin whose immutable isTest marker makes every downstream layer (submit,
+   * poller, ops alerts, client emails) treat it as demonstration-only. Not
+   * routed through llc.create so webinar rehearsals never burn the member
+   * create rate limit.
+   */
+  startTestRun: adminProcedure.mutation(async ({ ctx }) => {
+    const registration = await createLlcRegistration(ctx.user.id, { isTest: true });
+    return { id: registration.id };
+  }),
+
+  /**
+   * Advance a TEST filing one stage along the fixed demo ladder:
+   * payment_required → processing (also stamps retailPaidAt, so the payment
+   * card clears exactly as it would for a paying client) → completed (attaches
+   * the SAMPLE vault documents). Hard-refuses real registrations — this can
+   * never touch a client's order.
+   */
+  advanceTestStage: adminProcedure
+    .input(
+      registrationIdInput.extend({
+        // The stage the caller SAW when clicking: a stale click (double-tap,
+        // second window) becomes a graceful no-op instead of skipping a stage.
+        fromStatus: z.enum(["payment_required", "processing"]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      const bundle = await getLlcRegistrationById(owner.userId, input.id);
+      if (!bundle) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      const registration = bundle.registration;
+      if (!registration.isTest) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only test filings can be advanced.",
+        });
+      }
+
+      if (registration.status !== input.fromStatus) {
+        // The row already moved past the stage this click intended to
+        // advance — answer with the fresh view and change nothing.
+        return { registration: bundleToRegistrationView(bundle) };
+      }
+
+      if (input.fromStatus === "payment_required") {
+        await transitionLlcStatus({
+          userId: owner.userId,
+          registrationId: input.id,
+          toStatus: "processing",
+          source: "system",
+          note: "[TEST] Simulated payment confirmation; filing marked in progress",
+          expectedStatuses: ["payment_required"],
+          updates: { retailPaidAt: new Date() },
+        });
+      } else {
+        // Documents first, then the status flip: if a storage hiccup throws,
+        // the row stays in "processing" and the click can simply be retried
+        // (attachSampleDocuments only adds whichever document is missing).
+        const companyName = `${registration.legalName ?? "Your Company"} ${registration.entitySuffix}`;
+        await attachSampleDocuments({
+          registrationId: input.id,
+          ownerUserId: owner.userId,
+          companyName,
+          stateName: demoStateName(registration.formationState),
+          filedOn: new Date(),
+        });
+        await transitionLlcStatus({
+          userId: owner.userId,
+          registrationId: input.id,
+          toStatus: "completed",
+          source: "system",
+          note: "[TEST] Simulated completion; sample documents delivered",
+          expectedStatuses: ["processing"],
+        });
+      }
+
+      const fresh = await getLlcRegistrationById(owner.userId, input.id);
+      if (!fresh) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      }
+      return { registration: bundleToRegistrationView(fresh) };
+    }),
+
   deleteDemoFiling: adminProcedure
     .input(registrationIdInput)
     .mutation(async ({ input }) => {
@@ -622,9 +714,9 @@ export const llcOpsRouter = router({
       if (!bundle) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
       }
-      // Hard guard: rehearsal sends exist ONLY for demo filings — a real
+      // Hard guard: rehearsal sends exist ONLY for demo/test filings — a real
       // client registration can never be replayed through this procedure.
-      if (!isDemoSubmissionKey(bundle.registration.submissionKey)) {
+      if (!isTestRegistration(bundle.registration)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only demo filings can send demo emails",

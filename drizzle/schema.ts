@@ -2909,6 +2909,12 @@ export const llcRegistrations = mysqlTable(
     lastErrorMessage: varchar("lastErrorMessage", { length: 500 }),
     retryable: boolean("retryable").default(false).notNull(),
     submissionKey: varchar("submissionKey", { length: 64 }),
+    /**
+     * Admin webinar test run. Set once at creation and never touched by any
+     * edit path; every provider call, poller sweep, ops alert, and client
+     * email checks it so a test row can never reach the outside world.
+     */
+    isTest: boolean("isTest").default(false).notNull(),
     submittedAt: timestamp("submittedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

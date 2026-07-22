@@ -34,12 +34,22 @@ async function findRegistrationById(
   return rows[0];
 }
 
-export async function createLlcRegistration(userId: number) {
+export async function createLlcRegistration(
+  userId: number,
+  options?: { isTest?: boolean },
+) {
   const db = requireDb(await getDb());
 
   const result = await db
     .insert(llcRegistrations)
-    .values({ userId, status: "draft", currentStep: 1 });
+    .values({
+      userId,
+      status: "draft",
+      currentStep: 1,
+      // The test marker is only ever written here — no edit path can set or
+      // clear it afterwards, which is what makes it safe to trust at submit.
+      isTest: options?.isTest ?? false,
+    });
   const registrationId = Number(result[0].insertId);
   if (!registrationId) throw new Error("Unable to create LLC registration");
 
@@ -48,7 +58,9 @@ export async function createLlcRegistration(userId: number) {
     fromStatus: null,
     toStatus: "draft",
     source: "system",
-    note: "Registration draft created",
+    note: options?.isTest
+      ? "[TEST] Registration draft created for an admin test run"
+      : "Registration draft created",
   });
 
   const registration = await findRegistrationById(db, userId, registrationId);
@@ -132,12 +144,17 @@ export async function listRegistrationsForStatusPolling() {
     })
     .from(llcRegistrations)
     .where(
-      inArray(llcRegistrations.status, [
-        "submitting",
-        "payment_required",
-        "processing",
-        "action_required",
-      ]),
+      and(
+        inArray(llcRegistrations.status, [
+          "submitting",
+          "payment_required",
+          "processing",
+          "action_required",
+        ]),
+        // Test rows are provably outside the sweep, independent of the
+        // whopAccountId-null guard in the poller loop.
+        eq(llcRegistrations.isTest, false),
+      ),
     )
     .orderBy(asc(llcRegistrations.id));
 }

@@ -808,7 +808,11 @@ export default function LlcOpsPage() {
   }
 
   const orders = listQuery.data ?? [];
-  const needsPayment = orders.filter((order) => order.status === 'payment_required');
+  // Demo/test rows park in payment_required by design and have no wholesale
+  // checkout to pay — keep them out of the action banner.
+  const needsPayment = orders.filter(
+    (order) => order.status === 'payment_required' && !order.isDemo,
+  );
 
   return (
     <div className="min-h-screen bg-white">

@@ -97,6 +97,9 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     // submit); the wholesale checkout stays ops-only.
     retailPriceCents: registration.retailPriceCents ?? null,
     paid: Boolean(registration.retailPaidAt),
+    // Admin test runs only; always false for real registrations, so exposing
+    // it client-side reveals nothing about anyone's real order.
+    isTest: Boolean(registration.isTest),
     submittedAt: registration.submittedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
     history: history.map((item) => ({
@@ -121,6 +124,7 @@ export function registrationRowToSummary(row: RegistrationRow) {
     canEdit: isRegistrationEditable(row),
     currentStep: row.currentStep,
     updatedAt: row.updatedAt.getTime(),
+    isTest: Boolean(row.isTest),
   };
 }
 

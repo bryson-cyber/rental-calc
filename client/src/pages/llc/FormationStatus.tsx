@@ -6,6 +6,7 @@
  * formation documents appear in the "Your documents" vault below (served
  * through the authenticated /manus-storage proxy).
  */
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
@@ -20,10 +21,12 @@ import {
   Download,
   FileCheck2,
   FileText,
+  FlaskConical,
   Loader2,
   RefreshCw,
   RotateCcw,
   ShieldCheck,
+  Trash2,
   Trophy,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -115,14 +118,42 @@ function documentDisplayName(document: { name: string; documentType: string | nu
 function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const registrationQuery = trpc.llc.get.useQuery(
     { id: registrationId },
-    { retry: 1, refetchOnWindowFocus: false },
+    {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      // Test rows live-update during a webinar so the presenter can advance
+      // the stage from a second window or phone and the shared screen follows.
+      refetchInterval: (query) => (query.state.data?.isTest ? 5000 : false),
+    },
   );
+  const isTestRow = registrationQuery.data?.isTest ?? false;
   const documentsQuery = trpc.llc.documents.useQuery(
     { id: registrationId },
-    { retry: 1, refetchOnWindowFocus: false },
+    {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchInterval: isTestRow ? 5000 : false,
+    },
   );
+  const advanceMutation = trpc.llcOps.advanceTestStage.useMutation({
+    onSuccess: (result) => {
+      utils.llc.get.setData({ id: registrationId }, result.registration);
+      void utils.llc.documents.invalidate({ id: registrationId });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const removeTestMutation = trpc.llcOps.deleteDemoFiling.useMutation({
+    onSuccess: () => {
+      toast.success("Test filing removed.");
+      void utils.llc.list.invalidate();
+      setLocation("/?tab=llc");
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const refreshMutation = trpc.llc.refreshStatus.useMutation({
     onSuccess: (result) => {
       utils.llc.get.setData({ id: registrationId }, result.registration);
@@ -210,9 +241,17 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to LLC formation
         </a>
-        <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground">
-          {registration.statusLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          {registration.isTest ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+              <FlaskConical className="size-3" aria-hidden="true" />
+              Test filing
+            </span>
+          ) : null}
+          <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground">
+            {registration.statusLabel}
+          </span>
+        </div>
       </div>
 
       <div>
@@ -226,6 +265,61 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           {copy.body}
         </p>
       </div>
+
+      {isAdmin && registration.isTest ? (
+        <div className="apple-card border-dashed border-amber-300 bg-amber-50/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2">
+              <FlaskConical className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden="true" />
+              <p className="text-xs leading-5 text-muted-foreground">
+                <span className="font-semibold text-foreground">Demo controls (admin only).</span>{" "}
+                Advance the filing through its stages, then remove it when the
+                presentation is over.
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {registration.status === "payment_required" ||
+              registration.status === "processing" ? (
+                <Button
+                  size="sm"
+                  className="bg-amber-700 text-white hover:bg-amber-800"
+                  disabled={advanceMutation.isPending}
+                  onClick={() =>
+                    advanceMutation.mutate({
+                      id: registrationId,
+                      fromStatus:
+                        registration.status === "payment_required"
+                          ? "payment_required"
+                          : "processing",
+                    })
+                  }
+                >
+                  {advanceMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {registration.status === "payment_required"
+                    ? "Advance: confirm payment"
+                    : "Advance: complete filing"}
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive"
+                disabled={removeTestMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("Remove this test filing and all of its data?")) {
+                    removeTestMutation.mutate({ id: registrationId });
+                  }
+                }}
+              >
+                <Trash2 className="mr-1 size-3.5" aria-hidden="true" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showPaymentCard ? (
         <div className="apple-card border-primary/30 bg-primary/5 p-5">
@@ -241,7 +335,12 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                   : ""}
                 Your filing moves forward once payment is received.
               </p>
-              {paymentLinkUrl ? (
+              {registration.isTest ? (
+                <Button className="mt-3" disabled>
+                  Pay now
+                  <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
+                </Button>
+              ) : paymentLinkUrl ? (
                 <Button asChild className="mt-3">
                   <a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">
                     Pay now

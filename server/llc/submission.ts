@@ -355,6 +355,75 @@ export async function submitLlcRegistration(params: {
     };
   }
 
+  // TEST RUN FORK — before any provider code. An admin webinar test row
+  // simulates the success path exactly (status, history, retail snapshot)
+  // while whopAccountId/checkout fields stay NULL: no connected account, no
+  // checkout, no ops payment alert, and the client-email layer independently
+  // skips test rows.
+  if (lock.registration.isTest) {
+    let retailSnapshot: { retailPriceCents: number } | Record<string, never> = {};
+    if (lock.registration.retailPriceCents === null) {
+      try {
+        const statePricing = await getStatePricing(validated.complete.formationState);
+        if (statePricing.retailPriceCents !== null) {
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
+        }
+      } catch {
+        // Best-effort, mirroring the real submit path.
+      }
+    }
+    try {
+      await transitionLlcStatus({
+        userId: params.userId,
+        registrationId: params.registrationId,
+        toStatus: "payment_required",
+        source: "system",
+        note: "[TEST] Simulated submission — no provider filing was created",
+        expectedStatuses: ["submitting"],
+        updates: {
+          ...retailSnapshot,
+          submittedAt: new Date(),
+          lastErrorType: null,
+          lastErrorMessage: null,
+          retryable: false,
+        },
+      });
+      const simulated = await getLlcRegistrationById(
+        params.userId,
+        params.registrationId,
+      );
+      if (!simulated) throw new Error("Submitted LLC registration could not be reloaded");
+      return {
+        outcome: "checkout_ready" as const,
+        registration: bundleToRegistrationView(simulated),
+        message: "Your registration has been submitted for filing.",
+      };
+    } catch (error) {
+      // A wedged "submitting" test row would be unrecoverable (the poller
+      // ignores test rows by design), so mirror the real path's recovery:
+      // release the lock into a retryable failure.
+      await transitionLlcStatus({
+        userId: params.userId,
+        registrationId: params.registrationId,
+        toStatus: "failed",
+        source: "system",
+        note: "[TEST] Simulated submission was interrupted",
+        expectedStatuses: ["submitting"],
+        updates: { retryable: true },
+      }).catch(() => {});
+      const failed = await getLlcRegistrationById(
+        params.userId,
+        params.registrationId,
+      );
+      if (!failed) throw error;
+      return {
+        outcome: "failed" as const,
+        registration: bundleToRegistrationView(failed),
+        message: "The test submission was interrupted. It is safe to retry.",
+      };
+    }
+  }
+
   const submissionKey =
     lock.registration.submissionKey ?? randomUUID().replaceAll("-", "");
   if (!lock.registration.submissionKey) {
@@ -669,6 +738,16 @@ export async function refreshLlcRegistrationStatus(params: {
   );
   if (!bundle) throw new Error("LLC registration was not found");
   const registration = bundle.registration;
+
+  // Test rows have nothing provider-side to refresh; answer neutrally so the
+  // on-stage "Check for updates" click never contradicts the demo.
+  if (registration.isTest) {
+    return {
+      refreshed: false as const,
+      registration: bundleToRegistrationView(bundle),
+      message: "Everything is up to date.",
+    };
+  }
 
   if (!registration.whopAccountId) {
     return {

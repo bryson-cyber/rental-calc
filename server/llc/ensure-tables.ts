@@ -182,6 +182,13 @@ export async function ensureLlcTables(): Promise<void> {
       .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `retailPaidAt` timestamp"))
       .catch(() => undefined);
     await db
+      .execute(
+        sql.raw(
+          "ALTER TABLE `llc_registrations` ADD `isTest` boolean NOT NULL DEFAULT false",
+        ),
+      )
+      .catch(() => undefined);
+    await db
       .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `paymentLinkUrl` varchar(1000)"))
       .catch(() => undefined);
 

@@ -10,6 +10,7 @@ import { getDb } from "../db";
 import { getOpsConfig } from "../ops/config";
 import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getStatePricing } from "./pricing";
+import { isDemoSubmissionKey } from "./demo";
 
 /**
  * Client-facing transactional emails for the LLC filing lifecycle.
@@ -53,6 +54,7 @@ export type ClientEmailSendOutcome =
   | "skipped_batched"
   | "skipped_no_documents"
   | "skipped_unavailable"
+  | "skipped_test"
   | "failed";
 
 const SIGN_OFF = "— The Coach Inayah team";
@@ -444,6 +446,12 @@ async function sendLifecycleEmail(
       params.registrationId,
     );
     if (!context) return "skipped_unavailable";
+    // Test/demo rows never email real recipients — the admin previews these
+    // templates explicitly through sendDemoLifecycleEmails instead. Skipped
+    // BEFORE the claim so nothing is burned.
+    if (context.registration.isTest || isDemoSubmissionKey(context.registration.submissionKey)) {
+      return "skipped_test";
+    }
     // Recipient is the registration owner's account email; skip silently
     // (without burning the claim) when it is missing.
     if (!context.email) return "skipped_no_email";
@@ -542,6 +550,9 @@ export async function sendDocumentsReleasedEmail(params: {
       params.registrationId,
     );
     if (!context) return "skipped_unavailable";
+    if (context.registration.isTest || isDemoSubmissionKey(context.registration.submissionKey)) {
+      return "skipped_test";
+    }
     if (!context.email) return "skipped_no_email";
 
     const last = await lastDocumentsEmailAt(context.db, params.registrationId);

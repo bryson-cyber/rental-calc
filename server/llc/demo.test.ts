@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   llcDocuments,
+  llcEmailLog,
   llcFounders,
   llcRegistrations,
   llcStatusHistory,
@@ -29,6 +30,7 @@ import {
   createDemoFiling,
   deleteDemoFiling,
   isDemoSubmissionKey,
+  isTestRegistration,
 } from "./demo";
 import { bundleToRegistrationView } from "./domain";
 import { listFormationDocuments } from "./documents";
@@ -52,6 +54,8 @@ function makeFakeDb(selectResults: unknown[][]) {
         where: () => ({
           limit: async () => nextRows(),
           orderBy: async () => nextRows(),
+          // Bare `await ...where(...)` (no limit/orderBy) also yields rows.
+          then: (resolve: (rows: unknown[]) => void) => resolve(nextRows()),
         }),
       }),
     })),
@@ -127,8 +131,9 @@ describe("demo PDF builder", () => {
 
 describe("createDemoFiling", () => {
   it("fabricates a completed, paid registration with zero provider fields", async () => {
-    // Two selects: findLlcDocumentById after each of the two uploads.
-    const { db, inserted } = makeFakeDb([[{ id: 1 }], [{ id: 2 }]]);
+    // Three selects: existing-documents lookup, then findLlcDocumentById
+    // after each of the two uploads.
+    const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
 
     const result = await createDemoFiling(7);
@@ -181,7 +186,7 @@ describe("createDemoFiling", () => {
   });
 
   it("writes the full staggered pipeline history", async () => {
-    const { db, inserted } = makeFakeDb([[{ id: 1 }], [{ id: 2 }]]);
+    const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
 
     await createDemoFiling(7);
@@ -205,7 +210,7 @@ describe("createDemoFiling", () => {
   });
 
   it("stores two RELEASED sample documents in the owner's ACL'd namespace", async () => {
-    const { db, inserted } = makeFakeDb([[{ id: 1 }], [{ id: 2 }]]);
+    const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
 
     await createDemoFiling(7);
@@ -241,7 +246,7 @@ describe("demo filing client view", () => {
    * /llc/status/:id — and what they never see.
    */
   async function buildClientView() {
-    const { db, inserted } = makeFakeDb([[{ id: 1 }], [{ id: 2 }]]);
+    const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
     const { id } = await createDemoFiling(7);
 
@@ -394,6 +399,7 @@ describe("deleteDemoFiling guard", () => {
     const result = await deleteDemoFiling(41);
     expect(result).toEqual({ deleted: true, id: 41 });
     expect(deleted).toEqual([
+      llcEmailLog,
       llcDocuments,
       llcStatusHistory,
       llcSubmissionAttempts,
@@ -402,10 +408,39 @@ describe("deleteDemoFiling guard", () => {
     ]);
   });
 
+  it("deletes an admin test run (isTest row without a demo key), email log included", async () => {
+    const { db, deleted } = makeFakeDb([
+      [{ id: 41, submissionKey: null, isTest: true }],
+      [{ id: 41, submissionKey: null, isTest: true }],
+    ]);
+    database.getDb.mockResolvedValue(db);
+
+    const result = await deleteDemoFiling(41);
+    expect(result).toEqual({ deleted: true, id: 41 });
+    expect(deleted).toContain(llcEmailLog);
+    expect(deleted).toContain(llcRegistrations);
+  });
+
+  it("still refuses a real registration even when isTest is explicitly false", async () => {
+    const { db, deleted } = makeFakeDb([
+      [{ id: 41, submissionKey: "a1b2c3d4e5f6", isTest: false }],
+    ]);
+    database.getDb.mockResolvedValue(db);
+    await expect(deleteDemoFiling(41)).rejects.toBeInstanceOf(DemoGuardError);
+    expect(deleted).toHaveLength(0);
+  });
+
   it("recognizes only the demo- submission-key prefix", () => {
     expect(isDemoSubmissionKey("demo-abc123")).toBe(true);
     expect(isDemoSubmissionKey("abc-demo-123")).toBe(false);
     expect(isDemoSubmissionKey(null)).toBe(false);
     expect(isDemoSubmissionKey(undefined)).toBe(false);
+  });
+
+  it("isTestRegistration accepts either marker and rejects real rows", () => {
+    expect(isTestRegistration({ submissionKey: null, isTest: true })).toBe(true);
+    expect(isTestRegistration({ submissionKey: "demo-abc123", isTest: false })).toBe(true);
+    expect(isTestRegistration({ submissionKey: "a1b2c3d4", isTest: false })).toBe(false);
+    expect(isTestRegistration({ submissionKey: null, isTest: false })).toBe(false);
   });
 });

@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ChevronRight,
   FileCheck2,
+  FlaskConical,
   Landmark,
   Loader2,
   Lock,
@@ -55,6 +56,7 @@ function StatusPill({ label }: { label: string }) {
 export default function LLCFormationStep() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
 
   const listQuery = trpc.llc.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -71,10 +73,48 @@ export default function LLCFormationStep() {
     },
   });
 
+  const testRunMutation = trpc.llcOps.startTestRun.useMutation({
+    onSuccess: (result) => {
+      setLocation(`/llc/register/${result.id}`);
+    },
+    onError: () => {
+      toast.error('The test filing could not be started. Please try again.');
+    },
+  });
+
   const registrations = listQuery.data ?? [];
 
   return (
     <div className="space-y-8" data-tool-panel="llc">
+      {/* Admin-only: live-journey test mode for webinar demos. Visibility is
+          cosmetic — the procedure behind it is admin-gated server-side. */}
+      {isAdmin ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3">
+          <div className="flex min-w-0 items-start gap-2">
+            <FlaskConical className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
+            <p className="text-xs leading-5 text-slate-600">
+              <span className="font-semibold text-slate-900">Admin only.</span> Walk
+              through the full application in test mode — nothing is filed and no
+              emails go to clients.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-300"
+            disabled={testRunMutation.isPending}
+            onClick={() => testRunMutation.mutate()}
+          >
+            {testRunMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FlaskConical className="mr-2 h-4 w-4" />
+            )}
+            Run a test filing
+          </Button>
+        </div>
+      ) : null}
+
       {/* Offer */}
       <div className="grid gap-4 sm:grid-cols-3">
         {INCLUDED.map(({ icon: Icon, title, detail }) => (
@@ -176,6 +216,12 @@ export default function LLCFormationStep() {
                         </p>
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-3">
+                        {registration.isTest ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                            <FlaskConical className="h-3 w-3" />
+                            Test
+                          </span>
+                        ) : null}
                         <StatusPill label={registration.statusLabel} />
                         <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5" />
                       </div>
