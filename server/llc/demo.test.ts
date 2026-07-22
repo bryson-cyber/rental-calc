@@ -131,8 +131,8 @@ describe("demo PDF builder", () => {
 
 describe("createDemoFiling", () => {
   it("fabricates a completed, paid registration with zero provider fields", async () => {
-    // Three selects: existing-documents lookup, then findLlcDocumentById
-    // after each of the two uploads.
+    // Select queue: existing-documents lookup first, then a
+    // findLlcDocumentById per upload (exhausted entries resolve empty).
     const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
 
@@ -209,13 +209,13 @@ describe("createDemoFiling", () => {
     expect(Date.now() - times[5]).toBeLessThan(2.5 * 24 * 60 * 60 * 1000);
   });
 
-  it("stores two RELEASED sample documents in the owner's ACL'd namespace", async () => {
+  it("stores the four RELEASED sample deliverables in the owner's ACL'd namespace", async () => {
     const { db, inserted } = makeFakeDb([[], [{ id: 1 }], [{ id: 2 }]]);
     database.getDb.mockResolvedValue(db);
 
     await createDemoFiling(7);
 
-    expect(storage.put).toHaveBeenCalledTimes(2);
+    expect(storage.put).toHaveBeenCalledTimes(4);
     for (const call of storage.put.mock.calls) {
       expect(String(call[0])).toMatch(/^pdfs\/7\/llc\/41\//);
       expect(call[2]).toBe("application/pdf");
@@ -228,6 +228,8 @@ describe("createDemoFiling", () => {
     expect(documents.map((entry) => entry.values.documentType)).toEqual([
       "articles_of_organization",
       "ein_confirmation",
+      "operating_agreement",
+      "welcome_kit",
     ]);
     for (const document of documents) {
       expect(document.values.source).toBe("ops_upload");
@@ -337,7 +339,7 @@ describe("demo filing client view", () => {
     }
   });
 
-  it("lists the two released sample documents exactly like real ones", async () => {
+  it("lists the four released sample deliverables exactly like real ones", async () => {
     const { documentRows } = await buildClientView();
 
     const { db } = makeFakeDb([documentRows]);
@@ -347,6 +349,9 @@ describe("demo filing client view", () => {
     expect(documents.map((doc) => doc.name)).toEqual([
       "Articles of Organization",
       "EIN Confirmation Letter",
+      "Operating Agreement",
+      // The client list prefers the display label over the stored name.
+      "Welcome kit & next steps",
     ]);
     for (const doc of documents) {
       expect(doc.releasedAt).toBeTypeOf("number");

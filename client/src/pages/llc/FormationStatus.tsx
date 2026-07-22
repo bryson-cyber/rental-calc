@@ -106,6 +106,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   ein_letter: "EIN confirmation letter",
   ein_confirmation: "EIN confirmation letter",
   operating_agreement: "Operating agreement",
+  welcome_kit: "Welcome kit & next steps",
 };
 
 function documentDisplayName(document: { name: string; documentType: string | null }) {
@@ -242,10 +243,10 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           Back to LLC formation
         </a>
         <div className="flex items-center gap-2">
-          {registration.isTest ? (
+          {registration.isSample ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
               <FlaskConical className="size-3" aria-hidden="true" />
-              Test filing
+              {registration.isTest ? "Test filing" : "Demo filing"}
             </span>
           ) : null}
           <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground">
@@ -266,7 +267,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
         </p>
       </div>
 
-      {isAdmin && registration.isTest ? (
+      {isAdmin && registration.isSample ? (
         <div className="apple-card border-dashed border-amber-300 bg-amber-50/60 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-start gap-2">
@@ -278,8 +279,9 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
               </p>
             </div>
             <div className="flex flex-shrink-0 items-center gap-2">
-              {registration.status === "payment_required" ||
-              registration.status === "processing" ? (
+              {registration.isTest &&
+              (registration.status === "payment_required" ||
+                registration.status === "processing") ? (
                 <Button
                   size="sm"
                   className="bg-amber-700 text-white hover:bg-amber-800"

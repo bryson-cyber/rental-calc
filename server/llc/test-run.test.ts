@@ -182,9 +182,11 @@ describe("test-run client exposure", () => {
     const source = read("domain.ts");
     expect(source).toContain("isTest: Boolean(registration.isTest)");
     expect(source).toContain("isTest: Boolean(row.isTest)");
-    // The submission key itself must never reach a client payload.
+    // The submission key itself must never reach a client payload. Reading
+    // it to DERIVE booleans is fine (isSample does); exposing it as a field
+    // ("submissionKey:") is not — demo.test.ts proves the runtime payload.
     const viewStart = source.indexOf("export function bundleToRegistrationView");
     const viewEnd = source.indexOf("export function", viewStart + 1);
-    expect(source.slice(viewStart, viewEnd)).not.toContain("submissionKey");
+    expect(source.slice(viewStart, viewEnd)).not.toContain("submissionKey:");
   });
 });

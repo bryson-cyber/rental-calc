@@ -10,7 +10,7 @@ import {
 } from "../../drizzle/schema";
 import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getDb } from "../db";
-import { buildDemoPdf } from "./demo-pdf";
+import { buildDemoPdf, buildDemoPdfPages } from "./demo-pdf";
 import { uploadOpsDocument } from "./documents";
 
 /**
@@ -191,6 +191,7 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     companyName: "Amara Rose Stays LLC",
     stateName: "Georgia",
     filedOn: completedAt,
+    memberName: "Amara Johnson",
   });
 
   return { id: registrationId };
@@ -207,12 +208,15 @@ export async function attachSampleDocuments(params: {
   companyName: string;
   stateName: string;
   filedOn: Date;
+  /** Primary member's display name for the agreement's signature block. */
+  memberName?: string;
 }): Promise<void> {
   const sampleLine = "SAMPLE DOCUMENT — FOR DEMONSTRATION ONLY";
   const filedOn = formatLongDate(params.filedOn);
+  const memberName = params.memberName?.trim() || "Member of Record";
 
   // Idempotent: a retried advance (e.g. after a storage hiccup) only attaches
-  // whichever of the two documents is still missing — never duplicates.
+  // whichever documents are still missing — never duplicates.
   const db = requireDb(await getDb());
   const existing = await db
     .select({ documentType: llcDocuments.documentType })
@@ -220,60 +224,188 @@ export async function attachSampleDocuments(params: {
     .where(eq(llcDocuments.registrationId, params.registrationId));
   const existingTypes = new Set(existing.map((row) => row.documentType));
 
-  if (!existingTypes.has("articles_of_organization")) {
-  const articlesPdf = buildDemoPdf({
-    title: "Articles of Organization",
-    lines: [
-      params.companyName,
-      `State of ${params.stateName} — Secretary of State, Corporations Division`,
-      `Filed and effective: ${filedOn}`,
-      "",
-      "The undersigned, acting as organizer of a limited liability company",
-      "under the state's Limited Liability Company Act, certifies that the",
-      "company named above has been duly organized, that a registered agent",
-      "has been designated for service of process, and that these Articles",
-      "of Organization have been accepted for filing by the Secretary of",
-      "State on the date shown above.",
-    ],
-    footnote: sampleLine,
-  });
-  await uploadOpsDocument({
-    registrationId: params.registrationId,
-    ownerUserId: params.ownerUserId,
+  const attach = async (document: {
+    documentType: string;
+    name: string;
+    label: string;
+    pdf: Buffer;
+  }) => {
+    if (existingTypes.has(document.documentType)) return;
+    await uploadOpsDocument({
+      registrationId: params.registrationId,
+      ownerUserId: params.ownerUserId,
+      name: document.name,
+      label: document.label,
+      documentType: document.documentType,
+      dataBase64: document.pdf.toString("base64"),
+      mimeType: "application/pdf",
+    });
+  };
+
+  await attach({
+    documentType: "articles_of_organization",
     name: "Articles of Organization",
     label: "Articles of Organization",
-    documentType: "articles_of_organization",
-    dataBase64: articlesPdf.toString("base64"),
-    mimeType: "application/pdf",
+    pdf: buildDemoPdf({
+      title: "Articles of Organization",
+      lines: [
+        params.companyName,
+        `State of ${params.stateName} — Secretary of State, Corporations Division`,
+        `Filing number: SAMPLE-000000    Filed and effective: ${filedOn}`,
+        "",
+        "Article I — Name. The name of the limited liability company is",
+        `${params.companyName}.`,
+        "Article II — Duration. The duration of the company is perpetual.",
+        "Article III — Purpose. The company is organized for any lawful",
+        "purpose permitted under the state's Limited Liability Company Act.",
+        "Article IV — Registered Agent. A commercial registered agent has",
+        "been designated to receive service of process and official mail.",
+        "Article V — Management. The company is managed by its members.",
+        "",
+        "The undersigned organizer certifies that these Articles of",
+        "Organization have been accepted for filing by the Secretary of",
+        "State and that the company named above is duly organized on the",
+        "date shown above.",
+      ],
+      footnote: sampleLine,
+    }),
   });
-  }
 
-  if (!existingTypes.has("ein_confirmation")) {
-  const einPdf = buildDemoPdf({
-    title: "EIN Confirmation Letter",
-    lines: [
-      params.companyName,
-      `Formation state: ${params.stateName}`,
-      `Issued: ${filedOn}`,
-      "",
-      "We have assigned this entity a federal Employer Identification",
-      "Number. This number identifies the company for federal tax filings,",
-      "banking, and payroll purposes, and should be retained with the",
-      "company's permanent records. Use it on all federal correspondence",
-      "and filings for the entity named above.",
-    ],
-    footnote: sampleLine,
-  });
-  await uploadOpsDocument({
-    registrationId: params.registrationId,
-    ownerUserId: params.ownerUserId,
+  await attach({
+    documentType: "ein_confirmation",
     name: "EIN Confirmation Letter",
     label: "EIN Confirmation Letter",
-    documentType: "ein_confirmation",
-    dataBase64: einPdf.toString("base64"),
-    mimeType: "application/pdf",
+    pdf: buildDemoPdf({
+      title: "EIN Confirmation Letter",
+      lines: [
+        params.companyName,
+        `Formation state: ${params.stateName}    Issued: ${filedOn}`,
+        "SAMPLE EIN: 00-0000000",
+        "",
+        "We have assigned this entity the Employer Identification Number",
+        "shown above. This number identifies the company for federal tax",
+        "filings, banking, and payroll purposes. Keep this letter with the",
+        "company's permanent records — your bank will ask for it when you",
+        "open the business account.",
+        "",
+        "Use the number and the company's exact legal name on all federal",
+        "correspondence, tax deposits, and returns for the entity named",
+        "above. The name and EIN on every filing must match this letter",
+        "exactly.",
+      ],
+      footnote: sampleLine,
+    }),
   });
-  }
+
+  await attach({
+    documentType: "operating_agreement",
+    name: "Operating Agreement",
+    label: "Operating Agreement",
+    pdf: buildDemoPdfPages({
+      footnote: sampleLine,
+      pages: [
+        {
+          title: "Operating Agreement",
+          lines: [
+            params.companyName,
+            `A ${params.stateName} Limited Liability Company`,
+            `Effective date: ${filedOn}`,
+            "",
+            "Article I — Formation",
+            "1.1 The member(s) formed this limited liability company under",
+            `the laws of the State of ${params.stateName}. The rights and duties`,
+            "of the member(s) are governed by this agreement and by state law.",
+            "1.2 The company continues until dissolved under Article VII.",
+            "",
+            "Article II — Name and Principal Office",
+            `2.1 The company operates under the name ${params.companyName}.`,
+            "2.2 The principal office is the address on file with the state",
+            "and may be changed by the member(s) at any time.",
+            "",
+            "Article III — Purpose",
+            "3.1 The company may engage in any lawful business activity,",
+            "including the ownership and operation of rental property.",
+          ],
+        },
+        {
+          lines: [
+            "Article IV — Members and Ownership",
+            "4.1 The member(s) of record and their ownership percentages are",
+            "maintained in the company's records.",
+            `4.2 The primary member of record is ${memberName}.`,
+            "",
+            "Article V — Capital, Profits, and Distributions",
+            "5.1 Initial capital contributions are recorded in the company",
+            "records. No member is required to contribute additional capital.",
+            "5.2 Profits and losses are allocated in proportion to ownership.",
+            "5.3 Distributions are made at the times and in the amounts the",
+            "member(s) determine, after providing for company obligations.",
+            "",
+            "Article VI — Management and Banking",
+            "6.1 The company is managed by its member(s), who may open bank",
+            "accounts, sign contracts, and act for the company.",
+            "6.2 Company funds are kept separate from personal funds and are",
+            "used only for company purposes.",
+          ],
+        },
+        {
+          lines: [
+            "Article VII — Transfers and Dissolution",
+            "7.1 No member may transfer an interest in the company without",
+            "the written consent of the remaining member(s).",
+            "7.2 The company dissolves upon the written election of the",
+            "member(s), followed by winding up and filing with the state.",
+            "",
+            "Article VIII — General Provisions",
+            "8.1 This agreement is the entire agreement of the member(s) and",
+            `is governed by the laws of the State of ${params.stateName}.`,
+            "8.2 Amendments must be in writing and signed by the member(s).",
+            "",
+            "",
+            "IN WITNESS WHEREOF, the undersigned adopts this agreement as of",
+            "the effective date above.",
+            "",
+            "Signed: ______________________________",
+            `${memberName}, Member`,
+            `Date: ${filedOn}`,
+          ],
+        },
+      ],
+    }),
+  });
+
+  await attach({
+    documentType: "welcome_kit",
+    name: "LLC Welcome Kit",
+    label: "Welcome kit & next steps",
+    pdf: buildDemoPdf({
+      title: "Your LLC Welcome Kit",
+      lines: [
+        params.companyName,
+        `Formed in ${params.stateName} — ${filedOn}`,
+        "",
+        "Congratulations — your company is official. Here is what's in",
+        "your vault and what to do next:",
+        "",
+        "1. Articles of Organization — your company's birth certificate.",
+        "   Banks and lenders will ask for this.",
+        "2. EIN Confirmation Letter — your federal tax ID. Required to",
+        "   open the business bank account and to run payroll.",
+        "3. Operating Agreement — sign it and keep it with your records.",
+        "   Many banks ask for it at account opening.",
+        "",
+        "Next steps this week:",
+        "- Open a business checking account (bring items 1 and 2).",
+        "- Sign the operating agreement in front of all members.",
+        "- Run business income and expenses through the new account only.",
+        "- Calendar your state's annual report due date.",
+        "",
+        "Questions? Reply to any email from our team — we're with you",
+        "through every step.",
+      ],
+      footnote: sampleLine,
+    }),
+  });
 }
 
 /** Display name for a formation-state code in sample documents. */

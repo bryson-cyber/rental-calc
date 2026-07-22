@@ -663,12 +663,16 @@ export const llcOpsRouter = router({
         // the row stays in "processing" and the click can simply be retried
         // (attachSampleDocuments only adds whichever document is missing).
         const companyName = `${registration.legalName ?? "Your Company"} ${registration.entitySuffix}`;
+        const primaryFounder = bundle.founders.find((founder) => founder.isPrimary);
         await attachSampleDocuments({
           registrationId: input.id,
           ownerUserId: owner.userId,
           companyName,
           stateName: demoStateName(registration.formationState),
           filedOn: new Date(),
+          memberName: primaryFounder
+            ? `${primaryFounder.firstName ?? ""} ${primaryFounder.lastName ?? ""}`.trim()
+            : undefined,
         });
         await transitionLlcStatus({
           userId: owner.userId,

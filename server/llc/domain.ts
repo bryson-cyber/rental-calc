@@ -1,4 +1,5 @@
 import { isRegistrationEditable } from "./store";
+import { isDemoSubmissionKey } from "./demo";
 import type { getLlcRegistrationById, listLlcRegistrationsForUser } from "./store";
 import { decryptPii, maskSsn } from "./pii";
 import type { LlcDraft } from "../../shared/llc";
@@ -100,6 +101,10 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     // Admin test runs only; always false for real registrations, so exposing
     // it client-side reveals nothing about anyone's real order.
     isTest: Boolean(registration.isTest),
+    // Any demonstration row (instant demo or test run) — drives sample-only
+    // affordances. Named "sample" so client payloads never carry the word
+    // demo; the submission key itself never leaves the server.
+    isSample: Boolean(registration.isTest) || isDemoSubmissionKey(registration.submissionKey),
     submittedAt: registration.submittedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
     history: history.map((item) => ({
@@ -125,6 +130,7 @@ export function registrationRowToSummary(row: RegistrationRow) {
     currentStep: row.currentStep,
     updatedAt: row.updatedAt.getTime(),
     isTest: Boolean(row.isTest),
+    isSample: Boolean(row.isTest) || isDemoSubmissionKey(row.submissionKey),
   };
 }
 

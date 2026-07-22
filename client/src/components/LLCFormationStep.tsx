@@ -81,8 +81,29 @@ export default function LLCFormationStep() {
       toast.error('The test filing could not be started. Please try again.');
     },
   });
+  const createDemoMutation = trpc.llcOps.createDemoFiling.useMutation({
+    onSuccess: (result) => {
+      setLocation(`/llc/status/${result.id}`);
+    },
+    onError: () => {
+      toast.error('The sample filing could not be created. Please try again.');
+    },
+  });
 
   const registrations = listQuery.data ?? [];
+  // A finished demonstration row whose vault already holds the sample
+  // deliverables — reused by "View sample documents" instead of piling up
+  // a new demo filing per click.
+  const completedSample = registrations.find(
+    (registration) => registration.isSample && registration.status === 'completed',
+  );
+  const viewSampleDocuments = () => {
+    if (completedSample) {
+      setLocation(`/llc/status/${completedSample.id}`);
+      return;
+    }
+    createDemoMutation.mutate();
+  };
 
   return (
     <div className="space-y-8" data-tool-panel="llc">
@@ -98,20 +119,36 @@ export default function LLCFormationStep() {
               emails go to clients.
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-amber-300"
-            disabled={testRunMutation.isPending}
-            onClick={() => testRunMutation.mutate()}
-          >
-            {testRunMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FlaskConical className="mr-2 h-4 w-4" />
-            )}
-            Run a test filing
-          </Button>
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300"
+              disabled={testRunMutation.isPending}
+              onClick={() => testRunMutation.mutate()}
+            >
+              {testRunMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FlaskConical className="mr-2 h-4 w-4" />
+              )}
+              Run a test filing
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300"
+              disabled={createDemoMutation.isPending}
+              onClick={viewSampleDocuments}
+            >
+              {createDemoMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileCheck2 className="mr-2 h-4 w-4" />
+              )}
+              View sample documents
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -216,10 +253,10 @@ export default function LLCFormationStep() {
                         </p>
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-3">
-                        {registration.isTest ? (
+                        {registration.isSample ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
                             <FlaskConical className="h-3 w-3" />
-                            Test
+                            {registration.isTest ? 'Test' : 'Demo'}
                           </span>
                         ) : null}
                         <StatusPill label={registration.statusLabel} />
