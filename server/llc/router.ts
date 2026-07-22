@@ -67,6 +67,17 @@ function enforceRateLimit(userId: number, action: string, limit: number) {
 
 const registrationIdInput = z.object({ id: z.number().int().positive() });
 
+// Payment links render as client-side hrefs; zod's .url() alone accepts
+// javascript: and data: schemes, so restrict to plain web URLs.
+const httpUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .max(1000)
+  .refine((value) => /^https?:\/\//i.test(value), {
+    message: "Payment links must start with http:// or https://",
+  });
+
 async function requireRegistrationBundle(userId: number, registrationId: number) {
   const bundle = await getLlcRegistrationById(userId, registrationId);
   if (!bundle) {
@@ -519,7 +530,7 @@ export const llcOpsRouter = router({
         state: z.enum(LLC_FORMATION_STATES),
         retailPriceCents: z.number().int().min(0).max(10_000_000).nullable(),
         active: z.boolean(),
-        paymentLinkUrl: z.string().trim().url().max(1000).nullable().optional(),
+        paymentLinkUrl: httpUrlSchema.nullable().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -547,7 +558,7 @@ export const llcOpsRouter = router({
   applyPaymentLink: adminProcedure
     .input(
       z.object({
-        paymentLinkUrl: z.string().trim().url().max(1000).nullable(),
+        paymentLinkUrl: httpUrlSchema.nullable(),
       }),
     )
     .mutation(async ({ input }) => {

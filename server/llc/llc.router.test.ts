@@ -821,3 +821,14 @@ describe("LLC ops router authorization", () => {
     });
   });
 });
+
+describe("payment link scheme hardening", () => {
+  it("rejects non-http(s) payment links (javascript:, data:)", async () => {
+    const caller = appRouter.createCaller(makeContext(1, "admin"));
+    for (const url of ["javascript:alert(1)", "data:text/html,hi"]) {
+      await expect(
+        caller.llcOps.setStatePricing({ state: "NM", paymentLinkUrl: url }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    }
+  });
+});
