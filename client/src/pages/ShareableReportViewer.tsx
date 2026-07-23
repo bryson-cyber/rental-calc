@@ -610,6 +610,16 @@ export default function ShareableReportViewer() {
                   <h2 className="text-2xl font-bold text-slate-900">Property Analysis Results</h2>
                   <p className="text-slate-500">{validatorAddress}</p>
                 </div>
+                {reportData?._listingUrl && (
+                  <a
+                    href={reportData._listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#0F172A] px-4 py-2 text-sm font-semibold text-[#C9A962] hover:opacity-90 transition-opacity"
+                  >
+                    View Listing on Zillow →
+                  </a>
+                )}
               </div>
               <TeslaDashboard
                 result={reportData}
