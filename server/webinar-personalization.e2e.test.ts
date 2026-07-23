@@ -25,6 +25,7 @@ import {
   personalizedLinks,
   regulationCache,
   sharedReports,
+  webinarRegistrants,
 } from "../drizzle/schema";
 import {
   buildEmailPersonalization,
@@ -199,6 +200,34 @@ describe("persona B — opt-in city, no deal yet, failed regulation research", (
       "Reminder from Inayah: your Airbnb Masterclass is tomorrow. The system I teach finds opportunities in markets like Butte — you'll see it start to finish. Stay tuned for your join link.",
     );
     expect(sms).not.toContain("$");
+  });
+});
+
+describe("persona D — lead texted us a different city earlier", () => {
+  it("their texted city is durable: it beats HubSpot on every recompute", async () => {
+    // HubSpot says Las Vegas, but the lead replied 'Phoenix' to the
+    // engagement question last week — that choice must never revert
+    mockHubspot.mockResolvedValue({ hubspotId: "101", city: "LAS VEGAS", state: "NV", postalCode: "89135" });
+    const { db } = fakeDb(new Map<object, any[]>([
+      [webinarRegistrants as object, [{
+        id: 1,
+        metadata: { engagement: { cityOverride: { city: "Phoenix", state: "AZ" } } },
+      }]],
+      [analysisReports as object, []],
+      [emailOptins as object, []],
+      [newsletterCities as object, []],
+      [newsletterDeals as object, []],
+      [regulationCache as object, []],
+      [personalizedLinks as object, []],
+      [sharedReports as object, []],
+    ]));
+
+    const p = await computePersonalizationForEmail(db as any, "lead-d@example.com");
+    expect(p!.city).toBe("Phoenix");
+    expect(p!.state).toBe("AZ");
+    expect(p!.source).toBe("engagement");
+    expect(p!.timezone).toBe("America/Phoenix");
+    expect(mockHubspot).not.toHaveBeenCalled();
   });
 });
 

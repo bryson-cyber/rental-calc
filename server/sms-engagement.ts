@@ -327,18 +327,33 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
         replyText = OTHER_REPLY_MESSAGE;
       }
 
-      const newMeta: Record<string, unknown> = {
-        ...((reg.metadata as Record<string, unknown>) ?? {}),
-        engagement: {
-          ...engagement,
-          replies: (engagement.replies ?? 0) + 1,
-          lastIntent: parsed.intent,
-          lastReplyAt: new Date().toISOString(),
-          ...(cityOverride ? { cityOverride } : {}),
-        },
-        ...(personalization ? { personalization } : {}),
+      const engagementUpdate = {
+        ...engagement,
+        replies: (engagement.replies ?? 0) + 1,
+        lastIntent: parsed.intent,
+        lastReplyAt: new Date().toISOString(),
+        ...(cityOverride ? { cityOverride } : {}),
       };
-      await db.update(webinarRegistrants).set({ metadata: newMeta }).where(eq(webinarRegistrants.id, reg.id));
+
+      // Update EVERY row sharing this phone (duplicate registrations, other
+      // webinars) so SMS and email always render from the same state — the
+      // lead's texted city must never revert on a sibling row.
+      const siblings = await db
+        .select({ id: webinarRegistrants.id, metadata: webinarRegistrants.metadata })
+        .from(webinarRegistrants)
+        .where(sql`RIGHT(REPLACE(${webinarRegistrants.phone}, '-', ''), 10) = ${last10}`);
+      for (const sib of siblings) {
+        await db
+          .update(webinarRegistrants)
+          .set({
+            metadata: {
+              ...((sib.metadata as Record<string, unknown>) ?? {}),
+              engagement: engagementUpdate,
+              ...(personalization ? { personalization } : {}),
+            },
+          })
+          .where(eq(webinarRegistrants.id, sib.id));
+      }
 
       if (replyText) {
         const sent = await sendSmsDirect(reg.phone, replyText);

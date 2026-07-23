@@ -218,17 +218,37 @@ export async function computePersonalizationForEmail(
 
   // 1) Location. This is an unaware audience: they opted into a webinar and
   //    have never used the tool. A city the lead texted us themselves beats
-  //    everything; otherwise the opt-in / soft-pull address synced to HubSpot
-  //    (Data Perfection fields), then local opt-in rows, and only last a tool
-  //    run of their own.
+  //    everything — including one they texted for an EARLIER webinar (that
+  //    choice is durable, looked up across all their registrant rows) —
+  //    otherwise the opt-in / soft-pull address synced to HubSpot, then local
+  //    opt-in rows, and only last a tool run of their own.
   let city = "";
   let state = "";
   let source: RegistrantPersonalization["source"] = "hubspot";
 
-  const hubspotContact = opts.overrideCity ? null : await getContactLocationByEmail(normalizedEmail).catch(() => null);
-  if (opts.overrideCity) {
-    city = opts.overrideCity.city;
-    state = opts.overrideCity.state;
+  let override = opts.overrideCity;
+  if (!override) {
+    try {
+      const [ovrRow] = await db
+        .select({ metadata: webinarRegistrants.metadata })
+        .from(webinarRegistrants)
+        .where(and(
+          eq(webinarRegistrants.email, normalizedEmail),
+          sql`JSON_EXTRACT(${webinarRegistrants.metadata}, '$.engagement.cityOverride.city') IS NOT NULL`,
+        ))
+        .orderBy(desc(webinarRegistrants.id))
+        .limit(1);
+      const stored = (ovrRow?.metadata as any)?.engagement?.cityOverride;
+      if (stored?.city && stored?.state) override = { city: stored.city, state: stored.state };
+    } catch {
+      // Override lookup is best-effort; fall through to HubSpot
+    }
+  }
+
+  const hubspotContact = override ? null : await getContactLocationByEmail(normalizedEmail).catch(() => null);
+  if (override) {
+    city = override.city;
+    state = override.state;
     source = "engagement";
   } else if (hubspotContact?.city && hubspotContact.state) {
     city = hubspotContact.city;
