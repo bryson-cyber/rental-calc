@@ -322,6 +322,42 @@ export async function batchUpsertContacts(
 }
 
 /**
+ * Patch arbitrary properties on a contact (generic variant of updateContact
+ * for callers that own their property names, e.g. webinar lead priority).
+ */
+export async function updateContactProperties(
+  contactId: string,
+  properties: Record<string, string>
+): Promise<void> {
+  await hubspotRequest(`/crm/v3/objects/contacts/${contactId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ properties }),
+  });
+}
+
+/**
+ * Make sure a set of custom contact properties exists, creating any that are
+ * missing. Safe to call repeatedly; existing properties are left untouched.
+ */
+export async function ensureCustomContactProperties(
+  defs: Array<{ name: string; label: string }>
+): Promise<void> {
+  const existing = await getContactProperties();
+  const have = new Set(existing.map((p) => p.name));
+  for (const def of defs) {
+    if (have.has(def.name)) continue;
+    try {
+      await createContactProperty({ name: def.name, label: def.label, type: 'string' });
+    } catch (err: any) {
+      // 409 = created by a concurrent process — fine
+      if (!String(err?.message).includes('409')) {
+        console.warn(`[HubSpot] Could not create property ${def.name}:`, err.message);
+      }
+    }
+  }
+}
+
+/**
  * Get contact properties (for checking if custom properties exist)
  */
 export async function getContactProperties(): Promise<Array<{ name: string; label: string }>> {

@@ -84,6 +84,28 @@ export async function analyzePropertyForArbitrage(params: {
   sourcePlatform?: RentalDeal['sourcePlatform'];
   imageUrl?: string;
 }): Promise<RentalDeal | null> {
+  const detailed = await analyzePropertyForArbitrageDetailed(params);
+  return detailed?.deal ?? null;
+}
+
+/**
+ * Same analysis, but also returns the raw rentalizer estimate so callers can
+ * build artifacts from it (e.g. a shareable property report) without a second
+ * rentalizer call.
+ */
+export async function analyzePropertyForArbitrageDetailed(params: {
+  address: string;
+  city: string;
+  state: string;
+  zipCode?: string;
+  bedrooms: number;
+  bathrooms: number;
+  monthlyRent: number;
+  propertyType?: string;
+  sourceUrl?: string;
+  sourcePlatform?: RentalDeal['sourcePlatform'];
+  imageUrl?: string;
+}): Promise<{ deal: RentalDeal; estimate: NonNullable<Awaited<ReturnType<typeof getRentalizerEstimate>>> } | null> {
   try {
     console.log(`[DealFinder] Analyzing: ${params.address}`);
     
@@ -163,11 +185,11 @@ export async function analyzePropertyForArbitrage(params: {
       dealGrade,
       
       topComps,
-      
+
       analyzedAt: new Date()
     };
-    
-    return deal;
+
+    return { deal, estimate };
   } catch (error) {
     console.error(`[DealFinder] Error analyzing ${params.address}:`, error);
     return null;

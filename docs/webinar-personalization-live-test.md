@@ -127,11 +127,46 @@ After 1–2 import cycles (≈6 min):
      outside 8am–9pm in the Pacific registrant's local time, their row shows
      `deliveryStatus='skipped'` with the quiet-hours error.
    - `personalized_links` rows exist per lead (`campaignType='webinar_deals'`);
-     clicking a link opens the tool pre-targeted to that city and increments
-     `clickCount`.
+     clicking a `/l/<code>` link opens the tool's shared property report for
+     the deal (public `/report/<shareId>` page, NO login required) with the
+     Zillow listing linked inside it, and increments `clickCount`. A lead with
+     a deal but no report yet falls back to the Zillow listing directly.
 4. Emails: trigger the day-before email for the test webinar; confirm the
    "Near {city}" card renders for the lead with a deal and is absent (not
    broken) for the lead without one.
+
+## Stage 5 — two-way engagement flow (owner phone only)
+
+1. Kill switch exists: `webinar_sms_settings` key `sms_engagement` = `off`
+   disables both the question and reply handling. Leave it ON for this stage.
+2. Register the owner's phone as a manual test registrant. Expect two texts:
+   the clean confirmation, then ~2–5 minutes later (next import cycles) the
+   engagement question ("...Reply YES and I'll send you what my scanner found
+   near you. Or text me the city you're curious about.").
+3. Reply `YES` → within ~3 minutes (next poll cycle) expect the deal message
+   for the city on file, with the `/l/<code>` report link.
+4. From a second owner phone (fresh registrant), reply with a different city
+   (e.g. `what about phoenix az`) → expect that city scanned and its numbers
+   sent back; the registrant's payload city should switch to the texted city
+   (`JSON_EXTRACT(metadata,'$.engagement.cityOverride')`).
+5. Reply a third time and then a fourth — after 3 automated replies the system
+   must go silent (loop cap).
+6. Safety checks: leads confirmed more than 48h before deploy are never asked;
+   the inbound watermark (`engagement_last_inbound_ts`) starts at deploy time
+   so historical inbox traffic is never touched; `STOP`-like replies set
+   `optedOut` and get no response.
+
+## Stage 6 — lead priority + daily digest
+
+1. After a YES/city reply in Stage 5, check the owner-phone contact in
+   HubSpot: `webinar_lead_priority` (hot/warm/standard), `webinar_reply_intent`,
+   `webinar_reply_city`, `webinar_funding_qualified`, `webinar_funding_readiness`
+   should be set (properties are auto-created on first sync). "hot" requires
+   the contact to be funding-qualified via the soft pull AND engaged.
+2. The daily digest fires once per day after 14:00 UTC via the owner
+   notification channel: registrant counts, coverage, replies by intent, hot
+   leads to call, city scans, STOP warnings. Kill switch:
+   `webinar_sms_settings` key `daily_digest` = `off`.
 
 ## Success criteria
 

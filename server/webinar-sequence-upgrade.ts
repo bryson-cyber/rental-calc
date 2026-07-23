@@ -28,15 +28,29 @@ const SEQUENCE_UPGRADES: UpgradeSpec[] = [
   },
   {
     old: `Reminder from Inayah: your Airbnb Masterclass is tomorrow. I'll show you the exact 5-step system my students use to launch in under 90 days while keeping their W2. Stay tuned for your join link.`,
-    new: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] I'll show you how to run %CITY% through my research tool live.[/IF_CITY_ONLY] Stay tuned for your join link.`,
+    new: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`,
+  },
+  // v1 tokenized → v2 reframe: v1 promised to run the lead's city live in
+  // class, which the class doesn't do. v2 frames the opportunity instead.
+  {
+    old: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] I'll show you how to run %CITY% through my research tool live.[/IF_CITY_ONLY] Stay tuned for your join link.`,
+    new: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`,
   },
   {
     old: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live for your Airbnb Masterclass. If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist. Worth being there.`,
-    new: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] I'm bringing the numbers on a unit near %CITY% that could clear %DEAL_PROFIT%/mo.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
+    new: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] A unit near %CITY% is showing numbers that could clear %DEAL_PROFIT%/mo — tonight you'll see the exact system people use to get units like it.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
+  },
+  {
+    old: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] I'm bringing the numbers on a unit near %CITY% that could clear %DEAL_PROFIT%/mo.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
+    new: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] A unit near %CITY% is showing numbers that could clear %DEAL_PROFIT%/mo — tonight you'll see the exact system people use to get units like it.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
   },
   {
     old: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property. I'll send your join link 15 minutes before go time.`,
-    new: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] I'll also run %CITY% through the research tool live.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
+    new: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] The same system spots opportunities near %CITY% — you'll see how it works tonight.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
+  },
+  {
+    old: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] I'll also run %CITY% through the research tool live.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
+    new: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] The same system spots opportunities near %CITY% — you'll see how it works tonight.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
   },
   {
     old: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens. If you're still serious about adding $2K–$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: {{URL}}`,
@@ -44,10 +58,17 @@ const SEQUENCE_UPGRADES: UpgradeSpec[] = [
   },
 ];
 
-const CONFIRMATION_UPGRADE: UpgradeSpec = {
-  old: `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
-  new: `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
-};
+// The confirmation stays CLEAN — one job. The engagement question (separate
+// text, see sms-engagement.ts) carries the scanner hook. v1's deal line is
+// rolled back wherever it reached production.
+const CONFIRMATION_TARGET = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
+
+const CONFIRMATION_UPGRADES: UpgradeSpec[] = [
+  {
+    old: `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
+    new: CONFIRMATION_TARGET,
+  },
+];
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -109,10 +130,10 @@ export async function upgradeDefaultSequenceCopy(
     .from(webinarSmsSettings)
     .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))
     .limit(1);
-  if (setting && setting.settingValue.trim() === CONFIRMATION_UPGRADE.old) {
+  if (setting && CONFIRMATION_UPGRADES.some((spec) => setting.settingValue.trim() === spec.old)) {
     await db
       .update(webinarSmsSettings)
-      .set({ settingValue: CONFIRMATION_UPGRADE.new })
+      .set({ settingValue: CONFIRMATION_TARGET })
       .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"));
     confirmationUpgraded = true;
   }

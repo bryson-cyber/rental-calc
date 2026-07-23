@@ -1142,6 +1142,11 @@ async function startServer() {
   app.post("/api/scheduled/llc-status-poll", llcStatusPollHandler);
   app.get("/api/scheduled/health", scheduledHealthHandler);
 
+  // Public tracked short links (SMS/email deal links for unaware leads —
+  // must resolve with zero friction, no auth). Mounted before Vite fallthrough.
+  const { registerLinkRedirect } = await import("../link-redirect");
+  registerLinkRedirect(app);
+
   // LLC formation status poll trigger for external schedulers (GET /api/poll,
   // disabled unless POLL_SECRET is configured)
   const { registerPollEndpoint, startStatusPoller } = await import("../ops/poller");

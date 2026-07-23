@@ -418,7 +418,11 @@ Import cron (every 3 min, runWebinarImportInner)
                  (dealScore desc, ≤30 days old; claims gated at ≥$1,000/mo
                  profit — the class's own floor)
       regs:      regulation_cache (status "unknown" rows are ignored)
-      link:      personalized_links row, tool URL pre-targeted to their city
+      report:    shared_reports row per deal property (the tool's own public
+                 report page, built from the scan's rentalizer estimate; the
+                 Zillow listing is linked inside it)
+      link:      personalized_links row → tracked /l/<code> short link → the
+                 shared report (public, no login), else the Zillow listing
       stored in: webinar_registrants.metadata.personalization
   → confirmation SMS/email render with the payload (same cron cycle)
   → Phase 2 (detached, slow): runLiveCityScansForWebinar()
@@ -434,6 +438,13 @@ Manual add (addRegistrant) computes the payload inline before the instant sends.
 ```
 
 Also live in code:
+- **Two-way engagement** (`server/sms-engagement.ts`): the confirmation text
+  stays clean; ~2 min later the lead gets one question ("are you looking to
+  get started with Airbnb? Reply YES... or text me a city"). Replies are
+  polled from SimpleTexting each cron cycle and classified by the LLM —
+  YES sends the local deal + report link; a texted city (any city) gets
+  scanned and becomes the lead's city going forward; STOP opts out; 3-reply
+  loop cap; 48h ask window; kill switch `sms_engagement=off`.
 - **Production copy upgrade** (`server/webinar-sequence-upgrade.ts`): pending
   scheduled messages whose body exactly matches an old stock seed are rewritten
   to the tokenized defaults each import cycle; customized copy never matches

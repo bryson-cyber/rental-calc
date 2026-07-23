@@ -9,12 +9,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./hubspot", () => ({ getContactLocationByEmail: vi.fn() }));
 vi.mock("./hasdata-zillow", () => ({ searchZillowRentals: vi.fn() }));
-vi.mock("./newsletter-deal-finder", () => ({ analyzePropertyForArbitrage: vi.fn() }));
+vi.mock("./newsletter-deal-finder", () => ({ analyzePropertyForArbitrageDetailed: vi.fn() }));
 vi.mock("./regulation-tracker", () => ({ getRegulationInfo: vi.fn() }));
+vi.mock("./airdna", () => ({ getRentalizerEstimate: vi.fn() }));
 
 import { getContactLocationByEmail } from "./hubspot";
 import { searchZillowRentals } from "./hasdata-zillow";
-import { analyzePropertyForArbitrage } from "./newsletter-deal-finder";
+import { analyzePropertyForArbitrageDetailed } from "./newsletter-deal-finder";
 import { getRegulationInfo } from "./regulation-tracker";
 import {
   analysisReports,
@@ -23,6 +24,8 @@ import {
   newsletterDeals,
   personalizedLinks,
   regulationCache,
+  sharedReports,
+  webinarRegistrants,
 } from "../drizzle/schema";
 import {
   buildEmailPersonalization,
@@ -35,7 +38,7 @@ import { buildWebinarEmail } from "./hubspot-smtp";
 
 const mockHubspot = getContactLocationByEmail as unknown as ReturnType<typeof vi.fn>;
 const mockZillow = searchZillowRentals as unknown as ReturnType<typeof vi.fn>;
-const mockAnalyze = analyzePropertyForArbitrage as unknown as ReturnType<typeof vi.fn>;
+const mockAnalyze = analyzePropertyForArbitrageDetailed as unknown as ReturnType<typeof vi.fn>;
 const mockRegs = getRegulationInfo as unknown as ReturnType<typeof vi.fn>;
 
 // ─── Minimal chainable fake for the drizzle client ───────────────────────────
@@ -80,7 +83,7 @@ function fakeDb(tableRows: Map<object, any[]>): FakeDb {
 }
 
 // The exact production seed bodies (kept in sync by the upgradeBody specs)
-const DAY_BEFORE_SEED = `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] I'll show you how to run %CITY% through my research tool live.[/IF_CITY_ONLY] Stay tuned for your join link.`;
+const DAY_BEFORE_SEED = `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`;
 
 const VEGAS_DEAL_ROW = {
   id: 7,
@@ -111,6 +114,7 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
       [newsletterDeals as object, [VEGAS_DEAL_ROW]],
       [regulationCache as object, [{ status: "allowed_with_permit", yesNoSummary: "Yes, short-term rentals are allowed in Las Vegas with a permit." }]],
       [personalizedLinks as object, []],
+      [sharedReports as object, [{ shareId: "vegasrep123", address: VEGAS_DEAL_ROW.address, reportType: "property" }]],
     ]));
   }
 
@@ -128,8 +132,13 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
     expect(p!.deal?.monthlyRent).toBe(1850);
     expect(p!.deal?.monthlyRevenue).toBe(4100);
     expect(p!.deal?.monthlyProfit).toBe(2100);
-    // A tracked tool link was minted for this lead's city
-    expect(inserts.some((i) => i.table === (personalizedLinks as object) && i.values.targetCity === "Las Vegas")).toBe(true);
+    // The deal resolves to the tool's own shared report, sent as a tracked
+    // short link — a public page, never the login-gated tool
+    expect(p!.dealReportShareId).toBe("vegasrep123");
+    expect(p!.dealShortLink).toMatch(/\/l\/[a-z0-9]+$/);
+    const linkInsert = inserts.find((i) => i.table === (personalizedLinks as object));
+    expect(linkInsert!.values.linkUrl).toContain("/report/vegasrep123");
+    expect(linkInsert!.values.targetCity).toBe("Las Vegas");
   });
 
   it("renders the exact day-before SMS a Vegas lead receives", async () => {
@@ -163,6 +172,10 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
     expect(email.html).toContain("$1,850");
     expect(email.html).toContain("$4,100");
     expect(email.html).toContain("allowed in Las Vegas with a permit");
+    // Primary link: the tool's own report (tracked); secondary: the Zillow listing
+    expect(email.html).toContain("See the full property report");
+    expect(email.html).toContain("View the live listing on Zillow");
+    expect(email.html).toContain(VEGAS_DEAL_ROW.sourceUrl);
   });
 });
 
@@ -184,9 +197,37 @@ describe("persona B — opt-in city, no deal yet, failed regulation research", (
 
     const sms = renderMessageTemplate(DAY_BEFORE_SEED, { ...buildPersonalizationVars(p), name: "Sam" });
     expect(sms).toBe(
-      "Reminder from Inayah: your Airbnb Masterclass is tomorrow. I'll show you how to run Butte through my research tool live. Stay tuned for your join link.",
+      "Reminder from Inayah: your Airbnb Masterclass is tomorrow. The system I teach finds opportunities in markets like Butte — you'll see it start to finish. Stay tuned for your join link.",
     );
     expect(sms).not.toContain("$");
+  });
+});
+
+describe("persona D — lead texted us a different city earlier", () => {
+  it("their texted city is durable: it beats HubSpot on every recompute", async () => {
+    // HubSpot says Las Vegas, but the lead replied 'Phoenix' to the
+    // engagement question last week — that choice must never revert
+    mockHubspot.mockResolvedValue({ hubspotId: "101", city: "LAS VEGAS", state: "NV", postalCode: "89135" });
+    const { db } = fakeDb(new Map<object, any[]>([
+      [webinarRegistrants as object, [{
+        id: 1,
+        metadata: { engagement: { cityOverride: { city: "Phoenix", state: "AZ" } } },
+      }]],
+      [analysisReports as object, []],
+      [emailOptins as object, []],
+      [newsletterCities as object, []],
+      [newsletterDeals as object, []],
+      [regulationCache as object, []],
+      [personalizedLinks as object, []],
+      [sharedReports as object, []],
+    ]));
+
+    const p = await computePersonalizationForEmail(db as any, "lead-d@example.com");
+    expect(p!.city).toBe("Phoenix");
+    expect(p!.state).toBe("AZ");
+    expect(p!.source).toBe("engagement");
+    expect(p!.timezone).toBe("America/Phoenix");
+    expect(mockHubspot).not.toHaveBeenCalled();
   });
 });
 
@@ -220,17 +261,26 @@ describe("live city scan — automating step 4 for a dry city", () => {
       totalCount: 3, currentPage: 1, totalPages: 1,
     });
     mockAnalyze.mockResolvedValue({
-      address: "12 Fit St, Boise, ID 83702", city: "Boise", state: "ID", zipCode: "83702",
-      bedrooms: 3, bathrooms: 2, monthlyRent: 1700, propertyType: "house",
-      sourceUrl: "u2", sourcePlatform: "zillow", imageUrl: "",
-      projectedAnnualRevenue: 54000, projectedMonthlyRevenue: 4500, projectedAdr: 220,
-      projectedOccupancy: 0.62, monthlyProfit: 1900, annualProfit: 22800, profitMargin: 0.42,
-      breakEvenOccupancy: 0.26, dealScore: 78, dealGrade: "B", topComps: [], analyzedAt: new Date(),
+      deal: {
+        address: "12 Fit St, Boise, ID 83702", city: "Boise", state: "ID", zipCode: "83702",
+        bedrooms: 3, bathrooms: 2, monthlyRent: 1700, propertyType: "house",
+        sourceUrl: "u2", sourcePlatform: "zillow", imageUrl: "",
+        projectedAnnualRevenue: 54000, projectedMonthlyRevenue: 4500, projectedAdr: 220,
+        projectedOccupancy: 0.62, monthlyProfit: 1900, annualProfit: 22800, profitMargin: 0.42,
+        breakEvenOccupancy: 0.26, dealScore: 78, dealGrade: "B", topComps: [], analyzedAt: new Date(),
+      },
+      estimate: {
+        property: { address: "12 Fit St, Boise, ID 83702", zipcode: "83702", bedrooms: 3, bathrooms: 2, accommodates: 8 },
+        estimates: { annual_revenue: 54000, annual_revenue_low: 43000, annual_revenue_high: 65000, average_daily_rate: 220, occupancy_rate: 62, currency: "USD", currency_symbol: "$" },
+        monthly_forecast: [],
+        comps: [],
+      },
     });
 
     const { db, inserts } = fakeDb(new Map<object, any[]>([
       [newsletterCities as object, [{ id: 9, city: "Boise", state: "ID", lastDealScan: null }]],
       [newsletterDeals as object, []],
+      [sharedReports as object, []],
     ]));
 
     const result = await ensureCityData(db as any, "Boise", "ID");
@@ -248,5 +298,14 @@ describe("live city scan — automating step 4 for a dry city", () => {
     expect(dealInsert!.values.projectedProfit).toBe(22800);
     expect(dealInsert!.values.projectedRevenue).toBe(54000);
     expect(dealInsert!.values.status).toBe("active");
+
+    // The tool's shareable report was built from the same estimate — no extra
+    // API call — and it carries the public listing URL inside
+    const shareInsert = inserts.find((i) => i.table === (sharedReports as object));
+    expect(shareInsert!.values.reportType).toBe("property");
+    const reportData = JSON.parse(shareInsert!.values.reportData);
+    expect(reportData.property.listingUrl).toBe("u2");
+    expect(reportData.revenue_estimate.annual).toBe(54000);
+    expect(result.reportsCreated).toBeGreaterThanOrEqual(1);
   });
 });

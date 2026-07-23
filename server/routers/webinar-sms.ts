@@ -57,6 +57,8 @@ import {
   runLiveCityScansForWebinar,
 } from "../webinar-personalization";
 import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
+import { processInboundReplies, sendEngagementQuestions } from "../sms-engagement";
+import { maybeSendDailyDigest } from "../webinar-digest";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -731,7 +733,7 @@ export const webinarSmsRouter = router({
 
         (async () => {
           try {
-            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
+            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
             const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
               .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
             if (tplRow?.settingValue) tpl = tplRow.settingValue;
@@ -1493,7 +1495,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -2089,14 +2091,14 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 2,
-          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] I'll show you how to run %CITY% through my research tool live.[/IF_CITY_ONLY] Stay tuned for your join link.`,
+          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 3,
-          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] I'm bringing the numbers on a unit near %CITY% that could clear %DEAL_PROFIT%/mo.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
+          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] A unit near %CITY% is showing numbers that could clear %DEAL_PROFIT%/mo — tonight you'll see the exact system people use to get units like it.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
@@ -2110,7 +2112,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
-          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] I'll also run %CITY% through the research tool live.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
+          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] The same system spots opportunities near %CITY% — you'll see how it works tonight.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
@@ -4049,6 +4051,17 @@ async function runWebinarImportInner(
   runLiveCityScansForWebinar(db, webinarId).catch((err: any) =>
     console.error(`[Personalization] Live city scans failed for webinar ${webinarId}:`, err.message));
 
+  // Two-way engagement: ask recently-confirmed leads the one question, and
+  // handle any replies that came in since the last cycle (poll-based).
+  sendEngagementQuestions(db, webinarId).catch((err: any) =>
+    console.error(`[Engagement] Question send failed for webinar ${webinarId}:`, err.message));
+  processInboundReplies(db).catch((err: any) =>
+    console.error(`[Engagement] Inbound processing failed:`, err.message));
+
+  // Once a day: coverage/engagement/hot-leads digest to the owner
+  maybeSendDailyDigest(db).catch((err: any) =>
+    console.error(`[Digest] Daily digest failed:`, err.message));
+
   // Upgrade stock sequence copy already scheduled in production to the current
   // tokenized defaults (exact-match only — customized copy is never touched)
   try {
@@ -4102,7 +4115,7 @@ async function runWebinarImportInner(
       // SELECT the same pending rows before either marked them.
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
-      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
+      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
         .from(webinarSmsSettings)
         .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))
