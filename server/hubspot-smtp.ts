@@ -251,9 +251,9 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "The 90\u2011Day Launch Checklist",
             "A surprise bonus training I normally reserve for paid clients",
           ])}
-          ${propertyModule(data.personalization)}
           ${p("Block the time on your calendar now. I'll text and email your private join link 15 minutes before we go live.")}
           ${ctaButton("Add to Calendar", joinLink)}
+          ${p("P.S. Keep an eye on your texts \u2014 I'm going to ask you something quick, and if you're in, I'll send you what my scanner found near you.")}
           ${signoff("Talk soon")}
         `, "In 90 minutes I'll show you how busy professionals add $2K\u2013$5K/mo with Airbnb..."),
       };

@@ -57,6 +57,7 @@ import {
   runLiveCityScansForWebinar,
 } from "../webinar-personalization";
 import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
+import { processInboundReplies, sendEngagementQuestions } from "../sms-engagement";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -731,7 +732,7 @@ export const webinarSmsRouter = router({
 
         (async () => {
           try {
-            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] My scanner already flagged a property near %CITY% with Airbnb numbers worth seeing — I'll text them over before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
+            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
             const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
               .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
             if (tplRow?.settingValue) tpl = tplRow.settingValue;
@@ -1493,7 +1494,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] My scanner already flagged a property near %CITY% with Airbnb numbers worth seeing — I'll text them over before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -4049,6 +4050,13 @@ async function runWebinarImportInner(
   runLiveCityScansForWebinar(db, webinarId).catch((err: any) =>
     console.error(`[Personalization] Live city scans failed for webinar ${webinarId}:`, err.message));
 
+  // Two-way engagement: ask recently-confirmed leads the one question, and
+  // handle any replies that came in since the last cycle (poll-based).
+  sendEngagementQuestions(db, webinarId).catch((err: any) =>
+    console.error(`[Engagement] Question send failed for webinar ${webinarId}:`, err.message));
+  processInboundReplies(db).catch((err: any) =>
+    console.error(`[Engagement] Inbound processing failed:`, err.message));
+
   // Upgrade stock sequence copy already scheduled in production to the current
   // tokenized defaults (exact-match only — customized copy is never touched)
   try {
@@ -4102,7 +4110,7 @@ async function runWebinarImportInner(
       // SELECT the same pending rows before either marked them.
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
-      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] My scanner already flagged a property near %CITY% with Airbnb numbers worth seeing — I'll text them over before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
+      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
         .from(webinarSmsSettings)
         .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))

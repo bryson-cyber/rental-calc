@@ -135,6 +135,27 @@ After 1–2 import cycles (≈6 min):
    "Near {city}" card renders for the lead with a deal and is absent (not
    broken) for the lead without one.
 
+## Stage 5 — two-way engagement flow (owner phone only)
+
+1. Kill switch exists: `webinar_sms_settings` key `sms_engagement` = `off`
+   disables both the question and reply handling. Leave it ON for this stage.
+2. Register the owner's phone as a manual test registrant. Expect two texts:
+   the clean confirmation, then ~2–5 minutes later (next import cycles) the
+   engagement question ("...Reply YES and I'll send you what my scanner found
+   near you. Or text me the city you're curious about.").
+3. Reply `YES` → within ~3 minutes (next poll cycle) expect the deal message
+   for the city on file, with the `/l/<code>` report link.
+4. From a second owner phone (fresh registrant), reply with a different city
+   (e.g. `what about phoenix az`) → expect that city scanned and its numbers
+   sent back; the registrant's payload city should switch to the texted city
+   (`JSON_EXTRACT(metadata,'$.engagement.cityOverride')`).
+5. Reply a third time and then a fourth — after 3 automated replies the system
+   must go silent (loop cap).
+6. Safety checks: leads confirmed more than 48h before deploy are never asked;
+   the inbound watermark (`engagement_last_inbound_ts`) starts at deploy time
+   so historical inbox traffic is never touched; `STOP`-like replies set
+   `optedOut` and get no response.
+
 ## Success criteria
 
 - Stage 1: ≥1 enrichment log per cycle; pending stock copy tokenized; located

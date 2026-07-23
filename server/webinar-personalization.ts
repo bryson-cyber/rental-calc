@@ -65,8 +65,9 @@ export interface RegistrantPersonalization {
    * Where the location came from. Webinar leads are an unaware audience — they
    * haven't touched the tool — so HubSpot (opt-in / soft-pull address) leads,
    * and a tool run is only a bonus signal when it happens to exist.
+   * "engagement" = the lead texted us a city themselves (strongest signal).
    */
-  source: "hubspot" | "email_optin" | "analysis_report";
+  source: "hubspot" | "email_optin" | "analysis_report" | "engagement";
   city: string;
   state: string;
   marketName?: string;
@@ -210,20 +211,26 @@ function candidateRegulationKeys(city: string, state: string): string[] {
 export async function computePersonalizationForEmail(
   db: DbClient,
   email: string,
+  opts: { overrideCity?: { city: string; state: string } } = {},
 ): Promise<RegistrantPersonalization | null> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return null;
 
   // 1) Location. This is an unaware audience: they opted into a webinar and
-  //    have never used the tool. Their address comes from the opt-in /
-  //    soft-pull data synced to HubSpot (Data Perfection fields), then local
-  //    opt-in rows, and only last from a tool run of their own.
+  //    have never used the tool. A city the lead texted us themselves beats
+  //    everything; otherwise the opt-in / soft-pull address synced to HubSpot
+  //    (Data Perfection fields), then local opt-in rows, and only last a tool
+  //    run of their own.
   let city = "";
   let state = "";
   let source: RegistrantPersonalization["source"] = "hubspot";
 
-  const hubspotContact = await getContactLocationByEmail(normalizedEmail).catch(() => null);
-  if (hubspotContact?.city && hubspotContact.state) {
+  const hubspotContact = opts.overrideCity ? null : await getContactLocationByEmail(normalizedEmail).catch(() => null);
+  if (opts.overrideCity) {
+    city = opts.overrideCity.city;
+    state = opts.overrideCity.state;
+    source = "engagement";
+  } else if (hubspotContact?.city && hubspotContact.state) {
     city = hubspotContact.city;
     state = hubspotContact.state;
   } else {

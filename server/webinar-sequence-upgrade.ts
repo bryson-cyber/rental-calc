@@ -58,13 +58,12 @@ const SEQUENCE_UPGRADES: UpgradeSpec[] = [
   },
 ];
 
-const CONFIRMATION_TARGET = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] My scanner already flagged a property near %CITY% with Airbnb numbers worth seeing — I'll text them over before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
+// The confirmation stays CLEAN — one job. The engagement question (separate
+// text, see sms-engagement.ts) carries the scanner hook. v1's deal line is
+// rolled back wherever it reached production.
+const CONFIRMATION_TARGET = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
 
 const CONFIRMATION_UPGRADES: UpgradeSpec[] = [
-  {
-    old: `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
-    new: CONFIRMATION_TARGET,
-  },
   {
     old: `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
     new: CONFIRMATION_TARGET,
