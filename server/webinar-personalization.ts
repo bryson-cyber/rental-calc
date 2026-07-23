@@ -550,24 +550,12 @@ export async function ensureCityData(
     if (!cityRow) return { newDeals, scanned, reportsCreated };
   }
 
-  // Fresh deals already on file → nothing to scan, but make sure the top deal
-  // has its shareable report (costs ≤1 rentalizer call, once per property)
-  const freshCutoff = new Date(Date.now() - DEAL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000);
-  const [freshDeal] = await db
-    .select()
-    .from(newsletterDeals)
-    .where(and(
-      eq(newsletterDeals.city, city),
-      eq(newsletterDeals.state, state),
-      eq(newsletterDeals.status, "active"),
-      gte(newsletterDeals.discoveredAt, freshCutoff),
-    ))
-    .orderBy(desc(newsletterDeals.dealScore))
-    .limit(1);
-  if (freshDeal) {
-    // Backfill the report for the deal messages actually quote (shared
-    // selection), which is not necessarily the top-scored fresh deal
-    const target = pickMessageDeal(await getTopDealsForCity(db, city, state)) ?? freshDeal;
+  // Backfill the report for the deal messages actually quote (shared
+  // selection over the full message window, not just the freshness window) —
+  // costs ≤1 rentalizer call, once per property
+  const backfillMessageDealReport = async () => {
+    const target = pickMessageDeal(await getTopDealsForCity(db, city, state));
+    if (!target) return;
     try {
       const share = await ensureShareReportForDeal(db, {
         address: target.address,
@@ -584,12 +572,34 @@ export async function ensureCityData(
     } catch (err: any) {
       console.warn(`[Personalization] Share-report backfill failed for ${target.address}:`, err.message);
     }
+  };
+
+  // Fresh deals already on file → nothing to scan, just ensure the report
+  const freshCutoff = new Date(Date.now() - DEAL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000);
+  const [freshDeal] = await db
+    .select()
+    .from(newsletterDeals)
+    .where(and(
+      eq(newsletterDeals.city, city),
+      eq(newsletterDeals.state, state),
+      eq(newsletterDeals.status, "active"),
+      gte(newsletterDeals.discoveredAt, freshCutoff),
+    ))
+    .orderBy(desc(newsletterDeals.dealScore))
+    .limit(1);
+  if (freshDeal) {
+    await backfillMessageDealReport();
     return { newDeals, scanned, reportsCreated };
   }
 
-  // A recent dry scan means this city genuinely has nothing right now — wait
+  // A recent dry scan means this city genuinely has nothing right now — wait.
+  // An older (≤30d) deal may still back messages, so its report is ensured
+  // even while the scan itself is gated.
   const retryCutoff = new Date(Date.now() - CITY_SCAN_RETRY_HOURS * 60 * 60 * 1000);
-  if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) return { newDeals, scanned, reportsCreated };
+  if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) {
+    await backfillMessageDealReport();
+    return { newDeals, scanned, reportsCreated };
+  }
 
   // Claim before scanning so concurrent cron cycles don't double-spend credits
   await db
@@ -684,6 +694,9 @@ export async function ensureCityData(
       console.warn(`[Personalization] Deal analysis failed for ${listing.address}:`, err.message);
     }
   }
+
+  // Dry scan but an older (≤30d) deal on file → still ensure its report
+  if (newDeals === 0) await backfillMessageDealReport();
 
   console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s), ${reportsCreated} report(s) from ${candidates.length} listing(s)`);
   return { newDeals, scanned, reportsCreated };
