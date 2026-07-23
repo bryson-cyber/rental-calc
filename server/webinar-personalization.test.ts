@@ -8,8 +8,8 @@ import {
 } from "./webinar-personalization";
 
 const fullPayload: RegistrantPersonalization = {
-  version: 1,
-  source: "email_optin",
+  version: 2,
+  source: "hubspot",
   city: "San Diego",
   state: "CA",
   marketName: "San Diego, CA",
@@ -54,6 +54,16 @@ describe("buildPersonalizationVars", () => {
     expect(vars.has_city_only).toBe("1");
     // Fallbacks stay generic, not fabricated local figures
     expect(vars.deal_rent).toBe("about $2,000");
+  });
+
+  it("never claims a weak-profit deal", () => {
+    const weak = {
+      ...fullPayload,
+      deal: { ...fullPayload.deal!, monthlyProfit: 220 },
+    };
+    const vars = buildPersonalizationVars(weak);
+    expect(vars.has_deal).toBe("0");
+    expect(vars.has_city_only).toBe("1");
   });
 });
 

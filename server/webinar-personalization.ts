@@ -19,7 +19,7 @@
  * leaks raw into a message — copy must never rely on fallbacks to make claims.
  */
 
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 import {
   analysisReports,
   emailOptins,
@@ -28,17 +28,39 @@ import {
   personalizedLinks,
   regulationCache,
   webinarRegistrants,
+  webinarSmsSettings,
 } from "../drizzle/schema";
 import { getDb } from "./db";
+import { getContactLocationByEmail } from "./hubspot";
+import { searchZillowRentals } from "./hasdata-zillow";
+import { analyzePropertyForArbitrage } from "./newsletter-deal-finder";
+import { getRegulationInfo } from "./regulation-tracker";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
-export const PERSONALIZATION_VERSION = 1;
+export const PERSONALIZATION_VERSION = 2;
+
+/** Deal claims below this monthly profit stay out of messages — a "$200/mo" hook is worse than none */
+const MIN_CLAIMABLE_MONTHLY_PROFIT = 500;
+/** Deals older than this never back a message claim */
+const DEAL_MAX_AGE_DAYS = 30;
+/** Live-scan controls (webinar_sms_settings key; any value but "off" enables) */
+const LIVE_SCAN_SETTING_KEY = "personalization_live_scan";
+const MAX_LIVE_CITY_SCANS_PER_RUN = 2;
+const MAX_LISTINGS_TO_ANALYZE = 3;
+const CITY_SCAN_RETRY_HOURS = 24;
+const DEAL_FRESHNESS_DAYS = 7;
+/** Re-check leads that still have no deal after this long (bounds HubSpot lookups) */
+const NO_DEAL_RECOMPUTE_HOURS = 24;
 
 export interface RegistrantPersonalization {
   version: number;
-  /** Where the location came from: their own tool run beats their opt-in city */
-  source: "analysis_report" | "email_optin";
+  /**
+   * Where the location came from. Webinar leads are an unaware audience — they
+   * haven't touched the tool — so HubSpot (opt-in / soft-pull address) leads,
+   * and a tool run is only a bonus signal when it happens to exist.
+   */
+  source: "hubspot" | "email_optin" | "analysis_report";
   city: string;
   state: string;
   marketName?: string;
@@ -128,13 +150,33 @@ export async function computePersonalizationForEmail(
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return null;
 
-  // 1) Location: their own property run first (it's the market they researched),
-  //    then their stated opt-in city.
+  // 1) Location. This is an unaware audience: they opted into a webinar and
+  //    have never used the tool. Their address comes from the opt-in /
+  //    soft-pull data synced to HubSpot (Data Perfection fields), then local
+  //    opt-in rows, and only last from a tool run of their own.
   let city = "";
   let state = "";
-  let source: RegistrantPersonalization["source"] = "email_optin";
-  let ownReport: RegistrantPersonalization["ownReport"];
+  let source: RegistrantPersonalization["source"] = "hubspot";
 
+  const hubspotContact = await getContactLocationByEmail(normalizedEmail).catch(() => null);
+  if (hubspotContact?.city && hubspotContact.state) {
+    city = hubspotContact.city;
+    state = hubspotContact.state;
+  } else {
+    const [optin] = await db
+      .select({ city: emailOptins.city, state: emailOptins.state })
+      .from(emailOptins)
+      .where(and(eq(emailOptins.email, normalizedEmail), sql`${emailOptins.city} IS NOT NULL AND ${emailOptins.city} != ''`))
+      .orderBy(desc(emailOptins.createdAt))
+      .limit(1);
+    if (optin?.city && optin.state) {
+      city = optin.city;
+      state = optin.state;
+      source = "email_optin";
+    }
+  }
+
+  // Their own tool run: bonus signal, and location of last resort
   const [report] = await db
     .select({
       city: analysisReports.city,
@@ -148,25 +190,17 @@ export async function computePersonalizationForEmail(
     .orderBy(desc(analysisReports.createdAt))
     .limit(1);
 
+  let ownReport: RegistrantPersonalization["ownReport"];
   if (report?.city && report.state) {
-    city = report.city;
-    state = report.state;
-    source = "analysis_report";
     ownReport = {
       monthlyRevenue: report.annualRevenueRealistic ? Math.round(report.annualRevenueRealistic / 12) : undefined,
       adr: report.averageDailyRate ?? undefined,
       verdict: report.verdict ?? undefined,
     };
-  } else {
-    const [optin] = await db
-      .select({ city: emailOptins.city, state: emailOptins.state })
-      .from(emailOptins)
-      .where(and(eq(emailOptins.email, normalizedEmail), sql`${emailOptins.city} IS NOT NULL AND ${emailOptins.city} != ''`))
-      .orderBy(desc(emailOptins.createdAt))
-      .limit(1);
-    if (optin?.city && optin.state) {
-      city = optin.city;
-      state = optin.state;
+    if (!city) {
+      city = report.city;
+      state = report.state!;
+      source = "analysis_report";
     }
   }
 
@@ -181,14 +215,19 @@ export async function computePersonalizationForEmail(
     .where(and(eq(newsletterCities.city, city), eq(newsletterCities.state, state)))
     .limit(1);
 
-  // 3) Top active scanned deal for their city (figures stored annually; convert)
-  const dealConditions = cityRow
-    ? eq(newsletterDeals.cityId, cityRow.id)
-    : and(eq(newsletterDeals.city, city), eq(newsletterDeals.state, state));
+  // 3) Top active scanned deal for their city (figures stored annually; convert).
+  //    Match by city/state, not cityId — some writers (hasdata-zillow cacheDeal)
+  //    store cityId 0. Deals older than DEAL_MAX_AGE_DAYS never back a claim.
+  const dealCutoff = new Date(Date.now() - DEAL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
   const deals = await db
     .select()
     .from(newsletterDeals)
-    .where(and(dealConditions, eq(newsletterDeals.status, "active")))
+    .where(and(
+      eq(newsletterDeals.city, city),
+      eq(newsletterDeals.state, state),
+      eq(newsletterDeals.status, "active"),
+      gte(newsletterDeals.discoveredAt, dealCutoff),
+    ))
     .orderBy(desc(newsletterDeals.dealScore))
     .limit(3);
 
@@ -204,7 +243,8 @@ export async function computePersonalizationForEmail(
       }
     : undefined;
 
-  // 4) Regulation status, cache-only (never triggers a live regulation research)
+  // 4) Regulation status from cache. "unknown" rows are failed research
+  //    (production has such rows, e.g. Miami) — never message their boilerplate.
   let regStatus: string | undefined;
   let regLine: string | undefined;
   const regKeys = candidateRegulationKeys(city, state);
@@ -213,7 +253,7 @@ export async function computePersonalizationForEmail(
     .from(regulationCache)
     .where(and(inArray(regulationCache.locationKey, regKeys), gt(regulationCache.expiresAt, new Date())))
     .limit(1);
-  if (reg) {
+  if (reg && reg.status !== "unknown") {
     regStatus = reg.status;
     regLine = reg.yesNoSummary ?? undefined;
   }
@@ -272,6 +312,149 @@ export async function computePersonalizationForEmail(
   };
 }
 
+// ─── Live city data generation ("step 4" automated per lead city) ────────────
+
+async function isLiveScanEnabled(db: DbClient): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ settingValue: webinarSmsSettings.settingValue })
+      .from(webinarSmsSettings)
+      .where(eq(webinarSmsSettings.settingKey, LIVE_SCAN_SETTING_KEY))
+      .limit(1);
+    return row?.settingValue !== "off";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Make sure a lead's city has data to message with, generating it the same way
+ * the tool's Step 4 / validate flow does: Zillow rentals via HasData, revenue
+ * projections via the rentalizer (BNB Calc), regulation research via the
+ * regulation tracker. Results persist in newsletter_deals / newsletter_cities /
+ * regulation_cache, so each city is scanned once and shared by every lead there.
+ *
+ * Costs per dry city: 1 HasData listing call (5 credits), up to
+ * MAX_LISTINGS_TO_ANALYZE rentalizer calls, and at most one regulation research
+ * per 7 days (the tracker caches internally, including failures).
+ */
+export async function ensureCityData(
+  db: DbClient,
+  city: string,
+  state: string,
+): Promise<{ newDeals: number; scanned: boolean }> {
+  let newDeals = 0;
+  let scanned = false;
+
+  // Regulation: cached-or-research, self-caching, independent of the deal scan
+  try {
+    await getRegulationInfo(city, state);
+  } catch (err: any) {
+    console.warn(`[Personalization] Regulation lookup failed for ${city}, ${state}:`, err.message);
+  }
+
+  // City row (also claims the scan slot via lastDealScan)
+  let [cityRow] = await db
+    .select()
+    .from(newsletterCities)
+    .where(and(eq(newsletterCities.city, city), eq(newsletterCities.state, state)))
+    .limit(1);
+  if (!cityRow) {
+    await db.insert(newsletterCities).values({ city, state, contactCount: 0 }).catch(() => {});
+    [cityRow] = await db
+      .select()
+      .from(newsletterCities)
+      .where(and(eq(newsletterCities.city, city), eq(newsletterCities.state, state)))
+      .limit(1);
+    if (!cityRow) return { newDeals, scanned };
+  }
+
+  // Fresh deals already on file → nothing to generate
+  const freshCutoff = new Date(Date.now() - DEAL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000);
+  const [freshDeal] = await db
+    .select({ id: newsletterDeals.id })
+    .from(newsletterDeals)
+    .where(and(
+      eq(newsletterDeals.city, city),
+      eq(newsletterDeals.state, state),
+      eq(newsletterDeals.status, "active"),
+      gte(newsletterDeals.discoveredAt, freshCutoff),
+    ))
+    .limit(1);
+  if (freshDeal) return { newDeals, scanned };
+
+  // A recent dry scan means this city genuinely has nothing right now — wait
+  const retryCutoff = new Date(Date.now() - CITY_SCAN_RETRY_HOURS * 60 * 60 * 1000);
+  if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) return { newDeals, scanned };
+
+  // Claim before scanning so concurrent cron cycles don't double-spend credits
+  await db
+    .update(newsletterCities)
+    .set({ lastDealScan: new Date() })
+    .where(eq(newsletterCities.id, cityRow.id));
+
+  scanned = true;
+  console.log(`[Personalization] Live scan for ${city}, ${state} (webinar lead city with no deals)`);
+
+  const search = await searchZillowRentals({ city, state, minBeds: 1, maxBeds: 4 });
+  if (!search.success || search.listings.length === 0) {
+    console.log(`[Personalization] No rental listings found for ${city}, ${state}`);
+    return { newDeals, scanned };
+  }
+
+  const candidates = search.listings
+    .filter((l) => l.price >= 500 && l.price <= 6000 && l.bedrooms > 0)
+    .slice(0, MAX_LISTINGS_TO_ANALYZE);
+
+  for (const listing of candidates) {
+    try {
+      const deal = await analyzePropertyForArbitrage({
+        address: listing.address,
+        city,
+        state,
+        zipCode: listing.zipcode || undefined,
+        bedrooms: listing.bedrooms,
+        bathrooms: listing.bathrooms || Math.max(1, Math.ceil(listing.bedrooms * 0.75)),
+        monthlyRent: listing.price,
+        propertyType: listing.homeType || undefined,
+        sourceUrl: listing.detailUrl,
+        sourcePlatform: "zillow",
+        imageUrl: listing.imgSrc || undefined,
+      });
+      if (!deal) continue;
+
+      await db.insert(newsletterDeals).values({
+        cityId: cityRow.id,
+        city,
+        state,
+        zipCode: deal.zipCode || undefined,
+        address: deal.address,
+        bedrooms: deal.bedrooms,
+        bathrooms: String(deal.bathrooms),
+        monthlyRent: deal.monthlyRent,
+        propertyType: deal.propertyType,
+        sourceUrl: deal.sourceUrl || undefined,
+        sourcePlatform: "zillow",
+        imageUrl: deal.imageUrl || undefined,
+        projectedRevenue: Math.round(deal.projectedAnnualRevenue),
+        projectedAdr: Math.round(deal.projectedAdr),
+        projectedOccupancy: deal.projectedOccupancy.toFixed(2),
+        projectedProfit: Math.round(deal.annualProfit),
+        profitMargin: (deal.profitMargin * 100).toFixed(2),
+        dealScore: deal.dealScore,
+        status: "active",
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      });
+      newDeals++;
+    } catch (err: any) {
+      console.warn(`[Personalization] Deal analysis failed for ${listing.address}:`, err.message);
+    }
+  }
+
+  console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s) from ${candidates.length} listing(s)`);
+  return { newDeals, scanned };
+}
+
 // ─── Registrant enrichment (called from the import cron) ─────────────────────
 
 /**
@@ -301,10 +484,15 @@ export async function enrichWebinarRegistrants(
     .from(webinarRegistrants)
     .where(and(...conditions));
 
+  const recomputeCutoff = Date.now() - NO_DEAL_RECOMPUTE_HOURS * 60 * 60 * 1000;
   const pending = rows
     .filter((r) => {
       const p = (r.metadata as any)?.personalization;
-      return !p || p.version !== PERSONALIZATION_VERSION;
+      if (!p || p.version !== PERSONALIZATION_VERSION) return true;
+      // Leads still missing a deal get periodically re-checked so a later city
+      // scan (or fresh HubSpot data) upgrades them without manual intervention
+      const stale = !p.computedAt || new Date(p.computedAt).getTime() < recomputeCutoff;
+      return p.dealCount === 0 && stale;
     })
     .slice(0, limit);
 
@@ -337,6 +525,78 @@ export async function enrichWebinarRegistrants(
     console.log(`[Personalization] webinar ${webinarId}: ${enriched} enriched, ${noLocation} without location, ${pending.length} scanned`);
   }
   return { scanned: pending.length, enriched, noLocation };
+}
+
+/**
+ * Phase 2, run detached from the import cron: generate data for lead cities
+ * that came up empty. The audience is unaware — nobody is going to run the
+ * tool themselves, so the system runs it for them. Slow work (HasData +
+ * rentalizer + regulation research) lives here so confirmation sends are never
+ * blocked. Bounded per call; the 3-minute cron drains the backlog.
+ */
+export async function runLiveCityScansForWebinar(
+  db: DbClient,
+  webinarId: string,
+  opts: { maxCities?: number } = {},
+): Promise<{ citiesScanned: number; leadsUpgraded: number }> {
+  const maxCities = opts.maxCities ?? MAX_LIVE_CITY_SCANS_PER_RUN;
+  let citiesScanned = 0;
+  let leadsUpgraded = 0;
+
+  if (!(await isLiveScanEnabled(db))) return { citiesScanned, leadsUpgraded };
+
+  const rows = await db
+    .select({
+      id: webinarRegistrants.id,
+      email: webinarRegistrants.email,
+      metadata: webinarRegistrants.metadata,
+    })
+    .from(webinarRegistrants)
+    .where(and(
+      eq(webinarRegistrants.webinarId, webinarId),
+      sql`${webinarRegistrants.email} IS NOT NULL AND ${webinarRegistrants.email} != ''`,
+    ));
+
+  const dryCities = new Map<string, { city: string; state: string; emails: Set<string>; rows: typeof rows }>();
+  for (const row of rows) {
+    const p = personalizationFromMetadata(row.metadata);
+    if (!p) continue;
+    if (p.dealCount > 0 && p.regStatus) continue;
+    const key = `${p.city}|${p.state}`;
+    if (!dryCities.has(key)) dryCities.set(key, { city: p.city, state: p.state, emails: new Set(), rows: [] });
+    dryCities.get(key)!.emails.add(row.email!.trim().toLowerCase());
+    dryCities.get(key)!.rows.push(row);
+  }
+
+  for (const { city, state, emails, rows: cityRows } of Array.from(dryCities.values())) {
+    if (citiesScanned >= maxCities) break;
+    try {
+      const { newDeals, scanned } = await ensureCityData(db, city, state);
+      if (scanned) citiesScanned++;
+      if (newDeals === 0 && !scanned) continue;
+      // Upgrade every lead in that city with the fresh data
+      const upgradedByEmail = new Map<string, RegistrantPersonalization | null>();
+      for (const email of Array.from(emails)) {
+        upgradedByEmail.set(email, await computePersonalizationForEmail(db, email));
+      }
+      for (const row of cityRows) {
+        const upgraded = upgradedByEmail.get(row.email!.trim().toLowerCase());
+        if (!upgraded) continue;
+        await db
+          .update(webinarRegistrants)
+          .set({ metadata: { ...((row.metadata as Record<string, unknown>) ?? {}), personalization: upgraded } })
+          .where(eq(webinarRegistrants.id, row.id));
+        leadsUpgraded++;
+      }
+    } catch (err: any) {
+      console.error(`[Personalization] Live scan failed for ${city}, ${state}:`, err.message);
+    }
+  }
+
+  if (citiesScanned > 0 || leadsUpgraded > 0) {
+    console.log(`[Personalization] webinar ${webinarId}: ${citiesScanned} live city scan(s), ${leadsUpgraded} lead(s) upgraded`);
+  }
+  return { citiesScanned, leadsUpgraded };
 }
 
 // ─── Message token rendering ─────────────────────────────────────────────────
@@ -378,8 +638,10 @@ export function buildPersonalizationVars(p: RegistrantPersonalization | null | u
   const rent = fmtMoney(p.deal?.monthlyRent);
   const revenue = fmtMoney(p.deal?.monthlyRevenue);
   const profit = fmtMoney(p.deal?.monthlyProfit);
-  // A deal is only claimable when we can state real numbers for it
-  if (p.deal && rent && (revenue || profit)) {
+  // A deal is only claimable when we can state real numbers for it, and a weak
+  // profit figure makes a worse hook than no deal line at all
+  const profitStrongEnough = p.deal?.monthlyProfit == null || p.deal.monthlyProfit >= MIN_CLAIMABLE_MONTHLY_PROFIT;
+  if (p.deal && rent && (revenue || profit) && profitStrongEnough) {
     vars.has_deal = "1";
     vars.deal_rent = rent;
     if (revenue) vars.deal_revenue = revenue;
@@ -439,7 +701,8 @@ export function buildEmailPersonalization(
   const rent = fmtMoney(p.deal?.monthlyRent);
   const revenue = fmtMoney(p.deal?.monthlyRevenue);
   const profit = fmtMoney(p.deal?.monthlyProfit);
-  const hasDeal = Boolean(p.deal && rent && (revenue || profit));
+  const profitStrongEnough = p.deal?.monthlyProfit == null || p.deal.monthlyProfit >= MIN_CLAIMABLE_MONTHLY_PROFIT;
+  const hasDeal = Boolean(p.deal && rent && (revenue || profit) && profitStrongEnough);
   const ownRev = fmtMoney(p.ownReport?.monthlyRevenue);
   return {
     city: p.city,

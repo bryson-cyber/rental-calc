@@ -400,20 +400,36 @@ they ever get to class.
 
 ### Pipeline
 
+The audience is unaware — they opted into a webinar and have never touched the
+tool. So the system runs the tool for them: it looks up their city (from the
+opt-in / soft-pull address in HubSpot), then generates the Step 4 research —
+real rentable listings, revenue projections, regulations — for that city.
+
 ```
 Import cron (every 3 min, runWebinarImportInner)
-  → enrichWebinarRegistrants()          server/webinar-personalization.ts
-      location:  analysis_reports (their own tool run — strongest signal)
+  → Phase 1 (awaited, fast): enrichWebinarRegistrants()
+      location:  HubSpot contact (data_perfection__city/state/postal_code —
+                 populated from the opt-in / soft-pull flow; standard
+                 city/state/zip as backup)
                  else email_optins (their stated city)
+                 else analysis_reports (tool run — rare bonus, last resort)
       market:    newsletter_cities cached stats
-      deal:      top active newsletter_deals for their city (dealScore desc)
-      regs:      regulation_cache, fresh entries only
-      link:      personalized_links row (campaignType: webinar_deals),
-                 tool URL pre-targeted to their city + UTM
+      deal:      top active newsletter_deals for their city (dealScore desc,
+                 ≤30 days old; claims gated at ≥$500/mo profit)
+      regs:      regulation_cache (status "unknown" rows are ignored)
+      link:      personalized_links row, tool URL pre-targeted to their city
       stored in: webinar_registrants.metadata.personalization
   → confirmation SMS/email render with the payload (same cron cycle)
+  → Phase 2 (detached, slow): runLiveCityScansForWebinar()
+      for lead cities with no deals or no regulation data:
+        searchZillowRentals (HasData, 5 credits) → top 3 listings →
+        analyzePropertyForArbitrage (rentalizer/BNB Calc: revenue, profit
+        after rent + 20% opex, deal score) → newsletter_deals rows
+        getRegulationInfo (cached-or-live research, 7-day TTL)
+      then re-computes and upgrades every lead in that city
+      bounds: 2 cities per cycle, 24h retry on dry cities, kill switch via
+      webinar_sms_settings key personalization_live_scan = "off"
 Manual add (addRegistrant) computes the payload inline before the instant sends.
-DB-only lookups throughout — zero AirDNA quota usage.
 ```
 
 ### Message tokens

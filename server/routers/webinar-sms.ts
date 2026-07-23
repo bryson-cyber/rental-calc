@@ -54,6 +54,7 @@ import {
   computePersonalizationForEmail,
   enrichWebinarRegistrants,
   personalizationFromMetadata,
+  runLiveCityScansForWebinar,
 } from "../webinar-personalization";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
@@ -4055,13 +4056,17 @@ async function runWebinarImportInner(
   }
 
   // ═══ PERSONALIZATION ENRICHMENT ════════════════════════════════════════════
-  // Attach city/deal/regulation context to registrants (DB-only lookups, no
-  // external APIs). Runs before confirmation SMS so T0 messages can use tokens.
+  // Phase 1 (awaited, fast): attach city/deal/regulation context from HubSpot +
+  // local tables so confirmation SMS below can use tokens. Phase 2 (detached,
+  // slow): generate deals/regulations for lead cities that came up empty —
+  // Zillow listings + rentalizer + regulation research, bounded per cycle.
   try {
     await enrichWebinarRegistrants(db, webinarId);
   } catch (err: any) {
     console.error(`[Personalization] Enrichment failed for webinar ${webinarId}:`, err.message);
   }
+  runLiveCityScansForWebinar(db, webinarId).catch((err: any) =>
+    console.error(`[Personalization] Live city scans failed for webinar ${webinarId}:`, err.message));
 
   // ═══ AUTO-SEND REGISTRATION CONFIRMATION SMS ═══════════════════════════════
   // Send immediate confirmation SMS to all registrants who haven't received one yet.
