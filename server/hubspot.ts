@@ -555,6 +555,62 @@ export async function getContactsByCity(city: string, state?: string): Promise<N
 }
 
 /**
+ * Look up a single contact's location by email. This is the primary address
+ * source for webinar leads: Data Perfection fields are populated from the
+ * opt-in / soft-pull flow, with HubSpot's standard city/state/zip as backup.
+ * Returns null when HubSpot is unconfigured, the contact is unknown, or no
+ * city is on file — callers fall back to local tables.
+ */
+export async function getContactLocationByEmail(email: string): Promise<{
+  hubspotId: string;
+  city: string;
+  state: string;
+  postalCode: string;
+} | null> {
+  if (!HUBSPOT_API_KEY) return null;
+  try {
+    const res = await fetch(`${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/search`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filterGroups: [{
+          filters: [{ propertyName: 'email', operator: 'EQ', value: email }]
+        }],
+        properties: [
+          'email',
+          'city',
+          'state',
+          'zip',
+          DATA_PERFECTION_CITY,
+          DATA_PERFECTION_STATE,
+          DATA_PERFECTION_POSTAL_CODE
+        ],
+        limit: 1
+      })
+    });
+    if (!res.ok) {
+      console.warn(`[HubSpot] Contact lookup failed for ${email}: ${res.status}`);
+      return null;
+    }
+    const response: HubSpotSearchResponse = await res.json();
+    const contact = response.results?.[0];
+    if (!contact) return null;
+    const props = contact.properties || {};
+    const city = props[DATA_PERFECTION_CITY] || props.city || '';
+    const state = props[DATA_PERFECTION_STATE] || props.state || '';
+    const postalCode = props[DATA_PERFECTION_POSTAL_CODE] || props.zip || '';
+    if (!city || !state) return null;
+    return { hubspotId: contact.id, city, state, postalCode };
+  } catch (error) {
+    console.warn(`[HubSpot] Contact lookup error for ${email}:`, error);
+    return null;
+  }
+}
+
+/**
  * Group contacts by city
  * Returns a map of city -> contacts for batch processing
  */

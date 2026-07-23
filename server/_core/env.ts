@@ -30,4 +30,7 @@ export const ENV = {
   // Funding system (0percentfunded.com) partner API — server-side only
   fundingSystemUrl: process.env.FUNDING_SYSTEM_URL ?? "",
   fundingSystemApiKey: process.env.FUNDING_SYSTEM_API_KEY ?? "",
+  // Shared secret for /api/scheduled/* — lets any external scheduler drive the
+  // crons without a Manus session cookie. Empty = header auth disabled.
+  cronSecret: process.env.CRON_SECRET ?? "",
 };
