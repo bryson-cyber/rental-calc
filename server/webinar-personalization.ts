@@ -58,6 +58,15 @@ const CITY_SCAN_RETRY_HOURS = 24;
 const DEAL_FRESHNESS_DAYS = 7;
 /** Re-check leads that still have no deal after this long (bounds HubSpot lookups) */
 const NO_DEAL_RECOMPUTE_HOURS = 24;
+/**
+ * HubSpot protection: its search API allows ~4 req/s, and a big webinar list
+ * can hold thousands of unenriched rows. Lookups are spaced, capped per cycle,
+ * the cycle aborts on a 429, and a definitive "no city in HubSpot" is cached
+ * for 24h so the same misses aren't re-asked every 3 minutes.
+ */
+const HUBSPOT_LOOKUP_SPACING_MS = 250;
+const MAX_HUBSPOT_LOOKUPS_PER_CYCLE = 80;
+const LOCATION_MISS_RETRY_HOURS = 24;
 
 export interface RegistrantPersonalization {
   version: number;
@@ -245,7 +254,17 @@ export async function computePersonalizationForEmail(
     }
   }
 
-  const hubspotContact = override ? null : await getContactLocationByEmail(normalizedEmail).catch(() => null);
+  let hubspotContact: Awaited<ReturnType<typeof getContactLocationByEmail>> = null;
+  if (!override) {
+    try {
+      hubspotContact = await getContactLocationByEmail(normalizedEmail);
+    } catch (err: any) {
+      // Rate limiting propagates so the enrichment loop backs off for the
+      // cycle instead of hammering HubSpot with the remaining lookups
+      if (String(err?.message) === "HUBSPOT_RATE_LIMITED") throw err;
+      hubspotContact = null;
+    }
+  }
   if (override) {
     city = override.city;
     state = override.state;
@@ -660,10 +679,16 @@ export async function enrichWebinarRegistrants(
     .where(and(...conditions));
 
   const recomputeCutoff = Date.now() - NO_DEAL_RECOMPUTE_HOURS * 60 * 60 * 1000;
+  const missRetryCutoff = Date.now() - LOCATION_MISS_RETRY_HOURS * 60 * 60 * 1000;
   const pending = rows
     .filter((r) => {
       const p = (r.metadata as any)?.personalization;
-      if (!p || p.version !== PERSONALIZATION_VERSION) return true;
+      if (!p || p.version !== PERSONALIZATION_VERSION) {
+        // A fresh definitive miss ("no city anywhere") isn't re-asked yet
+        const miss = (r.metadata as any)?.personalizationMiss;
+        if (miss?.checkedAt && Date.parse(miss.checkedAt) > missRetryCutoff) return false;
+        return true;
+      }
       // Leads still missing a deal get periodically re-checked so a later city
       // scan (or fresh HubSpot data) upgrades them without manual intervention
       const stale = !p.computedAt || new Date(p.computedAt).getTime() < recomputeCutoff;
@@ -673,17 +698,28 @@ export async function enrichWebinarRegistrants(
 
   let enriched = 0;
   let noLocation = 0;
+  let lookups = 0;
+  let rateLimited = false;
   const byEmail = new Map<string, RegistrantPersonalization | null>();
 
   for (const row of pending) {
+    if (rateLimited) break;
     const email = row.email!.trim().toLowerCase();
     try {
       if (!byEmail.has(email)) {
+        if (lookups >= MAX_HUBSPOT_LOOKUPS_PER_CYCLE) break; // next cycle continues
+        lookups++;
         byEmail.set(email, await computePersonalizationForEmail(db, email));
+        await new Promise((r) => setTimeout(r, HUBSPOT_LOOKUP_SPACING_MS));
       }
       const personalization = byEmail.get(email);
       if (!personalization) {
         noLocation++;
+        // Definitive miss — don't re-ask HubSpot for this lead for 24h
+        await db
+          .update(webinarRegistrants)
+          .set({ metadata: { ...((row.metadata as Record<string, unknown>) ?? {}), personalizationMiss: { checkedAt: new Date().toISOString() } } })
+          .where(eq(webinarRegistrants.id, row.id));
         continue;
       }
       await db
@@ -692,7 +728,12 @@ export async function enrichWebinarRegistrants(
         .where(eq(webinarRegistrants.id, row.id));
       enriched++;
     } catch (err: any) {
-      console.error(`[Personalization] Failed to enrich registrant #${row.id}:`, err.message);
+      if (String(err?.message) === "HUBSPOT_RATE_LIMITED") {
+        rateLimited = true;
+        console.warn(`[Personalization] HubSpot rate limited after ${lookups} lookup(s) — backing off until next cycle`);
+      } else {
+        console.error(`[Personalization] Failed to enrich registrant #${row.id}:`, err.message);
+      }
     }
   }
 
