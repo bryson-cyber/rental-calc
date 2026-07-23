@@ -13497,3 +13497,20 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Remove "One-click Market Evaluation" from advanced analysis section (AirDNA data no longer available)
 - [x] Remove "Trends" tab from bottom navigation on property cards
 - [x] Fix Map tab: replaced broken MapFirstLayoutV2 (depended on removed marketExplorer) with PropertyMapView (geocodes address and shows on Google Maps)
+
+## Webinar Personalization Pipeline Live Verification (PR #5)
+
+- [x] Stage 0: Set personalization_live_scan to 'off' in webinar_sms_settings
+- [x] Stage 0: Confirm webinar-import cron completes cleanly after deploy
+- [x] Stage 1: Verify enrichment log lines appear after 1-2 import cycles
+- [x] Stage 1: Verify metadata.personalization payloads exist (version 3, cities, source hubspot)
+- [x] Stage 1: Run coverage query and check located-rate vs HubSpot city fill (7/1701 - limited by HubSpot 429 rate limit)
+- [x] Stage 1: Verify pending stock sequence rows contain [IF_ tokens, sent rows untouched
+- [x] Stage 1: Verify confirmation_sms_template contains [IF_DEAL] if stock text
+- [ ] Stage 2: Add owner-phone registrant with HubSpot-city email, verify rendered SMS/email
+- [ ] Stage 3: Enable live scans, monitor spend (max 2 cities/cycle)
+- [ ] Stage 3: Sanity-check newsletter_deals rows (real Zillow URLs, plausible numbers)
+- [ ] Stage 3: Check regulation_cache rows (mostly not unknown)
+- [ ] Stage 4: Create test webinar with 2-3 internal registrants, compressed timing
+- [ ] Stage 4: Verify per-lead city/deal rendering on devices
+- [ ] Stage 4: Verify quiet-hours skip and personalized_links click tracking
