@@ -741,6 +741,31 @@ export function applyConditionalBlocks(template: string, vars: Record<string, st
   return result.replace(/[^\S\n]{2,}/g, " ").replace(/ +\n/g, "\n").trim();
 }
 
+/**
+ * The production message renderer: conditional blocks, then {{var}} / %VAR%
+ * substitution (function-form replacement so "$" in money values is literal),
+ * then the legacy aliases. webinar-sms's renderMessage delegates here so tests
+ * exercise the exact send-path rendering.
+ */
+export function renderMessageTemplate(template: string, vars: Record<string, string>): string {
+  let result = applyConditionalBlocks(template, vars);
+  for (const [key, value] of Object.entries(vars)) {
+    if (key.startsWith("has_")) continue;
+    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => value);
+    result = result.replace(new RegExp(`%${key.toUpperCase()}%`, "g"), () => value);
+  }
+  if (vars.name) {
+    result = result.replace(/%FIRST_NAME%/g, () => vars.name);
+  }
+  if (vars.fullname) {
+    result = result.replace(/%FULL_NAME%/g, () => vars.fullname);
+  }
+  if (vars.email) {
+    result = result.replace(/%EMAIL%/g, () => vars.email);
+  }
+  return result;
+}
+
 /** Personalization payload from a registrant metadata JSON blob, if present */
 export function personalizationFromMetadata(metadata: unknown): RegistrantPersonalization | null {
   const p = (metadata as any)?.personalization;

@@ -48,12 +48,12 @@ import {
   getSmsDispatcherInterval,
 } from "./sms-dispatcher-v2";
 import {
-  applyConditionalBlocks,
   buildEmailPersonalization,
   buildPersonalizationVars,
   computePersonalizationForEmail,
   enrichWebinarRegistrants,
   personalizationFromMetadata,
+  renderMessageTemplate,
   runLiveCityScansForWebinar,
 } from "../webinar-personalization";
 import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
@@ -320,27 +320,7 @@ function isUsCanadaPhone(phone: string): boolean {
 // ─── Helper: Template variable replacement ───────────────────────────────────
 
 function renderMessage(template: string, vars: Record<string, string>): string {
-  // [IF_DEAL]/[IF_CITY] blocks resolve first so stripped copy never leaks tokens
-  let result = applyConditionalBlocks(template, vars);
-  // Support both {{var}} and %VAR% formats. Replacement uses the function form
-  // so values containing "$" (money figures) are never treated as regex
-  // capture-group references.
-  for (const [key, value] of Object.entries(vars)) {
-    if (key.startsWith("has_")) continue; // conditional flags, not tokens
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => value);
-    result = result.replace(new RegExp(`%${key.toUpperCase()}%`, "g"), () => value);
-  }
-  // Legacy aliases (used by the AI composer and older templates)
-  if (vars.name) {
-    result = result.replace(/%FIRST_NAME%/g, () => vars.name);
-  }
-  if (vars.fullname) {
-    result = result.replace(/%FULL_NAME%/g, () => vars.fullname);
-  }
-  if (vars.email) {
-    result = result.replace(/%EMAIL%/g, () => vars.email);
-  }
-  return result;
+  return renderMessageTemplate(template, vars);
 }
 
 // ─── In-memory cancellation sets (signal mid-send loops to stop) ────────────
