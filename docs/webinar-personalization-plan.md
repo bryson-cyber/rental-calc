@@ -414,8 +414,9 @@ Import cron (every 3 min, runWebinarImportInner)
                  else email_optins (their stated city)
                  else analysis_reports (tool run — rare bonus, last resort)
       market:    newsletter_cities cached stats
-      deal:      top active newsletter_deals for their city (dealScore desc,
-                 ≤30 days old; claims gated at ≥$500/mo profit)
+      deal:      best claimable newsletter_deals row for their city
+                 (dealScore desc, ≤30 days old; claims gated at ≥$1,000/mo
+                 profit — the class's own floor)
       regs:      regulation_cache (status "unknown" rows are ignored)
       link:      personalized_links row, tool URL pre-targeted to their city
       stored in: webinar_registrants.metadata.personalization

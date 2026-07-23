@@ -56,14 +56,20 @@ describe("buildPersonalizationVars", () => {
     expect(vars.deal_rent).toBe("about $2,000");
   });
 
-  it("never claims a weak-profit deal", () => {
+  it("never claims a deal under the $1K/mo class floor", () => {
     const weak = {
       ...fullPayload,
-      deal: { ...fullPayload.deal!, monthlyProfit: 220 },
+      deal: { ...fullPayload.deal!, monthlyProfit: 800 },
     };
     const vars = buildPersonalizationVars(weak);
     expect(vars.has_deal).toBe("0");
     expect(vars.has_city_only).toBe("1");
+
+    const strong = {
+      ...fullPayload,
+      deal: { ...fullPayload.deal!, monthlyProfit: 1000 },
+    };
+    expect(buildPersonalizationVars(strong).has_deal).toBe("1");
   });
 });
 

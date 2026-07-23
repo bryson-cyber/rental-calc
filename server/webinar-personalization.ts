@@ -40,14 +40,18 @@ type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 export const PERSONALIZATION_VERSION = 2;
 
-/** Deal claims below this monthly profit stay out of messages — a "$200/mo" hook is worse than none */
-const MIN_CLAIMABLE_MONTHLY_PROFIT = 500;
+/**
+ * Deal claims below this monthly profit stay out of messages. The class
+ * promises $1K–$3K/mo per property — a hook under that floor undercuts the
+ * pitch, so weaker deals render as generic copy instead.
+ */
+const MIN_CLAIMABLE_MONTHLY_PROFIT = 1000;
 /** Deals older than this never back a message claim */
 const DEAL_MAX_AGE_DAYS = 30;
 /** Live-scan controls (webinar_sms_settings key; any value but "off" enables) */
 const LIVE_SCAN_SETTING_KEY = "personalization_live_scan";
 const MAX_LIVE_CITY_SCANS_PER_RUN = 2;
-const MAX_LISTINGS_TO_ANALYZE = 3;
+const MAX_LISTINGS_TO_ANALYZE = 5;
 const CITY_SCAN_RETRY_HOURS = 24;
 const DEAL_FRESHNESS_DAYS = 7;
 /** Re-check leads that still have no deal after this long (bounds HubSpot lookups) */
@@ -231,7 +235,14 @@ export async function computePersonalizationForEmail(
     .orderBy(desc(newsletterDeals.dealScore))
     .limit(3);
 
-  const topDeal = deals[0];
+  // Best CLAIMABLE deal wins the message slot: highest-scored deal that clears
+  // the profit floor (or has revenue with no profit figure). A top-scored deal
+  // that fails the floor must not shadow a claimable runner-up.
+  const claimable = (d: (typeof deals)[number]) =>
+    d.monthlyRent != null &&
+    (d.projectedRevenue != null || d.projectedProfit != null) &&
+    (d.projectedProfit == null || Math.round(d.projectedProfit / 12) >= MIN_CLAIMABLE_MONTHLY_PROFIT);
+  const topDeal = deals.find(claimable) ?? deals[0];
   const deal = topDeal
     ? {
         label: topDeal.bedrooms ? `a ${topDeal.bedrooms}-bedroom in ${topDeal.city}` : `a unit in ${topDeal.city}`,
@@ -402,11 +413,20 @@ export async function ensureCityData(
     return { newDeals, scanned };
   }
 
+  // Rank candidates by likelihood of clearing the $1K/mo profit floor before
+  // spending rentalizer calls: 2–3BR at moderate rent has the widest
+  // revenue-over-rent spread (the same profile the class demos live).
+  const listingPriority = (l: (typeof search.listings)[number]) =>
+    (l.bedrooms >= 2 && l.bedrooms <= 3 ? 0 : 10) + (l.price >= 1000 && l.price <= 2800 ? 0 : 1);
   const candidates = search.listings
     .filter((l) => l.price >= 500 && l.price <= 6000 && l.bedrooms > 0)
+    .sort((a, b) => listingPriority(a) - listingPriority(b))
     .slice(0, MAX_LISTINGS_TO_ANALYZE);
 
+  let claimableFound = false;
   for (const listing of candidates) {
+    // Stop once a claimable hook exists — later cycles can deepen the pool
+    if (claimableFound && newDeals >= 2) break;
     try {
       const deal = await analyzePropertyForArbitrage({
         address: listing.address,
@@ -446,6 +466,7 @@ export async function ensureCityData(
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       });
       newDeals++;
+      if (deal.monthlyProfit >= MIN_CLAIMABLE_MONTHLY_PROFIT) claimableFound = true;
     } catch (err: any) {
       console.warn(`[Personalization] Deal analysis failed for ${listing.address}:`, err.message);
     }
