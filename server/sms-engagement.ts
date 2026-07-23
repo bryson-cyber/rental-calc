@@ -32,6 +32,7 @@ import {
   personalizationFromMetadata,
   type RegistrantPersonalization,
 } from "./webinar-personalization";
+import { syncLeadPriorityToHubSpot } from "./lead-priority";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -327,11 +328,25 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
         replyText = OTHER_REPLY_MESSAGE;
       }
 
+      // A reply is a sales signal: combine it with the soft-pull qualification
+      // and push the priority to HubSpot so the post-class calls start with
+      // the hottest leads. Never blocks the SMS flow.
+      let priority: string | undefined;
+      if (parsed.intent !== "stop" && reg.email) {
+        const synced = await syncLeadPriorityToHubSpot({
+          email: reg.email,
+          replyIntent: parsed.intent,
+          replyCity: cityOverride?.city,
+        }).catch(() => null);
+        priority = synced?.priority;
+      }
+
       const engagementUpdate = {
         ...engagement,
         replies: (engagement.replies ?? 0) + 1,
         lastIntent: parsed.intent,
         lastReplyAt: new Date().toISOString(),
+        ...(priority ? { priority } : {}),
         ...(cityOverride ? { cityOverride } : {}),
       };
 

@@ -4,6 +4,7 @@ vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 
 import { invokeLLM } from "./_core/llm";
 import { buildDealReplyMessage, classifyReply } from "./sms-engagement";
+import { computeLeadPriority } from "./lead-priority";
 import type { RegistrantPersonalization } from "./webinar-personalization";
 
 const mockLLM = invokeLLM as unknown as ReturnType<typeof vi.fn>;
@@ -48,6 +49,18 @@ describe("buildDealReplyMessage", () => {
     expect(msg).toContain("San Diego");
     expect(msg).not.toContain("$");
     expect(msg).toContain("masterclass");
+  });
+});
+
+describe("computeLeadPriority", () => {
+  it("ranks the ladder: qualified + engaged = hot, either = warm, neither = standard", () => {
+    expect(computeLeadPriority({ qualified: true }, "yes")).toBe("hot");
+    expect(computeLeadPriority({ qualified: true }, "city")).toBe("hot");
+    expect(computeLeadPriority({ qualified: true }, "no")).toBe("warm");
+    expect(computeLeadPriority({ qualified: true }, undefined)).toBe("warm");
+    expect(computeLeadPriority(null, "yes")).toBe("warm");
+    expect(computeLeadPriority(null, "no")).toBe("standard");
+    expect(computeLeadPriority(undefined, undefined)).toBe("standard");
   });
 });
 

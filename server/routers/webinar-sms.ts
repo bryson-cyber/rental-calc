@@ -58,6 +58,7 @@ import {
 } from "../webinar-personalization";
 import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
 import { processInboundReplies, sendEngagementQuestions } from "../sms-engagement";
+import { maybeSendDailyDigest } from "../webinar-digest";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -4056,6 +4057,10 @@ async function runWebinarImportInner(
     console.error(`[Engagement] Question send failed for webinar ${webinarId}:`, err.message));
   processInboundReplies(db).catch((err: any) =>
     console.error(`[Engagement] Inbound processing failed:`, err.message));
+
+  // Once a day: coverage/engagement/hot-leads digest to the owner
+  maybeSendDailyDigest(db).catch((err: any) =>
+    console.error(`[Digest] Daily digest failed:`, err.message));
 
   // Upgrade stock sequence copy already scheduled in production to the current
   // tokenized defaults (exact-match only — customized copy is never touched)

@@ -156,6 +156,18 @@ After 1–2 import cycles (≈6 min):
    so historical inbox traffic is never touched; `STOP`-like replies set
    `optedOut` and get no response.
 
+## Stage 6 — lead priority + daily digest
+
+1. After a YES/city reply in Stage 5, check the owner-phone contact in
+   HubSpot: `webinar_lead_priority` (hot/warm/standard), `webinar_reply_intent`,
+   `webinar_reply_city`, `webinar_funding_qualified`, `webinar_funding_readiness`
+   should be set (properties are auto-created on first sync). "hot" requires
+   the contact to be funding-qualified via the soft pull AND engaged.
+2. The daily digest fires once per day after 14:00 UTC via the owner
+   notification channel: registrant counts, coverage, replies by intent, hot
+   leads to call, city scans, STOP warnings. Kill switch:
+   `webinar_sms_settings` key `daily_digest` = `off`.
+
 ## Success criteria
 
 - Stage 1: ≥1 enrichment log per cycle; pending stock copy tokenized; located
