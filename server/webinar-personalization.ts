@@ -40,7 +40,9 @@ import { universalShareableReports } from "../drizzle/schema";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
-export const PERSONALIZATION_VERSION = 4;
+// v5: deal links resolve to the universal /share validator report (old /report
+// payloads must recompute so their personalized_links repoint)
+export const PERSONALIZATION_VERSION = 5;
 
 /**
  * Deal claims below this monthly profit stay out of messages. The class

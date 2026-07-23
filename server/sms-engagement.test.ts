@@ -10,7 +10,7 @@ import type { RegistrantPersonalization } from "./webinar-personalization";
 const mockLLM = invokeLLM as unknown as ReturnType<typeof vi.fn>;
 
 const basePayload: RegistrantPersonalization = {
-  version: 4,
+  version: 5,
   source: "engagement",
   city: "San Diego",
   state: "CA",
