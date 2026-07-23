@@ -123,6 +123,11 @@ export async function sendEngagementQuestions(db: DbClient, webinarId: string): 
       eq(webinarRegistrants.optedOut, 0),
       eq(webinarRegistrants.confirmationSmsSent, 1),
       sql`${webinarRegistrants.confirmationSmsAt} >= ${windowStart}`,
+      // Real-time opt-ins only (webinarjam/zapier/manual). Bulk CSV uploads
+      // carry older consent and no soft-pull data — a fresh upload also lands
+      // inside the 48h window, so without this guard an imported list would
+      // get the question en masse.
+      sql`${webinarRegistrants.source} != 'csv'`,
     ));
 
   for (const row of rows) {
