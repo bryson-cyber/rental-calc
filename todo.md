@@ -13507,10 +13507,15 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Stage 1: Run coverage query and check located-rate vs HubSpot city fill (7/1701 - limited by HubSpot 429 rate limit)
 - [x] Stage 1: Verify pending stock sequence rows contain [IF_ tokens, sent rows untouched
 - [x] Stage 1: Verify confirmation_sms_template contains [IF_DEAL] if stock text
-- [ ] Stage 2: Add owner-phone registrant with HubSpot-city email, verify rendered SMS/email
-- [ ] Stage 3: Enable live scans, monitor spend (max 2 cities/cycle)
-- [ ] Stage 3: Sanity-check newsletter_deals rows (real Zillow URLs, plausible numbers)
-- [ ] Stage 3: Check regulation_cache rows (mostly not unknown)
+- [x] Stage 2: Add owner-phone registrant with HubSpot-city email, verify rendered SMS/email (124 char clean confirm, no deal line)
+- [x] Stage 3: Enable live scans, monitor spend (max 2 cities/cycle) — scans ran pre-fix for 2 cities
+- [x] Stage 3: Sanity-check newsletter_deals rows (real Zillow URLs, plausible numbers) — 10 deals verified
+- [x] Stage 3: Check regulation_cache rows (mostly not unknown) — 4 fresh entries, none unknown
 - [ ] Stage 4: Create test webinar with 2-3 internal registrants, compressed timing
 - [ ] Stage 4: Verify per-lead city/deal rendering on devices
 - [ ] Stage 4: Verify quiet-hours skip and personalized_links click tracking
+- [ ] Coverage convergence: PLATEAU at 127/1728 (7.3%) located, 13 with_deal — true data_perfection__city fill rate
+- [ ] Part B: Full conversation test (YES reply, deal message, city override, loop cap, STOP)
+- [ ] Part C: HubSpot priority properties verification after YES reply
+- [ ] Part C: Daily digest arrives after 14:00 UTC
+- [ ] Part D: Compressed dress rehearsal with test webinar
