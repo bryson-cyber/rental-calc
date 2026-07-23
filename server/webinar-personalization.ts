@@ -70,6 +70,48 @@ const NO_DEAL_RECOMPUTE_HOURS = 24;
 const MAX_HUBSPOT_EMAILS_PER_CYCLE = 300; // = 3 batch API calls
 const LOCATION_MISS_RETRY_HOURS = 24;
 
+// ─── Deal selection (single source of truth) ─────────────────────────────────
+// The deal a message quotes, the /share report we build, and the link we mint
+// MUST all agree on the same property. Every path selects through these
+// helpers — a report built for a different deal than the message quotes leaves
+// the lead on the Zillow fallback forever.
+
+type NewsletterDealRow = typeof newsletterDeals.$inferSelect;
+
+/** A deal may only back a claim when its numbers exist and clear the floor */
+function isClaimableDealRow(d: NewsletterDealRow): boolean {
+  return (
+    d.monthlyRent != null &&
+    (d.projectedRevenue != null || d.projectedProfit != null) &&
+    (d.projectedProfit == null || Math.round(d.projectedProfit / 12) >= MIN_CLAIMABLE_MONTHLY_PROFIT)
+  );
+}
+
+/** Top active recent deals for a city, highest score first */
+async function getTopDealsForCity(db: DbClient, city: string, state: string): Promise<NewsletterDealRow[]> {
+  const dealCutoff = new Date(Date.now() - DEAL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+  return db
+    .select()
+    .from(newsletterDeals)
+    .where(and(
+      eq(newsletterDeals.city, city),
+      eq(newsletterDeals.state, state),
+      eq(newsletterDeals.status, "active"),
+      gte(newsletterDeals.discoveredAt, dealCutoff),
+    ))
+    .orderBy(desc(newsletterDeals.dealScore))
+    .limit(3);
+}
+
+/**
+ * Best CLAIMABLE deal wins the message slot: highest-scored deal that clears
+ * the profit floor (or has revenue with no profit figure). A top-scored deal
+ * that fails the floor must not shadow a claimable runner-up.
+ */
+function pickMessageDeal(deals: NewsletterDealRow[]): NewsletterDealRow | undefined {
+  return deals.find(isClaimableDealRow) ?? deals[0];
+}
+
 export interface RegistrantPersonalization {
   version: number;
   /**
@@ -340,27 +382,10 @@ export async function computePersonalizationForEmail(
   // 3) Top active scanned deal for their city (figures stored annually; convert).
   //    Match by city/state, not cityId — some writers (hasdata-zillow cacheDeal)
   //    store cityId 0. Deals older than DEAL_MAX_AGE_DAYS never back a claim.
-  const dealCutoff = new Date(Date.now() - DEAL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
-  const deals = await db
-    .select()
-    .from(newsletterDeals)
-    .where(and(
-      eq(newsletterDeals.city, city),
-      eq(newsletterDeals.state, state),
-      eq(newsletterDeals.status, "active"),
-      gte(newsletterDeals.discoveredAt, dealCutoff),
-    ))
-    .orderBy(desc(newsletterDeals.dealScore))
-    .limit(3);
-
-  // Best CLAIMABLE deal wins the message slot: highest-scored deal that clears
-  // the profit floor (or has revenue with no profit figure). A top-scored deal
-  // that fails the floor must not shadow a claimable runner-up.
-  const claimable = (d: (typeof deals)[number]) =>
-    d.monthlyRent != null &&
-    (d.projectedRevenue != null || d.projectedProfit != null) &&
-    (d.projectedProfit == null || Math.round(d.projectedProfit / 12) >= MIN_CLAIMABLE_MONTHLY_PROFIT);
-  const topDeal = deals.find(claimable) ?? deals[0];
+  //    Selection MUST go through the shared helpers so the report-building
+  //    paths target the same property this message will quote.
+  const deals = await getTopDealsForCity(db, city, state);
+  const topDeal = pickMessageDeal(deals);
   const deal = topDeal
     ? {
         label: topDeal.bedrooms ? `a ${topDeal.bedrooms}-bedroom in ${topDeal.city}` : `a unit in ${topDeal.city}`,
@@ -540,21 +565,24 @@ export async function ensureCityData(
     .orderBy(desc(newsletterDeals.dealScore))
     .limit(1);
   if (freshDeal) {
+    // Backfill the report for the deal messages actually quote (shared
+    // selection), which is not necessarily the top-scored fresh deal
+    const target = pickMessageDeal(await getTopDealsForCity(db, city, state)) ?? freshDeal;
     try {
       const share = await ensureShareReportForDeal(db, {
-        address: freshDeal.address,
-        city: freshDeal.city,
-        state: freshDeal.state,
-        zipCode: freshDeal.zipCode,
-        bedrooms: freshDeal.bedrooms,
-        bathrooms: freshDeal.bathrooms,
-        monthlyRent: freshDeal.monthlyRent,
-        propertyType: freshDeal.propertyType,
-        sourceUrl: freshDeal.sourceUrl,
+        address: target.address,
+        city: target.city,
+        state: target.state,
+        zipCode: target.zipCode,
+        bedrooms: target.bedrooms,
+        bathrooms: target.bathrooms,
+        monthlyRent: target.monthlyRent,
+        propertyType: target.propertyType,
+        sourceUrl: target.sourceUrl,
       });
       if (share?.created) reportsCreated++;
     } catch (err: any) {
-      console.warn(`[Personalization] Share-report backfill failed for ${freshDeal.address}:`, err.message);
+      console.warn(`[Personalization] Share-report backfill failed for ${target.address}:`, err.message);
     }
     return { newDeals, scanned, reportsCreated };
   }
@@ -668,19 +696,13 @@ export async function ensureCityData(
  * exists (found or created) afterward.
  */
 export async function ensureDealReportForCity(db: DbClient, city: string, state: string): Promise<boolean> {
-  const dealCutoff = new Date(Date.now() - DEAL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
-  const [deal] = await db
-    .select()
-    .from(newsletterDeals)
-    .where(and(
-      eq(newsletterDeals.city, city),
-      eq(newsletterDeals.state, state),
-      eq(newsletterDeals.status, "active"),
-      gte(newsletterDeals.discoveredAt, dealCutoff),
-    ))
-    .orderBy(desc(newsletterDeals.dealScore))
-    .limit(1);
-  if (!deal) return false;
+  // Same selection as computePersonalizationForEmail — the report must be for
+  // the deal the message will actually quote, not just the top-scored one
+  const deal = pickMessageDeal(await getTopDealsForCity(db, city, state));
+  if (!deal) {
+    console.log(`[Personalization] On-demand report: no active deal for ${city}, ${state}`);
+    return false;
+  }
   try {
     const share = await ensureShareReportForDeal(db, {
       address: deal.address,
@@ -693,6 +715,7 @@ export async function ensureDealReportForCity(db: DbClient, city: string, state:
       propertyType: deal.propertyType,
       sourceUrl: deal.sourceUrl,
     });
+    if (!share) console.warn(`[Personalization] On-demand report unavailable for ${deal.address} (no estimate)`);
     return Boolean(share);
   } catch (err: any) {
     console.warn(`[Personalization] On-demand report failed for ${deal.address}:`, err.message);

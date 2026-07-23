@@ -34,8 +34,10 @@ import {
   buildPersonalizationVars,
   computePersonalizationForEmail,
   ensureCityData,
+  ensureDealReportForCity,
   renderMessageTemplate,
 } from "./webinar-personalization";
+import { getRentalizerEstimate } from "./airdna";
 import { buildWebinarEmail } from "./hubspot-smtp";
 
 const mockHubspot = getContactLocationByEmail as unknown as ReturnType<typeof vi.fn>;
@@ -43,6 +45,7 @@ const mockZillow = searchZillowRentals as unknown as ReturnType<typeof vi.fn>;
 const mockAnalyze = analyzePropertyForArbitrageDetailed as unknown as ReturnType<typeof vi.fn>;
 const mockRegs = getRegulationInfo as unknown as ReturnType<typeof vi.fn>;
 const mockShareReport = createShareableReport as unknown as ReturnType<typeof vi.fn>;
+const mockRentalizer = getRentalizerEstimate as unknown as ReturnType<typeof vi.fn>;
 
 // ─── Minimal chainable fake for the drizzle client ───────────────────────────
 
@@ -344,5 +347,45 @@ describe("live city scan — automating step 4 for a dry city", () => {
     expect(shareInput.reportData.revenue.projected).toBe(54000);
     expect(shareInput.reportData.cashFlow.monthlyProfit).toBe(4500 - 1700 - 900); // rev − rent − 20% opex
     expect(result.reportsCreated).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("on-demand report (YES-reply path)", () => {
+  it("builds the report for the deal the message quotes, not the top-scored one", async () => {
+    // Top-scored deal has no rent figure → unclaimable → the message quotes
+    // the runner-up. The report MUST be built for that same runner-up, or the
+    // lead's link stays on the Zillow fallback forever.
+    const unclaimableTop = {
+      id: 21, city: "Las Vegas", state: "NV", address: "1 High Score Blvd, Las Vegas, NV 89129",
+      bedrooms: 4, bathrooms: 3, monthlyRent: null, projectedRevenue: null, projectedProfit: null,
+      dealScore: 95, status: "active", sourceUrl: "https://www.zillow.com/homedetails/top_zpid/",
+      discoveredAt: new Date(),
+    };
+    const claimableRunnerUp = {
+      id: 22, city: "Las Vegas", state: "NV", address: "10452 Mihela Ave, Las Vegas, NV 89129",
+      bedrooms: 3, bathrooms: 2, monthlyRent: 1690, projectedRevenue: 79632, projectedProfit: 43428,
+      dealScore: 80, status: "active", sourceUrl: "https://www.zillow.com/homedetails/mihela_zpid/",
+      discoveredAt: new Date(),
+    };
+    mockRentalizer.mockResolvedValue({
+      property: { address: claimableRunnerUp.address, zipcode: "89129", bedrooms: 3, bathrooms: 2, accommodates: 8 },
+      estimates: { annual_revenue: 79632, annual_revenue_low: 64000, annual_revenue_high: 95000, average_daily_rate: 240, occupancy_rate: 74, currency: "USD", currency_symbol: "$" },
+      monthly_forecast: [],
+      comps: [],
+    });
+    mockShareReport.mockResolvedValue({ success: true, shareCode: "ondemand1", shareUrl: "/share/ondemand1" });
+    const { db } = fakeDb(new Map<object, any[]>([
+      [newsletterDeals as object, [unclaimableTop, claimableRunnerUp]],
+      [universalShareableReports as object, []],
+    ]));
+
+    const ok = await ensureDealReportForCity(db as any, "Las Vegas", "NV");
+
+    expect(ok).toBe(true);
+    expect(mockShareReport).toHaveBeenCalledTimes(1);
+    const input = mockShareReport.mock.calls[0][0];
+    expect(input.address).toBe(claimableRunnerUp.address);
+    expect(input.reportType).toBe("validator");
+    expect(input.reportData._listingUrl).toBe(claimableRunnerUp.sourceUrl);
   });
 });
