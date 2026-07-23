@@ -31,7 +31,7 @@ import {
   webinarSmsSettings,
 } from "../drizzle/schema";
 import { getDb } from "./db";
-import { getContactLocationByEmail } from "./hubspot";
+import { getContactLocationByEmail, getContactLocationsByEmails } from "./hubspot";
 import { searchZillowRentals } from "./hasdata-zillow";
 import { analyzePropertyForArbitrageDetailed } from "./newsletter-deal-finder";
 import { getRegulationInfo } from "./regulation-tracker";
@@ -59,13 +59,13 @@ const DEAL_FRESHNESS_DAYS = 7;
 /** Re-check leads that still have no deal after this long (bounds HubSpot lookups) */
 const NO_DEAL_RECOMPUTE_HOURS = 24;
 /**
- * HubSpot protection: its search API allows ~4 req/s, and a big webinar list
- * can hold thousands of unenriched rows. Lookups are spaced, capped per cycle,
- * the cycle aborts on a 429, and a definitive "no city in HubSpot" is cached
- * for 24h so the same misses aren't re-asked every 3 minutes.
+ * HubSpot protection: the account's rate bucket is shared across the whole
+ * codebase and tight in practice. Enrichment therefore BATCH-reads locations
+ * (100 emails per API call) instead of per-contact lookups, caps emails per
+ * cycle, aborts the cycle on a 429, and caches a definitive "no city in
+ * HubSpot" for 24h so the same misses aren't re-asked every 3 minutes.
  */
-const HUBSPOT_LOOKUP_SPACING_MS = 250;
-const MAX_HUBSPOT_LOOKUPS_PER_CYCLE = 80;
+const MAX_HUBSPOT_EMAILS_PER_CYCLE = 300; // = 3 batch API calls
 const LOCATION_MISS_RETRY_HOURS = 24;
 
 export interface RegistrantPersonalization {
@@ -220,7 +220,14 @@ function candidateRegulationKeys(city: string, state: string): string[] {
 export async function computePersonalizationForEmail(
   db: DbClient,
   email: string,
-  opts: { overrideCity?: { city: string; state: string } } = {},
+  opts: {
+    overrideCity?: { city: string; state: string };
+    /**
+     * Prefetched HubSpot location (batch path): an object uses it, null means
+     * "known miss — skip HubSpot", undefined means do the single lookup.
+     */
+    hubspotLocation?: { city: string; state: string; postalCode?: string } | null;
+  } = {},
 ): Promise<RegistrantPersonalization | null> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return null;
@@ -254,15 +261,18 @@ export async function computePersonalizationForEmail(
     }
   }
 
-  let hubspotContact: Awaited<ReturnType<typeof getContactLocationByEmail>> = null;
+  let hubspotContact: { city: string; state: string } | null = null;
   if (!override) {
-    try {
-      hubspotContact = await getContactLocationByEmail(normalizedEmail);
-    } catch (err: any) {
-      // Rate limiting propagates so the enrichment loop backs off for the
-      // cycle instead of hammering HubSpot with the remaining lookups
-      if (String(err?.message) === "HUBSPOT_RATE_LIMITED") throw err;
-      hubspotContact = null;
+    if (opts.hubspotLocation !== undefined) {
+      hubspotContact = opts.hubspotLocation;
+    } else {
+      try {
+        hubspotContact = await getContactLocationByEmail(normalizedEmail);
+      } catch (err: any) {
+        // Rate limiting propagates so callers back off instead of hammering
+        if (String(err?.message) === "HUBSPOT_RATE_LIMITED") throw err;
+        hubspotContact = null;
+      }
     }
   }
   if (override) {
@@ -698,19 +708,39 @@ export async function enrichWebinarRegistrants(
 
   let enriched = 0;
   let noLocation = 0;
-  let lookups = 0;
-  let rateLimited = false;
   const byEmail = new Map<string, RegistrantPersonalization | null>();
 
+  // ONE batched HubSpot read for every email this cycle touches (100/API call)
+  // — the per-contact loop could not survive the account's shared rate bucket
+  const uniqueEmails: string[] = [];
+  const seen = new Set<string>();
   for (const row of pending) {
-    if (rateLimited) break;
     const email = row.email!.trim().toLowerCase();
+    if (seen.has(email)) continue;
+    seen.add(email);
+    uniqueEmails.push(email);
+    if (uniqueEmails.length >= MAX_HUBSPOT_EMAILS_PER_CYCLE) break;
+  }
+  let locations: Awaited<ReturnType<typeof getContactLocationsByEmails>>;
+  try {
+    locations = await getContactLocationsByEmails(uniqueEmails);
+  } catch (err: any) {
+    if (String(err?.message) === "HUBSPOT_RATE_LIMITED") {
+      console.warn(`[Personalization] HubSpot rate limited on batch read — backing off until next cycle`);
+      return { scanned: pending.length, enriched, noLocation };
+    }
+    throw err;
+  }
+  const batched = new Set(uniqueEmails);
+
+  for (const row of pending) {
+    const email = row.email!.trim().toLowerCase();
+    if (!batched.has(email)) continue; // beyond this cycle's email cap — next cycle
     try {
       if (!byEmail.has(email)) {
-        if (lookups >= MAX_HUBSPOT_LOOKUPS_PER_CYCLE) break; // next cycle continues
-        lookups++;
-        byEmail.set(email, await computePersonalizationForEmail(db, email));
-        await new Promise((r) => setTimeout(r, HUBSPOT_LOOKUP_SPACING_MS));
+        byEmail.set(email, await computePersonalizationForEmail(db, email, {
+          hubspotLocation: locations.get(email) ?? null,
+        }));
       }
       const personalization = byEmail.get(email);
       if (!personalization) {
@@ -728,12 +758,7 @@ export async function enrichWebinarRegistrants(
         .where(eq(webinarRegistrants.id, row.id));
       enriched++;
     } catch (err: any) {
-      if (String(err?.message) === "HUBSPOT_RATE_LIMITED") {
-        rateLimited = true;
-        console.warn(`[Personalization] HubSpot rate limited after ${lookups} lookup(s) — backing off until next cycle`);
-      } else {
-        console.error(`[Personalization] Failed to enrich registrant #${row.id}:`, err.message);
-      }
+      console.error(`[Personalization] Failed to enrich registrant #${row.id}:`, err.message);
     }
   }
 

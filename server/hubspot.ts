@@ -653,6 +653,62 @@ export async function getContactLocationByEmail(email: string): Promise<{
 }
 
 /**
+ * Batch variant of getContactLocationByEmail: one API call per 100 emails via
+ * /crm/v3/objects/contacts/batch/read (idProperty: email). This is how the
+ * enrichment backlog stays inside the account's shared rate bucket — ~18
+ * calls for 1,700 leads instead of 1,700. Returns a map keyed by lowercased
+ * email; emails absent from the map are definitive misses (no contact or no
+ * city). Throws HUBSPOT_RATE_LIMITED on 429 so callers back off.
+ */
+export async function getContactLocationsByEmails(emails: string[]): Promise<Map<string, {
+  hubspotId: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}>> {
+  const result = new Map<string, { hubspotId: string; city: string; state: string; postalCode: string }>();
+  if (!HUBSPOT_API_KEY || emails.length === 0) return result;
+
+  const properties = ['email', 'city', 'state', 'zip', DATA_PERFECTION_CITY, DATA_PERFECTION_STATE, DATA_PERFECTION_POSTAL_CODE];
+  for (let i = 0; i < emails.length; i += 100) {
+    const chunk = emails.slice(i, i + 100);
+    const res = await fetch(`${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/batch/read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        idProperty: 'email',
+        inputs: chunk.map((email) => ({ id: email })),
+        properties,
+      }),
+    });
+    if (res.status === 429) throw new Error('HUBSPOT_RATE_LIMITED');
+    if (!res.ok) {
+      console.warn(`[HubSpot] Batch contact read failed: ${res.status}`);
+      continue;
+    }
+    const data = await res.json() as { results?: Array<{ id: string; properties: Record<string, string | undefined> }> };
+    for (const contact of data.results ?? []) {
+      const props = contact.properties || {};
+      const email = (props.email || '').toLowerCase();
+      const city = props[DATA_PERFECTION_CITY] || props.city || '';
+      const state = props[DATA_PERFECTION_STATE] || props.state || '';
+      if (!email || !city || !state) continue;
+      result.set(email, {
+        hubspotId: contact.id,
+        city,
+        state,
+        postalCode: props[DATA_PERFECTION_POSTAL_CODE] || props.zip || '',
+      });
+    }
+    if (i + 100 < emails.length) await new Promise((r) => setTimeout(r, 300));
+  }
+  return result;
+}
+
+/**
  * Group contacts by city
  * Returns a map of city -> contacts for batch processing
  */

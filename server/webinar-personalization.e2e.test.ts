@@ -7,7 +7,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./hubspot", () => ({ getContactLocationByEmail: vi.fn() }));
+vi.mock("./hubspot", () => ({ getContactLocationByEmail: vi.fn(), getContactLocationsByEmails: vi.fn() }));
 vi.mock("./hasdata-zillow", () => ({ searchZillowRentals: vi.fn() }));
 vi.mock("./newsletter-deal-finder", () => ({ analyzePropertyForArbitrageDetailed: vi.fn() }));
 vi.mock("./regulation-tracker", () => ({ getRegulationInfo: vi.fn() }));
@@ -239,6 +239,25 @@ describe("HubSpot rate limiting", () => {
       [emailOptins as object, []],
     ]));
     await expect(computePersonalizationForEmail(db as any, "lead-rl@example.com")).rejects.toThrow("HUBSPOT_RATE_LIMITED");
+  });
+
+  it("uses a prefetched batch location without any per-contact lookup", async () => {
+    mockHubspot.mockRejectedValue(new Error("should not be called"));
+    const { db } = fakeDb(new Map<object, any[]>([
+      [analysisReports as object, []],
+      [emailOptins as object, []],
+      [newsletterCities as object, []],
+      [newsletterDeals as object, []],
+      [regulationCache as object, []],
+      [personalizedLinks as object, []],
+      [sharedReports as object, []],
+    ]));
+    const p = await computePersonalizationForEmail(db as any, "lead-batch@example.com", {
+      hubspotLocation: { city: "DALLAS", state: "TX" },
+    });
+    expect(p!.city).toBe("Dallas");
+    expect(p!.source).toBe("hubspot");
+    expect(mockHubspot).not.toHaveBeenCalled();
   });
 });
 
