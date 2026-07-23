@@ -82,6 +82,8 @@ interface PropertyData {
   monthlyRent?: number;
   latitude?: number;
   longitude?: number;
+  /** Public listing URL (e.g. Zillow) when the report was built from a live rental listing */
+  listingUrl?: string;
 }
 
 interface MarketMetrics {
@@ -528,6 +530,16 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                     ...(property.monthlyRent ? [['Monthly Rent', formatCurrency(property.monthlyRent)]] : [])
                   ]}
                 />
+                {property.listingUrl && (
+                  <a
+                    href={property.listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-4 text-sm font-semibold text-[oklch(0.15_0_0)] underline"
+                  >
+                    View the live rental listing →
+                  </a>
+                )}
               </div>
             </div>
 

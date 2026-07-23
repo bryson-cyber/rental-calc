@@ -201,11 +201,21 @@ function propertyModule(pz?: EmailPersonalization): string {
   if (pz.ownReportLine) rows.push(p(pz.ownReportLine));
   if (pz.regLine) rows.push(p(pz.regLine));
   if (rows.length === 0) return "";
+  // Links only to PUBLIC pages — never a login-gated tool page; unaware leads
+  // can't sign into anything. Primary: the tool's own shared property report
+  // (the research done for them); secondary: the live Zillow listing.
+  const primaryLabel = pz.isFullReport ? "See the full property report &rarr;" : "See the actual listing &rarr;";
+  const linkRow = pz.reportLink
+    ? `<p style="margin:8px 0 0;"><a href="${pz.reportLink}" style="color:${BRAND.navy};font-weight:600;text-decoration:underline;">${primaryLabel}</a></p>` +
+      (pz.zillowLink
+        ? `<p style="margin:6px 0 0;"><a href="${pz.zillowLink}" style="color:${BRAND.textMuted};font-size:14px;text-decoration:underline;">View the live listing on Zillow &rarr;</a></p>`
+        : "")
+    : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr>
 <td style="background-color:${BRAND.offWhite};border-left:4px solid ${BRAND.gold};border-radius:8px;padding:20px 24px;">
 <p style="margin:0 0 12px;color:${BRAND.navy};font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Near ${pz.city}</p>
 ${rows.join("")}
-<p style="margin:8px 0 0;"><a href="${pz.toolLink}" style="color:${BRAND.navy};font-weight:600;text-decoration:underline;">See properties near ${pz.city} &rarr;</a></p>
+${linkRow}
 </td></tr></table>`;
 }
 

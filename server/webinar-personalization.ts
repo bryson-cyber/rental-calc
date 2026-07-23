@@ -33,12 +33,14 @@ import {
 import { getDb } from "./db";
 import { getContactLocationByEmail } from "./hubspot";
 import { searchZillowRentals } from "./hasdata-zillow";
-import { analyzePropertyForArbitrage } from "./newsletter-deal-finder";
+import { analyzePropertyForArbitrageDetailed } from "./newsletter-deal-finder";
 import { getRegulationInfo } from "./regulation-tracker";
+import { ensureShareReportForDeal } from "./webinar-deal-report";
+import { sharedReports } from "../drizzle/schema";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
-export const PERSONALIZATION_VERSION = 3;
+export const PERSONALIZATION_VERSION = 4;
 
 /**
  * Deal claims below this monthly profit stay out of messages. The class
@@ -90,8 +92,19 @@ export interface RegistrantPersonalization {
     adr?: number;
     verdict?: string;
   };
-  /** Tracked link into the tool, pre-targeted to their city */
+  /** Public site fallback link (never a login-gated page) */
   toolLink: string;
+  /**
+   * Tracked short link (/l/<code>) that 302s to the deal's PUBLIC page —
+   * the tool's own shared property report when one exists, else the Zillow
+   * listing. Unaware leads can't sign into anything, so every link we send
+   * must open with zero friction.
+   */
+  dealShortLink?: string;
+  /** shareId of the tool's shared property report for this deal, when built */
+  dealReportShareId?: string;
+  /** Raw public Zillow listing URL for the deal */
+  dealZillowUrl?: string;
   /** IANA timezone inferred from their state, for lead-local quiet hours */
   timezone?: string;
   computedAt: string;
@@ -316,40 +329,62 @@ export async function computePersonalizationForEmail(
     regLine = reg.yesNoSummary ?? undefined;
   }
 
-  // 5) Tracked tool link targeted at their city (reuse one per email+campaign)
+  // 5) The deal's public page: the tool's own shared property report when one
+  //    has been built for this address (that IS the product — "we did the
+  //    research for you"), else the Zillow listing. Either way it's a public,
+  //    no-login page reached through a tracked short link (/l/<code>).
   const baseUrl = process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com";
-  const params = new URLSearchParams();
-  params.set("tab", "listings");
-  params.set("city", city);
-  params.set("state", state);
-  params.set("autoAnalyze", "true");
-  params.set("utm_source", "webinar_reminder");
-  params.set("utm_campaign", "webinar_personalization");
-  const linkUrl = `${baseUrl}/?${params.toString()}`;
-
-  let toolLink = linkUrl;
-  try {
-    const [existing] = await db
-      .select({ linkUrl: personalizedLinks.linkUrl })
-      .from(personalizedLinks)
-      .where(and(eq(personalizedLinks.email, normalizedEmail), eq(personalizedLinks.campaignType, "webinar_deals")))
-      .limit(1);
-    if (existing) {
-      toolLink = existing.linkUrl;
-    } else {
-      await db.insert(personalizedLinks).values({
-        email: normalizedEmail,
-        linkUrl,
-        shortCode: Math.random().toString(36).substring(2, 10),
-        targetCity: city,
-        targetState: state,
-        targetTab: "listings",
-        campaignName: "Webinar Personalization",
-        campaignType: "webinar_deals",
-      });
+  let dealShortLink: string | undefined;
+  let dealReportShareId: string | undefined;
+  if (topDeal?.sourceUrl || topDeal?.address) {
+    try {
+      const [share] = await db
+        .select({ shareId: sharedReports.shareId })
+        .from(sharedReports)
+        .where(and(eq(sharedReports.address, topDeal.address), eq(sharedReports.reportType, "property")))
+        .orderBy(desc(sharedReports.createdAt))
+        .limit(1);
+      dealReportShareId = share?.shareId ?? undefined;
+    } catch (err: any) {
+      console.error(`[Personalization] share lookup failed for ${topDeal.address}:`, err.message);
     }
-  } catch (err: any) {
-    console.error(`[Personalization] personalized_links write failed for ${normalizedEmail}:`, err.message);
+  }
+  const dealTargetUrl = dealReportShareId
+    ? `${baseUrl}/report/${dealReportShareId}`
+    : topDeal?.sourceUrl || undefined;
+  if (dealTargetUrl) {
+    try {
+      const [existing] = await db
+        .select({ id: personalizedLinks.id, shortCode: personalizedLinks.shortCode, linkUrl: personalizedLinks.linkUrl })
+        .from(personalizedLinks)
+        .where(and(eq(personalizedLinks.email, normalizedEmail), eq(personalizedLinks.campaignType, "webinar_deals")))
+        .limit(1);
+      let code = existing?.shortCode || undefined;
+      if (existing) {
+        if (!code || existing.linkUrl !== dealTargetUrl) {
+          code = code || Math.random().toString(36).substring(2, 10);
+          await db
+            .update(personalizedLinks)
+            .set({ linkUrl: dealTargetUrl, shortCode: code, targetCity: city, targetState: state })
+            .where(eq(personalizedLinks.id, existing.id));
+        }
+      } else {
+        code = Math.random().toString(36).substring(2, 10);
+        await db.insert(personalizedLinks).values({
+          email: normalizedEmail,
+          linkUrl: dealTargetUrl,
+          shortCode: code,
+          targetCity: city,
+          targetState: state,
+          targetTab: "listings",
+          campaignName: "Webinar Personalization",
+          campaignType: "webinar_deals",
+        });
+      }
+      if (code) dealShortLink = `${baseUrl}/l/${code}`;
+    } catch (err: any) {
+      console.error(`[Personalization] personalized_links write failed for ${normalizedEmail}:`, err.message);
+    }
   }
 
   return {
@@ -365,7 +400,10 @@ export async function computePersonalizationForEmail(
     deal,
     dealCount: deals.length,
     ownReport,
-    toolLink,
+    toolLink: baseUrl,
+    dealShortLink,
+    dealReportShareId,
+    dealZillowUrl: topDeal?.sourceUrl ?? undefined,
     timezone: timezoneForState(state),
     computedAt: new Date().toISOString(),
   };
@@ -401,9 +439,10 @@ export async function ensureCityData(
   db: DbClient,
   city: string,
   state: string,
-): Promise<{ newDeals: number; scanned: boolean }> {
+): Promise<{ newDeals: number; scanned: boolean; reportsCreated: number }> {
   let newDeals = 0;
   let scanned = false;
+  let reportsCreated = 0;
 
   // Regulation: cached-or-research, self-caching, independent of the deal scan
   try {
@@ -425,13 +464,14 @@ export async function ensureCityData(
       .from(newsletterCities)
       .where(and(eq(newsletterCities.city, city), eq(newsletterCities.state, state)))
       .limit(1);
-    if (!cityRow) return { newDeals, scanned };
+    if (!cityRow) return { newDeals, scanned, reportsCreated };
   }
 
-  // Fresh deals already on file → nothing to generate
+  // Fresh deals already on file → nothing to scan, but make sure the top deal
+  // has its shareable report (costs ≤1 rentalizer call, once per property)
   const freshCutoff = new Date(Date.now() - DEAL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000);
   const [freshDeal] = await db
-    .select({ id: newsletterDeals.id })
+    .select()
     .from(newsletterDeals)
     .where(and(
       eq(newsletterDeals.city, city),
@@ -439,12 +479,31 @@ export async function ensureCityData(
       eq(newsletterDeals.status, "active"),
       gte(newsletterDeals.discoveredAt, freshCutoff),
     ))
+    .orderBy(desc(newsletterDeals.dealScore))
     .limit(1);
-  if (freshDeal) return { newDeals, scanned };
+  if (freshDeal) {
+    try {
+      const share = await ensureShareReportForDeal(db, {
+        address: freshDeal.address,
+        city: freshDeal.city,
+        state: freshDeal.state,
+        zipCode: freshDeal.zipCode,
+        bedrooms: freshDeal.bedrooms,
+        bathrooms: freshDeal.bathrooms,
+        monthlyRent: freshDeal.monthlyRent,
+        propertyType: freshDeal.propertyType,
+        sourceUrl: freshDeal.sourceUrl,
+      });
+      if (share?.created) reportsCreated++;
+    } catch (err: any) {
+      console.warn(`[Personalization] Share-report backfill failed for ${freshDeal.address}:`, err.message);
+    }
+    return { newDeals, scanned, reportsCreated };
+  }
 
   // A recent dry scan means this city genuinely has nothing right now — wait
   const retryCutoff = new Date(Date.now() - CITY_SCAN_RETRY_HOURS * 60 * 60 * 1000);
-  if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) return { newDeals, scanned };
+  if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) return { newDeals, scanned, reportsCreated };
 
   // Claim before scanning so concurrent cron cycles don't double-spend credits
   await db
@@ -458,7 +517,7 @@ export async function ensureCityData(
   const search = await searchZillowRentals({ city, state, minBeds: 1, maxBeds: 4 });
   if (!search.success || search.listings.length === 0) {
     console.log(`[Personalization] No rental listings found for ${city}, ${state}`);
-    return { newDeals, scanned };
+    return { newDeals, scanned, reportsCreated };
   }
 
   // Rank candidates by likelihood of clearing the $1K/mo profit floor before
@@ -476,7 +535,7 @@ export async function ensureCityData(
     // Stop once a claimable hook exists — later cycles can deepen the pool
     if (claimableFound && newDeals >= 2) break;
     try {
-      const deal = await analyzePropertyForArbitrage({
+      const detailed = await analyzePropertyForArbitrageDetailed({
         address: listing.address,
         city,
         state,
@@ -489,7 +548,8 @@ export async function ensureCityData(
         sourcePlatform: "zillow",
         imageUrl: listing.imgSrc || undefined,
       });
-      if (!deal) continue;
+      if (!detailed) continue;
+      const { deal, estimate } = detailed;
 
       await db.insert(newsletterDeals).values({
         cityId: cityRow.id,
@@ -515,13 +575,32 @@ export async function ensureCityData(
       });
       newDeals++;
       if (deal.monthlyProfit >= MIN_CLAIMABLE_MONTHLY_PROFIT) claimableFound = true;
+
+      // Build the tool's shareable report from the estimate we already have —
+      // that report page is what leads get linked to (zero extra API calls)
+      try {
+        const share = await ensureShareReportForDeal(db, {
+          address: deal.address,
+          city,
+          state,
+          zipCode: deal.zipCode,
+          bedrooms: deal.bedrooms,
+          bathrooms: deal.bathrooms,
+          monthlyRent: deal.monthlyRent,
+          propertyType: deal.propertyType,
+          sourceUrl: deal.sourceUrl,
+        }, estimate);
+        if (share?.created) reportsCreated++;
+      } catch (err: any) {
+        console.warn(`[Personalization] Share-report creation failed for ${deal.address}:`, err.message);
+      }
     } catch (err: any) {
       console.warn(`[Personalization] Deal analysis failed for ${listing.address}:`, err.message);
     }
   }
 
-  console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s) from ${candidates.length} listing(s)`);
-  return { newDeals, scanned };
+  console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s), ${reportsCreated} report(s) from ${candidates.length} listing(s)`);
+  return { newDeals, scanned, reportsCreated };
 }
 
 // ─── Registrant enrichment (called from the import cron) ─────────────────────
@@ -634,7 +713,8 @@ export async function runLiveCityScansForWebinar(
   for (const row of rows) {
     const p = personalizationFromMetadata(row.metadata);
     if (!p) continue;
-    if (p.dealCount > 0 && p.regStatus) continue;
+    // Fully served: has a deal, a regulation line, and the deal's report link
+    if (p.dealCount > 0 && p.regStatus && (!p.deal || p.dealReportShareId)) continue;
     const key = `${p.city}|${p.state}`;
     if (!dryCities.has(key)) dryCities.set(key, { city: p.city, state: p.state, emails: new Set(), rows: [] });
     dryCities.get(key)!.emails.add(row.email!.trim().toLowerCase());
@@ -644,9 +724,11 @@ export async function runLiveCityScansForWebinar(
   for (const { city, state, emails, rows: cityRows } of Array.from(dryCities.values())) {
     if (citiesScanned >= maxCities) break;
     try {
-      const { newDeals, scanned } = await ensureCityData(db, city, state);
-      if (scanned) citiesScanned++;
-      if (newDeals === 0 && !scanned) continue;
+      const { newDeals, scanned, reportsCreated } = await ensureCityData(db, city, state);
+      // Backfill work (a report built for an existing deal) counts toward the
+      // per-cycle cap too — it also spends a rentalizer call
+      if (scanned || reportsCreated > 0) citiesScanned++;
+      if (newDeals === 0 && !scanned && reportsCreated === 0) continue;
       // Upgrade every lead in that city with the fresh data
       const upgradedByEmail = new Map<string, RegistrantPersonalization | null>();
       for (const email of Array.from(emails)) {
@@ -705,7 +787,11 @@ export function buildPersonalizationVars(p: RegistrantPersonalization | null | u
   vars.state = p.state;
   vars.market = p.marketName || p.city;
   vars.tool_link = p.toolLink;
-  vars.deal_link = p.toolLink;
+  // Deal links must be public (no-login) pages: tracked short link to the
+  // listing, else the raw listing URL — never the gated tool.
+  if (p.dealShortLink || p.deal?.sourceUrl) {
+    vars.deal_link = p.dealShortLink ?? p.deal!.sourceUrl!;
+  }
   if (p.regLine) vars.reg_line = p.regLine;
 
   const rent = fmtMoney(p.deal?.monthlyRent);
@@ -783,7 +869,12 @@ export interface EmailPersonalization {
   dealRevenue?: string;
   dealProfit?: string;
   regLine?: string;
-  toolLink: string;
+  /** Tracked short link to the deal's public page (shared report when built, else listing) */
+  reportLink?: string;
+  /** True when reportLink resolves to the tool's own shared property report */
+  isFullReport?: boolean;
+  /** Raw Zillow listing URL, shown as a secondary link when the report exists */
+  zillowLink?: string;
   ownReportLine?: string;
 }
 
@@ -809,7 +900,9 @@ export function buildEmailPersonalization(
     dealRevenue: hasDeal && revenue ? revenue : undefined,
     dealProfit: hasDeal && profit ? profit : undefined,
     regLine: p.regLine,
-    toolLink: p.toolLink,
+    reportLink: hasDeal ? p.dealShortLink ?? p.dealZillowUrl ?? p.deal?.sourceUrl : undefined,
+    isFullReport: hasDeal && Boolean(p.dealReportShareId),
+    zillowLink: hasDeal && p.dealReportShareId ? p.dealZillowUrl ?? p.deal?.sourceUrl : undefined,
     ownReportLine: ownRev ? `When you ran your own numbers in my tool, your ${p.city} report projected ${ownRev}/mo.` : undefined,
   };
 }

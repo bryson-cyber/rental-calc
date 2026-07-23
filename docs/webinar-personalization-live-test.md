@@ -127,8 +127,10 @@ After 1–2 import cycles (≈6 min):
      outside 8am–9pm in the Pacific registrant's local time, their row shows
      `deliveryStatus='skipped'` with the quiet-hours error.
    - `personalized_links` rows exist per lead (`campaignType='webinar_deals'`);
-     clicking a link opens the tool pre-targeted to that city and increments
-     `clickCount`.
+     clicking a `/l/<code>` link opens the tool's shared property report for
+     the deal (public `/report/<shareId>` page, NO login required) with the
+     Zillow listing linked inside it, and increments `clickCount`. A lead with
+     a deal but no report yet falls back to the Zillow listing directly.
 4. Emails: trigger the day-before email for the test webinar; confirm the
    "Near {city}" card renders for the lead with a deal and is absent (not
    broken) for the lead without one.

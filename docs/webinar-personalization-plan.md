@@ -418,7 +418,11 @@ Import cron (every 3 min, runWebinarImportInner)
                  (dealScore desc, ≤30 days old; claims gated at ≥$1,000/mo
                  profit — the class's own floor)
       regs:      regulation_cache (status "unknown" rows are ignored)
-      link:      personalized_links row, tool URL pre-targeted to their city
+      report:    shared_reports row per deal property (the tool's own public
+                 report page, built from the scan's rentalizer estimate; the
+                 Zillow listing is linked inside it)
+      link:      personalized_links row → tracked /l/<code> short link → the
+                 shared report (public, no login), else the Zillow listing
       stored in: webinar_registrants.metadata.personalization
   → confirmation SMS/email render with the payload (same cron cycle)
   → Phase 2 (detached, slow): runLiveCityScansForWebinar()
