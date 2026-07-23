@@ -3,9 +3,11 @@ import {
   applyConditionalBlocks,
   buildEmailPersonalization,
   buildPersonalizationVars,
+  isQuietHoursLocal,
   personalizationFromMetadata,
   type RegistrantPersonalization,
 } from "./webinar-personalization";
+import { upgradeBody } from "./webinar-sequence-upgrade";
 
 const fullPayload: RegistrantPersonalization = {
   version: 2,
@@ -115,6 +117,37 @@ describe("buildEmailPersonalization", () => {
 
   it("returns undefined without a payload", () => {
     expect(buildEmailPersonalization(null)).toBeUndefined();
+  });
+});
+
+describe("upgradeBody", () => {
+  it("upgrades stock day-before copy to the tokenized default, idempotently", () => {
+    const stock =
+      "Reminder from Inayah: your Airbnb Masterclass is tomorrow. I'll show you the exact 5-step system my students use to launch in under 90 days while keeping their W2. Stay tuned for your join link.";
+    const next = upgradeBody(stock);
+    expect(next).toContain("[IF_DEAL]");
+    expect(next).toContain("Stay tuned for your join link.");
+    expect(upgradeBody(next!)).toBeNull();
+  });
+
+  it("carries the interpolated URL through the missed-you upgrade", () => {
+    const stock = `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens. If you're still serious about adding $2K–$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: https://masterclass.coachinayah.com/turnkey-v2`;
+    const next = upgradeBody(stock);
+    expect(next).toContain("[IF_DEAL]");
+    expect(next).toContain("https://masterclass.coachinayah.com/turnkey-v2");
+  });
+
+  it("never touches customized copy", () => {
+    expect(upgradeBody("Hey %FIRST_NAME%, custom admin message about tonight")).toBeNull();
+  });
+});
+
+describe("isQuietHoursLocal", () => {
+  it("flags early-local hours, allows daytime, tolerates bad timezones", () => {
+    const utcNoon = new Date("2026-07-23T12:00:00Z"); // 8:00 in New York, 5:00 in LA
+    expect(isQuietHoursLocal("America/New_York", utcNoon)).toBe(false);
+    expect(isQuietHoursLocal("America/Los_Angeles", utcNoon)).toBe(true);
+    expect(isQuietHoursLocal("not-a-timezone", utcNoon)).toBe(false);
   });
 });
 

@@ -468,6 +468,12 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${h2(`Hey ${name},`)}
           ${p("I didn't see you live on the Airbnb Masterclass.")}
           ${p("Totally get that life happens. But nothing changes if nothing changes.")}
+          ${(() => {
+            const module = propertyModule(data.personalization);
+            if (!module) return "";
+            return p("And while you were busy, the numbers near you didn't slow down:") + module +
+              p("Finding and setting up units like that is exactly what my team does for Turnkey clients.");
+          })()}
           ${p("If you're still serious about adding $2K\u2013$5K/mo without quitting your W2, here's the best next step:")}
           ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
           ${p("On that call we'll look at:")}
@@ -495,6 +501,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "<strong>Group B</strong> decides they're more scared of staying where they are than of trying something new\u2026 and they take the next step.",
           ])}
           ${p("Both groups heard the same information. Only one group changes their finances.")}
+          ${propertyModule(data.personalization)}
           ${p("If you're Group B, here's what to do:")}
           ${ctaButton("Book Your Turnkey Strategy Call \u2192", callLink)}
           ${p("We'll review your situation, lay out a clear 90\u2011day plan, and see if we can be the team that walks you through getting your first \"yes.\"")}

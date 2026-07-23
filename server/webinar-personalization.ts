@@ -38,7 +38,7 @@ import { getRegulationInfo } from "./regulation-tracker";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
-export const PERSONALIZATION_VERSION = 2;
+export const PERSONALIZATION_VERSION = 3;
 
 /**
  * Deal claims below this monthly profit stay out of messages. The class
@@ -92,6 +92,8 @@ export interface RegistrantPersonalization {
   };
   /** Tracked link into the tool, pre-targeted to their city */
   toolLink: string;
+  /** IANA timezone inferred from their state, for lead-local quiet hours */
+  timezone?: string;
   computedAt: string;
 }
 
@@ -125,6 +127,51 @@ const STATE_FULL: Record<string, string> = {
   VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
   DC: "District of Columbia",
 };
+
+// Dominant IANA timezone per state — hour-level precision is enough for a
+// quiet-hours guard (multi-timezone states use their majority zone).
+const STATE_TIMEZONES: Record<string, string> = {
+  CT: "America/New_York", DE: "America/New_York", FL: "America/New_York", GA: "America/New_York",
+  IN: "America/New_York", KY: "America/New_York", ME: "America/New_York", MD: "America/New_York",
+  MA: "America/New_York", MI: "America/New_York", NH: "America/New_York", NJ: "America/New_York",
+  NY: "America/New_York", NC: "America/New_York", OH: "America/New_York", PA: "America/New_York",
+  RI: "America/New_York", SC: "America/New_York", VT: "America/New_York", VA: "America/New_York",
+  WV: "America/New_York", DC: "America/New_York",
+  AL: "America/Chicago", AR: "America/Chicago", IL: "America/Chicago", IA: "America/Chicago",
+  KS: "America/Chicago", LA: "America/Chicago", MN: "America/Chicago", MS: "America/Chicago",
+  MO: "America/Chicago", NE: "America/Chicago", ND: "America/Chicago", OK: "America/Chicago",
+  SD: "America/Chicago", TN: "America/Chicago", TX: "America/Chicago", WI: "America/Chicago",
+  AZ: "America/Phoenix",
+  CO: "America/Denver", ID: "America/Denver", MT: "America/Denver", NM: "America/Denver",
+  UT: "America/Denver", WY: "America/Denver",
+  CA: "America/Los_Angeles", NV: "America/Los_Angeles", OR: "America/Los_Angeles", WA: "America/Los_Angeles",
+  AK: "America/Anchorage", HI: "Pacific/Honolulu",
+};
+
+function timezoneForState(state: string): string | undefined {
+  const trimmed = state.trim();
+  const upper = trimmed.toUpperCase();
+  const abbr = STATE_TIMEZONES[upper]
+    ? upper
+    : Object.entries(STATE_FULL).find(([, full]) => full.toLowerCase() === trimmed.toLowerCase())?.[0];
+  return abbr ? STATE_TIMEZONES[abbr] : undefined;
+}
+
+/**
+ * True when it's outside 8am–9pm in the lead's local timezone — marketing SMS
+ * must not land in that window (TCPA hygiene; some states are stricter).
+ */
+export function isQuietHoursLocal(timezone: string, at: Date = new Date()): boolean {
+  try {
+    const hour = Number(
+      new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hour12: false }).format(at),
+    );
+    // Some ICU builds report midnight as 24
+    return hour < 8 || hour >= 21;
+  } catch {
+    return false;
+  }
+}
 
 // Same normalization as regulation-tracker's normalizeLocationKey (kept private there)
 function regulationKey(city: string, state: string): string {
@@ -319,6 +366,7 @@ export async function computePersonalizationForEmail(
     dealCount: deals.length,
     ownReport,
     toolLink,
+    timezone: timezoneForState(state),
     computedAt: new Date().toISOString(),
   };
 }
@@ -543,7 +591,11 @@ export async function enrichWebinarRegistrants(
   }
 
   if (pending.length > 0) {
-    console.log(`[Personalization] webinar ${webinarId}: ${enriched} enriched, ${noLocation} without location, ${pending.length} scanned`);
+    // Coverage funnel: located → claimable-deal, so degradation is visible in logs
+    const withDeal = Array.from(byEmail.values()).filter(
+      (p) => p && buildPersonalizationVars(p).has_deal === "1",
+    ).length;
+    console.log(`[Personalization] webinar ${webinarId}: ${enriched} enriched (${withDeal} with claimable deal), ${noLocation} without location, ${pending.length} scanned`);
   }
   return { scanned: pending.length, enriched, noLocation };
 }

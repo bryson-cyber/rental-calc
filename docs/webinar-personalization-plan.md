@@ -433,6 +433,21 @@ Import cron (every 3 min, runWebinarImportInner)
 Manual add (addRegistrant) computes the payload inline before the instant sends.
 ```
 
+Also live in code:
+- **Production copy upgrade** (`server/webinar-sequence-upgrade.ts`): pending
+  scheduled messages whose body exactly matches an old stock seed are rewritten
+  to the tokenized defaults each import cycle; customized copy never matches
+  and is never touched.
+- **Lead-local quiet hours**: the payload carries an IANA timezone (from state);
+  Dispatcher V2 skips any SMS that would land outside 8am–9pm where the lead
+  lives, recorded as a `skipped` delivery.
+- **Post-class turnkey framing**: the missed-you and follow-up emails carry the
+  "Near {city}" card as evidence ("my team finds and sets up units like this")
+  with the strategy-call CTA unchanged. Deals open minds; the program is the
+  offer.
+- **Coverage logging**: each enrichment cycle logs located → claimable-deal
+  counts so degradation (empty HubSpot cities, dry scans) is visible.
+
 ### Message tokens
 
 SMS templates (sequence slots, confirmation template, campaigns) support, with safe

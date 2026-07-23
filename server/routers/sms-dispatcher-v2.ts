@@ -19,7 +19,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { notifyOwner } from "../_core/notification";
-import { buildPersonalizationVars, personalizationFromMetadata } from "../webinar-personalization";
+import { buildPersonalizationVars, isQuietHoursLocal, personalizationFromMetadata } from "../webinar-personalization";
 
 // ─── Module-level state ──────────────────────────────────────────────────────
 const armedSmsTimers = new Map<number, NodeJS.Timeout>();
@@ -394,10 +394,29 @@ async function dispatchSingleMessage(db: NonNullable<Awaited<ReturnType<typeof g
         const recipient = recipients[i];
 
         try {
+          const personalization = personalizationFromMetadata(recipient.metadata);
+
+          // Lead-local quiet hours: marketing SMS must not land outside
+          // 8am–9pm where the lead lives (TCPA hygiene). Skips are recorded
+          // as deliveries so the campaign counts stay honest.
+          if (personalization?.timezone && isQuietHoursLocal(personalization.timezone)) {
+            skippedCount++;
+            pendingRows.push({
+              campaignId,
+              registrantId: recipient.id,
+              phone: recipient.phone,
+              deliveryStatus: "skipped",
+              externalMessageId: null,
+              error: "Quiet hours (lead-local time) — not sent",
+              sentAt: new Date(),
+            });
+            continue;
+          }
+
           const personalizedMessage = _renderMessage(msg.messageBody, {
             // City/deal tokens from the registrant's enrichment payload; the
             // legacy name/email vars come last so they always win.
-            ...buildPersonalizationVars(personalizationFromMetadata(recipient.metadata)),
+            ...buildPersonalizationVars(personalization),
             name: recipient.name.split(" ")[0],
             fullname: recipient.name,
             email: recipient.email || "",

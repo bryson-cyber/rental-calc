@@ -56,6 +56,7 @@ import {
   personalizationFromMetadata,
   runLiveCityScansForWebinar,
 } from "../webinar-personalization";
+import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -4067,6 +4068,14 @@ async function runWebinarImportInner(
   }
   runLiveCityScansForWebinar(db, webinarId).catch((err: any) =>
     console.error(`[Personalization] Live city scans failed for webinar ${webinarId}:`, err.message));
+
+  // Upgrade stock sequence copy already scheduled in production to the current
+  // tokenized defaults (exact-match only — customized copy is never touched)
+  try {
+    await upgradeDefaultSequenceCopy(db, webinarId);
+  } catch (err: any) {
+    console.error(`[SequenceUpgrade] Failed for webinar ${webinarId}:`, err.message);
+  }
 
   // ═══ AUTO-SEND REGISTRATION CONFIRMATION SMS ═══════════════════════════════
   // Send immediate confirmation SMS to all registrants who haven't received one yet.
