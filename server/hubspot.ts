@@ -627,6 +627,11 @@ export async function getContactLocationByEmail(email: string): Promise<{
         limit: 1
       })
     });
+    if (res.status === 429) {
+      // Surface rate limiting distinctly — callers must back off, not treat
+      // it as "contact has no city" (that poisons the negative cache)
+      throw new Error('HUBSPOT_RATE_LIMITED');
+    }
     if (!res.ok) {
       console.warn(`[HubSpot] Contact lookup failed for ${email}: ${res.status}`);
       return null;
@@ -640,7 +645,8 @@ export async function getContactLocationByEmail(email: string): Promise<{
     const postalCode = props[DATA_PERFECTION_POSTAL_CODE] || props.zip || '';
     if (!city || !state) return null;
     return { hubspotId: contact.id, city, state, postalCode };
-  } catch (error) {
+  } catch (error: any) {
+    if (String(error?.message) === 'HUBSPOT_RATE_LIMITED') throw error;
     console.warn(`[HubSpot] Contact lookup error for ${email}:`, error);
     return null;
   }

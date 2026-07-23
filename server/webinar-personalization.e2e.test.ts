@@ -231,6 +231,17 @@ describe("persona D — lead texted us a different city earlier", () => {
   });
 });
 
+describe("HubSpot rate limiting", () => {
+  it("propagates HUBSPOT_RATE_LIMITED so the enrichment cycle backs off", async () => {
+    mockHubspot.mockRejectedValue(new Error("HUBSPOT_RATE_LIMITED"));
+    const { db } = fakeDb(new Map<object, any[]>([
+      [analysisReports as object, []],
+      [emailOptins as object, []],
+    ]));
+    await expect(computePersonalizationForEmail(db as any, "lead-rl@example.com")).rejects.toThrow("HUBSPOT_RATE_LIMITED");
+  });
+});
+
 describe("persona C — no location anywhere", () => {
   it("renders clean generic copy with no leftover markers or tokens", async () => {
     mockHubspot.mockResolvedValue(null);
