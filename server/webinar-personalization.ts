@@ -36,7 +36,7 @@ import { searchZillowRentals } from "./hasdata-zillow";
 import { analyzePropertyForArbitrageDetailed } from "./newsletter-deal-finder";
 import { getRegulationInfo } from "./regulation-tracker";
 import { ensureShareReportForDeal } from "./webinar-deal-report";
-import { sharedReports } from "../drizzle/schema";
+import { universalShareableReports } from "../drizzle/schema";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -385,28 +385,28 @@ export async function computePersonalizationForEmail(
     regLine = reg.yesNoSummary ?? undefined;
   }
 
-  // 5) The deal's public page: the tool's own shared property report when one
-  //    has been built for this address (that IS the product — "we did the
-  //    research for you"), else the Zillow listing. Either way it's a public,
-  //    no-login page reached through a tracked short link (/l/<code>).
+  // 5) The deal's public page: the tool's own /share/<code> Property Analysis
+  //    report when one has been built for this address (that IS the product —
+  //    "we did the research for you"), else the Zillow listing. Either way a
+  //    public, no-login page reached through a tracked short link (/l/<code>).
   const baseUrl = process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com";
   let dealShortLink: string | undefined;
   let dealReportShareId: string | undefined;
   if (topDeal?.sourceUrl || topDeal?.address) {
     try {
       const [share] = await db
-        .select({ shareId: sharedReports.shareId })
-        .from(sharedReports)
-        .where(and(eq(sharedReports.address, topDeal.address), eq(sharedReports.reportType, "property")))
-        .orderBy(desc(sharedReports.createdAt))
+        .select({ shareCode: universalShareableReports.shareCode })
+        .from(universalShareableReports)
+        .where(and(eq(universalShareableReports.address, topDeal.address), eq(universalShareableReports.reportType, "validator")))
+        .orderBy(desc(universalShareableReports.createdAt))
         .limit(1);
-      dealReportShareId = share?.shareId ?? undefined;
+      dealReportShareId = share?.shareCode ?? undefined;
     } catch (err: any) {
       console.error(`[Personalization] share lookup failed for ${topDeal.address}:`, err.message);
     }
   }
   const dealTargetUrl = dealReportShareId
-    ? `${baseUrl}/report/${dealReportShareId}`
+    ? `${baseUrl}/share/${dealReportShareId}`
     : topDeal?.sourceUrl || undefined;
   if (dealTargetUrl) {
     try {
@@ -657,6 +657,45 @@ export async function ensureCityData(
 
   console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s), ${reportsCreated} report(s) from ${candidates.length} listing(s)`);
   return { newDeals, scanned, reportsCreated };
+}
+
+/**
+ * Make sure the top claimable deal in a city has its /share report — used by
+ * the reply path so a YES always gets the report link, never a bare listing.
+ * Costs ≤1 rentalizer call, once per property. Returns true when a report
+ * exists (found or created) afterward.
+ */
+export async function ensureDealReportForCity(db: DbClient, city: string, state: string): Promise<boolean> {
+  const dealCutoff = new Date(Date.now() - DEAL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+  const [deal] = await db
+    .select()
+    .from(newsletterDeals)
+    .where(and(
+      eq(newsletterDeals.city, city),
+      eq(newsletterDeals.state, state),
+      eq(newsletterDeals.status, "active"),
+      gte(newsletterDeals.discoveredAt, dealCutoff),
+    ))
+    .orderBy(desc(newsletterDeals.dealScore))
+    .limit(1);
+  if (!deal) return false;
+  try {
+    const share = await ensureShareReportForDeal(db, {
+      address: deal.address,
+      city: deal.city,
+      state: deal.state,
+      zipCode: deal.zipCode,
+      bedrooms: deal.bedrooms,
+      bathrooms: deal.bathrooms,
+      monthlyRent: deal.monthlyRent,
+      propertyType: deal.propertyType,
+      sourceUrl: deal.sourceUrl,
+    });
+    return Boolean(share);
+  } catch (err: any) {
+    console.warn(`[Personalization] On-demand report failed for ${deal.address}:`, err.message);
+    return false;
+  }
 }
 
 // ─── Registrant enrichment (called from the import cron) ─────────────────────

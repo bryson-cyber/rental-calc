@@ -12,11 +12,13 @@ vi.mock("./hasdata-zillow", () => ({ searchZillowRentals: vi.fn() }));
 vi.mock("./newsletter-deal-finder", () => ({ analyzePropertyForArbitrageDetailed: vi.fn() }));
 vi.mock("./regulation-tracker", () => ({ getRegulationInfo: vi.fn() }));
 vi.mock("./airdna", () => ({ getRentalizerEstimate: vi.fn() }));
+vi.mock("./shareable-reports", () => ({ createShareableReport: vi.fn() }));
 
 import { getContactLocationByEmail } from "./hubspot";
 import { searchZillowRentals } from "./hasdata-zillow";
 import { analyzePropertyForArbitrageDetailed } from "./newsletter-deal-finder";
 import { getRegulationInfo } from "./regulation-tracker";
+import { createShareableReport } from "./shareable-reports";
 import {
   analysisReports,
   emailOptins,
@@ -24,7 +26,7 @@ import {
   newsletterDeals,
   personalizedLinks,
   regulationCache,
-  sharedReports,
+  universalShareableReports,
   webinarRegistrants,
 } from "../drizzle/schema";
 import {
@@ -40,6 +42,7 @@ const mockHubspot = getContactLocationByEmail as unknown as ReturnType<typeof vi
 const mockZillow = searchZillowRentals as unknown as ReturnType<typeof vi.fn>;
 const mockAnalyze = analyzePropertyForArbitrageDetailed as unknown as ReturnType<typeof vi.fn>;
 const mockRegs = getRegulationInfo as unknown as ReturnType<typeof vi.fn>;
+const mockShareReport = createShareableReport as unknown as ReturnType<typeof vi.fn>;
 
 // ─── Minimal chainable fake for the drizzle client ───────────────────────────
 
@@ -114,7 +117,7 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
       [newsletterDeals as object, [VEGAS_DEAL_ROW]],
       [regulationCache as object, [{ status: "allowed_with_permit", yesNoSummary: "Yes, short-term rentals are allowed in Las Vegas with a permit." }]],
       [personalizedLinks as object, []],
-      [sharedReports as object, [{ shareId: "vegasrep123", address: VEGAS_DEAL_ROW.address, reportType: "property" }]],
+      [universalShareableReports as object, [{ shareCode: "vegasrep123", address: VEGAS_DEAL_ROW.address, reportType: "validator" }]],
     ]));
   }
 
@@ -137,7 +140,7 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
     expect(p!.dealReportShareId).toBe("vegasrep123");
     expect(p!.dealShortLink).toMatch(/\/l\/[a-z0-9]+$/);
     const linkInsert = inserts.find((i) => i.table === (personalizedLinks as object));
-    expect(linkInsert!.values.linkUrl).toContain("/report/vegasrep123");
+    expect(linkInsert!.values.linkUrl).toContain("/share/vegasrep123");
     expect(linkInsert!.values.targetCity).toBe("Las Vegas");
   });
 
@@ -219,7 +222,7 @@ describe("persona D — lead texted us a different city earlier", () => {
       [newsletterDeals as object, []],
       [regulationCache as object, []],
       [personalizedLinks as object, []],
-      [sharedReports as object, []],
+      [universalShareableReports as object, []],
     ]));
 
     const p = await computePersonalizationForEmail(db as any, "lead-d@example.com");
@@ -250,7 +253,7 @@ describe("HubSpot rate limiting", () => {
       [newsletterDeals as object, []],
       [regulationCache as object, []],
       [personalizedLinks as object, []],
-      [sharedReports as object, []],
+      [universalShareableReports as object, []],
     ]));
     const p = await computePersonalizationForEmail(db as any, "lead-batch@example.com", {
       hubspotLocation: { city: "DALLAS", state: "TX" },
@@ -281,6 +284,7 @@ describe("persona C — no location anywhere", () => {
 describe("live city scan — automating step 4 for a dry city", () => {
   it("analyzes best-fit listings first, writes complete deal rows, stops after a claimable hook", async () => {
     mockRegs.mockResolvedValue({ status: "allowed" });
+    mockShareReport.mockResolvedValue({ success: true, shareCode: "newcode", shareUrl: "/share/newcode" });
     mockZillow.mockResolvedValue({
       success: true,
       listings: [
@@ -310,7 +314,7 @@ describe("live city scan — automating step 4 for a dry city", () => {
     const { db, inserts } = fakeDb(new Map<object, any[]>([
       [newsletterCities as object, [{ id: 9, city: "Boise", state: "ID", lastDealScan: null }]],
       [newsletterDeals as object, []],
-      [sharedReports as object, []],
+      [universalShareableReports as object, []],
     ]));
 
     const result = await ensureCityData(db as any, "Boise", "ID");
@@ -329,13 +333,16 @@ describe("live city scan — automating step 4 for a dry city", () => {
     expect(dealInsert!.values.projectedRevenue).toBe(54000);
     expect(dealInsert!.values.status).toBe("active");
 
-    // The tool's shareable report was built from the same estimate — no extra
-    // API call — and it carries the public listing URL inside
-    const shareInsert = inserts.find((i) => i.table === (sharedReports as object));
-    expect(shareInsert!.values.reportType).toBe("property");
-    const reportData = JSON.parse(shareInsert!.values.reportData);
-    expect(reportData.property.listingUrl).toBe("u2");
-    expect(reportData.revenue_estimate.annual).toBe(54000);
+    // The public /share validator report was built from the same estimate —
+    // no extra rentalizer call — and carries the Zillow listing URL inside
+    expect(mockShareReport).toHaveBeenCalled();
+    const shareInput = mockShareReport.mock.calls[0][0];
+    expect(shareInput.reportType).toBe("validator");
+    expect(shareInput.address).toBe("12 Fit St, Boise, ID 83702");
+    expect(shareInput.annualRevenue).toBe(54000);
+    expect(shareInput.reportData._listingUrl).toBe("u2");
+    expect(shareInput.reportData.revenue.projected).toBe(54000);
+    expect(shareInput.reportData.cashFlow.monthlyProfit).toBe(4500 - 1700 - 900); // rev − rent − 20% opex
     expect(result.reportsCreated).toBeGreaterThanOrEqual(1);
   });
 });

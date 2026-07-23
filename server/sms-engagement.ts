@@ -28,6 +28,7 @@ import {
   buildPersonalizationVars,
   computePersonalizationForEmail,
   ensureCityData,
+  ensureDealReportForCity,
   isQuietHoursLocal,
   personalizationFromMetadata,
   type RegistrantPersonalization,
@@ -349,6 +350,14 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
           if (!personalization.deal && scansThisCycle < MAX_REPLY_SCANS_PER_CYCLE) {
             scansThisCycle++;
             await ensureCityData(db, personalization.city, personalization.state).catch(() => {});
+            if (reg.email) {
+              personalization = (await computePersonalizationForEmail(db, reg.email)) ?? personalization;
+            }
+          } else if (personalization.deal && !personalization.dealReportShareId && scansThisCycle < MAX_REPLY_SCANS_PER_CYCLE) {
+            // Build the /share report on demand — a YES must get the report
+            // link, never a bare Zillow URL
+            scansThisCycle++;
+            await ensureDealReportForCity(db, personalization.city, personalization.state).catch(() => {});
             if (reg.email) {
               personalization = (await computePersonalizationForEmail(db, reg.email)) ?? personalization;
             }
