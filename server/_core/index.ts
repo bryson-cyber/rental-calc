@@ -1135,11 +1135,12 @@ async function startServer() {
   // ─── Heartbeat HTTP Cron Handlers ───────────────────────────────────────
   // These MUST be mounted before tRPC and Vite fallthrough.
   // Platform POSTs to these endpoints on a schedule.
-  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler, llcStatusPollHandler } = await import("../scheduled-handlers");
+  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler, llcStatusPollHandler, scheduledHealthHandler } = await import("../scheduled-handlers");
   app.post("/api/scheduled/webinar-import", webinarImportHandler);
   app.post("/api/scheduled/sms-dispatch", smsDispatchHandler);
   app.post("/api/scheduled/email-dispatch", emailDispatchHandler);
   app.post("/api/scheduled/llc-status-poll", llcStatusPollHandler);
+  app.get("/api/scheduled/health", scheduledHealthHandler);
 
   // LLC formation status poll trigger for external schedulers (GET /api/poll,
   // disabled unless POLL_SECRET is configured)
