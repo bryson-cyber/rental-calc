@@ -165,8 +165,30 @@ export interface InboundIntent {
   state: string | null;
 }
 
+/**
+ * Deterministic classification for the replies that matter most — a plain
+ * YES/NO/STOP must never depend on an LLM round-trip succeeding.
+ */
+export function quickClassify(text: string): InboundIntent | null {
+  const bare = text
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const YES = new Set(["yes", "y", "yeah", "yep", "yup", "sure", "absolutely", "definitely", "yes please", "im interested", "i m interested", "interested", "ok", "okay", "lets go", "let s go"]);
+  const NO = new Set(["no", "n", "nope", "nah", "no thanks", "no thank you", "not interested", "not right now", "not now", "maybe later"]);
+  const STOP = new Set(["stop", "unsubscribe", "quit", "cancel", "end", "remove me", "stop texting me", "wrong number"]);
+  if (YES.has(bare)) return { intent: "yes", city: null, state: null };
+  if (NO.has(bare)) return { intent: "no", city: null, state: null };
+  if (STOP.has(bare)) return { intent: "stop", city: null, state: null };
+  return null;
+}
+
 /** LLM classification of a lead's reply — handles any city they throw at it */
 export async function classifyReply(text: string, knownCity?: string): Promise<InboundIntent> {
+  const quick = quickClassify(text);
+  if (quick) return quick;
+
   const fallback: InboundIntent = { intent: "other", city: null, state: null };
   try {
     const result = await invokeLLM({
@@ -189,9 +211,17 @@ Rules:
       ],
       responseFormat: { type: "json_object" },
     });
+    // Content may arrive as a string OR an array of text segments depending
+    // on the routed model — handle both, then extract the JSON object
     const content = result.choices?.[0]?.message?.content;
-    const raw = typeof content === "string" ? content : "";
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const raw = typeof content === "string"
+      ? content
+      : Array.isArray(content)
+        ? content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
+        : "";
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
     const intent = ["yes", "no", "city", "stop", "other"].includes(parsed.intent) ? parsed.intent : "other";
     return {
       intent,

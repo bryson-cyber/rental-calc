@@ -69,16 +69,35 @@ describe("classifyReply", () => {
     choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(obj) }, finish_reason: "stop" }],
   });
 
+  it("classifies plain YES/NO/STOP deterministically — no LLM involved", async () => {
+    mockLLM.mockRejectedValue(new Error("LLM must not be called"));
+    expect((await classifyReply("YES")).intent).toBe("yes");
+    expect((await classifyReply("Yes!!")).intent).toBe("yes");
+    expect((await classifyReply("yeah 👍")).intent).toBe("yes");
+    expect((await classifyReply("No thanks")).intent).toBe("no");
+    expect((await classifyReply("STOP")).intent).toBe("stop");
+    expect(mockLLM).not.toHaveBeenCalled();
+  });
+
   it("parses a city reply", async () => {
     mockLLM.mockResolvedValue(llmAnswer({ intent: "city", city: "Phoenix", state: "AZ" }));
     const parsed = await classifyReply("what about pheonix az?");
     expect(parsed).toEqual({ intent: "city", city: "Phoenix", state: "AZ" });
   });
 
-  it("parses a plain yes", async () => {
-    mockLLM.mockResolvedValue(llmAnswer({ intent: "yes", city: null, state: null }));
-    const parsed = await classifyReply("Yes!!", "Las Vegas");
-    expect(parsed.intent).toBe("yes");
+  it("handles array-style LLM content and prose-wrapped JSON", async () => {
+    mockLLM.mockResolvedValue({
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: 'Here is the result: {"intent": "city", "city": "Denver", "state": "CO"}' }],
+        },
+        finish_reason: "stop",
+      }],
+    });
+    const parsed = await classifyReply("thinking about denver maybe");
+    expect(parsed).toEqual({ intent: "city", city: "Denver", state: "CO" });
   });
 
   it("falls back to 'other' on malformed LLM output or errors", async () => {
