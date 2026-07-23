@@ -7,6 +7,11 @@ send each lead the message that matches their situation.
 Everything in this plan maps to systems that already exist in this repo. New pieces
 are marked **NEW**.
 
+> **Status:** the market/property personalization layer (section 8) is implemented in
+> this PR. The funding-segment layer (sections 2 and 4's segment-specific sequences)
+> is designed here but not yet wired — it needs the consent-language review in
+> section 7 first.
+
 ---
 
 ## 1. Short plan
@@ -383,3 +388,72 @@ the design rules the plan is built around:
    repair. "Funding readiness prep" framing only, and keep it educational.
 7. **Data minimization.** Raw reports stay with the partner. Locally: bands and the
    segment only, versioned, with a retention window aligned to the lead lifecycle.
+
+---
+
+## 8. v1 implementation (shipped with this PR)
+
+The "run properties" personalization layer is live in code. Every registrant gets a
+city/deal/regulation context attached, and every reminder can reference it — the
+class demos San Diego live; the messages show each lead their own market before
+they ever get to class.
+
+### Pipeline
+
+```
+Import cron (every 3 min, runWebinarImportInner)
+  → enrichWebinarRegistrants()          server/webinar-personalization.ts
+      location:  analysis_reports (their own tool run — strongest signal)
+                 else email_optins (their stated city)
+      market:    newsletter_cities cached stats
+      deal:      top active newsletter_deals for their city (dealScore desc)
+      regs:      regulation_cache, fresh entries only
+      link:      personalized_links row (campaignType: webinar_deals),
+                 tool URL pre-targeted to their city + UTM
+      stored in: webinar_registrants.metadata.personalization
+  → confirmation SMS/email render with the payload (same cron cycle)
+Manual add (addRegistrant) computes the payload inline before the instant sends.
+DB-only lookups throughout — zero AirDNA quota usage.
+```
+
+### Message tokens
+
+SMS templates (sequence slots, confirmation template, campaigns) support, with safe
+generic fallbacks: `%CITY%`, `%STATE%`, `%MARKET%`, `%DEAL_RENT%`, `%DEAL_REVENUE%`,
+`%DEAL_PROFIT%` (all monthly), `%DEAL_LINK%` / `%TOOL_LINK%`.
+
+Conditional blocks keep claims honest per recipient — a message never asserts a
+local property unless that lead actually has one on file:
+
+- `[IF_DEAL]...[/IF_DEAL]` — renders only when a real scanned deal with real
+  numbers exists for their city
+- `[IF_CITY]...[/IF_CITY]` — renders when we know their city
+- `[IF_CITY_ONLY]...[/IF_CITY_ONLY]` — city known but no deal (either/or copy)
+
+The default 11-slot sequence seeds and the evergreen confirmation template now use
+these hooks (regenerate the sequence from admin to pick them up; existing scheduled
+rows are not rewritten).
+
+### Emails
+
+`buildWebinarEmail` accepts an optional `personalization` payload and renders a
+"Near {city}" card (local deal + their own report line + regulation one-liner +
+tracked "see properties near {city}" link) in the confirmation, 2-days, day-before,
+and morning-of emails. The day-before subject line personalizes to the city when
+known. Emails without a payload render exactly as before.
+
+### Transcript-locked class beats used in the copy
+
+From the master class transcript: the live research demo (regulations check → Zillow
+listings → revenue/comps analysis), the $1K–$3K/mo per-property profit target, the
+$10K–$20K startup range or business credit path, the Landlord "Yes" pitch video and
+lease addendum, and the stay-to-the-end free course bonus. Copy teases these beats
+and attaches the lead's own market to them; income figures in templates stay within
+what the class itself claims.
+
+### Measurement hooks
+
+Deal-link clicks accrue on `personalized_links` (campaignType `webinar_deals`) via
+`clickCount`/`link_clicks`. Compare show-up rate for registrants with
+`metadata.personalization` present vs absent as a first natural experiment, then run
+the section 6 A/B properly.

@@ -19,6 +19,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { notifyOwner } from "../_core/notification";
+import { buildPersonalizationVars, personalizationFromMetadata } from "../webinar-personalization";
 
 // ─── Module-level state ──────────────────────────────────────────────────────
 const armedSmsTimers = new Map<number, NodeJS.Timeout>();
@@ -36,7 +37,7 @@ type RenderMessageFn = (template: string, vars: Record<string, string>) => strin
 type HasUnfilledPlaceholdersFn = (messageBody: string) => string | null;
 type FetchWebinarJamRegistrantsFn = (webinarId: string, scheduleId?: number, page?: number, overrideApiKey?: string) => Promise<{ registrants: any[]; hasMore: boolean }>;
 type FetchWebinarJamDetailsFn = (webinarId: string, overrideApiKey?: string) => Promise<any>;
-type GetRecipientsForMessageFn = (db: any, msg: { webinarId: string; audience: string }) => Promise<Array<{ id: number; name: string; email: string | null; phone: string }>>;
+type GetRecipientsForMessageFn = (db: any, msg: { webinarId: string; audience: string }) => Promise<Array<{ id: number; name: string; email: string | null; phone: string; metadata?: unknown }>>;
 
 let _sendSms: SendSmsFn;
 let _normalizePhone: NormalizePhoneFn;
@@ -394,6 +395,9 @@ async function dispatchSingleMessage(db: NonNullable<Awaited<ReturnType<typeof g
 
         try {
           const personalizedMessage = _renderMessage(msg.messageBody, {
+            // City/deal tokens from the registrant's enrichment payload; the
+            // legacy name/email vars come last so they always win.
+            ...buildPersonalizationVars(personalizationFromMetadata(recipient.metadata)),
             name: recipient.name.split(" ")[0],
             fullname: recipient.name,
             email: recipient.email || "",

@@ -6,6 +6,7 @@
  */
 import nodemailer from "nodemailer";
 import { ENV } from "./_core/env";
+import type { EmailPersonalization } from "./webinar-personalization";
 
 // Create reusable transporter
 let transporter: nodemailer.Transporter | null = null;
@@ -119,6 +120,9 @@ interface WebinarEmailData {
   webinarDate?: string;   // e.g. "July 8, 2026"
   webinarTime?: string;   // e.g. "7:00 PM ET"
   callLink?: string;      // Turnkey strategy call link
+  /** Lead's market context (city, local deal, regulation line). Optional —
+   *  templates render identically to before when absent. */
+  personalization?: EmailPersonalization;
 }
 
 const JOIN_LINK = "https://event.webinarjam.com/klp6w/go/live/696vzt4msgs2s6?webinar_id=380";
@@ -177,6 +181,34 @@ function signoff(closing: string = "Talk soon"): string {
   return `<p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:16px 0 0;">${closing},<br><strong>Inayah</strong></p>`;
 }
 
+/**
+ * "Near {city}" card: the lead's local deal, their own report numbers, and the
+ * regulation one-liner. Renders nothing unless we have at least one real local
+ * fact — never a fabricated local claim.
+ */
+function propertyModule(pz?: EmailPersonalization): string {
+  if (!pz?.city) return "";
+  const rows: string[] = [];
+  if (pz.dealLabel && pz.dealRent) {
+    const projection = pz.dealRevenue
+      ? `comps project <strong>${pz.dealRevenue}/mo</strong> on Airbnb`
+      : `comps project roughly <strong>${pz.dealProfit}/mo in profit</strong>`;
+    const profitTail = pz.dealRevenue && pz.dealProfit
+      ? ` — roughly <strong>${pz.dealProfit}/mo in profit</strong> after rent and expenses`
+      : "";
+    rows.push(p(`My deal scanner found ${pz.dealLabel} renting for <strong>${pz.dealRent}/mo</strong>, and ${projection}${profitTail}.`));
+  }
+  if (pz.ownReportLine) rows.push(p(pz.ownReportLine));
+  if (pz.regLine) rows.push(p(pz.regLine));
+  if (rows.length === 0) return "";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr>
+<td style="background-color:${BRAND.offWhite};border-left:4px solid ${BRAND.gold};border-radius:8px;padding:20px 24px;">
+<p style="margin:0 0 12px;color:${BRAND.navy};font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Near ${pz.city}</p>
+${rows.join("")}
+<p style="margin:8px 0 0;"><a href="${pz.toolLink}" style="color:${BRAND.navy};font-weight:600;text-decoration:underline;">See properties near ${pz.city} &rarr;</a></p>
+</td></tr></table>`;
+}
+
 export function buildWebinarEmail(type: string, data: WebinarEmailData): { subject: string; html: string } | null {
   const { firstName } = data;
   const name = firstName || "there";
@@ -209,6 +241,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "The 90\u2011Day Launch Checklist",
             "A surprise bonus training I normally reserve for paid clients",
           ])}
+          ${propertyModule(data.personalization)}
           ${p("Block the time on your calendar now. I'll text and email your private join link 15 minutes before we go live.")}
           ${ctaButton("Add to Calendar", joinLink)}
           ${signoff("Talk soon")}
@@ -231,6 +264,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "How rental arbitrage turns a $2K rent payment into $4K\u2013$6K revenue",
             "The exact tool I use to see if a unit can profit $1K\u2013$3K/mo before I ever sign a lease",
           ])}
+          ${propertyModule(data.personalization)}
           ${p('Most people will register and forget. The ones who show up live are usually the ones sending me messages 6 months later saying, "I got my first unit."')}
           ${p("You already raised your hand. Next step is just showing up.")}
           ${signoff("See you soon")}
@@ -242,7 +276,9 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
     // ─────────────────────────────────────────────────────────
     case "day_before":
       return {
-        subject: "Tomorrow: 5 steps to your first \"yes\" from a landlord",
+        subject: data.personalization?.city
+          ? `Tomorrow: 5 steps to your first "yes" \u2014 and what's near ${data.personalization.city}`
+          : "Tomorrow: 5 steps to your first \"yes\" from a landlord",
         html: wrap(`
           ${h2(`Hi ${name},`)}
           ${p(`Tomorrow at <strong>${time}</strong> we go deep on the 5\u2011step money\u2011making system behind my 7\u2011figure Airbnb portfolio.`)}
@@ -252,6 +288,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             'How to use data, not "that listing looks cute," to pick units',
             "Why my mom's two units passed $116,000 in less than 10 months while she kept her hospital job",
           ])}
+          ${propertyModule(data.personalization)}
           ${p('If you\'ve ever thought, "I work too hard to only have one income," this class was built for you.')}
           ${p("Watch for your join link tomorrow. Do whatever you need to do so you're not stuck at work or in traffic when we start.")}
           ${signoff("With you")}
@@ -274,6 +311,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "How much you realistically need to start ($10K\u2013$20K, or business credit)",
             "The timeline to go from zero to first cash\u2011flowing unit in about 90 days",
           ])}
+          ${propertyModule(data.personalization)}
           ${p("For most people, the real cost isn't the money. It's more months of their life trading every hour for a paycheck.")}
           ${p("Let's change that tonight.")}
           ${signoff("Talk soon")}

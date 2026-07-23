@@ -47,6 +47,14 @@ import {
   startSmsDispatcherV2,
   getSmsDispatcherInterval,
 } from "./sms-dispatcher-v2";
+import {
+  applyConditionalBlocks,
+  buildEmailPersonalization,
+  buildPersonalizationVars,
+  computePersonalizationForEmail,
+  enrichWebinarRegistrants,
+  personalizationFromMetadata,
+} from "../webinar-personalization";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
 
@@ -310,21 +318,25 @@ function isUsCanadaPhone(phone: string): boolean {
 // ─── Helper: Template variable replacement ───────────────────────────────────
 
 function renderMessage(template: string, vars: Record<string, string>): string {
-  let result = template;
-  // Support both {{var}} and %VAR% formats
+  // [IF_DEAL]/[IF_CITY] blocks resolve first so stripped copy never leaks tokens
+  let result = applyConditionalBlocks(template, vars);
+  // Support both {{var}} and %VAR% formats. Replacement uses the function form
+  // so values containing "$" (money figures) are never treated as regex
+  // capture-group references.
   for (const [key, value] of Object.entries(vars)) {
-    // Replace {{key}} format
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    if (key.startsWith("has_")) continue; // conditional flags, not tokens
+    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => value);
+    result = result.replace(new RegExp(`%${key.toUpperCase()}%`, "g"), () => value);
   }
-  // Also replace %FIRST_NAME%, %FULL_NAME%, %EMAIL% format (used by AI composer and templates)
+  // Legacy aliases (used by the AI composer and older templates)
   if (vars.name) {
-    result = result.replace(/%FIRST_NAME%/g, vars.name);
+    result = result.replace(/%FIRST_NAME%/g, () => vars.name);
   }
   if (vars.fullname) {
-    result = result.replace(/%FULL_NAME%/g, vars.fullname);
+    result = result.replace(/%FULL_NAME%/g, () => vars.fullname);
   }
   if (vars.email) {
-    result = result.replace(/%EMAIL%/g, vars.email);
+    result = result.replace(/%EMAIL%/g, () => vars.email);
   }
   return result;
 }
@@ -692,6 +704,22 @@ export const webinarSmsRouter = router({
         tags: input.tags,
       });
 
+      // Personalization: compute inline (DB-only lookups) so the instant
+      // confirmation SMS/email below can reference the lead's city. Non-fatal.
+      let personalization: Awaited<ReturnType<typeof computePersonalizationForEmail>> = null;
+      if (input.email) {
+        try {
+          personalization = await computePersonalizationForEmail(db, input.email);
+          if (personalization) {
+            await db.update(webinarRegistrants)
+              .set({ metadata: { personalization } })
+              .where(eq(webinarRegistrants.id, Number(result.insertId)));
+          }
+        } catch (err: any) {
+          console.error(`[Personalization] Inline compute failed for ${input.email}:`, err.message);
+        }
+      }
+
       // Auto-send calendar invite if email is provided and a webinar is selected
       if (input.email && selectedWebinarId) {
         autoSendCalendarInvites(
@@ -721,12 +749,16 @@ export const webinarSmsRouter = router({
 
         (async () => {
           try {
-            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
+            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
             const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
               .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
             if (tplRow?.settingValue) tpl = tplRow.settingValue;
             const firstName = (input.name || "there").split(" ")[0];
-            const msg = tpl.replace(/%FIRST_NAME%/g, firstName);
+            const msg = renderMessage(tpl, {
+              ...buildPersonalizationVars(personalization),
+              name: firstName,
+              fullname: input.name || "",
+            });
             const smsResult = await sendSms(normalizedPhone, msg);
             if (smsResult.success) {
               console.log(`[Confirmation SMS] Instant send to ${normalizedPhone} succeeded`);
@@ -795,6 +827,7 @@ export const webinarSmsRouter = router({
               webinarDay: manualWebinarDay || undefined,
               webinarDate: manualWebinarDate || undefined,
               webinarTime: manualWebinarTime || undefined,
+              personalization: buildEmailPersonalization(personalization),
             });
             if (emailContent) {
               const result2 = await sendWebinarEmail({
@@ -1478,7 +1511,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -2067,21 +2100,21 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 1,
-          messageBody: `Hey %FIRST_NAME%, it's Inayah. In 2 days I'm going to walk you through how 500+ professionals added $2K\u2013$5K/mo on Airbnb without owning property. You're on the list. Block 90 mins so you can focus.`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. In 2 days I'm going to walk you through how 500+ professionals added $2K\u2013$5K/mo on Airbnb without owning property. We do the research LIVE in class \u2014 real listings, real numbers.[IF_CITY] And yes, it works for %CITY% too.[/IF_CITY] Block 90 mins so you can focus.`,
           scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 2,
-          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow. I'll show you the exact 5-step system my students use to launch in under 90 days while keeping their W2. Stay tuned for your join link.`,
+          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] I'll show you how to run %CITY% through my research tool live.[/IF_CITY_ONLY] Stay tuned for your join link.`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 3,
-          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live for your Airbnb Masterclass. If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist. Worth being there.`,
+          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] I'm bringing the numbers on a unit near %CITY% that could clear %DEAL_PROFIT%/mo.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
@@ -2095,7 +2128,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
-          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property. I'll send your join link 15 minutes before go time.`,
+          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] I'll also run %CITY% through the research tool live.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
@@ -2132,7 +2165,7 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Missed You (No-Show)",
           sequenceOrder: 10,
-          messageBody: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens. If you're still serious about adding $2K\u2013$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: ${callLink}`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens.[IF_DEAL] While you were gone, my scanner kept working \u2014 a property near %CITY% rents for %DEAL_RENT%/mo with comps projecting %DEAL_REVENUE%/mo on Airbnb.[/IF_DEAL] If you're still serious about adding $2K\u2013$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: ${callLink}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
@@ -4021,6 +4054,15 @@ async function runWebinarImportInner(
     }
   }
 
+  // ═══ PERSONALIZATION ENRICHMENT ════════════════════════════════════════════
+  // Attach city/deal/regulation context to registrants (DB-only lookups, no
+  // external APIs). Runs before confirmation SMS so T0 messages can use tokens.
+  try {
+    await enrichWebinarRegistrants(db, webinarId);
+  } catch (err: any) {
+    console.error(`[Personalization] Enrichment failed for webinar ${webinarId}:`, err.message);
+  }
+
   // ═══ AUTO-SEND REGISTRATION CONFIRMATION SMS ═══════════════════════════════
   // Send immediate confirmation SMS to all registrants who haven't received one yet.
   // This runs every cron cycle (not just for newly imported) to catch retries.
@@ -4040,6 +4082,7 @@ async function runWebinarImportInner(
       id: webinarRegistrants.id,
       phone: webinarRegistrants.phone,
       name: webinarRegistrants.name,
+      metadata: webinarRegistrants.metadata,
     }).from(webinarRegistrants)
       .where(and(
         eq(webinarRegistrants.webinarId, webinarId),
@@ -4065,7 +4108,7 @@ async function runWebinarImportInner(
       // SELECT the same pending rows before either marked them.
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
-      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
+      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class.[IF_DEAL] I already found a property near %CITY% worth showing you — details coming before class.[/IF_DEAL] I'll send your join link here before we start. Save this number! - Inayah`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
         .from(webinarSmsSettings)
         .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))
@@ -4084,7 +4127,11 @@ async function runWebinarImportInner(
         const registrant = registrants[0];
         const allIds = registrants.map((r: any) => r.id);
         const firstName = (registrant.name || "there").split(" ")[0];
-        const personalizedMessage = confirmationTemplate.replace(/%FIRST_NAME%/g, firstName);
+        const personalizedMessage = renderMessage(confirmationTemplate, {
+          ...buildPersonalizationVars(personalizationFromMetadata(registrant.metadata)),
+          name: firstName,
+          fullname: registrant.name || "",
+        });
 
         // ═══ ATOMIC CLAIM ═══
         // Only the process whose UPDATE flips the owner row 0→1 sends to this
@@ -4184,6 +4231,7 @@ async function runWebinarImportInner(
       id: webinarRegistrants.id,
       email: webinarRegistrants.email,
       name: webinarRegistrants.name,
+      metadata: webinarRegistrants.metadata,
     }).from(webinarRegistrants)
       .where(and(
         eq(webinarRegistrants.webinarId, webinarId),
@@ -4268,6 +4316,7 @@ async function runWebinarImportInner(
             webinarDay: cronEmailDay || undefined,
             webinarDate: cronEmailDate || undefined,
             webinarTime: cronEmailTime || undefined,
+            personalization: buildEmailPersonalization(personalizationFromMetadata(reg.metadata)),
           });
           if (!emailContent) continue;
           const emailResult = await sendWebinarEmail({
@@ -4553,6 +4602,7 @@ async function getRecipientsForMessage(db: NonNullable<Awaited<ReturnType<typeof
     name: webinarRegistrants.name,
     email: webinarRegistrants.email,
     phone: webinarRegistrants.phone,
+    metadata: webinarRegistrants.metadata,
   }).from(webinarRegistrants).where(and(...conditions));
 
   // Dedup by phone
@@ -4899,6 +4949,7 @@ async function dispatchDueEmailBlasts(
         id: webinarRegistrants.id,
         name: webinarRegistrants.name,
         email: webinarRegistrants.email,
+        metadata: webinarRegistrants.metadata,
       }).from(webinarRegistrants).where(and(...emailConditions));
 
       if (emailRecipients.length === 0) {
@@ -4966,6 +5017,7 @@ async function dispatchDueEmailBlasts(
               webinarDay: webinarDay || undefined,
               webinarDate: webinarDate || undefined,
               webinarTime: webinarTime || undefined,
+              personalization: buildEmailPersonalization(personalizationFromMetadata(recipient.metadata)),
             });
 
             if (!emailContent) return { recipient, result: { success: false, error: "No email content" } as any };
