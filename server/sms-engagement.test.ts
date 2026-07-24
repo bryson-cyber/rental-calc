@@ -80,10 +80,12 @@ describe("classifyReply", () => {
     expect(mockLLM).not.toHaveBeenCalled();
   });
 
-  it("parses a city reply", async () => {
+  it("parses a city reply on the pinned classifier model", async () => {
     mockLLM.mockResolvedValue(llmAnswer({ intent: "city", city: "Phoenix", state: "AZ" }));
     const parsed = await classifyReply("what about pheonix az?");
     expect(parsed).toEqual({ intent: "city", city: "Phoenix", state: "AZ" });
+    // Gemini 2.5 Flash misreads natural-language city replies — the pin matters
+    expect(mockLLM.mock.calls[0][0].model).toBe("claude-sonnet");
   });
 
   it("handles array-style LLM content and prose-wrapped JSON", async () => {
