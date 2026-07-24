@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 
 import { invokeLLM } from "./_core/llm";
-import { buildDealReplyMessage, classifyReply, sendEngagementQuestions } from "./sms-engagement";
+import { buildDealReplyMessage, classifyReply, quickCityParse, sendEngagementQuestions } from "./sms-engagement";
 import { computeLeadPriority } from "./lead-priority";
 import type { RegistrantPersonalization } from "./webinar-personalization";
 import { webinarRegistrants, webinarSmsSettings } from "../drizzle/schema";
@@ -165,5 +165,42 @@ describe("sendEngagementQuestions — one question per person", () => {
     for (const u of updates) {
       expect((u.values.metadata as any).engagement.askedAt).toBeTruthy();
     }
+  });
+});
+
+// ─── Deterministic city parsing + LLM retry ──────────────────────────────────
+
+describe("quickCityParse — deterministic '<city> <ST>' replies", () => {
+  const llm = (obj: unknown) => ({
+    choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(obj) }, finish_reason: "stop" }],
+  });
+
+  it("rescues the common shapes when the LLM is down", async () => {
+    mockLLM.mockRejectedValue(new Error("llm hard down"));
+    expect(await classifyReply("What about phoenix az?")).toEqual({ intent: "city", city: "Phoenix", state: "AZ" });
+    expect(await classifyReply("phoenix az")).toEqual({ intent: "city", city: "Phoenix", state: "AZ" });
+    expect(await classifyReply("Salt Lake City UT")).toEqual({ intent: "city", city: "Salt Lake City", state: "UT" });
+  });
+
+  it("parses direct unit shapes deterministically", () => {
+    expect(quickCityParse("phoenix az")).toEqual({ intent: "city", city: "Phoenix", state: "AZ" });
+    expect(quickCityParse("sounds ok")).toBeNull(); // everyday word, not Sounds, OK
+  });
+
+  it("does not mistake everyday words for ambiguous state codes when the LLM is down", async () => {
+    mockLLM.mockRejectedValue(new Error("llm hard down"));
+    expect((await classifyReply("sounds ok")).intent).toBe("other");
+  });
+
+  it("accepts ambiguous codes when the message clearly asks about a place", () => {
+    expect(quickCityParse("what about norman ok?")).toEqual({ intent: "city", city: "Norman", state: "OK" });
+  });
+
+  it("retries the LLM once before falling back to 'other'", async () => {
+    mockLLM
+      .mockRejectedValueOnce(new Error("blip"))
+      .mockResolvedValueOnce(llm({ intent: "city", city: "Boise", state: "ID" }));
+    expect(await classifyReply("hmm maybe boise?")).toEqual({ intent: "city", city: "Boise", state: "ID" });
+    expect(mockLLM).toHaveBeenCalledTimes(2);
   });
 });
