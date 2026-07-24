@@ -204,3 +204,24 @@ describe("quickCityParse — deterministic '<city> <ST>' replies", () => {
     expect(mockLLM).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("classifyReply arbitration — obvious city text vs a waffling LLM", () => {
+  const llm = (obj: unknown) => ({
+    choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(obj) }, finish_reason: "stop" }],
+  });
+
+  it("overrides an LLM 'other' when the text is a clear city pattern", async () => {
+    mockLLM.mockResolvedValue(llm({ intent: "other", city: null, state: null }));
+    expect(await classifyReply("What about phonix az?")).toEqual({ intent: "city", city: "Phonix", state: "AZ" });
+  });
+
+  it("fills in the city when the LLM says 'city' but returns none", async () => {
+    mockLLM.mockResolvedValue(llm({ intent: "city", city: null, state: null }));
+    expect(await classifyReply("can you try tucson az")).toEqual({ intent: "city", city: "Tucson", state: "AZ" });
+  });
+
+  it("trusts a confident no even when a city pattern is present", async () => {
+    mockLLM.mockResolvedValue(llm({ intent: "no", city: null, state: null }));
+    expect((await classifyReply("not now dallas tx")).intent).toBe("no");
+  });
+});
