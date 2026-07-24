@@ -300,9 +300,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
@@ -313,6 +310,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
+  }
+
+  // Gemini's json_object mode returns EMPTY content when thinking is enabled
+  // (the reply lands in the thinking block) — callers asking for json_object
+  // need the content field, so thinking is only sent for other call shapes.
+  if ((normalizedResponseFormat as { type?: string } | undefined)?.type !== "json_object") {
+    payload.thinking = {
+      "budget_tokens": 128
+    }
   }
 
   const response = await fetch(resolveApiUrl(), {
