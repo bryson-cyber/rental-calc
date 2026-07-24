@@ -194,7 +194,7 @@ export function renderPaymentConfirmedEmail(params: {
     `2. The state approves your formation`,
     `3. We secure your federal EIN`,
     ``,
-    `This typically takes a few weeks and varies by state — we'll email you at each milestone.`,
+    `This typically takes a few weeks and varies by state — we'll email you when your formation is complete.`,
     ``,
     `Track your filing any time: ${statusUrl(params.registrationId)}`,
     ``,

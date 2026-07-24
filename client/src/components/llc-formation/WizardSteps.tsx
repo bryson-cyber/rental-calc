@@ -36,13 +36,7 @@ function formatSsnInput(value: string): string {
   return digits;
 }
 
-function StatePricePanel({
-  state,
-  expediteEin = false,
-}: {
-  state: string | null | undefined;
-  expediteEin?: boolean;
-}) {
+function StatePricePanel({ state }: { state: string | null | undefined }) {
   const pricingQuery = useStatePricing(state);
   const pricing = pricingQuery.data;
   if (!state || !pricing) return null;
@@ -171,7 +165,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           className="sm:col-span-2"
         />
       </div>
-      <StatePricePanel state={draft.formationState} expediteEin={draft.expediteEin} />
+      <StatePricePanel state={draft.formationState} />
     </div>
   );
 }
@@ -352,11 +346,8 @@ export function AddressAgentStep({ draft, errors, onChange }: StepProps) {
             </span>
             <span className="mt-3 grid gap-2">
               <IncludedLine>A professional address receives state mail — not your home</IncludedLine>
-              <IncludedLine>Legal documents accepted and handled on your behalf</IncludedLine>
-              <IncludedLine>
-                Included free for your first year — we'll reach out before renewal
-                with the annual rate
-              </IncludedLine>
+              <IncludedLine>Legal documents accepted for your company at a professional address</IncludedLine>
+              <IncludedLine>Included with your formation order</IncludedLine>
               <IncludedLine>Nothing extra to set up — we handle the paperwork</IncludedLine>
             </span>
           </ChoiceCard>
@@ -750,9 +741,7 @@ export function ReviewStep({
               value={
                 draft.founders.some((founder) => (founder.ssn ?? "").trim())
                   ? "Fast-track (SSN on file)"
-                  : draft.expediteEin
-                    ? "Expedited (add-on)"
-                    : "Standard"
+                  : "Standard — included"
               }
             />
           </dl>
@@ -764,20 +753,9 @@ export function ReviewStep({
               <h3 className="text-sm font-semibold text-foreground">Order total</h3>
             </div>
             <dl className="mt-1 divide-y divide-border">
-              {draft.expediteEin && pricing!.expediteEinPriceCents ? (
-                <SummaryLine
-                  label="Expedited EIN add-on"
-                  value={formatUsdFromCents(pricing!.expediteEinPriceCents)}
-                />
-              ) : null}
               <SummaryLine
                 label={`Total for ${stateDisplayName(draft.formationState)}`}
-                value={`${formatUsdFromCents(
-                  pricing!.retailPriceCents! +
-                    (draft.expediteEin && pricing!.expediteEinPriceCents
-                      ? pricing!.expediteEinPriceCents
-                      : 0),
-                )}${
+                value={`${formatUsdFromCents(pricing!.retailPriceCents!)}${
                   pricing!.stateFeeCents !== null
                     ? ` — includes the ${formatUsdFromCents(pricing!.stateFeeCents)} state filing fee`
                     : ""

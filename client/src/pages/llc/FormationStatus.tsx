@@ -608,7 +608,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <p className="text-xs leading-5 text-muted-foreground">
           Our team manages the state filing, registered agent, and EIN retrieval end to
-          end. You’ll hear from us the moment anything needs your attention.
+          end. You’ll hear from us whenever anything needs your attention.
         </p>
       </div>
 
