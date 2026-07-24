@@ -131,20 +131,45 @@ export async function sendEngagementQuestions(db: DbClient, webinarId: string): 
       sql`${webinarRegistrants.source} != 'csv'`,
     ));
 
+  // One question per PERSON, not per row. Duplicate registrations (re-adds,
+  // repeat test signups) share a phone; any row already asked means the
+  // person was asked — a new sibling row must never re-fire the question.
+  const byPhone = new Map<string, typeof rows>();
   for (const row of rows) {
+    if (!row.phone) continue;
+    const last10 = row.phone.replace(/[^\d]/g, "").slice(-10);
+    if (!byPhone.has(last10)) byPhone.set(last10, []);
+    byPhone.get(last10)!.push(row);
+  }
+
+  for (const group of Array.from(byPhone.values())) {
     if (asked >= MAX_QUESTIONS_PER_CYCLE) break;
+    if (group.some((r) => engagementFromMetadata(r.metadata).askedAt)) continue;
+    // The newest row is the live registration
+    const row = group.reduce((a, b) => (b.id > a.id ? b : a));
     if (!row.confirmationSmsAt || row.confirmationSmsAt > delayCutoff) continue;
     const engagement = engagementFromMetadata(row.metadata);
-    if (engagement.askedAt) continue;
     const pz = personalizationFromMetadata(row.metadata);
     if (pz?.timezone && isQuietHoursLocal(pz.timezone)) continue; // next cycle
 
     // Claim before sending so overlapping cycles can't double-text
+    const askedAtStamp = new Date().toISOString();
     const claim = await db
       .update(webinarRegistrants)
-      .set({ metadata: { ...((row.metadata as Record<string, unknown>) ?? {}), engagement: { ...engagement, askedAt: new Date().toISOString() } } })
+      .set({ metadata: { ...((row.metadata as Record<string, unknown>) ?? {}), engagement: { ...engagement, askedAt: askedAtStamp } } })
       .where(and(eq(webinarRegistrants.id, row.id), sql`JSON_EXTRACT(${webinarRegistrants.metadata}, '$.engagement.askedAt') IS NULL`));
     if (((claim as any)[0]?.affectedRows ?? 0) === 0) continue;
+
+    // Stamp the sibling rows too, so no later cycle re-asks this person
+    for (const sib of group) {
+      if (sib.id === row.id) continue;
+      const sibEng = engagementFromMetadata(sib.metadata);
+      await db
+        .update(webinarRegistrants)
+        .set({ metadata: { ...((sib.metadata as Record<string, unknown>) ?? {}), engagement: { ...sibEng, askedAt: sibEng.askedAt ?? askedAtStamp } } })
+        .where(eq(webinarRegistrants.id, sib.id))
+        .catch(() => {});
+    }
 
     const result = await sendSmsDirect(row.phone, ENGAGEMENT_QUESTION);
     if (result.success) {
@@ -402,12 +427,16 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
         .from(webinarRegistrants)
         .where(sql`RIGHT(REPLACE(${webinarRegistrants.phone}, '-', ''), 10) = ${last10}`);
       for (const sib of siblings) {
+        // Merge per sibling: the reply state is authoritative, but askedAt
+        // must survive on every row — losing it re-arms the ask loop and the
+        // person gets the question again
+        const sibEng = engagementFromMetadata(sib.metadata);
         await db
           .update(webinarRegistrants)
           .set({
             metadata: {
               ...((sib.metadata as Record<string, unknown>) ?? {}),
-              engagement: engagementUpdate,
+              engagement: { ...sibEng, ...engagementUpdate, askedAt: engagementUpdate.askedAt ?? sibEng.askedAt },
               ...(personalization ? { personalization } : {}),
             },
           })
