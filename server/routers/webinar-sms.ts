@@ -58,6 +58,7 @@ import {
 } from "../webinar-personalization";
 import { upgradeDefaultSequenceCopy } from "../webinar-sequence-upgrade";
 import { processInboundReplies, sendEngagementQuestions } from "../sms-engagement";
+import { sweepQuotedDealListings } from "../deal-liveness";
 import { maybeSendDailyDigest } from "../webinar-digest";
 
 // ─── Default Calendar Event Description ──────────────────────────────────────
@@ -4057,6 +4058,11 @@ async function runWebinarImportInner(
     console.error(`[Engagement] Question send failed for webinar ${webinarId}:`, err.message));
   processInboundReplies(db).catch((err: any) =>
     console.error(`[Engagement] Inbound processing failed:`, err.message));
+
+  // Retire quoted listings that have gone off-market BEFORE scheduled sends
+  // cite them (budgeted; 12h cache inside)
+  sweepQuotedDealListings(db, webinarId).catch((err: any) =>
+    console.error(`[DealLiveness] Sweep failed for webinar ${webinarId}:`, err.message));
 
   // Once a day: coverage/engagement/hot-leads digest to the owner
   maybeSendDailyDigest(db).catch((err: any) =>

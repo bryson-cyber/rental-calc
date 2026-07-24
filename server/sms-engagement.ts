@@ -34,6 +34,7 @@ import {
   type RegistrantPersonalization,
 } from "./webinar-personalization";
 import { syncLeadPriorityToHubSpot } from "./lead-priority";
+import { verifyDealListing } from "./deal-liveness";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -42,6 +43,8 @@ const INBOUND_WATERMARK_KEY = "engagement_last_inbound_ts";
 const MAX_AUTO_REPLIES = 3;
 const MAX_QUESTIONS_PER_CYCLE = 25;
 const MAX_REPLY_SCANS_PER_CYCLE = 2;
+/** Zillow liveness checks per inbound cycle (5 HasData credits each) */
+const MAX_LISTING_VERIFICATIONS_PER_CYCLE = 2;
 /** Only ask leads confirmed recently — never blast an old list on deploy */
 const ASK_WINDOW_HOURS = 48;
 /** Small gap after the confirmation so the two texts don't stack */
@@ -424,6 +427,24 @@ async function processInboundRepliesInner(db: DbClient): Promise<{ processed: nu
   if (fresh.length === 0) return { processed, replied };
 
   let scansThisCycle = 0;
+  let verifiesThisCycle = 0;
+
+  // Never quote a listing that's already off-market. Verification is cached
+  // (12h) and budgeted; a dead verdict retires the deal inside
+  // verifyDealListing, then a recompute promotes the runner-up — or strips
+  // the deal so the honest no-deal copy renders.
+  const withLiveDeal = async (
+    p: RegistrantPersonalization | null,
+    email: string | null,
+  ): Promise<RegistrantPersonalization | null> => {
+    if (!p?.deal || !p.dealZillowUrl) return p;
+    if (verifiesThisCycle >= MAX_LISTING_VERIFICATIONS_PER_CYCLE) return p;
+    verifiesThisCycle++;
+    const verdict = await verifyDealListing(db, { sourceUrl: p.dealZillowUrl, address: p.deal.label });
+    if (verdict !== "dead") return p;
+    const recomputed = email ? await computePersonalizationForEmail(db, email).catch(() => null) : null;
+    return recomputed ?? { ...p, deal: undefined, dealShortLink: undefined, dealZillowUrl: undefined, dealReportShareId: undefined };
+  };
 
   for (const msg of fresh) {
     processed++;
@@ -471,9 +492,11 @@ async function processInboundRepliesInner(db: DbClient): Promise<{ processed: nu
             overrideCity: { city: parsed.city, state: parsed.state },
           });
         }
+        personalization = await withLiveDeal(personalization, reg.email ?? null);
         cityOverride = { city: parsed.city, state: parsed.state };
         replyText = personalization ? buildDealReplyMessage(personalization) : OTHER_REPLY_MESSAGE;
       } else if (parsed.intent === "yes") {
+        personalization = await withLiveDeal(personalization, reg.email ?? null);
         if (personalization?.city) {
           if (!personalization.deal && scansThisCycle < MAX_REPLY_SCANS_PER_CYCLE) {
             scansThisCycle++;
