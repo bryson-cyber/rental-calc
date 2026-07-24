@@ -268,7 +268,25 @@ Rules:
         },
         { role: "user", content: text.slice(0, 400) },
       ],
-      responseFormat: { type: "json_object" },
+      // json_schema strict — the shape bug-report triage already uses in
+      // production; json_object returns empty content on the routed model
+      responseFormat: {
+        type: "json_schema",
+        json_schema: {
+          name: "reply_classification",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              intent: { type: "string", enum: ["yes", "no", "city", "stop", "other"] },
+              city: { type: ["string", "null"] },
+              state: { type: ["string", "null"] },
+            },
+            required: ["intent", "city", "state"],
+            additionalProperties: false,
+          },
+        },
+      },
     });
     // Content may arrive as a string OR an array of text segments depending
     // on the routed model — handle both, then extract the JSON object
@@ -278,6 +296,7 @@ Rules:
       : Array.isArray(content)
         ? content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
         : "";
+    if (!raw.trim()) throw new Error("LLM returned empty content (structured output swallowed by thinking mode?)");
     const cleaned = raw.replace(/```json|```/g, "").trim();
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
