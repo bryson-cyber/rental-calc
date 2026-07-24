@@ -251,6 +251,9 @@ export async function classifyReply(text: string, knownCity?: string): Promise<I
   const fallback: InboundIntent = { intent: "other", city: null, state: null };
   const attempt = async () => {
     const result = await invokeLLM({
+      // Pinned: Gemini 2.5 Flash misclassifies natural-language city replies
+      // ("the vegas area", "atl") as 'other'; Claude classifies them reliably
+      model: "claude-sonnet",
       messages: [
         {
           role: "system",
