@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./_core/llm", () => ({ invokeLLM: vi.fn() }));
 
 import { invokeLLM } from "./_core/llm";
-import { buildDealReplyMessage, classifyReply } from "./sms-engagement";
+import { buildDealReplyMessage, classifyReply, sendEngagementQuestions } from "./sms-engagement";
 import { computeLeadPriority } from "./lead-priority";
 import type { RegistrantPersonalization } from "./webinar-personalization";
+import { webinarRegistrants, webinarSmsSettings } from "../drizzle/schema";
 
 const mockLLM = invokeLLM as unknown as ReturnType<typeof vi.fn>;
 
@@ -106,5 +107,63 @@ describe("classifyReply", () => {
 
     mockLLM.mockRejectedValue(new Error("llm down"));
     expect((await classifyReply("hm")).intent).toBe("other");
+  });
+});
+
+// ─── One question per person, not per row ────────────────────────────────────
+
+function fakeDb(tableRows: Map<object, any[]>) {
+  const updates: Array<{ table: object; values: any }> = [];
+  const builder = (rows: any[]) => {
+    const b: any = {
+      where: () => b,
+      orderBy: () => b,
+      limit: (n: number) => Promise.resolve(rows.slice(0, n)),
+      then: (onOk: any, onErr: any) => Promise.resolve(rows).then(onOk, onErr),
+    };
+    return b;
+  };
+  const db = {
+    select: (_cols?: unknown) => ({ from: (table: object) => builder(tableRows.get(table) ?? []) }),
+    update: (table: object) => ({
+      set: (values: any) => ({
+        where: () => {
+          updates.push({ table, values });
+          return Promise.resolve([{ affectedRows: 1 }]);
+        },
+      }),
+    }),
+  };
+  return { db, updates };
+}
+
+describe("sendEngagementQuestions — one question per person", () => {
+  it("skips phones already asked on any row and stamps all sibling rows on ask", async () => {
+    const past = new Date(Date.now() - 10 * 60 * 1000);
+    const rows = [
+      // Phone A: three registrant rows (repeat test adds); ONE was already
+      // asked — the person must not be asked again from the un-asked rows
+      { id: 1, phone: "702-521-8792", metadata: { tag: "A1", engagement: { askedAt: "2026-07-23T16:00:00.000Z", replies: 0 } }, confirmationSmsAt: past },
+      { id: 2, phone: "7025218792", metadata: { tag: "A2" }, confirmationSmsAt: past },
+      { id: 3, phone: "+17025218792", metadata: { tag: "A3" }, confirmationSmsAt: past },
+      // Phone B: two rows, none asked — ask once, stamp both
+      { id: 4, phone: "615-555-0101", metadata: { tag: "B-old" }, confirmationSmsAt: past },
+      { id: 5, phone: "6155550101", metadata: { tag: "B-new" }, confirmationSmsAt: past },
+    ];
+    const { db, updates } = fakeDb(new Map<object, any[]>([
+      [webinarSmsSettings as object, []],
+      [webinarRegistrants as object, rows],
+    ]));
+
+    await sendEngagementQuestions(db as any, "wb-1");
+
+    const touched = updates.map((u) => (u.values.metadata as any).tag);
+    expect(touched).not.toContain("A1");
+    expect(touched).not.toContain("A2");
+    expect(touched).not.toContain("A3");
+    expect(touched.sort()).toEqual(["B-new", "B-old"]);
+    for (const u of updates) {
+      expect((u.values.metadata as any).engagement.askedAt).toBeTruthy();
+    }
   });
 });

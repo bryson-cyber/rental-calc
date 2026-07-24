@@ -98,6 +98,9 @@ async function getTopDealsForCity(db: DbClient, city: string, state: string): Pr
       eq(newsletterDeals.state, state),
       eq(newsletterDeals.status, "active"),
       gte(newsletterDeals.discoveredAt, dealCutoff),
+      // Rental listings turn over fast — past a deal's expiry (14 days at
+      // scan time) it must not back a claim, even inside the 30-day window
+      sql`(${newsletterDeals.expiresAt} IS NULL OR ${newsletterDeals.expiresAt} > NOW())`,
     ))
     .orderBy(desc(newsletterDeals.dealScore))
     .limit(3);
