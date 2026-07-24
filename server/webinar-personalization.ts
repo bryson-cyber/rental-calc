@@ -119,8 +119,10 @@ export interface RegistrantPersonalization {
    * haven't touched the tool — so HubSpot (opt-in / soft-pull address) leads,
    * and a tool run is only a bonus signal when it happens to exist.
    * "engagement" = the lead texted us a city themselves (strongest signal).
+   * "carryover" = no live source answered, so the city from their existing
+   * payload was kept — a lead once located never regresses to generic copy.
    */
-  source: "hubspot" | "email_optin" | "analysis_report" | "engagement";
+  source: "hubspot" | "email_optin" | "analysis_report" | "engagement" | "carryover";
   city: string;
   state: string;
   marketName?: string;
@@ -368,6 +370,33 @@ export async function computePersonalizationForEmail(
     }
   }
 
+  // Last resort: the city from a payload we already computed for them once.
+  // Live sources can go quiet later (e.g. a HubSpot batch read returning
+  // nothing for a contact first located through a different path) — that must
+  // never regress an already-personalized lead to generic copy, or strand
+  // their minted links on a stale target.
+  if (!city || !state) {
+    try {
+      const [priorRow] = await db
+        .select({ metadata: webinarRegistrants.metadata })
+        .from(webinarRegistrants)
+        .where(and(
+          eq(webinarRegistrants.email, normalizedEmail),
+          sql`JSON_EXTRACT(${webinarRegistrants.metadata}, '$.personalization.city') IS NOT NULL`,
+        ))
+        .orderBy(desc(webinarRegistrants.id))
+        .limit(1);
+      const prior = (priorRow?.metadata as any)?.personalization;
+      if (prior?.city && prior?.state) {
+        city = prior.city;
+        state = prior.state;
+        source = "carryover";
+      }
+    } catch {
+      // Best-effort; a miss here just means generic copy
+    }
+  }
+
   if (!city || !state) return null;
   city = titleCase(city.trim());
   state = state.trim();
@@ -522,10 +551,13 @@ export async function ensureCityData(
   db: DbClient,
   city: string,
   state: string,
-): Promise<{ newDeals: number; scanned: boolean; reportsCreated: number }> {
+): Promise<{ newDeals: number; scanned: boolean; reportsCreated: number; reportEnsured: boolean }> {
   let newDeals = 0;
   let scanned = false;
   let reportsCreated = 0;
+  // True when the message deal's /share report exists afterward (found OR
+  // created) — callers must still upgrade leads whose payloads predate it
+  let reportEnsured = false;
 
   // Regulation: cached-or-research, self-caching, independent of the deal scan
   try {
@@ -547,7 +579,7 @@ export async function ensureCityData(
       .from(newsletterCities)
       .where(and(eq(newsletterCities.city, city), eq(newsletterCities.state, state)))
       .limit(1);
-    if (!cityRow) return { newDeals, scanned, reportsCreated };
+    if (!cityRow) return { newDeals, scanned, reportsCreated, reportEnsured };
   }
 
   // Backfill the report for the deal messages actually quote (shared
@@ -568,6 +600,7 @@ export async function ensureCityData(
         propertyType: target.propertyType,
         sourceUrl: target.sourceUrl,
       });
+      if (share) reportEnsured = true;
       if (share?.created) reportsCreated++;
     } catch (err: any) {
       console.warn(`[Personalization] Share-report backfill failed for ${target.address}:`, err.message);
@@ -589,7 +622,7 @@ export async function ensureCityData(
     .limit(1);
   if (freshDeal) {
     await backfillMessageDealReport();
-    return { newDeals, scanned, reportsCreated };
+    return { newDeals, scanned, reportsCreated, reportEnsured };
   }
 
   // A recent dry scan means this city genuinely has nothing right now — wait.
@@ -598,7 +631,7 @@ export async function ensureCityData(
   const retryCutoff = new Date(Date.now() - CITY_SCAN_RETRY_HOURS * 60 * 60 * 1000);
   if (cityRow.lastDealScan && cityRow.lastDealScan > retryCutoff) {
     await backfillMessageDealReport();
-    return { newDeals, scanned, reportsCreated };
+    return { newDeals, scanned, reportsCreated, reportEnsured };
   }
 
   // Claim before scanning so concurrent cron cycles don't double-spend credits
@@ -613,7 +646,7 @@ export async function ensureCityData(
   const search = await searchZillowRentals({ city, state, minBeds: 1, maxBeds: 4 });
   if (!search.success || search.listings.length === 0) {
     console.log(`[Personalization] No rental listings found for ${city}, ${state}`);
-    return { newDeals, scanned, reportsCreated };
+    return { newDeals, scanned, reportsCreated, reportEnsured };
   }
 
   // Rank candidates by likelihood of clearing the $1K/mo profit floor before
@@ -686,6 +719,7 @@ export async function ensureCityData(
           propertyType: deal.propertyType,
           sourceUrl: deal.sourceUrl,
         }, estimate);
+        if (share) reportEnsured = true;
         if (share?.created) reportsCreated++;
       } catch (err: any) {
         console.warn(`[Personalization] Share-report creation failed for ${deal.address}:`, err.message);
@@ -699,7 +733,7 @@ export async function ensureCityData(
   if (newDeals === 0) await backfillMessageDealReport();
 
   console.log(`[Personalization] Scan of ${city}, ${state}: ${newDeals} deal(s), ${reportsCreated} report(s) from ${candidates.length} listing(s)`);
-  return { newDeals, scanned, reportsCreated };
+  return { newDeals, scanned, reportsCreated, reportEnsured };
 }
 
 /**
@@ -771,9 +805,14 @@ export async function enrichWebinarRegistrants(
     .filter((r) => {
       const p = (r.metadata as any)?.personalization;
       if (!p || p.version !== PERSONALIZATION_VERSION) {
-        // A fresh definitive miss ("no city anywhere") isn't re-asked yet
-        const miss = (r.metadata as any)?.personalizationMiss;
-        if (miss?.checkedAt && Date.parse(miss.checkedAt) > missRetryCutoff) return false;
+        // A fresh definitive miss ("no city anywhere") isn't re-asked yet —
+        // but only for rows never personalized. An existing older-version
+        // payload always recomputes: its city carries over even when every
+        // live location source comes back empty.
+        if (!p) {
+          const miss = (r.metadata as any)?.personalizationMiss;
+          if (miss?.checkedAt && Date.parse(miss.checkedAt) > missRetryCutoff) return false;
+        }
         return true;
       }
       // Leads still missing a deal get periodically re-checked so a later city
@@ -894,11 +933,13 @@ export async function runLiveCityScansForWebinar(
   for (const { city, state, emails, rows: cityRows } of Array.from(dryCities.values())) {
     if (citiesScanned >= maxCities) break;
     try {
-      const { newDeals, scanned, reportsCreated } = await ensureCityData(db, city, state);
+      const { newDeals, scanned, reportsCreated, reportEnsured } = await ensureCityData(db, city, state);
       // Backfill work (a report built for an existing deal) counts toward the
       // per-cycle cap too — it also spends a rentalizer call
       if (scanned || reportsCreated > 0) citiesScanned++;
-      if (newDeals === 0 && !scanned && reportsCreated === 0) continue;
+      // reportEnsured without any new work still upgrades: the report may
+      // exist from another lead's cycle while these payloads predate it
+      if (newDeals === 0 && !scanned && reportsCreated === 0 && !reportEnsured) continue;
       // Upgrade every lead in that city with the fresh data
       const upgradedByEmail = new Map<string, RegistrantPersonalization | null>();
       for (const email of Array.from(emails)) {
