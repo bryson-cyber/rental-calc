@@ -347,6 +347,41 @@ describe("live city scan — automating step 4 for a dry city", () => {
     expect(shareInput.reportData.revenue.projected).toBe(54000);
     expect(shareInput.reportData.cashFlow.monthlyProfit).toBe(4500 - 1700 - 900); // rev − rent − 20% opex
     expect(result.reportsCreated).toBeGreaterThanOrEqual(1);
+    expect(result.reportEnsured).toBe(true);
+  });
+});
+
+describe("carryover — live sources go quiet for an already-personalized lead", () => {
+  it("keeps their stored city and repoints the existing link instead of regressing", async () => {
+    // The lead was located once (v4 payload), but now HubSpot returns nothing
+    // for them and no opt-in/report row exists. The recompute must reuse the
+    // stored city — not return null — so the v5 upgrade lands and their
+    // already-texted short link repoints to the /share report in place.
+    mockHubspot.mockResolvedValue(null);
+    const { db, updates } = fakeDb(new Map<object, any[]>([
+      [analysisReports as object, []],
+      [emailOptins as object, []],
+      [webinarRegistrants as object, [{
+        metadata: { personalization: { version: 4, source: "hubspot", city: "Las Vegas", state: "NV", dealCount: 1, computedAt: "2026-07-23T10:56:13Z" } },
+      }]],
+      [newsletterCities as object, [{ id: 3, city: "Las Vegas", state: "NV" }]],
+      [newsletterDeals as object, [VEGAS_DEAL_ROW]],
+      [regulationCache as object, []],
+      [personalizedLinks as object, [{ id: 5, shortCode: "q1j3ycw2", linkUrl: "https://www.zillow.com/homedetails/x_zpid/" }]],
+      [universalShareableReports as object, [{ shareCode: "vegasrep123", address: VEGAS_DEAL_ROW.address, reportType: "validator" }]],
+    ]));
+
+    const p = await computePersonalizationForEmail(db as any, "owner@example.com");
+
+    expect(p).not.toBeNull();
+    expect(p!.source).toBe("carryover");
+    expect(p!.city).toBe("Las Vegas");
+    expect(p!.version).toBe(5);
+    expect(p!.dealReportShareId).toBe("vegasrep123");
+    // Same short code, new target — links already on phones flip in place
+    const linkUpdate = updates.find((u) => u.table === (personalizedLinks as object));
+    expect(linkUpdate!.values.linkUrl).toContain("/share/vegasrep123");
+    expect(linkUpdate!.values.shortCode).toBe("q1j3ycw2");
   });
 });
 
