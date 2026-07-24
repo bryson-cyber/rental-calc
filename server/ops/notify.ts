@@ -200,8 +200,14 @@ export function statusChangeAlert(params: {
       `Founder signatures needed — relay these signing links to the client under your brand:`,
     );
     for (const signature of signatures) {
+      const formLabel =
+        signature.form === "ss4"
+          ? "IRS Form SS-4 (EIN application)"
+          : signature.form === "form8821"
+            ? "IRS Form 8821 (tax information authorization)"
+            : "Signature";
       lines.push(
-        `- ${signature.url ?? "no link"}${signature.expires_at ? ` (expires ${signature.expires_at})` : ""}`,
+        `- ${formLabel}: ${signature.url ?? "no link"}${signature.expires_at ? ` (expires ${signature.expires_at})` : ""}`,
       );
     }
   }

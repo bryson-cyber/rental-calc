@@ -44,6 +44,60 @@ describe("normalizeWhopFormationStatus provider contract", () => {
     expect(result.localStatus).toBe("action_required");
   });
 
+  it("maps the documented enum: draft stays payment_required, never progress", () => {
+    const result = normalizeWhopFormationStatus({ status: "draft" });
+    expect(result.localStatus).toBe("payment_required");
+  });
+
+  it("maps the documented enum: filed is NOT completed while the EIN is outstanding", () => {
+    const result = normalizeWhopFormationStatus({
+      status: "filed",
+      state_registered: true,
+      ein_registered: false,
+    });
+    expect(result.localStatus).toBe("processing");
+  });
+
+  it("maps the documented enum: rejected demands ops attention", () => {
+    expect(normalizeWhopFormationStatus({ status: "rejected" }).localStatus).toBe(
+      "action_required",
+    );
+  });
+
+  it("still completes when both booleans confirm, regardless of status text", () => {
+    const result = normalizeWhopFormationStatus({
+      status: "filed",
+      state_registered: true,
+      ein_registered: true,
+    });
+    expect(result.localStatus).toBe("completed");
+  });
+
+  it("parses the keyed-object signatures shape and keeps the form label", () => {
+    const result = normalizeWhopFormationStatus({
+      status: "processing",
+      signatures: {
+        ss4: { status: "pending", url: "https://sign.example/ss4", expires_at: "2026-08-01" },
+      },
+    });
+    expect(result.localStatus).toBe("action_required");
+    expect(result.snapshot.signatures?.[0]?.form).toBe("ss4");
+    expect(result.snapshot.signatures?.[0]?.url).toBe("https://sign.example/ss4");
+  });
+
+  it("parses documents in both the pinned and current field shapes", () => {
+    const result = normalizeWhopFormationStatus({
+      status: "completed",
+      documents: [
+        { id: "file_1", name: "Articles", type: "articles_of_organization", url: "https://cdn.example/a.pdf" },
+        { id: "doc_2", name: "EIN", document_type: "ein_letter", download_url: "https://cdn.example/b.pdf" },
+      ],
+    });
+    expect(result.snapshot.documents?.[0]?.document_type).toBe("articles_of_organization");
+    expect(result.snapshot.documents?.[0]?.download_url).toBe("https://cdn.example/a.pdf");
+    expect(result.snapshot.documents?.[1]?.document_type).toBe("ein_letter");
+  });
+
   it("never classifies 'inactive' or 'incomplete' as completed", () => {
     expect(normalizeWhopFormationStatus({ status: "inactive" }).localStatus).not.toBe("completed");
     expect(normalizeWhopFormationStatus({ status: "incomplete" }).localStatus).not.toBe("completed");

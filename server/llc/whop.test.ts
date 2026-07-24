@@ -101,7 +101,9 @@ describe("Whop LLC contract", () => {
         founder_ssn: "000-00-0000",
       }),
     ).toMatchObject({
-      localStatus: "completed",
+      // Per the documented enum, "filed" means the state leg is done while
+      // the EIN may still be outstanding — progress, not completion.
+      localStatus: "processing",
       snapshot: { status: "filed" },
     });
 

@@ -494,6 +494,8 @@ export type WhopFormationDocument = {
 };
 
 export type WhopFormationSignature = {
+  /** Which IRS form this signature belongs to (e.g. ss4, form8821), when known. */
+  form: string | null;
   status: string | null;
   url: string | null;
   expires_at: string | null;
@@ -520,30 +522,53 @@ function sanitizeDocuments(value: unknown): WhopFormationDocument[] {
       {
         id: safeString(record.id, 128),
         name: safeString(record.name, 200),
-        document_type: safeString(record.document_type, 128),
-        download_url: safeString(record.download_url, 2000),
+        // The pinned API version names these document_type/download_url; the
+        // 2026-07-23 spec renames them type/url. Accept both.
+        document_type:
+          safeString(record.document_type, 128) ?? safeString(record.type, 128),
+        download_url:
+          safeString(record.download_url, 2000) ?? safeString(record.url, 2000),
       },
     ];
   });
 }
 
+function sanitizeSignatureEntry(
+  entry: unknown,
+  form: string | null,
+): WhopFormationSignature[] {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+  const record = entry as Record<string, unknown>;
+  const expires =
+    typeof record.expires_at === "number"
+      ? String(record.expires_at)
+      : safeString(record.expires_at, 64);
+  return [
+    {
+      form,
+      status: safeString(record.status, 64),
+      url: safeString(record.url, 2000),
+      expires_at: expires,
+    },
+  ];
+}
+
 function sanitizeSignatures(value: unknown): WhopFormationSignature[] {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 20).flatMap((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
-    const record = entry as Record<string, unknown>;
-    const expires =
-      typeof record.expires_at === "number"
-        ? String(record.expires_at)
-        : safeString(record.expires_at, 64);
-    return [
-      {
-        status: safeString(record.status, 64),
-        url: safeString(record.url, 2000),
-        expires_at: expires,
-      },
-    ];
-  });
+  // Legacy (pinned-version) shape: an array of signature entries.
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, 20)
+      .flatMap((entry) => sanitizeSignatureEntry(entry, null));
+  }
+  // Current (2026-07-23) shape: an object keyed by IRS form (ss4, form8821).
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .slice(0, 20)
+      .flatMap(([form, entry]) =>
+        sanitizeSignatureEntry(entry, safeString(form, 32)),
+      );
+  }
+  return [];
 }
 
 export function normalizeWhopFormationStatus(value: unknown): {
@@ -610,6 +635,51 @@ export function normalizeWhopFormationStatus(value: unknown): {
       snapshot,
       localStatus: "completed",
       note: "Whop reports the state filing and EIN are both complete",
+    };
+  }
+
+  // The 2026-07-23 spec documents status as a closed enum. Map those values
+  // explicitly — the defensive token matching below stays as the fallback for
+  // undocumented values, but must never see these (it would misread "draft"
+  // as progress and "filed" as completion).
+  const documentedStatus =
+    typeof snapshot.status === "string" ? snapshot.status.toLowerCase() : null;
+  if (documentedStatus === "draft") {
+    // Draft = the formation checkout has not been paid; nothing has started.
+    return {
+      snapshot,
+      localStatus: "payment_required",
+      note: "Whop is waiting for checkout payment",
+    };
+  }
+  if (documentedStatus === "processing") {
+    return {
+      snapshot,
+      localStatus: "processing",
+      note: "Whop is processing the LLC filing",
+    };
+  }
+  if (documentedStatus === "filed") {
+    // Filed = the state leg is done; the EIN may still be in progress (the
+    // both-booleans check above already promoted fully-complete formations).
+    return {
+      snapshot,
+      localStatus: "processing",
+      note: "The state filing is complete; the EIN is still in progress",
+    };
+  }
+  if (documentedStatus === "rejected") {
+    return {
+      snapshot,
+      localStatus: "action_required",
+      note: "Whop reports the filing was rejected; ops review required",
+    };
+  }
+  if (documentedStatus === "completed") {
+    return {
+      snapshot,
+      localStatus: "completed",
+      note: "Whop reports the formation is complete",
     };
   }
 

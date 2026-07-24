@@ -114,6 +114,9 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   ein_confirmation: "EIN confirmation letter",
   operating_agreement: "Operating agreement",
   welcome_kit: "Welcome kit & next steps",
+  signed_ss4: "Signed IRS Form SS-4",
+  signed_form8821: "Signed IRS Form 8821",
+  mail: "Company mail",
 };
 
 function documentDisplayName(document: { name: string; documentType: string | null }) {
