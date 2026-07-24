@@ -159,6 +159,7 @@ export function renderApplicationReceivedEmail(params: {
   }
   if (params.paymentLinkUrl) {
     lines.push(`Complete your payment here: ${params.paymentLinkUrl}`);
+    lines.push(`Filing payments are final and non-refundable.`);
   } else {
     lines.push(`We'll send your payment link shortly.`);
   }

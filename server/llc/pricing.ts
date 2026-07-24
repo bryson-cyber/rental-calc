@@ -100,6 +100,7 @@ export type StatePricing = {
   state: string;
   retailPriceCents: number | null;
   stateFeeCents: number | null;
+  expediteEinPriceCents: number | null;
   /**
    * Owner-provided hosted payment link (client-facing by design: this is the
    * page clients are SENT to after submitting). Null = link not configured.
@@ -118,6 +119,7 @@ export async function getStatePricing(state: string): Promise<StatePricing> {
     state,
     retailPriceCents: null,
     stateFeeCents: null,
+    expediteEinPriceCents: null,
     paymentLinkUrl: null,
     active: true,
   };
@@ -136,6 +138,7 @@ export async function getStatePricing(state: string): Promise<StatePricing> {
     state: row.state,
     retailPriceCents: row.retailPriceCents,
     stateFeeCents: row.stateFeeCents,
+    expediteEinPriceCents: row.expediteEinPriceCents,
     paymentLinkUrl: row.paymentLinkUrl,
     active: row.active,
   };
@@ -196,6 +199,7 @@ export async function listStatePricingWithWholesale() {
     state: row.state,
     retailPriceCents: row.retailPriceCents,
     stateFeeCents: row.stateFeeCents,
+    expediteEinPriceCents: row.expediteEinPriceCents,
     paymentLinkUrl: row.paymentLinkUrl,
     active: row.active,
     updatedAt: row.updatedAt.getTime(),
@@ -247,6 +251,19 @@ export async function applyStateMarkup(markupCents: number) {
       retailPriceCents: sql`${llcStatePricing.stateFeeCents} + ${markupCents}`,
     })
     .where(eq(llcStatePricing.active, true));
+  return { updated: Number((result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0) };
+}
+
+/**
+ * Bulk expedited-EIN add-on price: the add-on is a flat service fee, so one
+ * action prices it for every state (null clears it everywhere).
+ */
+export async function applyExpeditePriceToAllStates(expediteEinPriceCents: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db
+    .update(llcStatePricing)
+    .set({ expediteEinPriceCents });
   return { updated: Number((result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0) };
 }
 

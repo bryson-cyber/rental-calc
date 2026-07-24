@@ -43,6 +43,7 @@ import {
   uploadOpsDocument,
 } from "./documents";
 import {
+  applyExpeditePriceToAllStates,
   applyPaymentLinkToAllStates,
   applyStateMarkup,
   getInactiveStateError,
@@ -316,6 +317,8 @@ export const llcRouter = router({
         state: pricing.state,
         retailPriceCents: pricing.retailPriceCents,
         stateFeeCents: pricing.stateFeeCents,
+        // Retail add-on for expedited EIN; client-facing by definition.
+        expediteEinPriceCents: pricing.expediteEinPriceCents,
         // Client-facing by design: this is the page clients are SENT to pay.
         paymentLinkUrl: pricing.paymentLinkUrl,
         active: pricing.active,
@@ -569,6 +572,21 @@ export const llcOpsRouter = router({
         active: updated.active,
       };
     }),
+
+  setExpeditePriceForAllStates: adminProcedure
+    .input(
+      z.object({
+        expediteEinPriceCents: z
+          .number()
+          .int()
+          .min(0)
+          .max(10_000_000)
+          .nullable(),
+      }),
+    )
+    .mutation(async ({ input }) =>
+      applyExpeditePriceToAllStates(input.expediteEinPriceCents),
+    ),
 
   applyStateMarkup: adminProcedure
     .input(z.object({ markupCents: z.number().int().min(0).max(10_000_000) }))

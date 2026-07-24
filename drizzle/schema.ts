@@ -3094,6 +3094,8 @@ export const llcStatePricing = mysqlTable(
     stateFeeCents: int("stateFeeCents").notNull(),
     /** Owner-provided hosted payment link; clients are sent here after submit. */
     paymentLinkUrl: varchar("paymentLinkUrl", { length: 1000 }),
+    /** Retail add-on for the expedited-EIN option (null = not offered/priced). */
+    expediteEinPriceCents: int("expediteEinPriceCents"),
     active: boolean("active").default(true).notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

@@ -501,14 +501,24 @@ export function buildSampleDocumentPdf(
                   "     Many banks ask for it at account opening.",
                 ],
               },
-              { kind: "heading", text: "Next steps this week" },
+              { kind: "heading", text: "Signing your operating agreement" },
               {
                 kind: "para",
                 lines: [
-                  "•  Open a business checking account (bring items 1 and 2).",
-                  "•  Sign the operating agreement in front of all members.",
-                  "•  Run business income and expenses through the new account only.",
-                  "•  Calendar your state's annual report due date.",
+                  "Please sign the bottom of the last page of the operating",
+                  "agreement — your signature is essential for the agreement to be",
+                  "valid. There's no need to send the signed document back to us;",
+                  "simply save it with your records and use it as part of the next",
+                  "process (your bank will ask for it at account opening).",
+                ],
+              },
+              { kind: "heading", text: "Tax and reporting mail" },
+              {
+                kind: "para",
+                lines: [
+                  "Now that your business is officially set up, you may start",
+                  "receiving emails about tax-related information — be sure to save",
+                  "them for your taxes and annual reporting.",
                 ],
               },
               {

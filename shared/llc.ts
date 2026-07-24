@@ -171,6 +171,9 @@ export const LLC_ACTIVITY_PRESETS = [
     businessType: "brick_and_mortar",
     industryGroup: "hospitality_and_lodging",
     industryType: "vacation_rental_property",
+    /** Recommended federal classification, shown for reference on Step 2. */
+    naicsCode: "531311",
+    naicsLabel: "Residential Property Managers",
   },
 ] as const;
 

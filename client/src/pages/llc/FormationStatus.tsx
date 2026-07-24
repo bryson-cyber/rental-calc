@@ -357,12 +357,17 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                   <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
                 </Button>
               ) : paymentLinkUrl ? (
-                <Button asChild className="mt-3">
-                  <a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">
-                    Pay now
-                    <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
-                  </a>
-                </Button>
+                <>
+                  <Button asChild className="mt-3">
+                    <a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">
+                      Pay now
+                      <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                    Filing payments are final and non-refundable.
+                  </p>
+                </>
               ) : (
                 <p className="mt-2 text-[13px] font-medium text-foreground">
                   We&rsquo;ll send your secure payment link right away.

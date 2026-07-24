@@ -36,7 +36,13 @@ function formatSsnInput(value: string): string {
   return digits;
 }
 
-function StatePricePanel({ state }: { state: string | null | undefined }) {
+function StatePricePanel({
+  state,
+  expediteEin = false,
+}: {
+  state: string | null | undefined;
+  expediteEin?: boolean;
+}) {
   const pricingQuery = useStatePricing(state);
   const pricing = pricingQuery.data;
   if (!state || !pricing) return null;
@@ -165,7 +171,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           className="sm:col-span-2"
         />
       </div>
-      <StatePricePanel state={draft.formationState} />
+      <StatePricePanel state={draft.formationState} expediteEin={draft.expediteEin} />
     </div>
   );
 }
@@ -217,12 +223,18 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {preset.description}
                 </span>
+                {"naicsCode" in preset ? (
+                  <span className="mt-1.5 block text-[11px] font-medium text-primary">
+                    Recommended NAICS: {preset.naicsCode} · {preset.naicsLabel}
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Pick the closest style below if the default isn't quite right.
+          Pick the closest style below if the default isn't quite right. We map your
+          selection to the filing's required categories for you.
         </p>
       </div>
 
@@ -341,6 +353,7 @@ export function AddressAgentStep({ draft, errors, onChange }: StepProps) {
             <span className="mt-3 grid gap-2">
               <IncludedLine>A professional address receives state mail — not your home</IncludedLine>
               <IncludedLine>Legal documents accepted and handled on your behalf</IncludedLine>
+              <IncludedLine>Included free for your first year, then $119/year afterward</IncludedLine>
               <IncludedLine>Nothing extra to set up — we handle the paperwork</IncludedLine>
             </span>
           </ChoiceCard>
@@ -570,6 +583,8 @@ export function FoundersStep({ draft, errors, onChange }: StepProps) {
 
 export function PreferencesStep({ draft, errors, onChange }: StepProps) {
   const hasSsn = draft.founders.some((founder) => (founder.ssn ?? "").trim() !== "");
+  const pricingQuery = useStatePricing(draft.formationState);
+  const expeditePriceCents = pricingQuery.data?.expediteEinPriceCents ?? null;
   return (
     <div>
       <SectionHeading
@@ -588,6 +603,9 @@ export function PreferencesStep({ draft, errors, onChange }: StepProps) {
             <IncludedLine>Retrieved directly from the IRS for you</IncludedLine>
             <IncludedLine>Required to open a business bank account</IncludedLine>
             <IncludedLine>No Social Security number needed to start</IncludedLine>
+            <IncludedLine>
+              Est. timing: a few business days with an SSN on file; 4-8 weeks without one
+            </IncludedLine>
           </div>
         </div>
 
@@ -600,7 +618,7 @@ export function PreferencesStep({ draft, errors, onChange }: StepProps) {
             <div className="mt-3 grid gap-2">
               <IncludedLine>
                 An SSN is on file, so the IRS issues your EIN by its fastest route — no
-                add-on needed
+                add-on needed (est. a few business days after your filing completes)
               </IncludedLine>
               <IncludedLine>
                 The expedite option applies only to filings without an SSN
@@ -619,7 +637,13 @@ export function PreferencesStep({ draft, errors, onChange }: StepProps) {
               </span>
               <span className="mt-1.5 block max-w-xl text-[13px] leading-5 text-muted-foreground">
                 No SSN on the filing means the IRS takes the slower paper route. Our team
-                prioritizes your EIN retrieval so it lands sooner.
+                prioritizes your EIN retrieval so it lands sooner — est. 2-3 weeks instead
+                of 4-8.
+                {expeditePriceCents ? (
+                  <span className="mt-1 block font-medium text-foreground">
+                    Adds {formatUsdFromCents(expeditePriceCents)} to your total.
+                  </span>
+                ) : null}
               </span>
             </span>
             <Switch
@@ -785,9 +809,20 @@ export function ReviewStep({
               <h3 className="text-sm font-semibold text-foreground">Order total</h3>
             </div>
             <dl className="mt-1 divide-y divide-border">
+              {draft.expediteEin && pricing!.expediteEinPriceCents ? (
+                <SummaryLine
+                  label="Expedited EIN add-on"
+                  value={formatUsdFromCents(pricing!.expediteEinPriceCents)}
+                />
+              ) : null}
               <SummaryLine
                 label={`Total for ${stateDisplayName(draft.formationState)}`}
-                value={`${formatUsdFromCents(pricing!.retailPriceCents!)}${
+                value={`${formatUsdFromCents(
+                  pricing!.retailPriceCents! +
+                    (draft.expediteEin && pricing!.expediteEinPriceCents
+                      ? pricing!.expediteEinPriceCents
+                      : 0),
+                )}${
                   pricing!.stateFeeCents !== null
                     ? ` — includes the ${formatUsdFromCents(pricing!.stateFeeCents)} state filing fee`
                     : ""

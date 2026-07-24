@@ -191,6 +191,9 @@ export async function ensureLlcTables(): Promise<void> {
     await db
       .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `paymentLinkUrl` varchar(1000)"))
       .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `expediteEinPriceCents` int"))
+      .catch(() => undefined);
 
     // Idempotent reference seed (INSERT IGNORE per state): fills state filing
     // fees on first boot, never overwrites owner-set retail prices or flags.
