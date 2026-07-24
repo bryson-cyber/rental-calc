@@ -307,19 +307,34 @@ Rules:
       state: typeof parsed.state === "string" && parsed.state ? parsed.state : null,
     } as InboundIntent;
   };
+  // What the deterministic pattern sees — used as a rescue when the LLM is
+  // down AND as an arbiter when the LLM waffles on an obvious city text
+  const parserGuess = quickCityParse(text);
+
+  const arbitrate = (llm: InboundIntent): InboundIntent => {
+    // A clear "<city> <ST>" text must reach the city flow even when the model
+    // shrugs ("other") or names the intent without filling in the city.
+    // Confident yes/no/stop verdicts are trusted as-is.
+    if (parserGuess && (llm.intent === "other" || (llm.intent === "city" && !llm.city))) {
+      console.log(`[Engagement] LLM said intent=${llm.intent} city=${llm.city ?? "null"}; city-pattern override → ${parserGuess.city}, ${parserGuess.state}`);
+      return parserGuess;
+    }
+    console.log(`[Engagement] Classified reply: intent=${llm.intent}${llm.city ? ` city=${llm.city}, ${llm.state}` : ""}`);
+    return llm;
+  };
+
   try {
-    return await attempt();
+    return arbitrate(await attempt());
   } catch (firstErr: any) {
     // One retry — a transient LLM hiccup must not cost the lead their answer
     try {
-      return await attempt();
+      return arbitrate(await attempt());
     } catch (err: any) {
       // LLM down entirely: the deterministic parser still rescues the most
       // common city shape ("what about phoenix az?") — spelling as-typed
-      const quickCity = quickCityParse(text);
-      if (quickCity) {
-        console.warn(`[Engagement] LLM classification failed; deterministic city parse rescued: ${quickCity.city}, ${quickCity.state}`);
-        return quickCity;
+      if (parserGuess) {
+        console.warn(`[Engagement] LLM classification failed; deterministic city parse rescued: ${parserGuess.city}, ${parserGuess.state}`);
+        return parserGuess;
       }
       console.warn(`[Engagement] Reply classification failed (after retry):`, firstErr.message, "|", err.message);
       return fallback;
