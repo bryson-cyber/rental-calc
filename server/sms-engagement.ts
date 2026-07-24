@@ -55,6 +55,8 @@ interface EngagementState {
   replies?: number;
   lastIntent?: string;
   lastReplyAt?: string;
+  /** Timestamp of the newest inbound message already handled for this phone */
+  lastInboundTs?: string;
   cityOverride?: { city: string; state: string };
 }
 
@@ -210,13 +212,44 @@ export function quickClassify(text: string): InboundIntent | null {
   return null;
 }
 
+const STATE_ABBRS = new Set(["al","ak","az","ar","ca","co","ct","de","fl","ga","hi","ia","id","il","in","ks","ky","la","ma","md","me","mi","mn","mo","ms","mt","nc","nd","ne","nh","nj","nm","nv","ny","oh","ok","or","pa","ri","sc","sd","tn","tx","ut","va","vt","wa","wi","wv","wy","dc"]);
+// State codes that double as everyday words — only trusted when the message
+// clearly asks about a place
+const AMBIGUOUS_ABBRS = new Set(["ok", "in", "or", "me", "hi", "oh", "la", "de", "id", "ma", "mo", "pa"]);
+
+/**
+ * Deterministic parse for the most common city reply shape: "<city> <ST>"
+ * with optional filler ("what about phoenix az?"). The city flow must not
+ * hinge on the LLM being up for the pattern most leads actually send.
+ */
+export function quickCityParse(raw: string): InboundIntent | null {
+  const bare = raw
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const words = bare.split(" ");
+  if (words.length < 2 || words.length > 8) return null;
+  const last = words[words.length - 1];
+  if (!STATE_ABBRS.has(last)) return null;
+  const FILLER = new Set(["what", "whats", "about", "how", "hows", "can", "you", "u", "check", "out", "try", "run", "do", "look", "up", "at", "in", "for", "me", "my", "the", "a", "is", "of", "and", "please", "pls", "around", "near", "area", "yes", "yeah"]);
+  const cityWords = words.slice(0, -1).filter((w) => !FILLER.has(w));
+  if (cityWords.length < 1 || cityWords.length > 3) return null;
+  if (AMBIGUOUS_ABBRS.has(last)) {
+    const intentful = /,\s*[A-Za-z]{2}\s*[?!.]*$/.test(raw.trim()) || /\b(what about|how about|check|try|run|look)\b/i.test(raw);
+    if (!intentful) return null;
+  }
+  const city = cityWords.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return { intent: "city", city, state: last.toUpperCase() };
+}
+
 /** LLM classification of a lead's reply — handles any city they throw at it */
 export async function classifyReply(text: string, knownCity?: string): Promise<InboundIntent> {
   const quick = quickClassify(text);
   if (quick) return quick;
 
   const fallback: InboundIntent = { intent: "other", city: null, state: null };
-  try {
+  const attempt = async () => {
     const result = await invokeLLM({
       messages: [
         {
@@ -253,10 +286,25 @@ Rules:
       intent,
       city: typeof parsed.city === "string" && parsed.city ? parsed.city : null,
       state: typeof parsed.state === "string" && parsed.state ? parsed.state : null,
-    };
-  } catch (err: any) {
-    console.warn(`[Engagement] Reply classification failed:`, err.message);
-    return fallback;
+    } as InboundIntent;
+  };
+  try {
+    return await attempt();
+  } catch (firstErr: any) {
+    // One retry — a transient LLM hiccup must not cost the lead their answer
+    try {
+      return await attempt();
+    } catch (err: any) {
+      // LLM down entirely: the deterministic parser still rescues the most
+      // common city shape ("what about phoenix az?") — spelling as-typed
+      const quickCity = quickCityParse(text);
+      if (quickCity) {
+        console.warn(`[Engagement] LLM classification failed; deterministic city parse rescued: ${quickCity.city}, ${quickCity.state}`);
+        return quickCity;
+      }
+      console.warn(`[Engagement] Reply classification failed (after retry):`, firstErr.message, "|", err.message);
+      return fallback;
+    }
   }
 }
 
@@ -278,11 +326,26 @@ const ASK_CITY_MESSAGE =
   "Love it. What city should I check? Text me the city and I'll send you what my scanner finds. - Inayah";
 
 /**
- * Poll SimpleTexting for new inbound replies and respond. Runs once per
- * import-cron cycle; the watermark in webinar_sms_settings makes it
+ * Poll SimpleTexting for new inbound replies and respond. The watermark in
+ * webinar_sms_settings plus the in-process singleton guard make it
  * exactly-once across cycles.
  */
+let inboundProcessingRunning = false;
+
 export async function processInboundReplies(db: DbClient): Promise<{ processed: number; replied: number }> {
+  // The import cron fires this detached (and once per active webinar) —
+  // overlapping invocations would poll the same shared inbox against the same
+  // watermark and reply N times to one message. One at a time, always.
+  if (inboundProcessingRunning) return { processed: 0, replied: 0 };
+  inboundProcessingRunning = true;
+  try {
+    return await processInboundRepliesInner(db);
+  } finally {
+    inboundProcessingRunning = false;
+  }
+}
+
+async function processInboundRepliesInner(db: DbClient): Promise<{ processed: number; replied: number }> {
   let processed = 0;
   let replied = 0;
   if (!(await isEngagementEnabled(db))) return { processed, replied };
@@ -346,6 +409,9 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
       const engagement = engagementFromMetadata(reg.metadata);
       // Only converse with leads we asked, and never loop
       if (!engagement.askedAt || (engagement.replies ?? 0) >= MAX_AUTO_REPLIES) continue;
+      // Per-lead idempotency: never react to a message at-or-before the one
+      // already handled for this phone (covers watermark races and resets)
+      if (engagement.lastInboundTs && new Date(msg.timestamp).getTime() <= Date.parse(engagement.lastInboundTs)) continue;
 
       const knownCity = personalizationFromMetadata(reg.metadata)?.city;
       const parsed = await classifyReply(msg.text, knownCity);
@@ -415,6 +481,7 @@ export async function processInboundReplies(db: DbClient): Promise<{ processed: 
         replies: (engagement.replies ?? 0) + 1,
         lastIntent: parsed.intent,
         lastReplyAt: new Date().toISOString(),
+        lastInboundTs: new Date(msg.timestamp).toISOString(),
         ...(priority ? { priority } : {}),
         ...(cityOverride ? { cityOverride } : {}),
       };
