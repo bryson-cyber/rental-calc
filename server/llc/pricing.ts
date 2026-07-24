@@ -255,19 +255,6 @@ export async function applyStateMarkup(markupCents: number) {
 }
 
 /**
- * Bulk expedited-EIN add-on price: the add-on is a flat service fee, so one
- * action prices it for every state (null clears it everywhere).
- */
-export async function applyExpeditePriceToAllStates(expediteEinPriceCents: number | null) {
-  const db = await getDb();
-  if (!db) throw new Error("Database is not available");
-  const result = await db
-    .update(llcStatePricing)
-    .set({ expediteEinPriceCents });
-  return { updated: Number((result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0) };
-}
-
-/**
  * Bulk payment link: many owners use ONE hosted payment page for every
  * state, so this applies the link to all states in one action (null clears
  * it everywhere).

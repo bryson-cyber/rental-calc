@@ -366,13 +366,7 @@ export async function submitLlcRegistration(params: {
       try {
         const statePricing = await getStatePricing(validated.complete.formationState);
         if (statePricing.retailPriceCents !== null) {
-          // The expedited-EIN add-on is part of what the client was shown, so
-          // it belongs in the snapshot the payment card and margins use.
-          const addOn =
-            validated.complete.expediteEin && statePricing.expediteEinPriceCents
-              ? statePricing.expediteEinPriceCents
-              : 0;
-          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents + addOn };
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
         }
       } catch {
         // Best-effort, mirroring the real submit path.
@@ -535,13 +529,7 @@ export async function submitLlcRegistration(params: {
       try {
         const statePricing = await getStatePricing(validated.complete.formationState);
         if (statePricing.retailPriceCents !== null) {
-          // The expedited-EIN add-on is part of what the client was shown, so
-          // it belongs in the snapshot the payment card and margins use.
-          const addOn =
-            validated.complete.expediteEin && statePricing.expediteEinPriceCents
-              ? statePricing.expediteEinPriceCents
-              : 0;
-          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents + addOn };
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
         }
       } catch {
         // Best-effort: a pricing read failure must never fail the submission.

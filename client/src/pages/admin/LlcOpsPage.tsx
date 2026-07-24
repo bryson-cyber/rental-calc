@@ -397,15 +397,6 @@ function StatePricingSection() {
     },
     onError: (error) => toast.error(error.message),
   });
-  const [expediteValue, setExpediteValue] = useState('');
-  const expediteMutation = trpc.llcOps.setExpeditePriceForAllStates.useMutation({
-    onSuccess: (result) => {
-      void utils.llcOps.listStatePricing.invalidate();
-      toast.success(`Expedited EIN price set for ${result.updated} states.`);
-      setExpediteValue('');
-    },
-    onError: (error) => toast.error(error.message),
-  });
 
   const rows = pricingQuery.data ?? [];
 
@@ -479,44 +470,6 @@ function StatePricingSection() {
               disabled={linkMutation.isPending}
             >
               {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply link'}
-            </Button>
-          </form>
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const trimmed = expediteValue.trim();
-              const parsed = Math.round(Number(trimmed) * 100);
-              if (trimmed === '' || !Number.isFinite(parsed) || parsed < 0) {
-                toast.error('Enter the expedited EIN add-on price in dollars (0 clears it).');
-                return;
-              }
-              expediteMutation.mutate({
-                expediteEinPriceCents: parsed === 0 ? null : parsed,
-              });
-            }}
-          >
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              className="h-9 w-44 text-sm"
-              value={expediteValue}
-              onChange={(event) => setExpediteValue(event.target.value)}
-              placeholder="Expedited EIN price ($)"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="outline"
-              className="h-9"
-              disabled={expediteMutation.isPending}
-            >
-              {expediteMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Set add-on price'
-              )}
             </Button>
           </form>
         </div>
