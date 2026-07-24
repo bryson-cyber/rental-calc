@@ -353,7 +353,10 @@ export function AddressAgentStep({ draft, errors, onChange }: StepProps) {
             <span className="mt-3 grid gap-2">
               <IncludedLine>A professional address receives state mail — not your home</IncludedLine>
               <IncludedLine>Legal documents accepted and handled on your behalf</IncludedLine>
-              <IncludedLine>Included free for your first year, then $119/year afterward</IncludedLine>
+              <IncludedLine>
+                Included free for your first year — we'll reach out before renewal
+                with the annual rate
+              </IncludedLine>
               <IncludedLine>Nothing extra to set up — we handle the paperwork</IncludedLine>
             </span>
           </ChoiceCard>
