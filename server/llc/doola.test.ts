@@ -3,7 +3,7 @@ import {
   DoolaApiError,
   DoolaConfigurationError,
   deriveBusinessDescription,
-  deriveNaicsCode,
+  deriveDoolaIndustry,
   formatSsnForDoola,
   getDoolaConfig,
   getDoolaWebhookSecret,
@@ -189,13 +189,14 @@ describe("Doola request mapping", () => {
     expect(company.requestedServices).toEqual([{ service: "EinCreation", variant: "Standard" }]);
   });
 
-  it("derives the NAICS code from the matching activity preset", () => {
-    expect(deriveNaicsCode(makeRegistration())).toBe("531311");
+  it("derives Doola's industry label from the matching activity preset", () => {
+    expect(deriveDoolaIndustry(makeRegistration())).toBe("Vacation rentals");
     expect(
-      deriveNaicsCode(makeRegistration({ industryType: "something_custom" })),
+      deriveDoolaIndustry(makeRegistration({ industryType: "something_custom" })),
     ).toBeUndefined();
     const company = mapRegistrationToDoolaCompany(makeRegistration(), [makeFounder()], "dc_1");
-    expect(company.naicsCode).toBe("531311");
+    expect(company.industry).toBe("Vacation rentals");
+    expect(company).not.toHaveProperty("naicsCode");
   });
 
   it("derives a human description from the taxonomy", () => {

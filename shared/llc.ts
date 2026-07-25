@@ -172,8 +172,10 @@ export const LLC_ACTIVITY_PRESETS = [
     industryGroup: "hospitality_and_lodging",
     industryType: "vacation_rental_property",
     /** Recommended federal classification, shown for reference on Step 2. */
-    naicsCode: "531311",
-    naicsLabel: "Residential Property Managers",
+    naicsCode: "531110",
+    naicsLabel: "Vacation Rentals",
+    /** The filing provider's unique industry label (validated by their API). */
+    doolaIndustry: "Vacation rentals",
   },
 ] as const;
 

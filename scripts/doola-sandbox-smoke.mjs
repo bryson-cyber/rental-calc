@@ -97,7 +97,7 @@ const company = await call("POST", "/v1/partner/companies", {
     { name: `Smoke Test ${run}`, entityTypeEnding: "LLC" },
     { name: `Smoke Test ${run} Ventures`, entityTypeEnding: "LLC" },
   ],
-  naicsCode: "531311",
+  industry: "Vacation rentals",
   description: "Sandbox smoke test — fictional short-term rental business",
   responsibleParty: {
     legalFirstName: "Sandbox",

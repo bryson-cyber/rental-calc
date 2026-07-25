@@ -216,15 +216,20 @@ export function deriveBusinessDescription(registration: LlcRegistrationRecord): 
   return `${sentence} business`.slice(0, 250);
 }
 
-/** NAICS code when the registration's taxonomy matches a preset. */
-export function deriveNaicsCode(registration: LlcRegistrationRecord): string | undefined {
+/**
+ * Doola industry label when the registration's taxonomy matches a preset.
+ * Doola validates against its OWN industry list (821 labeled entries) and
+ * documents `industry` as the field to send — raw NAICS codes outside their
+ * list are rejected with E_NAICS_INVALID (verified in sandbox).
+ */
+export function deriveDoolaIndustry(registration: LlcRegistrationRecord): string | undefined {
   const preset = LLC_ACTIVITY_PRESETS.find(
     (candidate) =>
       candidate.businessType === registration.businessType &&
       candidate.industryGroup === registration.industryGroup &&
       candidate.industryType === registration.industryType,
   );
-  return (preset as { naicsCode?: string } | undefined)?.naicsCode;
+  return (preset as { doolaIndustry?: string } | undefined)?.doolaIndustry;
 }
 
 // ─── Request mapping ─────────────────────────────────────────────────────────
@@ -292,7 +297,7 @@ export function mapRegistrationToDoolaCompany(
         { provider: "customer", type: "business", address: companyAddress },
       ];
 
-  const naicsCode = deriveNaicsCode(registration);
+  const industry = deriveDoolaIndustry(registration);
 
   return {
     doolaCustomerId,
@@ -304,7 +309,7 @@ export function mapRegistrationToDoolaCompany(
         entityTypeEnding: registration.entitySuffix,
       },
     ],
-    ...(naicsCode ? { naicsCode } : {}),
+    ...(industry ? { industry } : {}),
     description: deriveBusinessDescription(registration),
     responsibleParty: {
       legalFirstName: primary.firstName ?? "",
