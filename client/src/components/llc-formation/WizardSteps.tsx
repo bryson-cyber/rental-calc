@@ -576,6 +576,9 @@ export function FoundersStep({ draft, errors, onChange }: StepProps) {
 }
 
 export function PreferencesStep({ draft, errors, onChange }: StepProps) {
+  const hasSsn = draft.founders.some((founder) => (founder.ssn ?? "").trim() !== "");
+  const pricingQuery = useStatePricing(draft.formationState);
+  const expeditePriceCents = pricingQuery.data?.expediteEinPriceCents ?? null;
   return (
     <div>
       <SectionHeading
@@ -599,6 +602,51 @@ export function PreferencesStep({ draft, errors, onChange }: StepProps) {
             </IncludedLine>
           </div>
         </div>
+
+        {hasSsn ? (
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[15px] font-semibold text-foreground">EIN fast-track</span>
+              <OfferBadge>Active</OfferBadge>
+            </div>
+            <div className="mt-3 grid gap-2">
+              <IncludedLine>
+                An SSN is on file, so the IRS issues your EIN by its fastest route — no
+                add-on needed (est. a few business days after your filing completes)
+              </IncludedLine>
+              <IncludedLine>
+                The expedite option applies only to filings without an SSN
+              </IncludedLine>
+            </div>
+          </div>
+        ) : expeditePriceCents ? (
+          <Label
+            htmlFor="expediteEin"
+            className="flex cursor-pointer items-start justify-between gap-5 rounded-xl border border-border bg-card p-5 transition-colors has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2.5">
+                <span className="text-[15px] font-semibold text-foreground">Expedite my EIN</span>
+                <OfferBadge tone="accent">Add-on</OfferBadge>
+              </span>
+              <span className="mt-1.5 block max-w-xl text-[13px] leading-5 text-muted-foreground">
+                No SSN on the filing means the IRS takes the slower paper route. Our team
+                prioritizes your EIN retrieval so it lands sooner — est. 2-3 weeks instead
+                of 4-8.
+                {expeditePriceCents ? (
+                  <span className="mt-1 block font-medium text-foreground">
+                    Adds {formatUsdFromCents(expeditePriceCents)} to your total.
+                  </span>
+                ) : null}
+              </span>
+            </span>
+            <Switch
+              id="expediteEin"
+              checked={draft.expediteEin}
+              onCheckedChange={(expediteEin) => onChange({ ...draft, expediteEin })}
+            />
+          </Label>
+        ) : null}
       </div>
 
       <p className="mt-5 max-w-2xl text-[13px] leading-5 text-muted-foreground">

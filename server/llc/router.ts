@@ -43,6 +43,7 @@ import {
   uploadOpsDocument,
 } from "./documents";
 import {
+  applyExpeditePriceToAllStates,
   applyPaymentLinkToAllStates,
   applyStateMarkup,
   getInactiveStateError,
@@ -602,6 +603,20 @@ export const llcOpsRouter = router({
     const fees = await listDoolaStateFees();
     return syncStateFeesFromProvider(fees);
   }),
+  setExpeditePriceForAllStates: adminProcedure
+    .input(
+      z.object({
+        expediteEinPriceCents: z
+          .number()
+          .int()
+          .min(0)
+          .max(10_000_000)
+          .nullable(),
+      }),
+    )
+    .mutation(async ({ input }) =>
+      applyExpeditePriceToAllStates(input.expediteEinPriceCents),
+    ),
 
   applyStateMarkup: adminProcedure
     .input(z.object({ markupCents: z.number().int().min(0).max(10_000_000) }))

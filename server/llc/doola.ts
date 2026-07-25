@@ -355,8 +355,20 @@ export function mapRegistrationToDoolaCompany(
       ownershipPercent: (founder.ownershipBasisPoints ?? 0) / 100,
       ...(founderSsn(founder) ? { ssn: founderSsn(founder) } : {}),
     })),
-    // EIN is part of every order; expedite is deliberately never requested.
-    requestedServices: [{ service: "EinCreation", variant: "Standard" }],
+    // EIN is part of every order. Expedite is requested only when the client
+    // bought the add-on AND no founder supplies a US tax id — Doola rejects
+    // expedited requests for SSN-carrying filings outright (and rejects them
+    // entirely for partners whose agreement lacks the feature, so the UI
+    // additionally gates the offer on an ops-set add-on price).
+    requestedServices: [
+      {
+        service: "EinCreation",
+        variant:
+          registration.expediteEin && !founders.some((founder) => founder.ssnEncrypted)
+            ? "Expedite"
+            : "Standard",
+      },
+    ],
   };
 }
 
@@ -441,13 +453,13 @@ export async function listDoolaStateFees(): Promise<Record<string, number>> {
 }
 
 /**
- * The partner's per-formation cost under the prepaid credit-pack model
- * ($150/$125/$100 by pack tier; state fees billed separately). Drives ops
- * margin math for Doola filings.
+ * The partner's per-formation cost under the prepaid credit-pack model.
+ * The operator holds the $10,000 pack: $100/formation, locked at any
+ * volume (state fees billed separately). Drives ops margin math.
  */
 export function getDoolaFormationCostCents(env: NodeJS.ProcessEnv = process.env): number {
   const parsed = Number.parseInt(env.DOOLA_FORMATION_COST_CENTS ?? "", 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 15000;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 10000;
 }
 
 export interface DoolaDocument {
