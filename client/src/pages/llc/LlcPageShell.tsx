@@ -83,6 +83,11 @@ export function LlcPageShell({
           ) : (
             children
           )}
+          {/* Contractual co-brand attribution (partner agreement §4.2) —
+              do not remove or obscure. */}
+          <p className="mt-10 pb-4 text-center text-[11px] text-muted-foreground/70">
+            Formation services powered by doola
+          </p>
         </div>
       </section>
     </div>

@@ -214,6 +214,21 @@ describe("test-run admin procedures", () => {
   });
 });
 
+describe("contractual co-brand attribution", () => {
+  it("the 'Powered by doola' attribution is present on the LLC service surfaces (partner agreement §4.2 — must never be removed)", () => {
+    const step = readFileSync(
+      join(__dirname, "../../client/src/components/LLCFormationStep.tsx"),
+      "utf8",
+    );
+    const shell = readFileSync(
+      join(__dirname, "../../client/src/pages/llc/LlcPageShell.tsx"),
+      "utf8",
+    );
+    expect(step).toContain("powered by doola");
+    expect(shell).toContain("powered by doola");
+  });
+});
+
 describe("test-run client exposure", () => {
   it("client views expose isTest and nothing else about the marker", () => {
     const source = read("domain.ts");
