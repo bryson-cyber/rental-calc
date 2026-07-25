@@ -92,19 +92,23 @@ function renderPage(
   footnote: string,
   pageNumber: number,
   pageCount: number,
+  watermark = true,
 ): string {
   const out: string[] = [];
 
   // Diagonal SAMPLE watermark, drawn first so all content sits above it.
-  out.push(
-    "BT",
-    `/${FONTS.serifBold} 110 Tf`,
-    `${WATERMARK} rg`,
-    // 45° rotation: [cos sin -sin cos tx ty]
-    "0.7071 0.7071 -0.7071 0.7071 130 170 Tm",
-    `(${escapePdfText("SAMPLE")}) Tj`,
-    "ET",
-  );
+  // Real client documents (watermark=false) skip it.
+  if (watermark) {
+    out.push(
+      "BT",
+      `/${FONTS.serifBold} 110 Tf`,
+      `${WATERMARK} rg`,
+      // 45° rotation: [cos sin -sin cos tx ty]
+      "0.7071 0.7071 -0.7071 0.7071 130 170 Tm",
+      `(${escapePdfText("SAMPLE")}) Tj`,
+      "ET",
+    );
+  }
 
   if (page.border === "certificate") {
     // Double-rule border: gold outer, hairline inner.
@@ -223,10 +227,12 @@ function assemblePdf(streams: string[]): Buffer {
 export function buildStyledDemoPdf(params: {
   pages: DemoPdfPageV2[];
   footnote: string;
+  /** false = real client documents (no diagonal SAMPLE watermark). */
+  watermark?: boolean;
 }): Buffer {
   const pages = params.pages.length > 0 ? params.pages : [{ blocks: [] }];
   const streams = pages.map((page, index) =>
-    renderPage(page, params.footnote, index + 1, pages.length),
+    renderPage(page, params.footnote, index + 1, pages.length, params.watermark !== false),
   );
   return assemblePdf(streams);
 }

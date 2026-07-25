@@ -308,3 +308,24 @@ describe("Doola status normalization", () => {
     });
   });
 });
+
+
+describe("client operating agreement", () => {
+  it("carries no SAMPLE watermark and lists every member", async () => {
+    const { buildClientOperatingAgreementPdf } = await import("./demo");
+    const pdf = buildClientOperatingAgreementPdf({
+      companyName: "Real Client LLC",
+      stateName: "Wyoming",
+      effectiveDate: new Date("2026-07-26T12:00:00.000Z"),
+      members: [
+        { name: "Amara Johnson", ownershipPercent: 60 },
+        { name: "Jordan Lee", ownershipPercent: 40 },
+      ],
+    });
+    const text = pdf.toString("latin1");
+    expect(text.startsWith("%PDF-1.4")).toBe(true);
+    expect(text).not.toContain("(SAMPLE) Tj");
+    expect(text).toContain("Amara Johnson");
+    expect(text).toContain("Jordan Lee");
+  });
+});

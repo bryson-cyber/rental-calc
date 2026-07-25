@@ -610,6 +610,7 @@ export function buildClientOperatingAgreementPdf(params: {
 
   return buildStyledDemoPdf({
     footnote,
+    watermark: false,
     pages: [
       {
         blocks: [
