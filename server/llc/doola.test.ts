@@ -208,6 +208,26 @@ describe("Doola request mapping", () => {
     ).toBe("General business activities");
   });
 
+  it("normalizes bare US phones to E.164 everywhere Doola sees a phone", () => {
+    const customer = mapRegistrationToDoolaCustomer(
+      makeRegistration(),
+      [makeFounder({ phone: "7025550100" })],
+    );
+    expect(customer.phoneNumber).toBe("+17025550100");
+
+    const company = mapRegistrationToDoolaCompany(
+      makeRegistration(),
+      [makeFounder({ phone: "(702) 555-0100" })],
+      "dc_1",
+    );
+    expect((company.responsibleParty as { address: { phone: string } }).address.phone).toBe(
+      "+17025550100",
+    );
+    expect((company.members as Array<{ address: { phone: string } }>)[0].address.phone).toBe(
+      "+17025550100",
+    );
+  });
+
   it("maps common alpha-2 countries and refuses unknowns", () => {
     expect(toIso3Country("US")).toBe("USA");
     expect(toIso3Country("gb")).toBe("GBR");

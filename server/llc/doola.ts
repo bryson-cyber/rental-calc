@@ -135,11 +135,18 @@ async function doolaRequest<T>(params: {
   if (!response.ok || envelope.error) {
     const code = typeof envelope.error?.code === "string" ? envelope.error.code : null;
     // Provider text stays server-side (ops logs); never client-facing.
+    const fieldErrors =
+      envelope.error && typeof envelope.error === "object" && "fields" in envelope.error
+        ? Object.entries((envelope.error as { fields?: Record<string, { code?: string }> }).fields ?? {}).map(
+            ([field, detail]) => `${field}:${detail?.code ?? "?"}`,
+          )
+        : [];
     console.error("[Doola] API request failed", {
       method: params.method,
       path: params.path.replace(/\/dc_[A-Za-z0-9]+/g, "/dc_[redacted]"),
       httpStatus: response.status,
       code,
+      fieldErrors,
     });
     throw new DoolaApiError({
       message: "The filing service reported an error.",
@@ -192,6 +199,23 @@ function founderSsn(founder: LlcFounderRecord): string | undefined {
   return formatSsnForDoola(decryptPii(founder.ssnEncrypted));
 }
 
+/**
+ * Doola requires E.164 phone numbers (E_PHONE_INVALID otherwise —
+ * sandbox-verified). The wizard accepts bare US numbers and normalizes at
+ * validation time, but founder ROWS store the raw draft value, so the
+ * mapper must normalize again here.
+ */
+export function normalizePhoneForDoola(phone: string | null | undefined): string | undefined {
+  const raw = (phone ?? "").trim();
+  if (!raw) return undefined;
+  const hasPlus = raw.startsWith("+");
+  const digits = raw.replace(/\D/g, "");
+  if (hasPlus) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return raw;
+}
+
 function personAddress(founder: LlcFounderRecord) {
   return {
     line1: founder.addressLine1 ?? "",
@@ -202,7 +226,7 @@ function personAddress(founder: LlcFounderRecord) {
     country: toIso3Country(founder.addressCountry),
     // Doola requires a phone on person addresses; the wizard requires a
     // phone per founder, so this is always present on validated bundles.
-    phone: founder.phone ?? "",
+    phone: normalizePhoneForDoola(founder.phone) ?? "",
   };
 }
 
@@ -252,7 +276,9 @@ export function mapRegistrationToDoolaCustomer(
     firstName: primary.firstName ?? "",
     lastName: primary.lastName ?? "",
     countryOfResidence: toIso3Country(primary.addressCountry),
-    ...(primary.phone ? { phoneNumber: primary.phone } : {}),
+    ...(normalizePhoneForDoola(primary.phone)
+      ? { phoneNumber: normalizePhoneForDoola(primary.phone) }
+      : {}),
   };
 }
 
@@ -280,7 +306,9 @@ export function mapRegistrationToDoolaCompany(
         state: registration.companyAddressState ?? "",
         postalCode: registration.companyAddressPostalCode ?? "",
         country: toIso3Country(registration.companyAddressCountry),
-        ...(registration.businessPhone ? { phone: registration.businessPhone } : {}),
+        ...(normalizePhoneForDoola(registration.businessPhone)
+          ? { phone: normalizePhoneForDoola(registration.businessPhone) }
+          : {}),
       };
 
   // Registered-agent mode routes BOTH addresses through Doola's RA: state
