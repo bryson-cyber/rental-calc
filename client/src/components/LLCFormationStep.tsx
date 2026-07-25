@@ -288,11 +288,7 @@ export default function LLCFormationStep() {
               You'll receive your total and payment link after you submit. No card details
               are entered here. SSNs are optional and stored encrypted.
             </p>
-            {/* Contractual co-brand attribution (partner agreement §4.2) —
-                do not remove or obscure. */}
-            <p className="mt-2 text-center text-[11px] text-slate-400">
-              Formation services powered by doola
-            </p>
+
           </div>
         </div>
       )}
