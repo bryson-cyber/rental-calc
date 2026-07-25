@@ -141,6 +141,8 @@ export async function listRegistrationsForStatusPolling() {
       userId: llcRegistrations.userId,
       status: llcRegistrations.status,
       whopAccountId: llcRegistrations.whopAccountId,
+      provider: llcRegistrations.provider,
+      doolaCompanyId: llcRegistrations.doolaCompanyId,
     })
     .from(llcRegistrations)
     .where(

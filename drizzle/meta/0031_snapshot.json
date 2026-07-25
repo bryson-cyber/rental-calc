@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "bb8d3f5e-a2c4-4d9b-c71f-6a3d9e2f1b30",
-  "prevId": "aa7c2f4e-91d3-4b8a-b60e-5f2c8d1e0a29",
+  "id": "bb8d3f5e-a2c4-4d9b-c71f-6a3d9e2f1b31",
+  "prevId": "bb8d3f5e-a2c4-4d9b-c71f-6a3d9e2f1b30",
   "tables": {
     "activity_logs": {
       "name": "activity_logs",

@@ -67,6 +67,7 @@ import {
 import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
+import { fileDoolaRegistration } from "./doolaSubmission";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -763,6 +764,15 @@ export const llcOpsRouter = router({
         userId: owner.userId,
         registrationId: input.id,
       }).catch(() => {});
+      // Bill-first providers file the moment retail is confirmed. Async and
+      // fire-and-forget: filing failures alert ops and mark the row failed
+      // without blocking the Mark-paid action.
+      void fileDoolaRegistration({
+        userId: owner.userId,
+        registrationId: input.id,
+      }).catch((error) => {
+        console.error("[LLC] Doola filing after markPaid failed:", error);
+      });
       return { id: input.id, paid: true as const };
     }),
 

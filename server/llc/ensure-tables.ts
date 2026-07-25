@@ -189,6 +189,40 @@ export async function ensureLlcTables(): Promise<void> {
       )
       .catch(() => undefined);
     await db
+      .execute(
+        sql.raw(
+          "ALTER TABLE `llc_registrations` ADD `provider` varchar(16) NOT NULL DEFAULT 'whop'",
+        ),
+      )
+      .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `doolaCustomerId` varchar(64)"))
+      .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `doolaCompanyId` varchar(64)"))
+      .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `ein` varchar(16)"))
+      .catch(() => undefined);
+    await db
+      .execute(
+        sql.raw(
+          "CREATE INDEX `llc_registration_doola_company_idx` ON `llc_registrations` (`doolaCompanyId`)",
+        ),
+      )
+      .catch(() => undefined);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`llc_webhook_events\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`eventId\` varchar(128) NOT NULL,
+        \`eventName\` varchar(64) NOT NULL,
+        \`registrationId\` int,
+        \`receivedAt\` timestamp NOT NULL DEFAULT (now()),
+        CONSTRAINT \`llc_webhook_events_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`llc_webhook_event_unique\` UNIQUE(\`eventId\`)
+      )
+    `);
+    await db
       .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `paymentLinkUrl` varchar(1000)"))
       .catch(() => undefined);
     await db

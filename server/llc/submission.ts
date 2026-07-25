@@ -23,6 +23,8 @@ import {
 } from "./clientEmails";
 import { mirrorFormationDocuments } from "./documents";
 import { getInactiveStateError, getStatePricing } from "./pricing";
+import { getConfiguredLlcProvider } from "./provider";
+import { fileDoolaRegistration, refreshDoolaRegistrationStatus } from "./doolaSubmission";
 import {
   WhopApiError,
   WhopConfigurationError,
@@ -424,6 +426,88 @@ export async function submitLlcRegistration(params: {
     }
   }
 
+  // PROVIDER FORK — Doola charges at submission, so a Doola registration
+  // holds here at payment_required with ZERO provider interaction. The
+  // actual filing happens in fileDoolaRegistration once ops confirms the
+  // client's retail payment (llcOps.markPaid), or via client retry after
+  // payment. The provider is stamped on the row so an env change never
+  // re-routes an in-flight filing.
+  if (getConfiguredLlcProvider() === "doola" && !lock.registration.doolaCompanyId) {
+    let retailSnapshot: { retailPriceCents: number } | Record<string, never> = {};
+    if (lock.registration.retailPriceCents === null) {
+      try {
+        const statePricing = await getStatePricing(validated.complete.formationState);
+        if (statePricing.retailPriceCents !== null) {
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
+        }
+      } catch {
+        // Best-effort, mirroring the provider path.
+      }
+    }
+    await transitionLlcStatus({
+      userId: params.userId,
+      registrationId: params.registrationId,
+      toStatus: "payment_required",
+      source: "system",
+      note: "Order received; the filing starts once the client's payment is confirmed",
+      expectedStatuses: ["submitting"],
+      updates: {
+        provider: "doola",
+        ...retailSnapshot,
+        submittedAt: new Date(),
+        lastErrorType: null,
+        lastErrorMessage: null,
+        retryable: false,
+      },
+    });
+    const held = await getLlcRegistrationById(params.userId, params.registrationId);
+    if (!held) throw new Error("Submitted LLC registration could not be reloaded");
+    await sendOpsAlert(
+      checkoutReadyAlert({
+        registrationId: params.registrationId,
+        legalName: `${validated.complete.legalName} ${validated.complete.entitySuffix}`,
+        formationState: validated.complete.formationState,
+        checkoutUrl: "(no wholesale checkout — the filing charges automatically once you Mark paid)",
+        checkoutTotal: null,
+        retailPriceCents: held.registration.retailPriceCents,
+        accountEmailAlias: "n/a",
+        retailPaid: Boolean(held.registration.retailPaidAt),
+      }),
+    ).catch(() => {});
+    void sendApplicationReceivedEmail({
+      userId: params.userId,
+      registrationId: params.registrationId,
+    }).catch(() => {});
+
+    // Already paid (e.g. client retry after a failed filing): file now.
+    if (held.registration.retailPaidAt) {
+      const filed = await fileDoolaRegistration({
+        userId: params.userId,
+        registrationId: params.registrationId,
+      });
+      const after = await getLlcRegistrationById(params.userId, params.registrationId);
+      if (!after) throw new Error("Submitted LLC registration could not be reloaded");
+      if (filed.outcome === "failed") {
+        return {
+          outcome: "failed" as const,
+          registration: bundleToRegistrationView(after),
+          message: "The filing could not be submitted. Our team has been alerted.",
+        };
+      }
+      return {
+        outcome: "checkout_ready" as const,
+        registration: bundleToRegistrationView(after),
+        message: "Your registration has been submitted for filing.",
+      };
+    }
+
+    return {
+      outcome: "checkout_ready" as const,
+      registration: bundleToRegistrationView(held),
+      message: "Your registration has been submitted for filing.",
+    };
+  }
+
   const submissionKey =
     lock.registration.submissionKey ?? randomUUID().replaceAll("-", "");
   if (!lock.registration.submissionKey) {
@@ -746,6 +830,32 @@ export async function refreshLlcRegistrationStatus(params: {
       refreshed: false as const,
       registration: bundleToRegistrationView(bundle),
       message: "Everything is up to date.",
+    };
+  }
+
+  if (registration.provider === "doola") {
+    if (!registration.doolaCompanyId) {
+      return {
+        refreshed: false as const,
+        registration: bundleToRegistrationView(bundle),
+        message: registration.retailPaidAt
+          ? "Your filing is being prepared."
+          : "This registration has not been submitted for filing yet.",
+      };
+    }
+    await refreshDoolaRegistrationStatus({
+      userId: params.userId,
+      registrationId: params.registrationId,
+    });
+    const refreshedBundle = await getLlcRegistrationById(
+      params.userId,
+      params.registrationId,
+    );
+    if (!refreshedBundle) throw new Error("LLC registration was not found");
+    return {
+      refreshed: true as const,
+      registration: bundleToRegistrationView(refreshedBundle),
+      message: "Latest confirmed status loaded.",
     };
   }
 

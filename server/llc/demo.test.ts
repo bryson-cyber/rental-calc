@@ -379,6 +379,7 @@ describe("demo filing client view", () => {
     expect(serialized).not.toContain(String(registrationValues?.submissionKey));
     // Nothing provider-side either: the wholesale leg does not exist.
     expect(serialized).not.toMatch(/whop/i);
+    expect(serialized).not.toMatch(/doola/i);
     expect(serialized).not.toContain("checkout");
   });
 });

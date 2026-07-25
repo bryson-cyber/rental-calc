@@ -105,6 +105,8 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     // affordances. Named "sample" so client payloads never carry the word
     // demo; the submission key itself never leaves the server.
     isSample: Boolean(registration.isTest) || isDemoSubmissionKey(registration.submissionKey),
+    // The company's own EIN once issued — client-facing by definition.
+    ein: registration.ein ?? null,
     submittedAt: registration.submittedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
     history: history.map((item) => ({

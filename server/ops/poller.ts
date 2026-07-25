@@ -24,7 +24,13 @@ export async function runStatusPollOnce(): Promise<{
   try {
     const registrations = await listRegistrationsForStatusPolling();
     for (const registration of registrations) {
-      if (!registration.whopAccountId) continue;
+      // Pollable = the provider leg exists: a Whop connected account or a
+      // filed Doola company. Held/unfiled rows have nothing to ask about.
+      if (registration.provider === "doola") {
+        if (!registration.doolaCompanyId) continue;
+      } else if (!registration.whopAccountId) {
+        continue;
+      }
       try {
         await refreshLlcRegistrationStatus({
           userId: registration.userId,

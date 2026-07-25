@@ -381,6 +381,26 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
         </div>
       ) : null}
 
+      {registration.ein ? (
+        <div className="apple-card border-primary/25 bg-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10">
+              <FileCheck2 className="size-4 text-primary" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Your Federal EIN</h3>
+              <p className="mt-1 font-mono text-lg font-semibold tracking-wide text-foreground">
+                {registration.ein}
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+                Issued by the IRS for your company. Use it with your exact legal
+                name to open the business bank account and for all federal filings.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {registration.status === "completed" ? (
         <div className="apple-card border-emerald-600/25 bg-emerald-600/5 p-5">
           <div className="flex items-start gap-3">

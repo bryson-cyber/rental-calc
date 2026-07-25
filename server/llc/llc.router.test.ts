@@ -376,6 +376,7 @@ describe("LLC per-state pricing (client procedure)", () => {
     expect(serialized).not.toContain("39900");
     expect(serialized.toLowerCase()).not.toContain("wholesale");
     expect(serialized.toLowerCase()).not.toContain("whop");
+    expect(serialized.toLowerCase()).not.toContain("doola");
   });
 });
 
@@ -773,6 +774,7 @@ describe("LLC client view white-label boundary", () => {
     expect(serialized).not.toContain("39900");
     expect(serialized).not.toContain("ops+reg41");
     expect(serialized.toLowerCase()).not.toContain("whop");
+    expect(serialized.toLowerCase()).not.toContain("doola");
     expect(result).not.toHaveProperty("checkout");
     expect(result.history.every((item) => !("note" in item))).toBe(true);
   });

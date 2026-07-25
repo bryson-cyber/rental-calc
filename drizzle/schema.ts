@@ -2915,6 +2915,12 @@ export const llcRegistrations = mysqlTable(
      * email checks it so a test row can never reach the outside world.
      */
     isTest: boolean("isTest").default(false).notNull(),
+    /** Fulfillment provider for this filing, chosen at submit time. */
+    provider: varchar("provider", { length: 16 }).default("whop").notNull(),
+    doolaCustomerId: varchar("doolaCustomerId", { length: 64 }),
+    doolaCompanyId: varchar("doolaCompanyId", { length: 64 }),
+    /** The company's EIN once the IRS issues it (Doola exposes it as data). */
+    ein: varchar("ein", { length: 16 }),
     submittedAt: timestamp("submittedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -2924,7 +2930,21 @@ export const llcRegistrations = mysqlTable(
     uniqueIndex("llc_registration_whop_account_unique").on(table.whopAccountId),
     uniqueIndex("llc_registration_checkout_unique").on(table.checkoutSessionId),
     index("llc_registration_status_idx").on(table.status),
+    index("llc_registration_doola_company_idx").on(table.doolaCompanyId),
   ],
+);
+
+/** Webhook delivery dedupe: at-least-once delivery, exactly-once processing. */
+export const llcWebhookEvents = mysqlTable(
+  "llc_webhook_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    eventId: varchar("eventId", { length: 128 }).notNull(),
+    eventName: varchar("eventName", { length: 64 }).notNull(),
+    registrationId: int("registrationId"),
+    receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("llc_webhook_event_unique").on(table.eventId)],
 );
 
 export const llcFounders = mysqlTable(

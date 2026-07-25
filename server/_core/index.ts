@@ -61,6 +61,10 @@ async function startServer() {
   // This is critical for session cookies (SameSite=None requires Secure=true)
   app.set('trust proxy', 1);
   const server = createServer(app);
+  // Doola webhooks verify an HMAC over the RAW body — must be mounted
+  // before the JSON parser consumes the stream.
+  const { registerDoolaWebhook } = await import("../llc/doolaWebhook");
+  registerDoolaWebhook(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

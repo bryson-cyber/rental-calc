@@ -55,7 +55,11 @@ describe("test-run submission fork", () => {
   it("the simulated branch never writes provider identifiers", () => {
     const source = read("submission.ts");
     const forkStart = source.indexOf("TEST RUN FORK");
-    const forkEnd = source.indexOf("const submissionKey =", forkStart);
+    // The test fork ends where the provider fork (or the submission-key
+    // section) begins — scan only the simulated branch itself.
+    const providerFork = source.indexOf("PROVIDER FORK", forkStart);
+    const keySection = source.indexOf("const submissionKey =", forkStart);
+    const forkEnd = providerFork !== -1 ? Math.min(providerFork, keySection) : keySection;
     expect(forkStart).toBeGreaterThan(-1);
     // Scan executable code only — comment lines may legitimately name the
     // fields they promise to leave untouched.
@@ -92,6 +96,37 @@ describe("test-run submission fork", () => {
     const neutral = source.indexOf("Everything is up to date.", refreshStart);
     expect(neutral).toBeGreaterThan(refreshStart);
     expect(neutral).toBeLessThan(providerIndex);
+  });
+});
+
+describe("provider fork ordering", () => {
+  it("the test fork outranks the provider fork — test rows never reach any provider", () => {
+    const source = read("submission.ts");
+    const submitStart = source.indexOf("export async function submitLlcRegistration");
+    const testFork = source.indexOf("TEST RUN FORK", submitStart);
+    const providerFork = source.indexOf("PROVIDER FORK", submitStart);
+    expect(testFork).toBeGreaterThan(-1);
+    expect(providerFork).toBeGreaterThan(-1);
+    expect(testFork).toBeLessThan(providerFork);
+  });
+
+  it("the doola hold path performs no provider calls at submit", () => {
+    const source = read("submission.ts");
+    const start = source.indexOf("PROVIDER FORK");
+    const end = source.indexOf("const submissionKey =", start);
+    const branch = source
+      .slice(start, end)
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    // The hold path may only FILE via fileDoolaRegistration when retail is
+    // already paid; it must never create accounts/checkouts or call the
+    // doola client directly.
+    for (const forbidden of ["ensureWhopAccount", "registerWhopLlc", "createDoolaCustomer", "createDoolaCompany"]) {
+      expect(branch).not.toContain(forbidden);
+    }
+    expect(branch).toContain("fileDoolaRegistration");
+    expect(branch).toContain("retailPaidAt");
   });
 });
 
@@ -141,7 +176,9 @@ describe("test-run admin procedures", () => {
   it("the fork recovers a wedged 'submitting' test row into a retryable failure", () => {
     const source = read("submission.ts");
     const forkStart = source.indexOf("TEST RUN FORK");
-    const forkEnd = source.indexOf("const submissionKey =", forkStart);
+    const providerFork = source.indexOf("PROVIDER FORK", forkStart);
+    const keySection = source.indexOf("const submissionKey =", forkStart);
+    const forkEnd = providerFork !== -1 ? Math.min(providerFork, keySection) : keySection;
     const branch = source.slice(forkStart, forkEnd);
     expect(branch).toContain("[TEST] Simulated submission was interrupted");
     expect(branch).toContain('toStatus: "failed"');
