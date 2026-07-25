@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { STATE_FILING_FEES_CENTS, seedStatePricing } from "./pricing";
+import { DOOLA_STATE_FEES_CENTS } from "./doolaStateFees";
 
 /**
  * Minimal INSERT IGNORE simulator: applies MySQL unique-key semantics for
@@ -71,8 +72,9 @@ describe("seedStatePricing idempotency", () => {
       expect(statement).toMatch(/^INSERT IGNORE INTO `llc_state_pricing`/);
     }
     expect(rows.size).toBe(51);
+    // The seed prefers the provider's live-synced fee table.
     expect(rows.get("NM")).toEqual({
-      stateFeeCents: 5000,
+      stateFeeCents: DOOLA_STATE_FEES_CENTS.NM ?? STATE_FILING_FEES_CENTS.NM,
       retailPriceCents: null,
       active: true,
     });
@@ -91,7 +93,7 @@ describe("seedStatePricing idempotency", () => {
 
     expect(rows.size).toBe(51);
     expect(rows.get("NM")).toEqual({
-      stateFeeCents: 5000,
+      stateFeeCents: DOOLA_STATE_FEES_CENTS.NM ?? STATE_FILING_FEES_CENTS.NM,
       retailPriceCents: 54900,
       active: true,
     });

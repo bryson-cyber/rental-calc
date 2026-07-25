@@ -425,6 +425,31 @@ export async function retrieveDoolaCompany(doolaCompanyId: string): Promise<Dool
   return payload;
 }
 
+/** Provider's live per-state filing fee table (billed through at cost). */
+export async function listDoolaStateFees(): Promise<Record<string, number>> {
+  const { payload } = await doolaRequest<
+    Array<{ state?: string; priceInCents?: number }> | { content?: Array<{ state?: string; priceInCents?: number }> }
+  >({ method: "GET", path: "/v1/partner/references/state-fees" });
+  const items = Array.isArray(payload) ? payload : (payload.content ?? []);
+  const fees: Record<string, number> = {};
+  for (const entry of items) {
+    if (typeof entry.state === "string" && typeof entry.priceInCents === "number") {
+      fees[entry.state] = entry.priceInCents;
+    }
+  }
+  return fees;
+}
+
+/**
+ * The partner's per-formation cost under the prepaid credit-pack model
+ * ($150/$125/$100 by pack tier; state fees billed separately). Drives ops
+ * margin math for Doola filings.
+ */
+export function getDoolaFormationCostCents(env: NodeJS.ProcessEnv = process.env): number {
+  const parsed = Number.parseInt(env.DOOLA_FORMATION_COST_CENTS ?? "", 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 15000;
+}
+
 export interface DoolaDocument {
   id?: string;
   name?: string;

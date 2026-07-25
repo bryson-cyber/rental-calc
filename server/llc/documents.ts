@@ -330,6 +330,8 @@ export async function uploadOpsDocument(params: {
   documentType: string;
   dataBase64: string;
   mimeType: string;
+  /** false = attach HELD for ops review (auto-generated docs); default true. */
+  release?: boolean;
 }) {
   const db = requireDb(await getDb());
   const { buffer, mimeType, extension } = decodeOpsUpload(params);
@@ -351,7 +353,7 @@ export async function uploadOpsDocument(params: {
     documentType,
     source: "ops_upload",
     storageKey: key,
-    releasedAt: new Date(),
+    releasedAt: params.release === false ? null : new Date(),
   });
   const documentId = Number(result[0].insertId);
   return findLlcDocumentById(documentId);

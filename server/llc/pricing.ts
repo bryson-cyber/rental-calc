@@ -1,6 +1,7 @@
 import { eq, isNotNull, sql, type SQL } from "drizzle-orm";
 import { llcRegistrations, llcStatePricing } from "../../drizzle/schema";
 import { LLC_FORMATION_STATES } from "../../shared/llc";
+import { DOOLA_STATE_FEES_CENTS } from "./doolaStateFees";
 import { getDb } from "../db";
 
 /**
@@ -89,7 +90,7 @@ type ExecutingDb = { execute: (query: SQL) => Promise<unknown> };
  */
 export async function seedStatePricing(db: ExecutingDb): Promise<void> {
   for (const state of LLC_FORMATION_STATES) {
-    const feeCents = STATE_FILING_FEES_CENTS[state];
+    const feeCents = DOOLA_STATE_FEES_CENTS[state] ?? STATE_FILING_FEES_CENTS[state];
     await db.execute(
       sql`INSERT IGNORE INTO \`llc_state_pricing\` (\`state\`, \`stateFeeCents\`) VALUES (${state}, ${feeCents})`,
     );
@@ -252,6 +253,29 @@ export async function applyStateMarkup(markupCents: number) {
     })
     .where(eq(llcStatePricing.active, true));
   return { updated: Number((result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0) };
+}
+
+/**
+ * Sync stateFeeCents for every state to the provider's live fee table
+ * (state fees are billed through at cost, so the provider's numbers ARE the
+ * wholesale fees). Never touches retail prices or active flags.
+ */
+export async function syncStateFeesFromProvider(
+  fees: Record<string, number>,
+): Promise<{ updated: number }> {
+  const db = await getDb();
+  if (!db) return { updated: 0 };
+  let updated = 0;
+  for (const state of LLC_FORMATION_STATES) {
+    const feeCents = fees[state];
+    if (typeof feeCents !== "number" || feeCents < 0) continue;
+    await db
+      .update(llcStatePricing)
+      .set({ stateFeeCents: feeCents })
+      .where(eq(llcStatePricing.state, state));
+    updated += 1;
+  }
+  return { updated };
 }
 
 /**

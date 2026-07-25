@@ -10,7 +10,7 @@ import {
 } from "../../drizzle/schema";
 import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getDb } from "../db";
-import { buildStyledDemoPdf } from "./demo-pdf";
+import { buildStyledDemoPdf, type DemoPdfBlock } from "./demo-pdf";
 import { uploadOpsDocument } from "./documents";
 
 /**
@@ -576,6 +576,155 @@ export async function attachSampleDocuments(params: {
       mimeType: "application/pdf",
     });
   }
+}
+
+/**
+ * The REAL client-facing operating agreement for completed filings — the
+ * provider's own generated agreement names the provider's legal entity in
+ * its organizer block, so it can never be released to clients. This one is
+ * generated from the filing's own data, carries no SAMPLE watermark, and
+ * supports multiple members with per-member signature blocks.
+ */
+export function buildClientOperatingAgreementPdf(params: {
+  companyName: string;
+  stateName: string;
+  effectiveDate: Date;
+  members: Array<{ name: string; ownershipPercent: number }>;
+}): Buffer {
+  const effective = formatLongDate(params.effectiveDate);
+  const single = params.members.length === 1;
+  const footnote = `${params.companyName} — Operating Agreement`;
+
+  const memberLines = params.members.map(
+    (member) =>
+      `${member.name} — ${member.ownershipPercent % 1 === 0 ? member.ownershipPercent : member.ownershipPercent.toFixed(2)}% membership interest`,
+  );
+  const signatureBlocks: DemoPdfBlock[] = params.members.flatMap((member): DemoPdfBlock[] => [
+    {
+      kind: "signature",
+      name: member.name,
+      role: "Member",
+      date: effective,
+    },
+  ]);
+
+  return buildStyledDemoPdf({
+    footnote,
+    pages: [
+      {
+        blocks: [
+          {
+            kind: "eyebrow",
+            text: single
+              ? "Single-Member Limited Liability Company Operating Agreement"
+              : "Multi-Member Limited Liability Company Operating Agreement",
+          },
+          { kind: "title", text: "Operating Agreement" },
+          { kind: "rule" },
+          {
+            kind: "meta",
+            rows: [
+              ["Company", params.companyName],
+              ["Jurisdiction", `State of ${params.stateName}`],
+              ["Effective date", effective],
+            ],
+          },
+          { kind: "heading", text: "Article I — Formation" },
+          {
+            kind: "para",
+            lines: [
+              "1.1  The member(s) formed this limited liability company under the",
+              `laws of the State of ${params.stateName}. The rights and duties of the`,
+              "member(s) are governed by this agreement and by state law.",
+              "1.2  The company continues until dissolved under Article VII.",
+            ],
+          },
+          { kind: "heading", text: "Article II — Name and Principal Office" },
+          {
+            kind: "para",
+            lines: [
+              `2.1  The company operates under the name ${params.companyName}.`,
+              "2.2  The principal office is the address on file with the state and",
+              "may be changed by the member(s) at any time.",
+            ],
+          },
+          { kind: "heading", text: "Article III — Purpose" },
+          {
+            kind: "para",
+            lines: [
+              "3.1  The company may engage in any lawful business activity",
+              "permitted under the state's Limited Liability Company Act.",
+            ],
+          },
+        ],
+      },
+      {
+        blocks: [
+          { kind: "heading", text: "Article IV — Members and Ownership" },
+          {
+            kind: "para",
+            lines: [
+              "4.1  The members of record and their membership interests are:",
+              ...memberLines,
+            ],
+          },
+          { kind: "heading", text: "Article V — Capital, Profits, and Distributions" },
+          {
+            kind: "para",
+            lines: [
+              "5.1  Initial capital contributions are recorded in the company",
+              "records. No member is required to contribute additional capital.",
+              "5.2  Profits and losses are allocated in proportion to ownership.",
+              "5.3  Distributions are made at the times and in the amounts the",
+              "member(s) determine, after providing for company obligations.",
+            ],
+          },
+          { kind: "heading", text: "Article VI — Management and Banking" },
+          {
+            kind: "para",
+            lines: [
+              "6.1  The company is managed by its member(s), who may open bank",
+              "accounts, sign contracts, and act for the company.",
+              "6.2  Company funds are kept separate from personal funds and are",
+              "used only for company purposes.",
+            ],
+          },
+        ],
+      },
+      {
+        blocks: [
+          { kind: "heading", text: "Article VII — Transfers and Dissolution" },
+          {
+            kind: "para",
+            lines: [
+              "7.1  No member may transfer an interest in the company without the",
+              "written consent of the remaining member(s).",
+              "7.2  The company dissolves upon the written election of the",
+              "member(s), followed by winding up and filing with the state.",
+            ],
+          },
+          { kind: "heading", text: "Article VIII — General Provisions" },
+          {
+            kind: "para",
+            lines: [
+              "8.1  This agreement is the entire agreement of the member(s) and is",
+              `governed by the laws of the State of ${params.stateName}.`,
+              "8.2  Amendments must be in writing and signed by the member(s).",
+            ],
+          },
+          { kind: "space", pt: 10 },
+          {
+            kind: "para",
+            lines: [
+              "IN WITNESS WHEREOF, the undersigned adopt(s) this agreement as of",
+              "the effective date above.",
+            ],
+          },
+          ...signatureBlocks,
+        ],
+      },
+    ],
+  });
 }
 
 /** Display name for a formation-state code in sample documents. */

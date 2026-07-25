@@ -68,6 +68,8 @@ import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
+import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
+import { syncStateFeesFromProvider } from "./pricing";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -360,6 +362,13 @@ export const llcRouter = router({
 export const llcOpsRouter = router({
   listAll: adminProcedure.query(async () => {
     const rows = await listAllLlcRegistrations();
+    // Pass-through state fees for Doola wholesale math, loaded once per list.
+    const stateFeeByState = new Map<string, number>(
+      (await listStatePricingWithWholesale()).map((row) => [
+        row.state,
+        row.stateFeeCents ?? 0,
+      ]),
+    );
     return rows.map(({ registration, clientName, clientEmail }) => ({
       id: registration.id,
       orderRef: `NF-${String(registration.id).padStart(4, "0")}`,
@@ -372,10 +381,22 @@ export const llcOpsRouter = router({
       checkoutUrl: registration.checkoutUrl,
       checkoutTotal: registration.checkoutTotal,
       retailPriceCents: registration.retailPriceCents,
+      // Wholesale: the provider checkout total (Whop) or the credit-pack
+      // formation cost plus the state's pass-through fee (Doola).
+      wholesaleCents:
+        registration.provider === "doola"
+          ? getDoolaFormationCostCents() +
+            (stateFeeByState.get(registration.formationState ?? "") ?? 0)
+          : registration.checkoutTotal,
       marginCents:
-        registration.retailPriceCents !== null &&
-        registration.checkoutTotal !== null
-          ? registration.retailPriceCents - registration.checkoutTotal
+        registration.retailPriceCents !== null
+          ? registration.provider === "doola"
+            ? registration.retailPriceCents -
+              (getDoolaFormationCostCents() +
+                (stateFeeByState.get(registration.formationState ?? "") ?? 0))
+            : registration.checkoutTotal !== null
+              ? registration.retailPriceCents - registration.checkoutTotal
+              : null
           : null,
       lastErrorMessage: registration.lastErrorMessage,
       // Ops-only marker so the dashboard can badge demo/test rows; the
@@ -572,6 +593,15 @@ export const llcOpsRouter = router({
         active: updated.active,
       };
     }),
+
+  /**
+   * Refresh every state's fee to the provider's live fee table (fees are
+   * billed through at cost). Retail prices and active flags are untouched.
+   */
+  syncStateFees: adminProcedure.mutation(async () => {
+    const fees = await listDoolaStateFees();
+    return syncStateFeesFromProvider(fees);
+  }),
 
   applyStateMarkup: adminProcedure
     .input(z.object({ markupCents: z.number().int().min(0).max(10_000_000) }))

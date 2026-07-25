@@ -28,9 +28,13 @@ import {
   retrieveDoolaCompany,
 } from "./doola";
 import { isFormationStatusRegression } from "./whop";
-import { mirrorFormationDocuments } from "./documents";
+import { mirrorFormationDocuments, uploadOpsDocument } from "./documents";
 import { sendOpsAlert, statusChangeAlert, submissionProblemAlert } from "../ops/notify";
 import { sendFormationCompleteEmail } from "./clientEmails";
+import { buildClientOperatingAgreementPdf, demoStateName } from "./demo";
+import { llcDocuments } from "../../drizzle/schema";
+import { getDb } from "../db";
+import { and, eq } from "drizzle-orm";
 import type { LlcStatus } from "../../shared/llc";
 
 /**
@@ -278,6 +282,19 @@ export async function refreshDoolaRegistrationStatus(params: {
       userId: params.userId,
       registrationId: params.registrationId,
     }).catch(() => {});
+    // WHITE-LABEL: the provider's generated operating agreement names the
+    // provider's own legal entity in its organizer block — it must never be
+    // released. Generate OUR branded agreement from the filing's own data
+    // (held for ops review) and flag the provider copy in the review queue.
+    void attachClientOperatingAgreement({
+      userId: params.userId,
+      registrationId: params.registrationId,
+    }).catch((error) => {
+      console.error("[Doola] client OA generation failed", {
+        registrationId: params.registrationId,
+        error: error instanceof Error ? error.name : "UnknownError",
+      });
+    });
   }
   await sendOpsAlert(
     statusChangeAlert({
@@ -291,4 +308,72 @@ export async function refreshDoolaRegistrationStatus(params: {
   ).catch(() => {});
 
   return { refreshed: true, changed: true };
+}
+
+
+/**
+ * Attach the company's client-facing operating agreement (generated from the
+ * filing's own data, no provider branding, HELD for ops release) and mark
+ * the provider's mirrored agreement as an internal copy.
+ */
+export async function attachClientOperatingAgreement(params: {
+  userId: number;
+  registrationId: number;
+}): Promise<void> {
+  const bundle = await getLlcRegistrationById(params.userId, params.registrationId);
+  if (!bundle) return;
+  const registration = bundle.registration;
+  if (registration.isTest) return;
+
+  const existing = await listOpsDocumentTypes(params.registrationId);
+  if (!existing.has("operating_agreement:ops_upload")) {
+    const companyName = `${registration.legalName ?? "Your Company"} ${registration.entitySuffix}`;
+    const pdf = buildClientOperatingAgreementPdf({
+      companyName,
+      stateName: demoStateName(registration.formationState),
+      effectiveDate: new Date(),
+      members: bundle.founders.map((founder) => ({
+        name: `${founder.firstName ?? ""} ${founder.lastName ?? ""}`.trim() || "Member of Record",
+        ownershipPercent: (founder.ownershipBasisPoints ?? 0) / 100,
+      })),
+    });
+    await uploadOpsDocument({
+      registrationId: params.registrationId,
+      ownerUserId: params.userId,
+      name: "Operating Agreement",
+      label: "Operating Agreement",
+      documentType: "operating_agreement",
+      dataBase64: pdf.toString("base64"),
+      mimeType: "application/pdf",
+      release: false,
+    });
+  }
+
+  await flagProviderOperatingAgreementCopies(params.registrationId);
+}
+
+async function listOpsDocumentTypes(registrationId: number): Promise<Set<string>> {
+  const db = await getDb();
+  if (!db) return new Set();
+  const rows = await db
+    .select({ documentType: llcDocuments.documentType, source: llcDocuments.source })
+    .from(llcDocuments)
+    .where(eq(llcDocuments.registrationId, registrationId));
+  return new Set(rows.map((row) => `${row.documentType}:${row.source}`));
+}
+
+/** Provider-mirrored operating agreements get an unmistakable review label. */
+async function flagProviderOperatingAgreementCopies(registrationId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(llcDocuments)
+    .set({ label: "Operating agreement — PROVIDER COPY, do not release" })
+    .where(
+      and(
+        eq(llcDocuments.registrationId, registrationId),
+        eq(llcDocuments.documentType, "operating_agreement"),
+        eq(llcDocuments.source, "provider"),
+      ),
+    );
 }

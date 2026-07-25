@@ -389,6 +389,13 @@ function StatePricingSection() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const syncFeesMutation = trpc.llcOps.syncStateFees.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listStatePricing.invalidate();
+      toast.success(`State fees synced from the provider for ${result.updated} states.`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const linkMutation = trpc.llcOps.applyPaymentLink.useMutation({
     onSuccess: (result) => {
       void utils.llcOps.listStatePricing.invalidate();
@@ -412,6 +419,19 @@ function StatePricingSection() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={syncFeesMutation.isPending}
+            onClick={() => syncFeesMutation.mutate()}
+          >
+            {syncFeesMutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="mr-1.5 size-3.5" aria-hidden="true" />
+            )}
+            Sync state fees
+          </Button>
           <form
             className="flex items-center gap-2"
             onSubmit={(event) => {
