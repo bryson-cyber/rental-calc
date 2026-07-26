@@ -436,9 +436,16 @@ export async function submitLlcRegistration(params: {
   // holds here at payment_required with ZERO provider interaction. The
   // actual filing happens in fileDoolaRegistration once ops confirms the
   // client's retail payment (llcOps.markPaid), or via client retry after
-  // payment. The provider is stamped on the row so an env change never
-  // re-routes an in-flight filing.
-  if (getConfiguredLlcProvider() === "doola" && !lock.registration.doolaCompanyId) {
+  // payment. Routing honors the row's history FIRST: a row stamped "doola"
+  // (or carrying a doolaCompanyId) re-enters the Doola leg even if the env
+  // was flipped back, and a row with Whop artifacts never re-routes to
+  // Doola — an env change must never re-route an in-flight filing.
+  const rowIsDoola =
+    lock.registration.provider === "doola" || Boolean(lock.registration.doolaCompanyId);
+  const rowIsWhop = Boolean(
+    lock.registration.whopAccountId || lock.registration.checkoutSessionId,
+  );
+  if (rowIsDoola || (!rowIsWhop && getConfiguredLlcProvider() === "doola")) {
     let retailSnapshot: { retailPriceCents: number } | Record<string, never> = {};
     if (lock.registration.retailPriceCents === null) {
       try {

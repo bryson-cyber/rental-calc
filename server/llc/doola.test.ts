@@ -6,6 +6,7 @@ import {
   deriveDoolaIndustry,
   formatSsnForDoola,
   getDoolaConfig,
+  getDoolaEnvironment,
   getDoolaWebhookSecret,
   mapRegistrationToDoolaCompany,
   mapRegistrationToDoolaCustomer,
@@ -98,13 +99,36 @@ afterEach(() => {
 });
 
 describe("Doola configuration", () => {
-  it("accepts sandbox and live keys, rejects everything else", () => {
+  it("accepts correctly-paired keys and hosts, rejects everything else", () => {
     vi.stubEnv("DOOLA_API_KEY", "dk_test_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.test.doola.com");
     expect(getDoolaConfig().apiKey).toBe("dk_test_abcdefghijklmnop");
     vi.stubEnv("DOOLA_API_KEY", "dk_live_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.doola.com");
     expect(getDoolaConfig().apiKey).toBe("dk_live_abcdefghijklmnop");
     vi.stubEnv("DOOLA_API_KEY", "sk_whatever");
     expect(() => getDoolaConfig()).toThrow(DoolaConfigurationError);
+  });
+
+  it("rejects a key/host environment mismatch in BOTH directions", () => {
+    // Live key against a leftover sandbox URL — the classic half-flipped
+    // go-live env. Must fail loudly at config time, not after a client pays.
+    vi.stubEnv("DOOLA_API_KEY", "dk_live_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.test.doola.com");
+    expect(() => getDoolaConfig()).toThrow(DoolaConfigurationError);
+    // Test key against production (also the default base URL).
+    vi.stubEnv("DOOLA_API_KEY", "dk_test_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.doola.com");
+    expect(() => getDoolaConfig()).toThrow(DoolaConfigurationError);
+  });
+
+  it("maps the configured host to an environment stamp", () => {
+    vi.stubEnv("DOOLA_API_KEY", "dk_test_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.test.doola.com");
+    expect(getDoolaEnvironment()).toBe("sandbox");
+    vi.stubEnv("DOOLA_API_KEY", "dk_live_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.doola.com");
+    expect(getDoolaEnvironment()).toBe("production");
   });
 
   it("locks the base URL to the doola production or sandbox hosts over HTTPS", () => {

@@ -79,7 +79,32 @@ export function getDoolaConfig(env: NodeJS.ProcessEnv = process.env): DoolaConfi
       "DOOLA_API_BASE_URL must point at the Doola production or sandbox API.",
     );
   }
+  // Key and host must belong to the SAME environment. A leftover sandbox
+  // base URL with a freshly-flipped live key (or vice versa) would otherwise
+  // pass validation and only surface after a client's retail payment, at the
+  // filing call.
+  const liveKey = apiKey.startsWith("dk_live_");
+  const productionHost = parsed.host === new URL(DEFAULT_DOOLA_API_BASE_URL).host;
+  if (liveKey !== productionHost) {
+    throw new DoolaConfigurationError(
+      "DOOLA_API_KEY and DOOLA_API_BASE_URL point at different environments (dk_live_ pairs with api.doola.com, dk_test_ with api.test.doola.com).",
+    );
+  }
   return { apiKey, baseUrl: rawBaseUrl };
+}
+
+export type DoolaEnvironment = "production" | "sandbox";
+
+/**
+ * The environment the current configuration targets. Rows are stamped with
+ * this at filing time so an env flip can never re-fire them at the other
+ * environment. Throws DoolaConfigurationError when unconfigured/mismatched.
+ */
+export function getDoolaEnvironment(env: NodeJS.ProcessEnv = process.env): DoolaEnvironment {
+  const config = getDoolaConfig(env);
+  return new URL(config.baseUrl).host === new URL(DEFAULT_DOOLA_API_BASE_URL).host
+    ? "production"
+    : "sandbox";
 }
 
 export function getDoolaWebhookSecret(env: NodeJS.ProcessEnv = process.env): string | null {

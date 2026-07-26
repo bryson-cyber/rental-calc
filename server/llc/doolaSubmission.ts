@@ -16,6 +16,7 @@ import {
   getLlcRegistrationById,
   transitionLlcStatus,
   updateLlcRegistrationProviderFields,
+  UNCERTAIN_ERROR_PREFIX,
 } from "./store";
 import {
   DoolaApiError,
@@ -23,6 +24,7 @@ import {
   createDoolaCompany,
   createDoolaCustomer,
   getDoolaDocumentDownload,
+  getDoolaEnvironment,
   listDoolaDocuments,
   normalizeDoolaCompanyStatus,
   retrieveDoolaCompany,
@@ -69,7 +71,34 @@ export async function fileDoolaRegistration(params: {
     return { outcome: "not_ready", reason: "Retail payment has not been confirmed" };
   }
 
+  // Environment fence: a row stamped for one environment must never file
+  // against the other (e.g. a sandbox-era test order after the production
+  // cutover). Resolved BEFORE the lock so a mismatch changes nothing.
+  let environment: ReturnType<typeof getDoolaEnvironment>;
+  try {
+    environment = getDoolaEnvironment();
+  } catch {
+    return { outcome: "not_ready", reason: "The filing service is not configured" };
+  }
+  if (registration.doolaEnv && registration.doolaEnv !== environment) {
+    await sendOpsAlert(
+      submissionProblemAlert({
+        registrationId: params.registrationId,
+        legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+        errorType: "environment_mismatch",
+        message: `Filing refused: this order was created against the ${registration.doolaEnv} environment but the app is now configured for ${environment}. If it is a leftover test order, delete or ignore it; it will never file automatically.`,
+        uncertain: true,
+      }),
+    ).catch(() => {});
+    return {
+      outcome: "not_ready",
+      reason: "This order belongs to a different filing environment",
+    };
+  }
+
   // Single-flight lock: only one caller wins payment_required → submitting.
+  // The environment stamp rides the same write, so a row is fenced from the
+  // moment it first heads toward a provider.
   const lock = await transitionLlcStatus({
     userId: params.userId,
     registrationId: params.registrationId,
@@ -77,7 +106,12 @@ export async function fileDoolaRegistration(params: {
     source: "system",
     note: "Filing with the formation service (retail payment confirmed)",
     expectedStatuses: ["payment_required", "failed"],
-    updates: { lastErrorType: null, lastErrorMessage: null, retryable: false },
+    updates: {
+      lastErrorType: null,
+      lastErrorMessage: null,
+      retryable: false,
+      doolaEnv: environment,
+    },
   });
   if (!lock.changed) {
     return { outcome: "not_ready", reason: "The filing is already in progress" };
@@ -156,9 +190,21 @@ export async function fileDoolaRegistration(params: {
     const isConfig = error instanceof DoolaConfigurationError;
     const api = error instanceof DoolaApiError ? error : null;
     const retryable = Boolean(api?.retryable) && !isConfig;
+    // Transport-uncertain outcomes (timeout/network drop mid-create, a
+    // malformed create response, or any unexpected throw) may have created
+    // the company provider-side even though we never saw the id. The
+    // uncertain_ prefix freezes client EDITS (which would rotate the
+    // idempotency key and defeat replay dedupe) while plain retries stay
+    // safe — they replay the SAME stored submissionKey.
+    const uncertainOutcome =
+      !isConfig &&
+      (api === null ||
+        api.code === "E_TIMEOUT" ||
+        api.code === "E_NETWORK" ||
+        api.code === "E_MALFORMED_RESPONSE");
     const errorType = isConfig
       ? "provider_configuration"
-      : (api?.code ?? "provider_failure").toLowerCase();
+      : `${uncertainOutcome ? UNCERTAIN_ERROR_PREFIX : ""}${(api?.code ?? "provider_failure").toLowerCase()}`;
 
     await finishSubmissionAttempt({
       attemptId,
@@ -189,9 +235,10 @@ export async function fileDoolaRegistration(params: {
         registrationId: params.registrationId,
         legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
         errorType,
-        message:
-          "Doola filing failed AFTER retail payment was collected — review and retry from the order page.",
-        uncertain: !retryable,
+        message: uncertainOutcome
+          ? "Doola filing outcome is UNCERTAIN after retail payment (the request may have landed provider-side). Retry from the order page is safe — it replays the same idempotency key. Do NOT edit the order first."
+          : "Doola filing failed AFTER retail payment was collected — review and retry from the order page.",
+        uncertain: uncertainOutcome || !retryable,
       }),
     ).catch(() => {});
 
@@ -216,6 +263,18 @@ export async function refreshDoolaRegistrationStatus(params: {
   const registration = bundle.registration;
   if (registration.isTest || registration.provider !== "doola" || !registration.doolaCompanyId) {
     return { refreshed: false, changed: false };
+  }
+  // Environment fence: a company created in the other environment does not
+  // exist here — asking would 404 on every sweep forever. Rows without a
+  // stamp (pre-fence history) still refresh normally.
+  if (registration.doolaEnv) {
+    try {
+      if (registration.doolaEnv !== getDoolaEnvironment()) {
+        return { refreshed: false, changed: false };
+      }
+    } catch {
+      return { refreshed: false, changed: false };
+    }
   }
 
   const company = await retrieveDoolaCompany(registration.doolaCompanyId);

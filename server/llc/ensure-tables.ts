@@ -202,6 +202,9 @@ export async function ensureLlcTables(): Promise<void> {
       .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `doolaCompanyId` varchar(64)"))
       .catch(() => undefined);
     await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `doolaEnv` varchar(16)"))
+      .catch(() => undefined);
+    await db
       .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `ein` varchar(16)"))
       .catch(() => undefined);
     await db

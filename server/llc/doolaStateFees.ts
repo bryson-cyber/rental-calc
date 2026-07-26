@@ -52,7 +52,10 @@ export const DOOLA_STATE_FEES_CENTS: Record<string, number> = {
   UT: 7500,
   VA: 10000,
   VT: 12500,
-  WA: 66666,
+  // Sandbox reference returned a placeholder ($666.66) for WA; corrected to
+  // the real $200 filing fee. "Sync state fees" against production remains
+  // the authoritative refresh.
+  WA: 20000,
   WI: 13000,
   WV: 13000,
   WY: 10000,

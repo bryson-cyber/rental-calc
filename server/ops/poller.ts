@@ -1,7 +1,22 @@
 import { timingSafeEqual, createHash } from "node:crypto";
 import type { Express, Request, Response } from "express";
-import { listRegistrationsForStatusPolling } from "../llc/store";
+import {
+  listRegistrationsForStatusPolling,
+  transitionLlcStatus,
+  UNCERTAIN_ERROR_PREFIX,
+} from "../llc/store";
 import { refreshLlcRegistrationStatus } from "../llc/submission";
+import { sendOpsAlert, submissionProblemAlert } from "./notify";
+
+/**
+ * A Doola row stuck in "submitting" with no company id means the process
+ * died between the filing call and the persistence write — the $100 credit
+ * may already be spent on a company we never recorded. After this grace
+ * period the sweep recovers it to a retryable failure (a plain retry replays
+ * the SAME stored idempotency key, so it re-attaches rather than double-files)
+ * and alerts ops. Client edits stay frozen by the uncertain_ marker.
+ */
+const WEDGED_SUBMITTING_GRACE_MS = 20 * 60 * 1000;
 
 /**
  * Periodic provider-status sync. Whop publishes no webhook for LLC formation,
@@ -27,7 +42,42 @@ export async function runStatusPollOnce(): Promise<{
       // Pollable = the provider leg exists: a Whop connected account or a
       // filed Doola company. Held/unfiled rows have nothing to ask about.
       if (registration.provider === "doola") {
-        if (!registration.doolaCompanyId) continue;
+        if (!registration.doolaCompanyId) {
+          // Watchdog: recover a filing wedged mid-flight by a crash.
+          if (
+            registration.status === "submitting" &&
+            Date.now() - new Date(registration.updatedAt).getTime() >
+              WEDGED_SUBMITTING_GRACE_MS
+          ) {
+            const recovered = await transitionLlcStatus({
+              userId: registration.userId,
+              registrationId: registration.id,
+              toStatus: "failed",
+              source: "system",
+              note: "Filing was interrupted mid-flight; recovered by the status poller",
+              expectedStatuses: ["submitting"],
+              updates: {
+                lastErrorType: `${UNCERTAIN_ERROR_PREFIX}interrupted`,
+                lastErrorMessage:
+                  "Your filing needs a quick review by our team. Nothing further is needed from you right now.",
+                retryable: true,
+              },
+            }).catch(() => ({ changed: false }));
+            if (recovered.changed) {
+              await sendOpsAlert(
+                submissionProblemAlert({
+                  registrationId: registration.id,
+                  legalName: "(see order page)",
+                  errorType: "uncertain_interrupted",
+                  message:
+                    "A filing was interrupted mid-flight (server restart?) and has been recovered to a retryable failure. Retry from the order page is safe — it replays the same idempotency key. Do NOT edit the order first.",
+                  uncertain: true,
+                }),
+              ).catch(() => {});
+            }
+          }
+          continue;
+        }
       } else if (!registration.whopAccountId) {
         continue;
       }

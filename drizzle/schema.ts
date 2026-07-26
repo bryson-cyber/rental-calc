@@ -2919,6 +2919,13 @@ export const llcRegistrations = mysqlTable(
     provider: varchar("provider", { length: 16 }).default("whop").notNull(),
     doolaCustomerId: varchar("doolaCustomerId", { length: 64 }),
     doolaCompanyId: varchar("doolaCompanyId", { length: 64 }),
+    /**
+     * Which provider environment ("production" | "sandbox") this row filed
+     * against. Filing and refresh refuse rows stamped for the other
+     * environment, so an env flip can never fire a sandbox-era order at
+     * production (or vice versa).
+     */
+    doolaEnv: varchar("doolaEnv", { length: 16 }),
     /** The company's EIN once the IRS issues it (Doola exposes it as data). */
     ein: varchar("ein", { length: 16 }),
     submittedAt: timestamp("submittedAt"),

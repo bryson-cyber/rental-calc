@@ -453,10 +453,22 @@ export const llcOpsRouter = router({
       if (!owner) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
       }
-      const result = await refreshLlcRegistrationStatus({
-        userId: owner.userId,
-        registrationId: input.id,
-      });
+      let result: { refreshed: boolean; message: string };
+      try {
+        result = await refreshLlcRegistrationStatus({
+          userId: owner.userId,
+          registrationId: input.id,
+        });
+      } catch {
+        // Provider errors (e.g. a company id the current environment does not
+        // know) must not surface as an opaque 500 — the stored status is
+        // still valid.
+        result = {
+          refreshed: false,
+          message:
+            "The filing service could not answer for this order right now. The last confirmed status is unchanged.",
+        };
+      }
       const bundle = await getLlcRegistrationById(owner.userId, input.id);
       if (!bundle) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });

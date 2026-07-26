@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, notLike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, notLike, or, sql } from "drizzle-orm";
 import {
   llcFounders,
   llcRegistrations,
@@ -143,16 +143,31 @@ export async function listRegistrationsForStatusPolling() {
       whopAccountId: llcRegistrations.whopAccountId,
       provider: llcRegistrations.provider,
       doolaCompanyId: llcRegistrations.doolaCompanyId,
+      updatedAt: llcRegistrations.updatedAt,
+      submittedAt: llcRegistrations.submittedAt,
     })
     .from(llcRegistrations)
     .where(
       and(
-        inArray(llcRegistrations.status, [
-          "submitting",
-          "payment_required",
-          "processing",
-          "action_required",
-        ]),
+        or(
+          inArray(llcRegistrations.status, [
+            "submitting",
+            "payment_required",
+            "processing",
+            "action_required",
+          ]),
+          // Recently-completed Doola rows stay in the sweep: registered-agent
+          // mail and late EIN letters arrive as API documents AFTER
+          // completion, and without a webhook only polling delivers them.
+          // Anchored on submittedAt (stable after filing — updatedAt renews
+          // on every refresh write and would keep rows in the sweep forever).
+          and(
+            eq(llcRegistrations.status, "completed"),
+            eq(llcRegistrations.provider, "doola"),
+            isNotNull(llcRegistrations.doolaCompanyId),
+            gte(llcRegistrations.submittedAt, sql`(NOW() - INTERVAL 90 DAY)`),
+          ),
+        ),
         // Test rows are provably outside the sweep, independent of the
         // whopAccountId-null guard in the poller loop.
         eq(llcRegistrations.isTest, false),
