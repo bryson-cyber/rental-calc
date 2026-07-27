@@ -58,6 +58,7 @@ import {
   contentStudioRouter,
   contentHubRouter,
   webinarSmsRouter,
+  promoCampaignRouter,
   leaseReaderRouter,
   webinarEnvRouter,
   tosRouter,
@@ -192,6 +193,9 @@ export const appRouter = router({
 
   // Webinar SMS (isolated module)
   webinarSms: webinarSmsRouter,
+
+  // Promo drip campaigns (isolated module)
+  promoCampaign: promoCampaignRouter,
 
   // Step 8: Lease Reader & Addendum Maker
   leaseReader: leaseReaderRouter,

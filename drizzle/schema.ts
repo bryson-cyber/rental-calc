@@ -3186,3 +3186,161 @@ export const llcEmailLog = mysqlTable(
 );
 
 export type LlcEmailLogRecord = typeof llcEmailLog.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROMO DRIP CAMPAIGNS — multi-day promo sequences (email via HubSpot SMTP +
+// SMS via SimpleTexting) sent to a frozen snapshot of a HubSpot list's members.
+// Distinct from the legacy `promotions` tables (admin-tracking record-keeping
+// only) and from the webinar sequence tables (webinar-anchored).
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * A promo drip campaign: one audience snapshot + a series of scheduled
+ * email/SMS steps. Audience comes from a HubSpot list, frozen at snapshot time.
+ */
+export const promoDripCampaigns = mysqlTable("promo_drip_campaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign name for display (e.g., "Affiliate Arbitrage — 0percentfunded") */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Campaign lifecycle status */
+  status: mysqlEnum("status", ["draft", "active", "completed", "cancelled"]).default("draft").notNull(),
+  /** HubSpot list ID the audience snapshot is built from (v3 ILS list id) */
+  hubspotListId: varchar("hubspotListId", { length: 50 }).notNull(),
+  /** HubSpot list name at snapshot time (display only) */
+  hubspotListName: varchar("hubspotListName", { length: 255 }),
+  /** When the audience snapshot was last built */
+  snapshotAt: timestamp("snapshotAt"),
+  /** Total contacts pulled from the HubSpot list */
+  snapshotTotal: int("snapshotTotal").default(0).notNull(),
+  /** Contacts eligible for email after exclusions */
+  eligibleCount: int("eligibleCount").default(0).notNull(),
+  /** Contacts excluded at snapshot time (upcoming webinar registration) */
+  excludedWebinarCount: int("excludedWebinarCount").default(0).notNull(),
+  /** Contacts with a valid US/Canada phone (SMS-eligible) */
+  smsEligibleCount: int("smsEligibleCount").default(0).notNull(),
+  /** When the campaign was launched (drip anchored to this moment) */
+  launchedAt: timestamp("launchedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("pdc_status_idx").on(table.status),
+]);
+export type PromoDripCampaign = typeof promoDripCampaigns.$inferSelect;
+export type InsertPromoDripCampaign = typeof promoDripCampaigns.$inferInsert;
+
+/**
+ * One step of a promo drip: a single email or SMS with its day offset.
+ * `scheduledAt` is computed at launch (UTC) from dayOffset + sendTimeEt.
+ */
+export const promoDripMessages = mysqlTable("promo_drip_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign this step belongs to */
+  campaignId: int("campaignId").notNull(),
+  /** Delivery channel for this step */
+  channel: mysqlEnum("channel", ["email", "sms"]).notNull(),
+  /** Stable step key (e.g., "email_d0", "sms_d18") — used in the send-log claim */
+  stepKey: varchar("stepKey", { length: 50 }).notNull(),
+  /** Position in the sequence for display ordering */
+  sequenceOrder: int("sequenceOrder").notNull(),
+  /** Days after launch day this step sends (0 = launch day) */
+  dayOffset: int("dayOffset").notNull(),
+  /** Send time in Eastern Time, "HH:MM" 24h (day-0 steps send immediately at launch) */
+  sendTimeEt: varchar("sendTimeEt", { length: 5 }).default("09:00").notNull(),
+  /** Email subject (null for SMS steps) */
+  subject: varchar("subject", { length: 500 }),
+  /** Plain-text body. Emails render via plainTextToEmailHtml; SMS sends as-is. */
+  body: text("body").notNull(),
+  /** When this step should be sent (UTC) — set at launch, null while draft */
+  scheduledAt: timestamp("scheduledAt"),
+  /** Step status */
+  status: mysqlEnum("status", ["pending", "sending", "sent", "failed", "cancelled"]).default("pending").notNull(),
+  /** Successfully sent count */
+  sentCount: int("sentCount").default(0).notNull(),
+  /** Failed count (real failures, not skips) */
+  failedCount: int("failedCount").default(0).notNull(),
+  /** Skipped count (opt-outs, invalid/international phones, upcoming-webinar holds) */
+  skippedCount: int("skippedCount").default(0).notNull(),
+  /** Error detail if the step failed */
+  error: text("error"),
+  /** Dispatcher liveness heartbeat — bumped while a tick is actively working this step */
+  claimedAt: timestamp("claimedAt"),
+  /** When the step finished sending */
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("pdm_step_uq").on(table.campaignId, table.stepKey),
+  index("pdm_status_sched_idx").on(table.status, table.scheduledAt),
+  index("pdm_campaign_idx").on(table.campaignId),
+]);
+export type PromoDripMessage = typeof promoDripMessages.$inferSelect;
+export type InsertPromoDripMessage = typeof promoDripMessages.$inferInsert;
+
+/**
+ * Frozen audience snapshot — one row per HubSpot contact at snapshot time.
+ * Contacts excluded at snapshot (upcoming webinar) keep their row with
+ * excludedAt/excludedReason set so preview counts stay explainable.
+ */
+export const promoDripRecipients = mysqlTable("promo_drip_recipients", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign this recipient belongs to */
+  campaignId: int("campaignId").notNull(),
+  /** HubSpot contact record id */
+  hubspotContactId: varchar("hubspotContactId", { length: 50 }).notNull(),
+  /** Contact email (lowercased) — null if the contact has none */
+  email: varchar("email", { length: 320 }),
+  /** First name for personalization */
+  firstName: varchar("firstName", { length: 255 }),
+  /** Normalized 10-digit US/Canada phone, or empty when none/invalid */
+  phone: varchar("phone", { length: 50 }).default("").notNull(),
+  /** 1 when phone is a valid US/Canada number (SMS-eligible) */
+  phoneValid: int("phoneValid").default(0).notNull(),
+  /** Set when this recipient is excluded from the whole campaign */
+  excludedAt: timestamp("excludedAt"),
+  /** Why they were excluded (e.g., "upcoming_webinar", "no_email_no_phone") */
+  excludedReason: varchar("excludedReason", { length: 100 }),
+  /** Set when the recipient unsubscribed from this promo (stops email + SMS) */
+  unsubscribedAt: timestamp("unsubscribedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("pdr_contact_uq").on(table.campaignId, table.hubspotContactId),
+  index("pdr_campaign_idx").on(table.campaignId),
+  index("pdr_email_idx").on(table.email),
+  index("pdr_phone_idx").on(table.phone),
+]);
+export type PromoDripRecipient = typeof promoDripRecipients.$inferSelect;
+export type InsertPromoDripRecipient = typeof promoDripRecipients.$inferInsert;
+
+/**
+ * Per-send log + atomic claim. The unique (messageId, recipientId) index is
+ * the concurrency lock: whichever dispatcher inserts the row owns the send.
+ * Mirrors email_send_log's claim pattern (email_log_claim_uq).
+ */
+export const promoDripSendLog = mysqlTable("promo_drip_send_log", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Campaign (denormalized for reporting) */
+  campaignId: int("campaignId").notNull(),
+  /** The drip step this send belongs to */
+  messageId: int("messageId").notNull(),
+  /** The snapshot recipient */
+  recipientId: int("recipientId").notNull(),
+  /** Channel at send time: "email" | "sms" */
+  channel: varchar("channel", { length: 10 }).notNull(),
+  /** pending (claimed) → sent | failed | skipped */
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  /** Skip reason or failure detail */
+  errorMessage: text("errorMessage"),
+  /** Provider message id (SMTP messageId / SimpleTexting sms id) */
+  externalId: varchar("externalId", { length: 255 }),
+  /** When the send completed */
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("promo_send_claim_uq").on(table.messageId, table.recipientId),
+  index("pdsl_campaign_idx").on(table.campaignId),
+  index("pdsl_message_status_idx").on(table.messageId, table.status),
+]);
+export type PromoDripSendLogRow = typeof promoDripSendLog.$inferSelect;
+export type InsertPromoDripSendLogRow = typeof promoDripSendLog.$inferInsert;

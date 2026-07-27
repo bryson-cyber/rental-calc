@@ -33,4 +33,6 @@ export const ENV = {
   // Shared secret for /api/scheduled/* — lets any external scheduler drive the
   // crons without a Manus session cookie. Empty = header auth disabled.
   cronSecret: process.env.CRON_SECRET ?? "",
+  /** Public base URL of the deployed app (used for promo unsubscribe links) */
+  appUrl: process.env.VITE_APP_URL ?? "",
 };

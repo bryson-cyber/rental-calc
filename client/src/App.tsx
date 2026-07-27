@@ -58,6 +58,7 @@ const MarketEvaluationPage = lazy(() => import("./pages/MarketEvaluationPage"));
 const MyReportsPage = lazy(() => import("./pages/MyReportsPage"));
 const ContentStudioPage = lazy(() => import("./pages/ContentStudioPage"));
 const WebinarCampaignManager = lazy(() => import('./pages/WebinarCampaignManager'));
+const PromoCampaignManager = lazy(() => import('./pages/PromoCampaignManager'));
 const AdminViewReport = lazy(() => import('./pages/AdminViewReport'));
 const VideoLandingPage = lazy(() => import('./pages/VideoLandingPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
@@ -174,6 +175,9 @@ function Router() {
         
         {/* Webinar Campaign Manager - Standalone SMS hub */}
         <Route path="/webinar-campaigns" component={WebinarCampaignManager} />
+
+        {/* Promo Campaign Manager - HubSpot-list promo drips (email + SMS) */}
+        <Route path="/promo-campaigns" component={PromoCampaignManager} />
         
         {/* LLC formation - account-required wizard + status tracker */}
         <Route path="/llc/register/:id" component={LLCFormationWizard} />

@@ -78,7 +78,7 @@ This is the exact system Coach Inayah used to build a multi-property portfolio a
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 
-async function sendSms(phone: string, message: string): Promise<{ success: boolean; smsId?: string; error?: string }> {
+export async function sendSms(phone: string, message: string): Promise<{ success: boolean; smsId?: string; error?: string }> {
   const apiKey = ENV.simpletextingApiKey;
   if (!apiKey) {
     return { success: false, error: "SimpleTexting API key not configured" };

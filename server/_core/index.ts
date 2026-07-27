@@ -1139,12 +1139,19 @@ async function startServer() {
   // ─── Heartbeat HTTP Cron Handlers ───────────────────────────────────────
   // These MUST be mounted before tRPC and Vite fallthrough.
   // Platform POSTs to these endpoints on a schedule.
-  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler, llcStatusPollHandler, scheduledHealthHandler } = await import("../scheduled-handlers");
+  const { webinarImportHandler, smsDispatchHandler, emailDispatchHandler, llcStatusPollHandler, scheduledHealthHandler, promoDispatchHandler } = await import("../scheduled-handlers");
   app.post("/api/scheduled/webinar-import", webinarImportHandler);
   app.post("/api/scheduled/sms-dispatch", smsDispatchHandler);
   app.post("/api/scheduled/email-dispatch", emailDispatchHandler);
   app.post("/api/scheduled/llc-status-poll", llcStatusPollHandler);
+  app.post("/api/scheduled/promo-dispatch", promoDispatchHandler);
   app.get("/api/scheduled/health", scheduledHealthHandler);
+
+  // Promo drip unsubscribe (public, HMAC-token-protected):
+  // GET = confirm page (no side effect — scanner-safe), POST = perform (RFC 8058 one-click)
+  const { promoUnsubscribeConfirmHandler, promoUnsubscribeHandler } = await import("../promo/promo-unsubscribe");
+  app.get("/api/promo/unsubscribe", promoUnsubscribeConfirmHandler);
+  app.post("/api/promo/unsubscribe", promoUnsubscribeHandler);
 
   // Public tracked short links (SMS/email deal links for unaware leads —
   // must resolve with zero friction, no auth). Mounted before Vite fallthrough.
@@ -1241,6 +1248,11 @@ async function startServer() {
           console.error('[Email Dispatcher] Failed to start:', err),
         );
       }).catch(() => { /* email dispatcher not critical */ });
+
+      // Start promo drip dispatcher (60s timer; claim-based, overlap-safe)
+      import('../promo/promo-dispatcher').then(({ startPromoDispatcher }) => {
+        startPromoDispatcher();
+      }).catch(() => { /* promo dispatcher not critical */ });
     } else {
       console.log('[Cron] Production mode: setInterval crons disabled. Heartbeat HTTP crons handle scheduling.');
     }

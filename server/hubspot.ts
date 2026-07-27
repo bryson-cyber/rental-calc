@@ -55,6 +55,8 @@ async function hubspotRequest<T>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+    // A hung socket must not wedge callers (e.g. the promo snapshot lock)
+    signal: options.signal ?? AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
@@ -858,3 +860,82 @@ export async function sendBatchMarketingEmails(params: {
 }
 
 export type { NewsletterContact, CityContactGroup };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v3 Lists API — promo drip audience snapshots
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface HubSpotListInfo {
+  listId: string;
+  name: string;
+  size: number | null;
+}
+
+/**
+ * Fetch a v3 list's metadata (name + size) for display/validation.
+ * Requires the crm.lists.read scope on the private-app token.
+ */
+export async function getListInfo(listId: string): Promise<HubSpotListInfo> {
+  const response = await hubspotRequest<{
+    list: { listId: string; name: string; additionalProperties?: { hs_list_size?: string } };
+  }>(`/crm/v3/lists/${encodeURIComponent(listId)}`);
+  const size = response.list?.additionalProperties?.hs_list_size;
+  return {
+    listId: response.list?.listId ?? listId,
+    name: response.list?.name ?? "",
+    size: size != null ? Number(size) : null,
+  };
+}
+
+/**
+ * Fetch every contact record ID in a v3 list (paginated, 250/page).
+ */
+export async function getListMembershipContactIds(listId: string): Promise<string[]> {
+  const ids: string[] = [];
+  let after: string | undefined;
+  do {
+    const qs = new URLSearchParams({ limit: "250" });
+    if (after) qs.set("after", after);
+    const response = await hubspotRequest<{
+      results: Array<{ recordId: string }>;
+      paging?: { next?: { after: string } };
+    }>(`/crm/v3/lists/${encodeURIComponent(listId)}/memberships/join-order?${qs.toString()}`);
+    ids.push(...(response.results || []).map((r) => r.recordId));
+    after = response.paging?.next?.after;
+  } while (after);
+  return ids;
+}
+
+export interface HubSpotBatchContact {
+  id: string;
+  properties: Record<string, string | undefined>;
+}
+
+/**
+ * Batch-read contacts by record ID (100/batch). Returns whatever contacts
+ * still exist — deleted/merged IDs are silently absent from results.
+ */
+export async function batchReadContacts(
+  contactIds: string[],
+  properties: string[] = ["email", "firstname", "lastname", "phone", "data_perfection__phones"]
+): Promise<HubSpotBatchContact[]> {
+  const out: HubSpotBatchContact[] = [];
+  for (let i = 0; i < contactIds.length; i += 100) {
+    const response = await hubspotRequest<{ results: HubSpotBatchContact[] }>(
+      "/crm/v3/objects/contacts/batch/read",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          properties,
+          inputs: contactIds.slice(i, i + 100).map((id) => ({ id })),
+        }),
+      }
+    );
+    out.push(...(response.results || []));
+    // Small delay between batches to respect rate limits
+    if (i + 100 < contactIds.length) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  return out;
+}

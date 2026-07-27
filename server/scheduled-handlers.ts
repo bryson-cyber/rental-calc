@@ -293,3 +293,44 @@ export async function llcStatusPollHandler(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * POST /api/scheduled/promo-dispatch
+ *
+ * Promo drip dispatcher (email + SMS steps for promo campaigns).
+ * Time-budgeted and claim-based — safe to call every 60s; overlapping calls
+ * and retries cannot duplicate sends.
+ */
+export async function promoDispatchHandler(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const isAuthed = await verifyCronAuth(req);
+    if (!isAuthed) {
+      return res.status(403).json({ error: "cron-only" });
+    }
+
+    // Dynamically import to avoid circular dependencies
+    const { runScheduledPromoDispatch } = await import("./promo/promo-dispatcher");
+    const result = await runScheduledPromoDispatch();
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[Scheduled] promo-dispatch completed in ${elapsed}ms:`, result);
+
+    return res.json({ ok: true, elapsed, ...result });
+  } catch (err: any) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[Scheduled] promo-dispatch FAILED after ${elapsed}ms:`, err.message);
+
+    notifyOwner({
+      title: "🚨 Scheduled Promo Dispatch Failed",
+      content: `The scheduled promo drip dispatch handler failed.\n\nError: ${err.message}\n\nThis may mean promo campaign messages are not being sent.`,
+    }).catch(() => {});
+
+    return res.status(500).json({
+      error: err.message,
+      stack: err.stack?.split("\n").slice(0, 5).join("\n"),
+      context: { url: req.url },
+      timestamp: new Date().toISOString(),
+    });
+  }
+}

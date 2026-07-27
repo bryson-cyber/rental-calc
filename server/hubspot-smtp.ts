@@ -35,6 +35,8 @@ interface SendEmailOptions {
   html: string;
   from?: string;
   replyTo?: string;
+  /** Extra SMTP headers (e.g. List-Unsubscribe for promo sends) */
+  headers?: Record<string, string>;
 }
 
 export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -46,6 +48,7 @@ export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ suc
       subject: options.subject,
       html: options.html,
       replyTo: options.replyTo || ENV.hubspotSmtpFrom,
+      ...(options.headers ? { headers: options.headers } : {}),
     });
     return { success: true, messageId: result.messageId };
   } catch (error: any) {

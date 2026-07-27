@@ -38,6 +38,7 @@ export { translationRouter } from "./translation";
 export { contentStudioRouter } from "./content-studio";
 export { contentHubRouter } from "./content-hub";
 export { webinarSmsRouter } from "./webinar-sms";
+export { promoCampaignRouter } from "./promo-campaign";
 export { leaseReaderRouter } from "./lease-reader";
 export { webinarEnvRouter } from "./webinar-env";
 export { tosRouter } from "./tos";
