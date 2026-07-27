@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator, Shield, FileText, Send } from 'lucide-react';
+import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator, Shield, FileText, Send, Megaphone } from 'lucide-react';
 import { Link } from 'wouter';
 
 export function AuthButton() {
@@ -97,6 +97,12 @@ export function AuthButton() {
               <DropdownMenuItem className="gap-2 cursor-pointer min-h-[44px] bg-amber-50 text-amber-800 hover:bg-amber-100">
                 <Send className="w-4 h-4" />
                 <span>Webinar Campaigns</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link href="/promo-campaigns">
+              <DropdownMenuItem className="gap-2 cursor-pointer min-h-[44px] bg-amber-50 text-amber-800 hover:bg-amber-100">
+                <Megaphone className="w-4 h-4" />
+                <span>Promo Campaigns</span>
               </DropdownMenuItem>
             </Link>
           </>
