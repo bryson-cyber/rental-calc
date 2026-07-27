@@ -150,6 +150,13 @@ function StepRow({ step, campaignStatus, onRefetch }: StepRowProps) {
               {step.status !== "pending" && (
                 <> • {step.sentCount} sent{step.failedCount > 0 && `, ${step.failedCount} failed`}{step.skippedCount > 0 && `, ${step.skippedCount} skipped`}</>
               )}
+              {step.engagement && (step.engagement.opens > 0 || step.engagement.uniqueClicks > 0) && (
+                <span className="text-emerald-700 font-medium" title="Opens include email apps that auto-load images (Apple Mail); clicks can include a few security scanners. Directional, not exact.">
+                  {isEmail && <> • ~{step.engagement.opens.toLocaleString()} opens</>}
+                  <> • {step.engagement.uniqueClicks.toLocaleString()} clicks</>
+                  {step.engagement.totalClicks > step.engagement.uniqueClicks && <> ({step.engagement.totalClicks.toLocaleString()} total)</>}
+                </span>
+              )}
             </div>
           </div>
         </div>

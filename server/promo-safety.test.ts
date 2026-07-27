@@ -221,3 +221,36 @@ describe("wiring", () => {
     expect(router).toMatch(/eligibleCount <= 0/);
   });
 });
+
+describe("engagement tracking", () => {
+  const tracking = read("promo/promo-tracking.ts");
+
+  it("dispatcher tracks links before sending, on both channels", () => {
+    const emailIdx = dispatcher.indexOf('channel: "email"', dispatcher.indexOf("sendToRecipient"));
+    expect(dispatcher.indexOf("buildTrackedPromoContent")).toBeGreaterThan(-1);
+    const sendEmailIdx = dispatcher.indexOf("await sendWebinarEmail(");
+    const trackEmailIdx = dispatcher.indexOf("buildTrackedPromoContent", dispatcher.indexOf("async function sendToRecipient"));
+    expect(trackEmailIdx).toBeGreaterThan(-1);
+    expect(trackEmailIdx).toBeLessThan(sendEmailIdx);
+    const smsSendIdx = dispatcher.indexOf("await sendSms(recipient.phone, trackedSms.body)");
+    expect(smsSendIdx).toBeGreaterThan(-1);
+  });
+
+  it("tracking failure falls back to the untracked body (send never blocked)", () => {
+    const idx = tracking.indexOf("sending untracked");
+    expect(idx).toBeGreaterThan(-1);
+    expect(tracking.substring(idx, idx + 200)).toContain("return { body, openCode: null }");
+  });
+
+  it("open pixel endpoint is mounted before tRPC and never cached", () => {
+    const idx = coreIndex.indexOf('app.get("/api/promo/open/:code", promoOpenPixelHandler)');
+    expect(idx).toBeGreaterThan(-1);
+    expect(idx).toBeLessThan(coreIndex.indexOf('"/api/trpc"'));
+    expect(tracking).toContain('"Cache-Control", "no-store');
+  });
+
+  it("step stats exclude test sends", () => {
+    expect(tracking).toContain('["promo_drip", "promo_drip_open"]');
+    expect(tracking).toContain('"promo_drip_test"');
+  });
+});

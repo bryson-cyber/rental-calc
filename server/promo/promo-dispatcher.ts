@@ -38,6 +38,7 @@ import { sendSms } from "../routers/webinar-sms";
 import { buildPromoExclusionSets, type PromoExclusionSets } from "./promo-webinar-exclusion";
 import { buildPromoUnsubscribeUrl, chunk, renderPromoVars } from "./promo-util";
 import { PROMO_POSTAL_ADDRESS } from "./promo-content";
+import { buildTrackedPromoContent, openPixelHtml } from "./promo-tracking";
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 const PROMO_TICK_BUDGET_MS = 75_000; // stay under the 2-min heartbeat handler timeout
@@ -453,11 +454,20 @@ async function sendToRecipient(
       const body = renderPromoVars(step.body, { firstName: recipient.firstName });
       const subject = renderPromoVars(step.subject || "", { firstName: recipient.firstName });
       const unsubUrl = buildPromoUnsubscribeUrl(ENV.appUrl, campaign.id, to);
-      let html = plainTextToEmailHtml(body);
-      // CAN-SPAM footer: physical postal address + working unsubscribe.
+      // Per-recipient tracked links + open pixel (falls back untracked on error)
+      const trackedContent = await buildTrackedPromoContent(db, {
+        campaignId: campaign.id,
+        stepKey: step.stepKey,
+        channel: "email",
+        recipientEmail: to,
+        body,
+      });
+      let html = plainTextToEmailHtml(trackedContent.body);
+      // Open pixel + CAN-SPAM footer: physical postal address + working unsubscribe.
+      const pixel = trackedContent.openCode ? openPixelHtml(trackedContent.openCode) : "";
       html = html.replace(
         "</body></html>",
-        `<p style="margin:24px 0 0;font-size:12px;color:#64748b;">${PROMO_POSTAL_ADDRESS}<br>Don't want these emails? <a href="${unsubUrl}" style="color:#64748b;">Unsubscribe</a></p></body></html>`
+        `${pixel}<p style="margin:24px 0 0;font-size:12px;color:#64748b;">${PROMO_POSTAL_ADDRESS}<br>Don't want these emails? <a href="${unsubUrl}" style="color:#64748b;">Unsubscribe</a></p></body></html>`
       );
       const result = await sendWebinarEmail({
         to,
@@ -478,9 +488,16 @@ async function sendToRecipient(
       return "failed";
     }
 
-    // SMS
-    const text = renderPromoVars(step.body, { firstName: recipient.firstName });
-    const result = await sendSms(recipient.phone, text);
+    // SMS — tracked short link (falls back untracked on error)
+    const rendered = renderPromoVars(step.body, { firstName: recipient.firstName });
+    const trackedSms = await buildTrackedPromoContent(db, {
+      campaignId: campaign.id,
+      stepKey: step.stepKey,
+      channel: "sms",
+      recipientEmail: recipient.email,
+      body: rendered,
+    });
+    const result = await sendSms(recipient.phone, trackedSms.body);
     if (result.success) {
       await finish("sent", { externalId: result.smsId });
       return "sent";

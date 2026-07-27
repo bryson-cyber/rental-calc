@@ -1153,6 +1153,10 @@ async function startServer() {
   app.get("/api/promo/unsubscribe", promoUnsubscribeConfirmHandler);
   app.post("/api/promo/unsubscribe", promoUnsubscribeHandler);
 
+  // Promo drip email open pixel (public; records the open, returns a 1×1 gif)
+  const { promoOpenPixelHandler } = await import("../promo/promo-tracking");
+  app.get("/api/promo/open/:code", promoOpenPixelHandler);
+
   // Public tracked short links (SMS/email deal links for unaware leads —
   // must resolve with zero friction, no auth). Mounted before Vite fallthrough.
   const { registerLinkRedirect } = await import("../link-redirect");

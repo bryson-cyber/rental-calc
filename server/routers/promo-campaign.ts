@@ -31,6 +31,7 @@ import {
   AFFILIATE_ARBITRAGE_STEPS,
 } from "../promo/promo-content";
 import { buildAudienceSnapshot, snapshotProgress } from "../promo/promo-snapshot";
+import { buildTrackedPromoContent, getPromoEngagement, openPixelHtml } from "../promo/promo-tracking";
 import { computeStepScheduledAt, zonedCalendarDate } from "../promo/promo-time";
 import { buildPromoUnsubscribeUrl, normalizePromoPhone, renderPromoVars } from "../promo/promo-util";
 import { PROMO_POSTAL_ADDRESS } from "../promo/promo-content";
@@ -106,9 +107,16 @@ export const promoCampaignRouter = router({
       );
     const smsEligible = activePhones.filter((r) => !optedSet.has(r.phone)).length;
 
+    // Per-step opens/clicks from the tracked-link rows (test sends excluded)
+    const engagement = await getPromoEngagement(db, input.campaignId);
+    const messagesWithEngagement = messages.map((m: any) => ({
+      ...m,
+      engagement: engagement.get(m.stepKey) ?? null,
+    }));
+
     return {
       campaign,
-      messages,
+      messages: messagesWithEngagement,
       recipientStats: {
         total: Number(recipientStats?.total ?? 0),
         eligible: Number(recipientStats?.eligible ?? 0),
@@ -236,11 +244,21 @@ export const promoCampaignRouter = router({
       const body = renderPromoVars(message.body, { firstName });
       const subject = `[TEST] ${renderPromoVars(message.subject || message.stepKey, { firstName })}`;
       const unsubUrl = buildPromoUnsubscribeUrl(ENV.appUrl, message.campaignId, input.to);
-      let html = plainTextToEmailHtml(body);
+      // Tracked like a real send (tagged as test — excluded from step stats)
+      const trackedContent = await buildTrackedPromoContent(db, {
+        campaignId: message.campaignId,
+        stepKey: message.stepKey,
+        channel: "email",
+        recipientEmail: input.to,
+        body,
+        isTest: true,
+      });
+      let html = plainTextToEmailHtml(trackedContent.body);
       // Same footer as real sends so the test is a faithful preview.
+      const pixel = trackedContent.openCode ? openPixelHtml(trackedContent.openCode) : "";
       html = html.replace(
         "</body></html>",
-        `<p style="margin:24px 0 0;font-size:12px;color:#64748b;">${PROMO_POSTAL_ADDRESS}<br>Don't want these emails? <a href="${unsubUrl}" style="color:#64748b;">Unsubscribe</a></p></body></html>`
+        `${pixel}<p style="margin:24px 0 0;font-size:12px;color:#64748b;">${PROMO_POSTAL_ADDRESS}<br>Don't want these emails? <a href="${unsubUrl}" style="color:#64748b;">Unsubscribe</a></p></body></html>`
       );
 
       const result = await sendWebinarEmail({
@@ -263,8 +281,16 @@ export const promoCampaignRouter = router({
       if (message.channel !== "sms") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "This step is an email step — use Send Test Email" });
       }
-      const text = renderPromoVars(message.body, { firstName: "there" });
-      const result = await sendSms(input.phone, text);
+      const rendered = renderPromoVars(message.body, { firstName: "there" });
+      const trackedSms = await buildTrackedPromoContent(db, {
+        campaignId: message.campaignId,
+        stepKey: message.stepKey,
+        channel: "sms",
+        recipientEmail: null,
+        body: rendered,
+        isTest: true,
+      });
+      const result = await sendSms(input.phone, trackedSms.body);
       if (!result.success) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Test SMS failed: ${result.error}` });
       }

@@ -11,6 +11,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 // process.env at module-eval time).
 vi.hoisted(() => {
   process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret-for-promo-tokens";
+  process.env.VITE_APP_URL = process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com";
 });
 
 import {
@@ -231,5 +232,84 @@ describe("chunk", () => {
   it("splits arrays evenly with a remainder tail", () => {
     expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
     expect(chunk([], 8)).toEqual([]);
+  });
+});
+
+describe("promo link tracking", () => {
+  it("short codes are URL-safe and unambiguous", async () => {
+    const { generateShortCode } = await import("./promo/promo-tracking");
+    for (let i = 0; i < 50; i++) {
+      const code = generateShortCode();
+      expect(code).toMatch(/^[a-hjkmnp-z2-9]{10}$/);
+    }
+    expect(new Set([...Array(200)].map(() => generateShortCode())).size).toBe(200);
+  });
+
+  it("appends UTM params preserving existing query strings", async () => {
+    const { withUtmParams } = await import("./promo/promo-tracking");
+    const url = withUtmParams("https://0percentfunded.com/", "email", "email_d3");
+    const u = new URL(url);
+    expect(u.searchParams.get("utm_source")).toBe("coachinayah");
+    expect(u.searchParams.get("utm_medium")).toBe("email");
+    expect(u.searchParams.get("utm_campaign")).toBe("affiliate_arbitrage");
+    expect(u.searchParams.get("utm_content")).toBe("email_d3");
+    const existing = withUtmParams("https://x.com/?a=1", "sms", "sms_d0");
+    expect(new URL(existing).searchParams.get("a")).toBe("1");
+    expect(withUtmParams("not a url", "sms", "sms_d0")).toBe("not a url");
+  });
+
+  it("replaces every URL occurrence with a tracked short link", async () => {
+    const inserts: any[] = [];
+    const stubDb = { insert: () => ({ values: async (v: any) => inserts.push(v) }) };
+    const { buildTrackedPromoContent } = await import("./promo/promo-tracking");
+    const body = "Check https://0percentfunded.com/ now.\nAgain: https://0percentfunded.com/ done.";
+    const tracked = await buildTrackedPromoContent(stubDb, {
+      campaignId: 7,
+      stepKey: "sms_d0",
+      channel: "sms",
+      recipientEmail: "a@b.com",
+      body,
+    });
+    expect(tracked.body).not.toContain("0percentfunded.com");
+    const matches = tracked.body.match(/https:\/\/coachinayahturnkeytool\.com\/l\/[a-z2-9]{10}/g) || [];
+    expect(matches).toHaveLength(2);
+    expect(new Set(matches).size).toBe(1); // same URL → same short link
+    expect(tracked.openCode).toBeNull(); // sms: no open pixel
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].campaignName).toBe("promo:7:sms_d0");
+    expect(inserts[0].campaignType).toBe("promo_drip");
+    expect(inserts[0].linkUrl).toContain("utm_content=sms_d0");
+  });
+
+  it("emails also mint an open-pixel row; test sends are tagged for exclusion", async () => {
+    const inserts: any[] = [];
+    const stubDb = { insert: () => ({ values: async (v: any) => inserts.push(v) }) };
+    const { buildTrackedPromoContent } = await import("./promo/promo-tracking");
+    const tracked = await buildTrackedPromoContent(stubDb, {
+      campaignId: 7,
+      stepKey: "email_d0",
+      channel: "email",
+      recipientEmail: "a@b.com",
+      body: "Go: https://0percentfunded.com/",
+      isTest: true,
+    });
+    expect(tracked.openCode).toMatch(/^[a-z2-9]{10}$/);
+    expect(inserts).toHaveLength(2);
+    expect(inserts.every((v) => v.campaignType === "promo_drip_test")).toBe(true);
+  });
+
+  it("NEVER fails the send: tracking errors fall back to the original body", async () => {
+    const throwingDb = { insert: () => ({ values: async () => { throw new Error("db down"); } }) };
+    const { buildTrackedPromoContent } = await import("./promo/promo-tracking");
+    const body = "Go: https://0percentfunded.com/";
+    const tracked = await buildTrackedPromoContent(throwingDb, {
+      campaignId: 7,
+      stepKey: "email_d0",
+      channel: "email",
+      recipientEmail: "a@b.com",
+      body,
+    });
+    expect(tracked.body).toBe(body);
+    expect(tracked.openCode).toBeNull();
   });
 });
