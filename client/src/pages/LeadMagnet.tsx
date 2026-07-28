@@ -133,7 +133,7 @@ const BuildFullReportButton = lazy(() => import('@/components/BuildFullReportBut
 import StepErrorBoundary from '@/components/StepErrorBoundary';
 import { useReportMode } from '@/contexts/ReportModeContext';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
-import { TermsAcceptanceModal, hasTosBeenAccepted } from '@/components/TermsAcceptanceModal';
+import { TermsAcceptanceModal, useTosGate } from '@/components/TermsAcceptanceModal';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -428,7 +428,9 @@ export default function LeadMagnet() {
 
   
   // Terms of Service acceptance state
-  const [tosAccepted, setTosAccepted] = useState(() => hasTosBeenAccepted());
+  // Server-aware TOS gate (was localStorage-only, which re-asked users on
+  // every new browser/origin even when their acceptance was on record).
+  const tosGate = useTosGate();
   
   // Interactive tour state
   const { showTour, isFirstVisit, startTour, closeTour, completeTour, resetTour } = useInteractiveTour();
@@ -7363,8 +7365,8 @@ export default function LeadMagnet() {
       
       {/* Terms of Service Acceptance Modal */}
       <TermsAcceptanceModal
-        isOpen={!tosAccepted}
-        onAccept={() => setTosAccepted(true)}
+        isOpen={tosGate.ready && !tosGate.accepted}
+        onAccept={tosGate.accept}
       />
     </div>
     </LoginGate>

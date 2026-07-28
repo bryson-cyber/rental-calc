@@ -7,7 +7,7 @@
  * The modal cannot be dismissed without accepting.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileText, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
@@ -38,7 +38,39 @@ export function markTosAccepted(): void {
   }
 }
 
+/**
+ * Server-aware TOS gate. localStorage is instant but per-browser AND
+ * per-origin — a login from a new device, a cleared browser, or crossing
+ * www/apex re-asked users who had already accepted (server records existed
+ * via tos.accept, but nothing ever READ them). The modal now shows only
+ * after the server check settles, so an accepted user never sees a flash.
+ */
+export function useTosGate() {
+  const [accepted, setAccepted] = useState(() => hasTosBeenAccepted());
+  const serverCheck = trpc.tos.checkAcceptance.useQuery(undefined, {
+    enabled: !accepted,
+    staleTime: Infinity,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (serverCheck.data?.accepted) {
+      markTosAccepted(); // write-through so the next load is instant
+      setAccepted(true);
+    }
+  }, [serverCheck.data]);
+
+  return {
+    accepted,
+    // Never flash the modal while the server answer is in flight.
+    ready: accepted || serverCheck.isFetched || serverCheck.isError,
+    accept: () => setAccepted(true),
+  };
+}
+
 interface TermsAcceptanceModalProps {
+
   isOpen: boolean;
   onAccept: () => void;
 }

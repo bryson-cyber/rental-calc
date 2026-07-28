@@ -48,3 +48,63 @@ describe("the pricing controls the operator depends on stay present", () => {
     expect(wizard).toContain("includes the {formatUsdFromCents(pricing.stateFeeCents)} state filing fee");
   });
 });
+
+describe('nagging-popup fixes (operator 2026-07-28: "it just keeps popping up")', () => {
+  it('Skip for now PERSISTS — the old remember=false branch deleted the stored mode', () => {
+    const modal = read('client/src/components/ReportModeOnboarding.tsx');
+    expect(modal).toContain("completeOnboarding('guided', true)");
+    expect(modal).not.toContain("completeOnboarding('guided', false)");
+  });
+
+  it('the TOS gate consults the server record, not just this browser', () => {
+    const tos = read('client/src/components/TermsAcceptanceModal.tsx');
+    expect(tos).toContain('export function useTosGate()');
+    expect(tos).toContain('trpc.tos.checkAcceptance.useQuery');
+    // Accepted-elsewhere users never see a flash while the check runs.
+    expect(tos).toContain('accepted || serverCheck.isFetched || serverCheck.isError');
+    // Write-through so the next load is instant.
+    expect(tos).toContain('markTosAccepted(); // write-through');
+    // Both gated pages use the hook instead of raw localStorage.
+    for (const page of ['client/src/pages/ExplorePage.tsx', 'client/src/pages/LeadMagnet.tsx']) {
+      const src = read(page);
+      expect(src).toContain('useTosGate');
+      expect(src).not.toContain('hasTosBeenAccepted()');
+    }
+  });
+});
+
+describe('LLC ops page redesign invariants', () => {
+  const ops = read('client/src/pages/admin/LlcOpsPage.tsx');
+
+  it('internal tooling headings are sans — the marketing serif read as broken', () => {
+    expect(ops).toContain('font-sans text-2xl font-semibold tracking-tight text-slate-900');
+    expect(ops).toContain('font-sans text-base font-semibold tracking-tight');
+  });
+
+  it('at-a-glance stat tiles exist (orders, awaiting payment, collected, margin)', () => {
+    for (const label of ['Filing orders', 'Awaiting payment', 'Retail collected', 'Margin to date']) {
+      expect(ops).toContain(label);
+    }
+  });
+
+  it('both data surfaces have a real error state with retry', () => {
+    expect(ops).toContain("Couldn't load filing orders.");
+    expect(ops).toContain("Couldn't load state pricing.");
+    expect((ops.match(/Try again/g) ?? []).length).toBe(2);
+  });
+
+  it('bulk pricing actions are grouped and labeled, not floating placeholder-only forms', () => {
+    expect(ops).toContain('Bulk actions — all states at once');
+    expect(ops).toContain("Our fee ($) — added to each state's fee");
+    expect(ops).not.toContain('placeholder="Markup $"');
+  });
+
+  it('the orders table dropped to 8 columns with paid folded into Retail', () => {
+    expect(ops).toContain('min-w-[64rem]');
+    expect(ops).not.toContain('min-w-[76rem]');
+    expect(ops).not.toContain("'Retail paid',");
+    expect(ops).not.toContain("'Last sync',");
+    // Last sync survives inside the expanded documents row.
+    expect(ops).toContain('Last provider sync:');
+  });
+});

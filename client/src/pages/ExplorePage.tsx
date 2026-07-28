@@ -7,7 +7,7 @@
  */
 
 import { useState, Suspense, lazy } from 'react';
-import { TermsAcceptanceModal, hasTosBeenAccepted } from '@/components/TermsAcceptanceModal';
+import { TermsAcceptanceModal, useTosGate } from '@/components/TermsAcceptanceModal';
 import { SEOHead, organizationSchema, createWebPageSchema } from '@/components/SEOHead';
 import { Loader2 } from 'lucide-react';
 
@@ -20,10 +20,12 @@ const explorePageSchema = createWebPageSchema({
 });
 
 export default function ExplorePage() {
-  const [showTos, setShowTos] = useState(!hasTosBeenAccepted());
+  // Server-aware gate: never re-asks a user whose acceptance is on record,
+  // and never flashes while the check is in flight.
+  const tos = useTosGate();
 
   // TOS gate
-  if (showTos) {
+  if (tos.ready && !tos.accepted) {
     return (
       <>
         <SEOHead
@@ -35,7 +37,7 @@ export default function ExplorePage() {
         />
         <TermsAcceptanceModal
           isOpen={true}
-          onAccept={() => setShowTos(false)}
+          onAccept={tos.accept}
         />
       </>
     );

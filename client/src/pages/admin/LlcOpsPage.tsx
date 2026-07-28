@@ -144,7 +144,7 @@ function CreateDemoButton() {
       ) : (
         <Sparkles className="w-4 h-4 mr-2" />
       )}
-      Create demo filing (for presentations)
+      Demo filing
     </Button>
   );
 }
@@ -418,16 +418,22 @@ function StatePricingSection() {
 
   return (
     <section className="mt-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">State pricing</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-            State fees are editable reference data (published filing fees at seed time —
-            not legal advice). Clients see a price only when retail is set and the state
-            is active. Wholesale figures on this table never reach clients.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <div>
+        <h2 className="font-sans text-xl font-semibold tracking-tight text-slate-900">State pricing</h2>
+        <p className="mt-1 max-w-2xl font-sans text-xs leading-5 text-slate-500">
+          State fees are editable reference data (published filing fees at seed time —
+          not legal advice). Clients see a price only when retail is set and the state
+          is active. Wholesale figures on this table never reach clients.
+        </p>
+      </div>
+
+      {/* Bulk actions grouped and labeled — these were four unlabeled forms
+          floating against the section title, unreadable at a glance. */}
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+        <p className="font-sans text-[11px] font-semibold uppercase tracking-wider text-slate-500">Bulk actions — all states at once</p>
+        <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-4">
+          <div>
+            <p className="mb-1 font-sans text-xs font-medium text-slate-600">Provider fees</p>
           <Button
             size="sm"
             variant="outline"
@@ -441,8 +447,9 @@ function StatePricingSection() {
             )}
             Sync state fees
           </Button>
+          </div>
           <form
-            className="flex items-center gap-2"
+            className="flex items-end gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               const parsed = Math.round(Number(markupValue) * 100);
@@ -459,19 +466,25 @@ function StatePricingSection() {
               }
             }}
           >
-            <Input
-              inputMode="decimal"
-              className="h-9 w-28 text-sm"
-              value={markupValue}
-              onChange={(event) => setMarkupValue(event.target.value)}
-              placeholder="Markup $"
-            />
+            <div>
+              <label htmlFor="bulk-markup" className="mb-1 block font-sans text-xs font-medium text-slate-600">
+                Our fee ($) — added to each state's fee
+              </label>
+              <Input
+                id="bulk-markup"
+                inputMode="decimal"
+                className="h-9 w-28 text-sm"
+                value={markupValue}
+                onChange={(event) => setMarkupValue(event.target.value)}
+                placeholder="250"
+              />
+            </div>
             <Button type="submit" size="sm" className="h-9" disabled={markupMutation.isPending}>
               {markupMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply markup'}
             </Button>
           </form>
           <form
-            className="flex items-center gap-2"
+            className="flex items-end gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               const link = bulkLinkValue.trim();
@@ -484,13 +497,19 @@ function StatePricingSection() {
               }
             }}
           >
-            <Input
-              type="url"
-              className="h-9 w-56 text-sm"
-              value={bulkLinkValue}
-              onChange={(event) => setBulkLinkValue(event.target.value)}
-              placeholder="Payment link for all states"
-            />
+            <div>
+              <label htmlFor="bulk-link" className="mb-1 block font-sans text-xs font-medium text-slate-600">
+                Payment link
+              </label>
+              <Input
+                id="bulk-link"
+                type="url"
+                className="h-9 w-56 text-sm"
+                value={bulkLinkValue}
+                onChange={(event) => setBulkLinkValue(event.target.value)}
+                placeholder="https://pay…"
+              />
+            </div>
             <Button
               type="submit"
               size="sm"
@@ -502,7 +521,7 @@ function StatePricingSection() {
             </Button>
           </form>
           <form
-            className="flex items-center gap-2"
+            className="flex items-end gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               const trimmed = expediteValue.trim();
@@ -516,15 +535,21 @@ function StatePricingSection() {
               });
             }}
           >
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              className="h-9 w-44 text-sm"
-              value={expediteValue}
-              onChange={(event) => setExpediteValue(event.target.value)}
-              placeholder="Expedited EIN price ($)"
-            />
+            <div>
+              <label htmlFor="bulk-expedite" className="mb-1 block font-sans text-xs font-medium text-slate-600">
+                Expedited EIN add-on ($)
+              </label>
+              <Input
+                id="bulk-expedite"
+                type="number"
+                min="0"
+                step="0.01"
+                className="h-9 w-36 text-sm"
+                value={expediteValue}
+                onChange={(event) => setExpediteValue(event.target.value)}
+                placeholder="249"
+              />
+            </div>
             <Button
               type="submit"
               size="sm"
@@ -542,7 +567,15 @@ function StatePricingSection() {
         </div>
       </div>
 
-      {pricingQuery.isLoading ? (
+      {pricingQuery.error ? (
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-6">
+          <p className="font-sans text-sm font-medium text-red-800">Couldn't load state pricing.</p>
+          <p className="mt-1 font-sans text-xs text-red-600">{pricingQuery.error.message}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => void pricingQuery.refetch()}>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
+          </Button>
+        </div>
+      ) : pricingQuery.isLoading ? (
         <div className="mt-4">
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
@@ -884,10 +917,13 @@ export default function LlcOpsPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="container max-w-[1400px] mx-auto px-4 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-semibold text-slate-900">LLC filing orders</h1>
+            <p className="font-sans text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</p>
+            {/* font-sans: the global heading rule applies the marketing serif,
+                which read as broken on this internal tooling surface. */}
+            <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">LLC filing orders</h1>
+            <p className="mt-1 font-sans text-sm text-slate-500">Filings, pricing, and client documents — clients never see this page.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <CreateDemoButton />
@@ -900,12 +936,39 @@ export default function LlcOpsPage() {
           </div>
         </div>
 
+        {/* At-a-glance numbers so the eye lands on state, not a spreadsheet. */}
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {(() => {
+            const real = orders.filter((order) => !order.isDemo);
+            const collected = real
+              .filter((order) => order.retailPaidAt && order.retailPriceCents !== null)
+              .reduce((sum, order) => sum + (order.retailPriceCents ?? 0), 0);
+            const margin = real
+              .filter((order) => order.marginCents !== null)
+              .reduce((sum, order) => sum + (order.marginCents ?? 0), 0);
+            const tiles = [
+              { label: 'Filing orders', value: String(real.length) },
+              { label: 'Awaiting payment', value: String(needsPayment.length), alert: needsPayment.length > 0 },
+              { label: 'Retail collected', value: formatCents(collected) },
+              { label: 'Margin to date', value: formatCents(margin) },
+            ];
+            return tiles.map((tile) => (
+              <div key={tile.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
+                <p className="font-sans text-[11px] font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                <p className={`mt-1 font-sans text-2xl font-semibold tabular-nums tracking-tight ${tile.alert ? 'text-amber-600' : 'text-slate-900'}`}>
+                  {tile.value}
+                </p>
+              </div>
+            ));
+          })()}
+        </div>
+
         {needsPayment.length > 0 ? (
           <section role="alert" className="mt-6 rounded-2xl bg-slate-900 p-5 text-white">
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 w-5 h-5 flex-shrink-0" />
               <div>
-                <h2 className="font-semibold">
+                <h2 className="font-sans text-base font-semibold tracking-tight">
                   {needsPayment.length} wholesale checkout{needsPayment.length === 1 ? '' : 's'} waiting for payment
                 </h2>
                 <p className="mt-1 text-sm text-white/70">
@@ -916,30 +979,36 @@ export default function LlcOpsPage() {
           </section>
         ) : null}
 
-        {listQuery.isLoading ? (
+        {listQuery.error ? (
+          <section className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
+            <p className="font-sans text-sm font-medium text-red-800">Couldn't load filing orders.</p>
+            <p className="mt-1 font-sans text-xs text-red-600">{listQuery.error.message}</p>
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => void listQuery.refetch()}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
+            </Button>
+          </section>
+        ) : listQuery.isLoading ? (
           <div className="mt-8">
             <Skeleton className="h-96 w-full rounded-2xl" />
           </div>
         ) : (
           <section className="mt-6 overflow-x-auto apple-card p-2 sm:p-4">
-            <table className="w-full min-w-[76rem] border-separate border-spacing-0 text-left">
+            <table className="w-full min-w-[64rem] border-separate border-spacing-0 text-left">
               <thead>
                 <tr>
                   {[
-                    'Order',
-                    'Client',
-                    'Company',
-                    'Status',
-                    'Wholesale (COGS)',
-                    'Retail',
-                    'Retail paid',
-                    'Margin',
-                    'Last sync',
-                    'Actions',
-                  ].map((heading) => (
+                    { heading: 'Order' },
+                    { heading: 'Client' },
+                    { heading: 'Company' },
+                    { heading: 'Status' },
+                    { heading: 'Wholesale (COGS)', numeric: true },
+                    { heading: 'Retail' },
+                    { heading: 'Margin', numeric: true },
+                    { heading: 'Actions' },
+                  ].map(({ heading, numeric }) => (
                     <th
                       key={heading}
-                      className="border-b border-slate-200 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+                      className={`border-b border-slate-200 px-4 py-3 font-sans text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${numeric ? 'text-right' : ''}`}
                     >
                       {heading}
                     </th>
@@ -949,15 +1018,16 @@ export default function LlcOpsPage() {
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
-                      No orders yet. New client submissions appear here automatically.
+                    <td colSpan={8} className="px-4 py-12 text-center">
+                      <p className="font-sans text-sm font-medium text-slate-700">No filing orders yet</p>
+                      <p className="mt-1 font-sans text-xs text-slate-500">New client submissions appear here automatically — or create a demo filing to see the flow.</p>
                     </td>
                   </tr>
                 ) : (
                   orders.map((order) => (
                     <Fragment key={order.id}>
                       <tr className="align-top">
-                        <td className="border-b border-slate-100 px-4 py-4">
+                        <td className="border-b border-slate-100 px-4 py-3">
                           <p className="font-mono text-xs font-bold text-slate-900">{order.orderRef}</p>
                           <p className="mt-1 text-[11px] text-slate-500">{order.formationState ?? '—'}</p>
                           {order.isDemo ? (
@@ -969,14 +1039,14 @@ export default function LlcOpsPage() {
                             </span>
                           ) : null}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4">
+                        <td className="border-b border-slate-100 px-4 py-3">
                           <p className="text-sm font-medium text-slate-900">{order.clientName ?? '—'}</p>
                           <p className="mt-1 break-all text-[11px] text-slate-500">{order.clientEmail ?? '—'}</p>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4 text-sm font-medium text-slate-900">
+                        <td className="border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-900">
                           {order.legalName ? `${order.legalName} ${order.entitySuffix}` : 'Untitled draft'}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4">
+                        <td className="border-b border-slate-100 px-4 py-3">
                           <span
                             className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusBadgeClass(order.status)}`}
                           >
@@ -988,22 +1058,19 @@ export default function LlcOpsPage() {
                             </p>
                           ) : null}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4 text-sm tabular-nums text-slate-900">
+                        <td className="border-b border-slate-100 px-4 py-3 text-right text-sm tabular-nums text-slate-900">
                           {formatCents(order.checkoutTotal)}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4">
-                          <RetailPriceCell registrationId={order.id} retailPriceCents={order.retailPriceCents} />
+                        <td className="border-b border-slate-100 px-4 py-3">
+                          <div className="flex flex-col gap-1.5">
+                            <RetailPriceCell registrationId={order.id} retailPriceCents={order.retailPriceCents} />
+                            <PaidCell order={order} />
+                          </div>
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4">
-                          <PaidCell order={order} />
-                        </td>
-                        <td className="border-b border-slate-100 px-4 py-4 text-sm tabular-nums text-slate-900">
+                        <td className="border-b border-slate-100 px-4 py-3 text-right text-sm tabular-nums text-slate-900">
                           {formatCents(order.marginCents)}
                         </td>
-                        <td className="border-b border-slate-100 px-4 py-4 text-xs text-slate-500">
-                          {formatDate(order.lastProviderSyncAt)}
-                        </td>
-                        <td className="border-b border-slate-100 px-4 py-4">
+                        <td className="border-b border-slate-100 px-4 py-3">
                           <div className="flex flex-wrap items-center gap-2">
                             {order.status === 'payment_required' && order.checkoutUrl ? (
                               <Button asChild size="sm" className="h-8 rounded-lg px-3 text-xs font-bold">
@@ -1052,7 +1119,8 @@ export default function LlcOpsPage() {
                       </tr>
                       {expandedId === order.id ? (
                         <tr>
-                          <td colSpan={10} className="border-b border-slate-100 px-4 pb-6 pt-1">
+                          <td colSpan={8} className="border-b border-slate-100 px-4 pb-6 pt-1">
+                            <p className="mb-2 font-sans text-[11px] text-slate-400">Last provider sync: {formatDate(order.lastProviderSyncAt)}</p>
                             <DocumentsPanel registrationId={order.id} />
                           </td>
                         </tr>

@@ -243,8 +243,13 @@ export function ReportModeOnboarding() {
             </span>
           </button>
           
+          {/* remember=true, deliberately: the old remember=false branch
+              REMOVED the stored mode, so skipping guaranteed this modal
+              returned on the next page load — the operator saw it "over and
+              over". Skipping now commits the default (guided) durably; the
+              copy already promises "you can switch anytime". */}
           <button
-            onClick={() => completeOnboarding('guided', false)}
+            onClick={() => completeOnboarding('guided', true)}
             className="w-full text-center text-xs text-white/25 hover:text-white/45 mt-4 py-1 transition-colors duration-300 font-sans"
           >
             Skip for now
