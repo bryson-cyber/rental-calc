@@ -78,7 +78,9 @@ describe('LLC ops page redesign invariants', () => {
 
   it('internal tooling headings are sans — the marketing serif read as broken', () => {
     expect(ops).toContain('font-sans text-2xl font-semibold tracking-tight text-slate-900');
-    expect(ops).toContain('font-sans text-base font-semibold tracking-tight');
+    // Explicit text-white: the global heading rule hard-codes near-black,
+    // which silently beat the banner's inherited white (operator screenshot).
+    expect(ops).toContain('font-sans text-base font-semibold tracking-tight text-white');
   });
 
   it('at-a-glance stat tiles exist (orders, awaiting payment, collected, margin)', () => {

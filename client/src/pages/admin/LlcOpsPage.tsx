@@ -968,7 +968,7 @@ export default function LlcOpsPage() {
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 w-5 h-5 flex-shrink-0" />
               <div>
-                <h2 className="font-sans text-base font-semibold tracking-tight">
+                <h2 className="font-sans text-base font-semibold tracking-tight text-white">
                   {needsPayment.length} wholesale checkout{needsPayment.length === 1 ? '' : 's'} waiting for payment
                 </h2>
                 <p className="mt-1 text-sm text-white/70">
