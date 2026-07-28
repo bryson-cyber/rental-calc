@@ -389,6 +389,13 @@ function StatePricingSection() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const referenceFeesMutation = trpc.llcOps.applyReferenceFees.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listStatePricing.invalidate();
+      toast.success(`Operator fee sheet loaded for ${result.updated} states.`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const syncFeesMutation = trpc.llcOps.syncStateFees.useMutation({
     onSuccess: (result) => {
       void utils.llcOps.listStatePricing.invalidate();
@@ -446,6 +453,25 @@ function StatePricingSection() {
               <RefreshCw className="mr-1.5 size-3.5" aria-hidden="true" />
             )}
             Sync state fees
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-2"
+            disabled={referenceFeesMutation.isPending}
+            title="Loads the operator fee sheet (matches doola production fees, confirmed 2026-07-28) into every state's fee. 'Sync state fees' instead pulls the provider's live table — both should agree in production."
+            onClick={() => {
+              if (window.confirm('Load the operator fee sheet into ALL state fees? Retail prices are untouched.')) {
+                referenceFeesMutation.mutate();
+              }
+            }}
+          >
+            {referenceFeesMutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <FileText className="mr-1.5 size-3.5" aria-hidden="true" />
+            )}
+            Load fee sheet
           </Button>
           </div>
           <form

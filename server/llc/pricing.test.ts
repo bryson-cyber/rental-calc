@@ -54,11 +54,13 @@ describe("state filing-fee reference data", () => {
   });
 
   it("carries the documented reference values for spot-checked states", () => {
+    // Operator fee sheet, loaded 2026-07-28 (matches doola PRODUCTION fees
+    // per doola's own confirmation; NV carries the observed billed cents).
     expect(STATE_FILING_FEES_CENTS.NM).toBe(5000);
-    expect(STATE_FILING_FEES_CENTS.MA).toBe(50000);
+    expect(STATE_FILING_FEES_CENTS.MA).toBe(52000);
     expect(STATE_FILING_FEES_CENTS.MT).toBe(3500);
     expect(STATE_FILING_FEES_CENTS.KY).toBe(4000);
-    expect(STATE_FILING_FEES_CENTS.NV).toBe(42500);
+    expect(STATE_FILING_FEES_CENTS.NV).toBe(43563);
   });
 });
 
@@ -74,7 +76,7 @@ describe("seedStatePricing idempotency", () => {
     expect(rows.size).toBe(51);
     // The seed prefers the provider's live-synced fee table.
     expect(rows.get("NM")).toEqual({
-      stateFeeCents: DOOLA_STATE_FEES_CENTS.NM ?? STATE_FILING_FEES_CENTS.NM,
+      stateFeeCents: STATE_FILING_FEES_CENTS.NM ?? DOOLA_STATE_FEES_CENTS.NM,
       retailPriceCents: null,
       active: true,
     });
@@ -93,7 +95,7 @@ describe("seedStatePricing idempotency", () => {
 
     expect(rows.size).toBe(51);
     expect(rows.get("NM")).toEqual({
-      stateFeeCents: DOOLA_STATE_FEES_CENTS.NM ?? STATE_FILING_FEES_CENTS.NM,
+      stateFeeCents: STATE_FILING_FEES_CENTS.NM ?? DOOLA_STATE_FEES_CENTS.NM,
       retailPriceCents: 54900,
       active: true,
     });

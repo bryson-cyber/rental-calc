@@ -17,7 +17,9 @@ import { getDb } from "../db";
  */
 
 /**
- * Secretary-of-State LLC filing fees in cents, as published at seed time.
+ * Per-state LLC filing fees in cents — operator's fee sheet (Google Sheet,
+ * loaded 2026-07-28; includes observed billed amounts, hence non-round
+ * cents on NV/TX/TN/WY).
  * EDITABLE REFERENCE DATA ONLY — fees change; this is not legal or tax
  * advice, and the client-facing price is always the owner-set
  * retailPriceCents (null = no price published). Seeded with INSERT IGNORE so
@@ -27,35 +29,35 @@ export const STATE_FILING_FEES_CENTS: Record<
   (typeof LLC_FORMATION_STATES)[number],
   number
 > = {
-  AL: 20000,
+  AL: 23600,
   AK: 25000,
   AZ: 5000,
   AR: 4500,
   CA: 7000,
   CO: 5000,
   CT: 12000,
-  DE: 11000,
+  DE: 16000,
   DC: 9900,
   FL: 12500,
-  GA: 10000,
-  HI: 5000,
-  ID: 10000,
+  GA: 11000,
+  HI: 7600,
+  ID: 10100,
   IL: 15000,
   IN: 9500,
   IA: 5000,
-  KS: 16000,
+  KS: 8500,
   KY: 4000,
   LA: 10000,
   ME: 17500,
-  MD: 10000,
-  MA: 50000,
+  MD: 10300,
+  MA: 52000,
   MI: 5000,
   MN: 15500,
   MS: 5000,
   MO: 5000,
   MT: 3500,
   NE: 10000,
-  NV: 42500,
+  NV: 43563,
   NH: 10000,
   NJ: 12500,
   NM: 5000,
@@ -66,18 +68,18 @@ export const STATE_FILING_FEES_CENTS: Record<
   OK: 10000,
   OR: 10000,
   PA: 12500,
-  RI: 15000,
+  RI: 15600,
   SC: 11000,
   SD: 15000,
-  TN: 30000,
-  TX: 30000,
+  TN: 30700,
+  TX: 30810,
   UT: 5900,
   VT: 12500,
   VA: 10000,
   WA: 20000,
   WV: 10000,
   WI: 13000,
-  WY: 10000,
+  WY: 10240,
 };
 
 type ExecutingDb = { execute: (query: SQL) => Promise<unknown> };
@@ -90,7 +92,10 @@ type ExecutingDb = { execute: (query: SQL) => Promise<unknown> };
  */
 export async function seedStatePricing(db: ExecutingDb): Promise<void> {
   for (const state of LLC_FORMATION_STATES) {
-    const feeCents = DOOLA_STATE_FEES_CENTS[state] ?? STATE_FILING_FEES_CENTS[state];
+    // Operator sheet first: it matches doola PRODUCTION fees (confirmed by
+    // doola 2026-07-28); DOOLA_STATE_FEES_CENTS is a SANDBOX snapshot that
+    // doola says is not kept in sync and never for quoting customers.
+    const feeCents = STATE_FILING_FEES_CENTS[state] ?? DOOLA_STATE_FEES_CENTS[state];
     await db.execute(
       sql`INSERT IGNORE INTO \`llc_state_pricing\` (\`state\`, \`stateFeeCents\`) VALUES (${state}, ${feeCents})`,
     );
@@ -253,6 +258,26 @@ export async function applyStateMarkup(markupCents: number) {
     })
     .where(eq(llcStatePricing.active, true));
   return { updated: Number((result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0) };
+}
+
+/**
+ * Push the operator fee sheet (STATE_FILING_FEES_CENTS) into every state's
+ * live stateFeeCents. The counterpart to syncStateFeesFromProvider: that one
+ * makes the PROVIDER the authority; this one makes the OPERATOR'S SHEET the
+ * authority. Never touches retail prices or active flags.
+ */
+export async function applyReferenceFees(): Promise<{ updated: number }> {
+  const db = await getDb();
+  if (!db) return { updated: 0 };
+  let updated = 0;
+  for (const state of LLC_FORMATION_STATES) {
+    await db
+      .update(llcStatePricing)
+      .set({ stateFeeCents: STATE_FILING_FEES_CENTS[state] })
+      .where(eq(llcStatePricing.state, state));
+    updated += 1;
+  }
+  return { updated };
 }
 
 /**

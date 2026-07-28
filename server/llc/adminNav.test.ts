@@ -110,3 +110,29 @@ describe('LLC ops page redesign invariants', () => {
     expect(ops).toContain('Last provider sync:');
   });
 });
+
+describe('operator fee sheet (Google Sheet, loaded 2026-07-28)', () => {
+  const pricing = read('server/llc/pricing.ts');
+
+  it('the seed carries the sheet values, including observed billed cents', () => {
+    expect(pricing).toContain('NV: 43563');
+    expect(pricing).toContain('TX: 30810');
+    expect(pricing).toContain('AL: 23600');
+    expect(pricing).toContain('WY: 10240');
+    expect(pricing).toContain('GA: 11000'); // doola-confirmed production value
+  });
+
+  it('seeding prefers the operator sheet over the SANDBOX snapshot', () => {
+    expect(pricing).toContain('STATE_FILING_FEES_CENTS[state] ?? DOOLA_STATE_FEES_CENTS[state]');
+    expect(pricing).not.toContain('DOOLA_STATE_FEES_CENTS[state] ?? STATE_FILING_FEES_CENTS[state]');
+  });
+
+  it('the sheet is loadable from the ops page in one action', () => {
+    expect(pricing).toContain('export async function applyReferenceFees()');
+    const router = read('server/llc/router.ts');
+    expect(router).toContain('applyReferenceFees: adminProcedure.mutation');
+    const ops = read('client/src/pages/admin/LlcOpsPage.tsx');
+    expect(ops).toContain('trpc.llcOps.applyReferenceFees.useMutation');
+    expect(ops).toContain('Load fee sheet');
+  });
+});

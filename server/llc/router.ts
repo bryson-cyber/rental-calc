@@ -48,6 +48,7 @@ import {
   applyStateMarkup,
   getInactiveStateError,
   getStatePricing,
+  applyReferenceFees,
   listStatePricingWithWholesale,
   setStatePricing,
 } from "./pricing";
@@ -611,6 +612,15 @@ export const llcOpsRouter = router({
    * Refresh every state's fee to the provider's live fee table (fees are
    * billed through at cost). Retail prices and active flags are untouched.
    */
+  /**
+   * Load the operator fee sheet (the seeded reference table) into every
+   * state's live fee. Counterpart to syncStateFees: sheet vs provider as
+   * the authority. Retail prices and active flags untouched.
+   */
+  applyReferenceFees: adminProcedure.mutation(async () => {
+    return applyReferenceFees();
+  }),
+
   syncStateFees: adminProcedure.mutation(async () => {
     const fees = await listDoolaStateFees();
     return syncStateFeesFromProvider(fees);
