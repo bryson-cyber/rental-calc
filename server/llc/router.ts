@@ -401,6 +401,13 @@ export const llcOpsRouter = router({
               : null
           : null,
       lastErrorMessage: registration.lastErrorMessage,
+      // Provider truth for the list view: what doola's snapshot last said.
+      stateRegistered:
+        (registration.providerStatus as { state_registered?: boolean } | null)
+          ?.state_registered === true,
+      einRegistered:
+        (registration.providerStatus as { ein_registered?: boolean } | null)
+          ?.ein_registered === true,
       // Ops-only marker so the dashboard can badge demo/test rows; the
       // client registration view never carries the submission key.
       isDemo: isTestRegistration(registration),

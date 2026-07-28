@@ -52,6 +52,17 @@ function formatDate(value: number | null) {
   }).format(new Date(value));
 }
 
+/** "4m ago" / "3h ago" / "2d ago" — provider-verification freshness. */
+function timeAgo(value: number | null) {
+  if (!value) return null;
+  const minutes = Math.floor((Date.now() - value) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function statusBadgeClass(status: string) {
   if (status === 'payment_required') return 'bg-slate-900 text-white';
   if (status === 'action_required' || status === 'failed') return 'bg-red-100 text-red-700';
@@ -1078,6 +1089,23 @@ export default function LlcOpsPage() {
                           >
                             {order.status.replaceAll('_', ' ')}
                           </span>
+                          {/* Provider truth — what doola's API actually said,
+                              and how fresh that answer is (operator: "I need
+                              to know via API if it's actually going through"). */}
+                          {order.lastProviderSyncAt ? (
+                            <div className="mt-2 space-y-0.5">
+                              <p className={`text-[11px] font-medium ${Date.now() - order.lastProviderSyncAt > 24 * 60 * 60 * 1000 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                                doola confirmed {timeAgo(order.lastProviderSyncAt)}
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                State stamp: {order.stateRegistered ? '\u2713 registered' : 'pending'} \u00b7 EIN: {order.einRegistered ? '\u2713' : 'pending'}
+                              </p>
+                            </div>
+                          ) : order.status !== 'draft' ? (
+                            <p className="mt-2 text-[11px] font-medium text-amber-600">
+                              Not yet confirmed by doola \u2014 hit Verify
+                            </p>
+                          ) : null}
                           {order.lastErrorMessage ? (
                             <p className="mt-2 max-w-[18rem] text-[11px] leading-4 text-slate-500">
                               {order.lastErrorMessage}
@@ -1118,7 +1146,7 @@ export default function LlcOpsPage() {
                               ) : (
                                 <RefreshCw className="w-3 h-3" />
                               )}
-                              <span className="ml-1">Sync</span>
+                              <span className="ml-1">Verify with doola</span>
                             </Button>
                             <Button
                               size="sm"

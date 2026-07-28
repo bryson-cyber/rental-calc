@@ -136,3 +136,20 @@ describe('operator fee sheet (Google Sheet, loaded 2026-07-28)', () => {
     expect(ops).toContain('Load fee sheet');
   });
 });
+
+describe('provider truth in the ops table (operator: "I need to know via API")', () => {
+  it('the list view carries doola-confirmed flags and the ops page shows them', () => {
+    const router = read('server/llc/router.ts');
+    expect(router).toContain('state_registered?: boolean');
+    expect(router).toContain('ein_registered?: boolean');
+    const ops = read('client/src/pages/admin/LlcOpsPage.tsx');
+    expect(ops).toContain('doola confirmed {timeAgo(order.lastProviderSyncAt)}');
+    expect(ops).toContain('State stamp:');
+    // Never-confirmed non-draft rows warn instead of pretending.
+    expect(ops).toContain('Not yet confirmed by doola');
+    // Stale confirmations (>24h) go amber.
+    expect(ops).toContain('24 * 60 * 60 * 1000');
+    // The button says what it actually does.
+    expect(ops).toContain('Verify with doola');
+  });
+});
