@@ -75,7 +75,8 @@ import {
   Film,
   Settings,
   Percent,
-  Megaphone
+  Megaphone,
+  Building2
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -454,6 +455,17 @@ export default function UnifiedAdmin() {
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
+            {/* LLC ops lives on its own page (/admin/llc) — this styled link
+                sits in the tab row so pricing/registrations are one click
+                away (operator 2026-07-28: "add the LLC portion to the admin
+                navigation... so we can always adjust our prices"). */}
+            <Link
+              href="/admin/llc"
+              className="inline-flex items-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              LLC
+            </Link>
           </TabsList>
 
           {/* ============================================ */}
