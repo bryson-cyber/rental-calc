@@ -265,6 +265,41 @@ export async function listOpsDocuments(registrationId: number) {
   }));
 }
 
+/**
+ * Formation-document row owning a storage key, joined to its registration's
+ * status token — for the tokenized-link fallback in the storage proxy
+ * (2026-07-28). Returns whether THIS document row is released; the caller
+ * must authorize ONLY when released AND the presented token matches.
+ */
+export async function findRegistrationIdByStorageKey(storageKey: string): Promise<{
+  registrationId: number;
+  released: boolean;
+  statusToken: string | null;
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({
+      registrationId: llcDocuments.registrationId,
+      releasedAt: llcDocuments.releasedAt,
+      statusToken: llcRegistrations.statusToken,
+    })
+    .from(llcDocuments)
+    .innerJoin(
+      llcRegistrations,
+      eq(llcDocuments.registrationId, llcRegistrations.id),
+    )
+    .where(eq(llcDocuments.storageKey, storageKey))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    registrationId: row.registrationId,
+    released: row.releasedAt !== null,
+    statusToken: row.statusToken,
+  };
+}
+
 export async function findLlcDocumentById(documentId: number) {
   const db = requireDb(await getDb());
   const rows = await db

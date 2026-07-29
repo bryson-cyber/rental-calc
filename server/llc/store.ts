@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, notLike, or, sql } from "drizzle-orm";
 import {
   llcFounders,
@@ -14,6 +15,67 @@ import { encryptPii } from "./pii";
 function requireDb<T>(db: T | null): T {
   if (!db) throw new Error("Database is not available");
   return db;
+}
+
+/**
+ * Unguessable per-registration status token (48 hex chars). Carried by email
+ * status links as ?t= so a client can open their filing page without signing
+ * in — mirrors the results-token pattern. NEVER log these.
+ */
+export function generateStatusToken(): string {
+  return randomBytes(24).toString("hex");
+}
+
+/**
+ * Constant-time status-token comparison. A null/absent stored token never
+ * matches anything, and the caller must answer identically for every failure
+ * mode (missing row, null token, mismatch) so nothing is revealed.
+ */
+export function statusTokenMatches(
+  expected: string | null | undefined,
+  provided: string,
+): boolean {
+  if (!expected) return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(provided);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/**
+ * Existing status token for a registration, or generate-and-persist one for
+ * rows that predate the column. First-write-wins: the UPDATE only fills a
+ * NULL cell, and the token is re-read afterwards so a concurrent writer's
+ * token is returned instead of the one that lost the race.
+ */
+export async function ensureStatusToken(
+  registrationId: number,
+): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ statusToken: llcRegistrations.statusToken })
+    .from(llcRegistrations)
+    .where(eq(llcRegistrations.id, registrationId))
+    .limit(1);
+  if (!rows[0]) return null;
+  if (rows[0].statusToken) return rows[0].statusToken;
+
+  await db
+    .update(llcRegistrations)
+    .set({ statusToken: generateStatusToken() })
+    .where(
+      and(
+        eq(llcRegistrations.id, registrationId),
+        isNull(llcRegistrations.statusToken),
+      ),
+    );
+  const fresh = await db
+    .select({ statusToken: llcRegistrations.statusToken })
+    .from(llcRegistrations)
+    .where(eq(llcRegistrations.id, registrationId))
+    .limit(1);
+  return fresh[0]?.statusToken ?? null;
 }
 
 async function findRegistrationById(
@@ -49,6 +111,9 @@ export async function createLlcRegistration(
       // The test marker is only ever written here — no edit path can set or
       // clear it afterwards, which is what makes it safe to trust at submit.
       isTest: options?.isTest ?? false,
+      // Minted once at creation so every email link can carry it; rows that
+      // predate the column are backfilled at boot / by ensureStatusToken.
+      statusToken: generateStatusToken(),
     });
   const registrationId = Number(result[0].insertId);
   if (!registrationId) throw new Error("Unable to create LLC registration");

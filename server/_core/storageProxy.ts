@@ -1,5 +1,7 @@
 import type { Express, Request, Response } from "express";
 import type { User } from "../../drizzle/schema";
+import { findRegistrationIdByStorageKey } from "../llc/documents";
+import { statusTokenMatches } from "../llc/store";
 import { storageGet } from "../storage";
 import { sdk } from "./sdk";
 
@@ -137,6 +139,28 @@ function dispositionFileName(key: string): string {
   return base.replace(/[^\w.\- ]/g, "").slice(0, 120) || "file";
 }
 
+/**
+ * Status-token fallback (2026-07-28): LLC status emails link the filing page
+ * with ?t=<statusToken>, and the page appends the same token to its document
+ * URLs so a client can open them WITHOUT a session (the login wall on
+ * phones/other browsers was the operator complaint). Authorizes ONLY when
+ * the key belongs to a formation-document row that is RELEASED and the
+ * presented token matches the owning registration's statusToken
+ * (constant-time). Tokens are never logged.
+ */
+async function authorizeStorageKeyByStatusToken(
+  key: string,
+  token: string,
+): Promise<boolean> {
+  try {
+    const document = await findRegistrationIdByStorageKey(key);
+    if (!document || !document.released) return false;
+    return statusTokenMatches(document.statusToken, token);
+  } catch {
+    return false;
+  }
+}
+
 export async function handleStorageProxyRequest(req: Request, res: Response) {
   const key = (req.params as Record<string, string | undefined>)["0"];
   if (!key) {
@@ -147,8 +171,20 @@ export async function handleStorageProxyRequest(req: Request, res: Response) {
   const user = await resolveSessionUser(req);
   const decision = authorizeStorageKey(key, user);
   if (!decision.allowed) {
-    res.status(decision.status).send(decision.message);
-    return;
+    // Tokenized email links: only consulted when the session path did NOT
+    // authorize, so the authed path is untouched. A 400 (traversal/malformed
+    // key) is never overridden by a token.
+    const token = (req.query as Record<string, unknown> | undefined)?.t;
+    const tokenAuthorized =
+      decision.status !== 400 &&
+      typeof token === "string" &&
+      token.length >= 32 &&
+      token.length <= 64 &&
+      (await authorizeStorageKeyByStatusToken(key, token));
+    if (!tokenAuthorized) {
+      res.status(decision.status).send(decision.message);
+      return;
+    }
   }
 
   try {

@@ -1,6 +1,8 @@
-import { sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { llcRegistrations } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
+import { generateStatusToken } from "./store";
 
 /**
  * Boot-time idempotent creation of the LLC tables (mirrors migrations
@@ -231,6 +233,41 @@ export async function ensureLlcTables(): Promise<void> {
     await db
       .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `expediteEinPriceCents` int"))
       .catch(() => undefined);
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `statusToken` varchar(64)"))
+      .catch(() => undefined);
+
+    // statusToken backfill (2026-07-28): rows created before the column each
+    // get their own unguessable token at boot so tokenized email links work
+    // for existing filings too. First-write-wins via the IS NULL guard in the
+    // UPDATE; the row cap is harmless because any remainder is picked up on
+    // the next boot (and ensureStatusToken covers stragglers at send time).
+    try {
+      const missing = await db
+        .select({ id: llcRegistrations.id })
+        .from(llcRegistrations)
+        .where(isNull(llcRegistrations.statusToken))
+        .limit(500);
+      for (const row of missing) {
+        await db
+          .update(llcRegistrations)
+          .set({ statusToken: generateStatusToken() })
+          .where(
+            and(
+              eq(llcRegistrations.id, row.id),
+              isNull(llcRegistrations.statusToken),
+            ),
+          );
+      }
+      if (missing.length > 0) {
+        // Count only — the tokens themselves are never logged.
+        console.log(
+          `[LLC] Backfilled status tokens for ${missing.length} registrations`,
+        );
+      }
+    } catch (error) {
+      console.warn("[LLC] statusToken backfill failed:", error);
+    }
 
     // Idempotent reference seed (INSERT IGNORE per state): fills state filing
     // fees on first boot, never overwrites owner-set retail prices or flags.

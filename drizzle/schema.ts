@@ -2910,6 +2910,14 @@ export const llcRegistrations = mysqlTable(
     retryable: boolean("retryable").default(false).notNull(),
     submissionKey: varchar("submissionKey", { length: 64 }),
     /**
+     * Unguessable per-registration token (48 hex chars) carried by email
+     * status links as ?t= so clients can open their filing page and released
+     * documents without signing in (mirrors the results-token pattern).
+     * Nullable for rows that predate the column; backfilled at boot and by
+     * ensureStatusToken. Never logged; compared constant-time.
+     */
+    statusToken: varchar("statusToken", { length: 64 }),
+    /**
      * Admin webinar test run. Set once at creation and never touched by any
      * edit path; every provider call, poller sweep, ops alert, and client
      * email checks it so a test row can never reach the outside world.

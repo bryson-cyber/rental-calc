@@ -107,6 +107,9 @@ export function makePersistedBundle(status: TestLlcStatus = "ready") {
       lastErrorMessage: null as string | null,
       retryable: false,
       submissionKey: "stable-submission-key",
+      // Token-less by default so the URL pins in existing email tests stay
+      // exact; token-mode tests set this explicitly (2026-07-28).
+      statusToken: null as string | null,
       submittedAt: null as Date | null,
       createdAt: now,
       updatedAt: now,

@@ -5,6 +5,11 @@
  * gold accents, apple-card content surfaces, fixed home button top-left.
  * Filing requires an account, so unauthenticated visitors get the app's
  * standard sign-in call to action (returning to the page they wanted).
+ *
+ * allowAnonymous (2026-07-28): the status page can be opened from a
+ * tokenized email link (?t=) without a session — the token itself is the
+ * credential, verified server-side by llc.track. Every other LLC page keeps
+ * the sign-in gate.
  */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AuthButton } from "@/components/AuthButton";
@@ -17,10 +22,12 @@ export function LlcPageShell({
   title,
   description,
   children,
+  allowAnonymous = false,
 }: {
   title: string;
   description: string;
   children: ReactNode;
+  allowAnonymous?: boolean;
 }) {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
 
@@ -62,7 +69,7 @@ export function LlcPageShell({
               <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
               <span className="text-sm text-muted-foreground">Loading your workspace…</span>
             </div>
-          ) : !isAuthenticated || !user ? (
+          ) : !allowAnonymous && (!isAuthenticated || !user) ? (
             <div className="apple-card p-8 text-center sm:p-12">
               <h2 className="text-xl font-semibold text-foreground">Sign in to continue</h2>
               <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">

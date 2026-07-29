@@ -5,6 +5,7 @@ import { getDb } from "../db";
 import { sdk } from "../_core/sdk";
 import { buildSampleDocumentPdf, demoStateName } from "./demo";
 import { isTestRegistration } from "./demoMarker";
+import { statusTokenMatches } from "./store";
 
 /**
  * GET /api/llc/sample-documents/:documentId
@@ -17,7 +18,9 @@ import { isTestRegistration } from "./demoMarker";
  * hard-refuses any registration without the demo/test marker.
  *
  * Access: the registration's owner or an admin, session-cookie
- * authenticated. `?download=1` switches to attachment disposition.
+ * authenticated — or a ?t=<statusToken> matching the owning registration
+ * (2026-07-28 tokenized email links; released documents only, same rules as
+ * the storage proxy). `?download=1` switches to attachment disposition.
  */
 export function registerLlcSampleDocumentRoute(app: Express) {
   app.get("/api/llc/sample-documents/:documentId", async (req: Request, res: Response) => {
@@ -28,7 +31,14 @@ export function registerLlcSampleDocumentRoute(app: Express) {
       } catch {
         user = null;
       }
-      if (!user) {
+      // Status-token candidate (never logged). Anonymous requests without
+      // one keep the original instant 401.
+      const rawToken = req.query.t;
+      const statusToken =
+        typeof rawToken === "string" && rawToken.length >= 32 && rawToken.length <= 64
+          ? rawToken
+          : null;
+      if (!user && !statusToken) {
         res.status(401).send("Sign in to view this document");
         return;
       }
@@ -55,10 +65,6 @@ export function registerLlcSampleDocumentRoute(app: Express) {
         res.status(404).send("Document not found");
         return;
       }
-      if (user.role !== "admin" && document.userId !== user.id) {
-        res.status(403).send("You don't have access to this document");
-        return;
-      }
 
       const registrationRows = await db
         .select()
@@ -66,6 +72,27 @@ export function registerLlcSampleDocumentRoute(app: Express) {
         .where(eq(llcRegistrations.id, document.registrationId))
         .limit(1);
       const registration = registrationRows[0];
+
+      // Session path first (unchanged for signed-in users); the token path
+      // authorizes ONLY a released document whose owning registration's
+      // statusToken matches (constant-time). Token failures answer 404 —
+      // never revealing whether the id or the token was wrong.
+      const sessionAuthorized =
+        user !== null && (user.role === "admin" || document.userId === user.id);
+      const tokenAuthorized =
+        !sessionAuthorized &&
+        statusToken !== null &&
+        registration !== undefined &&
+        statusTokenMatches(registration.statusToken, statusToken);
+      if (!sessionAuthorized && !tokenAuthorized) {
+        if (user) {
+          res.status(403).send("You don't have access to this document");
+        } else {
+          res.status(404).send("Document not found");
+        }
+        return;
+      }
+
       // Sample regeneration exists ONLY for demo/test filings — a real
       // registration's documents are provider artifacts, not reproducible
       // from form data, and must never be impersonated by this route.

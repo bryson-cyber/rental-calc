@@ -11,6 +11,7 @@ import { getOpsConfig } from "../ops/config";
 import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getStatePricing } from "./pricing";
 import { isDemoSubmissionKey } from "./demoMarker";
+import { ensureStatusToken } from "./store";
 
 /**
  * Client-facing transactional emails for the LLC filing lifecycle.
@@ -92,12 +93,19 @@ function companyDisplayName(params: {
  * which shipped a dead 'Track your filing any time: /llc/status/…' line in
  * the live payment-received email (operator screenshot, 2026-07-28). A
  * client email must never depend on an optional env var for its links.
+ *
+ * When a statusToken is provided the link carries it as ?t= so the client
+ * can open their filing page from the email WITHOUT signing in (operator
+ * complaint 2026-07-28: email links hit a login wall on phones/other
+ * browsers). Mirrors the results-token pattern: the unguessable token IS
+ * the credential. Token-less calls render the plain URL unchanged.
  */
-function statusUrl(registrationId: number): string {
+function statusUrl(registrationId: number, statusToken?: string | null): string {
   const base = (process.env.APP_BASE_URL || process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com")
     .trim()
     .replace(/\/+$/, "");
-  return `${base}/llc/status/${registrationId}`;
+  const url = `${base}/llc/status/${registrationId}`;
+  return statusToken ? `${url}?t=${statusToken}` : url;
 }
 
 function escapeHtml(value: string): string {
@@ -173,6 +181,8 @@ export function renderApplicationReceivedEmail(params: {
   formationState: string | null;
   retailPriceCents: number | null;
   paymentLinkUrl: string | null;
+  /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
+  statusToken?: string | null;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const state = stateDisplayName(params.formationState);
@@ -193,7 +203,7 @@ export function renderApplicationReceivedEmail(params: {
     lines.push(`Complete your payment from your filing page and your filing starts the moment it goes through:`);
   }
   lines.push(
-    `${statusUrl(params.registrationId)}`,
+    `${statusUrl(params.registrationId, params.statusToken)}`,
     ``,
     `Filing payments are final and non-refundable. Already paid? You're all set — a confirmation is on its way, and the link above is your filing hub from here on out: live status, and every document (Articles, EIN letter, operating agreement) lands there the moment it's ready.`,
     ``,
@@ -208,6 +218,8 @@ export function renderPaymentConfirmedEmail(params: {
   entitySuffix: string;
   formationState: string | null;
   retailPriceCents: number | null;
+  /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
+  statusToken?: string | null;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const state = stateDisplayName(params.formationState);
@@ -225,7 +237,7 @@ export function renderPaymentConfirmedEmail(params: {
     ``,
     `This typically takes a few weeks and varies by state — we'll email you when your formation is complete.`,
     ``,
-    `Track your filing any time: ${statusUrl(params.registrationId)}`,
+    `Track your filing any time: ${statusUrl(params.registrationId, params.statusToken)}`,
     ``,
     SIGN_OFF,
   ];
@@ -239,6 +251,8 @@ export function renderFormationCompleteEmail(params: {
   registrationId: number;
   legalName: string | null;
   entitySuffix: string;
+  /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
+  statusToken?: string | null;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const lines = [
@@ -246,7 +260,7 @@ export function renderFormationCompleteEmail(params: {
     ``,
     `Your state approval is complete and your federal EIN has been secured. Your documents will appear in your account as our team delivers them.`,
     ``,
-    `View your filing: ${statusUrl(params.registrationId)}`,
+    `View your filing: ${statusUrl(params.registrationId, params.statusToken)}`,
     ``,
     `Your LLC is ready to hold your first rental property — explore the tools anytime.`,
     ``,
@@ -261,6 +275,8 @@ export function renderDocumentsReleasedEmail(params: {
   entitySuffix: string;
   /** Display names of the documents in this batch (already client-facing). */
   documents: string[];
+  /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
+  statusToken?: string | null;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const lines = [`New documents for ${company} are in your account:`, ``];
@@ -273,7 +289,7 @@ export function renderDocumentsReleasedEmail(params: {
   }
   lines.push(
     ``,
-    `View and download them any time: ${statusUrl(params.registrationId)}`,
+    `View and download them any time: ${statusUrl(params.registrationId, params.statusToken)}`,
     ``,
     SIGN_OFF,
   );
@@ -449,6 +465,24 @@ function documentDisplayName(row: {
   return row.label ?? row.name ?? row.documentType ?? "Document";
 }
 
+/**
+ * Status token for a loaded registration row (2026-07-28 tokenized links).
+ * Rows minted after the column carry it directly; a NULL cell (row predates
+ * the boot backfill) falls back to ensureStatusToken, which persists one
+ * first-write-wins. The strict null check leaves rows whose loader did not
+ * select the column (e.g. token-less test fixtures) token-less rather than
+ * minting tokens from inside an email render.
+ */
+async function resolveStatusToken(registration: {
+  id: number;
+  statusToken?: string | null;
+}): Promise<string | null> {
+  if (registration.statusToken === null) {
+    return ensureStatusToken(registration.id);
+  }
+  return registration.statusToken ?? null;
+}
+
 /** Best-effort read of the state's client-facing payment link. */
 async function bestEffortPaymentLink(
   formationState: string | null,
@@ -572,6 +606,7 @@ export async function sendApplicationReceivedEmail(params: {
       formationState: registration.formationState,
       retailPriceCents: registration.retailPriceCents,
       paymentLinkUrl: await bestEffortPaymentLink(registration.formationState),
+      statusToken: await resolveStatusToken(registration),
     }),
   );
 }
@@ -581,13 +616,14 @@ export async function sendPaymentConfirmedEmail(params: {
   userId: number;
   registrationId: number;
 }): Promise<ClientEmailSendOutcome> {
-  return sendLifecycleEmail("payment_confirmed", params, (registration) =>
+  return sendLifecycleEmail("payment_confirmed", params, async (registration) =>
     renderPaymentConfirmedEmail({
       registrationId: registration.id,
       legalName: registration.legalName,
       entitySuffix: registration.entitySuffix,
       formationState: registration.formationState,
       retailPriceCents: registration.retailPriceCents,
+      statusToken: await resolveStatusToken(registration),
     }),
   );
 }
@@ -597,11 +633,12 @@ export async function sendFormationCompleteEmail(params: {
   userId: number;
   registrationId: number;
 }): Promise<ClientEmailSendOutcome> {
-  return sendLifecycleEmail("formation_complete", params, (registration) =>
+  return sendLifecycleEmail("formation_complete", params, async (registration) =>
     renderFormationCompleteEmail({
       registrationId: registration.id,
       legalName: registration.legalName,
       entitySuffix: registration.entitySuffix,
+      statusToken: await resolveStatusToken(registration),
     }),
   );
 }
@@ -655,6 +692,7 @@ export async function sendDocumentsReleasedEmail(params: {
       legalName: context.registration.legalName,
       entitySuffix: context.registration.entitySuffix,
       documents: documents.map(documentDisplayName),
+      statusToken: await resolveStatusToken(context.registration),
     });
     const delivered = await deliverClientEmail(context.email, content);
     if (!delivered) {
@@ -701,6 +739,10 @@ export async function sendDemoLifecycleEmails(params: {
 
   const documents = await listReleasedDocumentsSince(db, registration.id, null);
 
+  // Rehearsal emails carry the same tokenized status link a client would get,
+  // so the presenter can demonstrate the no-login flow from a phone.
+  const statusToken = await resolveStatusToken(registration);
+
   const emails: ClientEmailContent[] = [
     renderApplicationReceivedEmail({
       registrationId: registration.id,
@@ -709,6 +751,7 @@ export async function sendDemoLifecycleEmails(params: {
       formationState: registration.formationState,
       retailPriceCents: registration.retailPriceCents,
       paymentLinkUrl,
+      statusToken,
     }),
     renderPaymentConfirmedEmail({
       registrationId: registration.id,
@@ -716,17 +759,20 @@ export async function sendDemoLifecycleEmails(params: {
       entitySuffix: registration.entitySuffix,
       formationState: registration.formationState,
       retailPriceCents: registration.retailPriceCents,
+      statusToken,
     }),
     renderFormationCompleteEmail({
       registrationId: registration.id,
       legalName: registration.legalName,
       entitySuffix: registration.entitySuffix,
+      statusToken,
     }),
     renderDocumentsReleasedEmail({
       registrationId: registration.id,
       legalName: registration.legalName,
       entitySuffix: registration.entitySuffix,
       documents: documents.map(documentDisplayName),
+      statusToken,
     }),
   ];
 

@@ -5,6 +5,13 @@
  * standalone LLC-formation app into rental-calc's native design. Released
  * formation documents appear in the "Your documents" vault below (served
  * through the app's authenticated document routes).
+ *
+ * Token mode (2026-07-28): email links carry ?t=<statusToken> so clients can
+ * open this page WITHOUT signing in (the login wall on phones/other browsers
+ * was the operator complaint). With a token present the page reads
+ * llc.track — a public procedure whose credential is the token itself —
+ * instead of the session-only llc.get + llc.documents (which would 401), and
+ * appends the token to every document URL so the storage proxy authorizes.
  */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -44,7 +51,13 @@ import {
   stateDisplayName,
   useStatePricing,
 } from "@/components/llc-formation/useStatePricing";
+import { getLoginUrl } from "@/const";
 import { LlcPageShell } from "./LlcPageShell";
+
+/** Join a query param onto a URL that may already carry a query string. */
+function appendQueryParam(url: string, param: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}${param}`;
+}
 
 function formatDate(value: number | null) {
   if (!value) return "Not yet recorded";
@@ -132,11 +145,20 @@ type VaultDocument = {
   url: string;
 };
 
-function StatusWorkspace({ registrationId }: { registrationId: number }) {
+function StatusWorkspace({
+  registrationId,
+  statusToken,
+}: {
+  registrationId: number;
+  statusToken: string | null;
+}) {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  // Tokenized email link: the token (not a session) is the credential, so
+  // the session-only queries are skipped entirely — they'd 401.
+  const tokenMode = statusToken !== null;
   const [viewerDocument, setViewerDocument] = useState<VaultDocument | null>(null);
   // Stripe sends the client back with ?payment=success|cancelled. The
   // webhook that flips the order to paid can land a few seconds AFTER the
@@ -149,6 +171,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const registrationQuery = trpc.llc.get.useQuery(
     { id: registrationId },
     {
+      enabled: !tokenMode,
       retry: 1,
       refetchOnWindowFocus: false,
       // Test rows live-update during a webinar so the presenter can advance
@@ -162,13 +185,35 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
       },
     },
   );
-  const isTestRow = registrationQuery.data?.isTest ?? false;
+  // Token mode data source: registration view + released documents in one
+  // public query. Mirrors llc.get's polling rules (including the
+  // payment-return settle poll) so banners keep working without a session.
+  const trackQuery = trpc.llc.track.useQuery(
+    { id: registrationId, token: statusToken ?? "" },
+    {
+      enabled: tokenMode,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchInterval: (query) => {
+        if (query.state.data?.registration.isTest) return 5000;
+        if (
+          paymentReturn === "success" &&
+          query.state.data?.registration.status === "payment_required"
+        )
+          return 3000;
+        return false;
+      },
+    },
+  );
+  const isTestRow =
+    (tokenMode ? trackQuery.data?.registration.isTest : registrationQuery.data?.isTest) ?? false;
   const documentsQuery = trpc.llc.documents.useQuery(
     { id: registrationId },
     {
+      enabled: !tokenMode,
       retry: 1,
       refetchOnWindowFocus: false,
-      refetchInterval: isTestRow ? 5000 : false,
+      refetchInterval: !tokenMode && isTestRow ? 5000 : false,
     },
   );
   const advanceMutation = trpc.llcOps.advanceTestStage.useMutation({
@@ -222,17 +267,37 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
     },
   });
 
-  const registration = registrationQuery.data;
+  const registration = tokenMode
+    ? trackQuery.data?.registration
+    : registrationQuery.data;
+  // Token viewers get their documents from llc.track, with the token appended
+  // to every URL so the document proxy authorizes without a session.
+  const documents = useMemo(() => {
+    const rows = tokenMode
+      ? trackQuery.data?.documents ?? []
+      : documentsQuery.data ?? [];
+    if (!statusToken) return rows;
+    return rows.map((document) => ({
+      ...document,
+      url: appendQueryParam(document.url, `t=${encodeURIComponent(statusToken)}`),
+    }));
+  }, [tokenMode, trackQuery.data?.documents, documentsQuery.data, statusToken]);
   const primaryFounder = useMemo(
     () => registration?.draft.founders.find((founder) => founder.isPrimary),
     [registration?.draft.founders],
   );
-  const statePricingQuery = useStatePricing(registration?.draft.formationState);
+  // State pricing is a session-only procedure; token viewers fall back to the
+  // retail price snapshotted on the registration itself.
+  const statePricingQuery = useStatePricing(
+    user ? registration?.draft.formationState : null,
+  );
   const statePricing = statePricingQuery.data;
 
-  if (registrationQuery.isLoading) return <StatusSkeleton />;
+  if (tokenMode ? trackQuery.isLoading : registrationQuery.isLoading) {
+    return <StatusSkeleton />;
+  }
 
-  if (registrationQuery.isError || !registration) {
+  if ((tokenMode ? trackQuery.isError : registrationQuery.isError) || !registration) {
     return (
       <div className="apple-card p-8 text-center">
         <AlertCircle className="mx-auto size-6 text-destructive" aria-hidden="true" />
@@ -242,7 +307,10 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           No registration data was changed. Try loading the secure record again.
         </p>
-        <Button className="mt-5" onClick={() => registrationQuery.refetch()}>
+        <Button
+          className="mt-5"
+          onClick={() => (tokenMode ? trackQuery.refetch() : registrationQuery.refetch())}
+        >
           <RefreshCw className="mr-2 size-4" aria-hidden="true" />
           Try again
         </Button>
@@ -410,6 +478,26 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                   Pay now
                   <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
                 </Button>
+              ) : !user ? (
+                // Anonymous token viewer: checkout requires the account the
+                // filing belongs to, so send them through sign-in and back to
+                // this exact page (token preserved in the return URL).
+                <>
+                  <Button
+                    className="mt-3"
+                    onClick={() => {
+                      window.location.href = getLoginUrl(
+                        window.location.pathname + window.location.search,
+                      );
+                    }}
+                  >
+                    Sign in to pay
+                    <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
+                  </Button>
+                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                    Filing payments are final and non-refundable.
+                  </p>
+                </>
               ) : (
                 <>
                   <Button
@@ -496,9 +584,9 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           Stored securely in your account — download them any time for your bank,
           leases, and registrations.
         </p>
-        {(documentsQuery.data ?? []).length > 0 ? (
+        {documents.length > 0 ? (
           <ul className="mt-4 divide-y divide-border">
-            {(documentsQuery.data ?? []).map((document) => (
+            {documents.map((document) => (
               <li key={document.id} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
@@ -518,7 +606,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                     View
                   </Button>
                   <Button asChild variant="outline" size="sm">
-                    <a href={`${document.url}?download=1`}>
+                    <a href={appendQueryParam(document.url, "download=1")}>
                       <Download className="mr-1.5 size-3.5" aria-hidden="true" />
                       Download
                     </a>
@@ -605,8 +693,10 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
         </dl>
       </div>
 
+      {/* Session-only actions: edit/retry/refresh call protected procedures,
+          so anonymous token viewers never see buttons that would 401. */}
       <div className="flex flex-wrap gap-3">
-        {registration.canEdit ? (
+        {user && registration.canEdit ? (
           <Button
             variant="outline"
             onClick={() => setLocation(`/llc/register/${registrationId}`)}
@@ -614,7 +704,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
             Review saved form
           </Button>
         ) : null}
-        {registration.canRetry ? (
+        {user && registration.canRetry ? (
           <Button disabled={isBusy} onClick={() => retryMutation.mutate({ id: registrationId })}>
             {retryMutation.isPending ? (
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
@@ -624,7 +714,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
             Retry safely
           </Button>
         ) : null}
-        {isProviderStatus || registration.status === "submitting" ? (
+        {user && (isProviderStatus || registration.status === "submitting") ? (
           <Button
             variant="outline"
             disabled={isBusy}
@@ -710,7 +800,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
               />
               <div className="flex justify-end">
                 <Button asChild variant="outline" size="sm">
-                  <a href={`${viewerDocument.url}?download=1`}>
+                  <a href={appendQueryParam(viewerDocument.url, "download=1")}>
                     <Download className="mr-1.5 size-3.5" aria-hidden="true" />
                     Download
                   </a>
@@ -728,6 +818,14 @@ export default function FormationStatus() {
   const params = useParams<{ id: string }>();
   const registrationId = Number(params.id);
   const [, setLocation] = useLocation();
+  // Tokenized email link (?t=…): read once at mount, same pattern as the
+  // paymentReturn read above. Length bounds mirror the server's llc.track
+  // input so an obviously-invalid token never switches the page into token
+  // mode (a signed-in user with a mangled link still gets the session path).
+  const [statusToken] = useState<string | null>(() => {
+    const value = new URLSearchParams(window.location.search).get("t");
+    return value && value.length >= 32 && value.length <= 64 ? value : null;
+  });
 
   useEffect(() => {
     if (!Number.isInteger(registrationId) || registrationId <= 0) {
@@ -741,8 +839,13 @@ export default function FormationStatus() {
     <LlcPageShell
       title="Your LLC Filing"
       description="Track every confirmed step of your formation — from submission to completion."
+      allowAnonymous={statusToken !== null}
     >
-      <StatusWorkspace key={registrationId} registrationId={registrationId} />
+      <StatusWorkspace
+        key={registrationId}
+        registrationId={registrationId}
+        statusToken={statusToken}
+      />
     </LlcPageShell>
   );
 }

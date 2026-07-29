@@ -13,13 +13,16 @@ import {
   listAllLlcRegistrations,
   listLlcRegistrationsForUser,
   saveLlcDraft,
+  statusTokenMatches,
   transitionLlcStatus,
   updateLlcRegistrationProviderFields,
 } from "./store";
 // The public tools stay public, but FILING requires an account: every client
 // procedure is gated behind protectedProcedure. Ops procedures use
-// adminProcedure.
-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+// adminProcedure. The single exception is llc.track, where the unguessable
+// per-registration status token IS the credential (email links must open
+// without a login wall — operator complaint 2026-07-28).
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import {
   bundleToDraft,
   bundleToOpsView,
@@ -128,6 +131,53 @@ export const llcRouter = router({
     .query(async ({ ctx, input }) => {
       const bundle = await requireRegistrationBundle(ctx.user.id, input.id);
       return bundleToRegistrationView(bundle);
+    }),
+
+  /**
+   * Tokenized status read (2026-07-28): the ?t= token from a status email is
+   * the credential, so clients can open their filing page without signing in.
+   * Constant behavior on EVERY failure (missing row, null token, mismatch):
+   * the same NOT_FOUND, never revealing which part failed. The payload is the
+   * exact client-safe shape of llc.get (same serializer — never wholesale or
+   * provider fields) plus the RELEASED documents list llc.documents returns;
+   * founder SSNs are additionally blanked because a mailto link is a weaker
+   * credential than a session and the status page never shows them.
+   */
+  track: publicProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        token: z.string().min(32).max(64),
+      }),
+    )
+    .query(async ({ input }) => {
+      const notFound = () =>
+        new TRPCError({
+          code: "NOT_FOUND",
+          message: "This filing could not be found.",
+        });
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) throw notFound();
+      const bundle = await getLlcRegistrationById(owner.userId, input.id);
+      if (!bundle) throw notFound();
+      if (!statusTokenMatches(bundle.registration.statusToken, input.token)) {
+        throw notFound();
+      }
+      const view = bundleToRegistrationView(bundle);
+      return {
+        registration: {
+          ...view,
+          draft: {
+            ...view.draft,
+            founders: view.draft.founders.map((founder) => ({
+              ...founder,
+              ssn: "",
+            })),
+          },
+        },
+        // Released documents only — same serializer as llc.documents.
+        documents: await listFormationDocuments(owner.userId, input.id),
+      };
     }),
 
   saveDraft: protectedProcedure
