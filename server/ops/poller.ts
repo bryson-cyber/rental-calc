@@ -33,6 +33,14 @@ export async function runStatusPollOnce(): Promise<{
 }> {
   if (pollInFlight) return { polled: 0, failed: 0, skipped: true };
   pollInFlight = true;
+
+  // Piggybacked: rescue-email sweep for abandoned payments (>15 min unpaid,
+  // operator 2026-07-28). Fire-and-forget — the rescue can never delay or
+  // fail the status poll.
+  import("../llc/clientEmails")
+    .then(({ sendPaymentRescueEmails }) => sendPaymentRescueEmails())
+    .then((r) => { if (r.sent > 0) console.log(`[LLC] Payment-rescue emails sent: ${r.sent}`); })
+    .catch(() => {});
   let polled = 0;
   let failed = 0;
 

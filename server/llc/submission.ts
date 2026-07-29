@@ -18,7 +18,6 @@ import {
 } from "../ops/notify";
 import { bundleToDraft, bundleToRegistrationView } from "./domain";
 import {
-  sendApplicationReceivedEmail,
   sendFormationCompleteEmail,
 } from "./clientEmails";
 import { mirrorFormationDocuments } from "./documents";
@@ -301,12 +300,10 @@ export async function submitLlcRegistration(params: {
         params.registrationId,
       );
       if (!recovered) throw new Error("LLC registration could not be reloaded");
-      // Client receipt for the recovered checkout too — fire-and-forget, and
-      // the send-once claim dedupes against the original submission.
-      void sendApplicationReceivedEmail({
-        userId: params.userId,
-        registrationId: params.registrationId,
-      }).catch(() => {});
+      // No instant application email (operator 2026-07-28): with self-serve
+      // checkout most clients pay within a minute, making it noise ahead of
+      // the payment confirmation. The 15-minute payment-rescue sweep in
+      // clientEmails.ts emails only genuine abandoners.
       return {
         outcome: "checkout_ready" as const,
         registration: bundleToRegistrationView(recovered),
@@ -487,10 +484,8 @@ export async function submitLlcRegistration(params: {
         retailPaid: Boolean(held.registration.retailPaidAt),
       }),
     ).catch(() => {});
-    void sendApplicationReceivedEmail({
-      userId: params.userId,
-      registrationId: params.registrationId,
-    }).catch(() => {});
+    // Instant application email removed — see the payment-rescue sweep note
+    // above (sendPaymentRescueEmails in clientEmails.ts).
 
     // Already paid (e.g. client retry after a failed filing): file now.
     if (held.registration.retailPaidAt) {
@@ -729,12 +724,8 @@ export async function submitLlcRegistration(params: {
       );
     }
 
-    // Client-facing receipt (same seam as the ops checkout alert):
-    // fire-and-forget so an email failure can never affect the filing.
-    void sendApplicationReceivedEmail({
-      userId: params.userId,
-      registrationId: params.registrationId,
-    }).catch(() => {});
+    // Instant application email removed (operator 2026-07-28) — the
+    // 15-minute payment-rescue sweep emails only genuine abandoners.
 
     return {
       outcome: "checkout_ready" as const,

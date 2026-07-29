@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "../_core/context";
 import { makePersistedBundle } from "./test-fixtures";
@@ -208,22 +210,23 @@ beforeEach(() => {
 });
 
 describe("application_received trigger (submit succeeds)", () => {
-  it("fires exactly one application email at the checkout_ready seam", async () => {
+  // 2026-07-28 operator change: NO instant application email at submission.
+  // With self-serve checkout most clients pay within a minute, and the
+  // instant email was noise arriving seconds before payment confirmation.
+  // The 15-minute payment-rescue sweep (sendPaymentRescueEmails, run from
+  // the status-poll heartbeat) now emails only genuine abandoners.
+  it("does NOT fire an instant application email at the checkout_ready seam", async () => {
     installState(makePersistedBundle("ready"));
 
     const result = await submitLlcRegistration({ userId: 7, registrationId: 41 });
     await flushAsync();
 
     expect(result.outcome).toBe("checkout_ready");
-    expect(clientEmails.applicationReceived).toHaveBeenCalledTimes(1);
-    expect(clientEmails.applicationReceived).toHaveBeenCalledWith({
-      userId: 7,
-      registrationId: 41,
-    });
+    expect(clientEmails.applicationReceived).not.toHaveBeenCalled();
     expect(clientEmails.formationComplete).not.toHaveBeenCalled();
   });
 
-  it("also fires when a persisted checkout is recovered after an interrupted response", async () => {
+  it("recovered checkouts are also silent (rescue sweep owns the email)", async () => {
     const bundle = makePersistedBundle("submitting");
     bundle.registration.checkoutSessionId = "ch_recovered";
     bundle.registration.checkoutUrl = "https://example.com/checkout/recovered";
@@ -233,7 +236,16 @@ describe("application_received trigger (submit succeeds)", () => {
     await flushAsync();
 
     expect(result.outcome).toBe("checkout_ready");
-    expect(clientEmails.applicationReceived).toHaveBeenCalledTimes(1);
+    expect(clientEmails.applicationReceived).not.toHaveBeenCalled();
+  });
+
+  it("the rescue sweep exists with the 15-minute window and poller wiring", () => {
+    const emails = readFileSync(join(__dirname, "clientEmails.ts"), "utf8");
+    expect(emails).toContain("export async function sendPaymentRescueEmails");
+    expect(emails).toContain("15 * 60 * 1000");
+    expect(emails).toContain('eq(llcRegistrations.status, "payment_required")');
+    const poller = readFileSync(join(__dirname, "..", "ops", "poller.ts"), "utf8");
+    expect(poller).toContain("sendPaymentRescueEmails()");
   });
 
   it("does not email the client when the submission fails", async () => {

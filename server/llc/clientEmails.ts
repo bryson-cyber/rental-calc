@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { and, asc, desc, eq, gt, isNotNull, like } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNotNull, isNull, like, lt } from "drizzle-orm";
 import {
   llcDocuments,
   llcEmailLog,
@@ -132,12 +132,31 @@ function textToHtml(text: string): string {
     .join("");
   const paragraphs = linked
     .split(/\n{2,}/)
-    .map(
-      (paragraph) =>
-        `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#1e293b;">${paragraph.replace(/\n/g, "<br>")}</p>`,
-    )
+    .map((paragraph) => {
+      // A paragraph that is EXACTLY one linked URL becomes the gold CTA
+      // button (house style from the webinar emails); prose links stay
+      // inline. The plain-text version is untouched either way.
+      const buttonMatch = paragraph.match(/^<a href="([^"]+)"[^>]*>[^<]+<\/a>$/);
+      if (buttonMatch) {
+        return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;"><tr><td style="border-radius:8px;background-color:#C9A962;"><a href="${buttonMatch[1]}" style="display:inline-block;padding:14px 28px;font-weight:bold;font-size:15px;color:#0F172A;text-decoration:none;">Open your filing page</a></td></tr></table>`;
+      }
+      return `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#1e293b;">${paragraph.replace(/\n/g, "<br>")}</p>`;
+    })
     .join("");
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${paragraphs}</body></html>`;
+  // Branded shell matching the webinar emails: centered brand mark, gold
+  // accent rule, card body, quiet footer. Table-based for email clients.
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background-color:#f6f5f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f5f1;"><tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<tr><td align="center" style="padding-bottom:20px;">
+<span style="font-size:20px;font-weight:700;letter-spacing:-0.02em;color:#0F172A;">Coach Inayah</span>
+<div style="width:44px;height:3px;background-color:#C9A962;border-radius:2px;margin:10px auto 0;"></div>
+</td></tr>
+<tr><td style="background-color:#ffffff;border:1px solid #e7e5df;border-radius:12px;padding:32px 28px;">${paragraphs}</td></tr>
+<tr><td align="center" style="padding-top:20px;">
+<p style="margin:0;font-size:12px;line-height:1.6;color:#8a877f;">You're receiving this because you started an LLC filing with us.<br>Questions? Just reply to this email.</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
 }
 
 function finalize(subject: string, lines: string[]): ClientEmailContent {
@@ -500,6 +519,47 @@ async function sendLifecycleEmail(
 }
 
 /** Trigger: submit succeeded (checkout_ready). */
+/**
+ * Payment-rescue sweep (operator 2026-07-28): the application-received
+ * email is no longer sent at submission — with self-serve checkout most
+ * clients pay within a minute and the instant email was noise arriving
+ * seconds before the payment confirmation. Instead, this sweep (run from
+ * the LLC status-poll heartbeat) emails ONLY genuine abandoners: unpaid,
+ * still payment_required, 15 minutes to 7 days old, not samples. The
+ * send-once claim in sendLifecycleEmail makes re-sweeps harmless.
+ */
+export async function sendPaymentRescueEmails(): Promise<{ sent: number }> {
+  const db = await getDb();
+  if (!db) return { sent: 0 };
+  const now = Date.now();
+  const oldest = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const newest = new Date(now - 15 * 60 * 1000);
+  const rows = await db
+    .select({
+      id: llcRegistrations.id,
+      userId: llcRegistrations.userId,
+    })
+    .from(llcRegistrations)
+    .where(
+      and(
+        eq(llcRegistrations.status, "payment_required"),
+        isNull(llcRegistrations.retailPaidAt),
+        gt(llcRegistrations.createdAt, oldest),
+        lt(llcRegistrations.createdAt, newest),
+      ),
+    )
+    .limit(25);
+  let sent = 0;
+  for (const row of rows) {
+    const result = await sendApplicationReceivedEmail({
+      userId: row.userId,
+      registrationId: row.id,
+    }).catch(() => "failed" as const);
+    if (result === "sent") sent += 1;
+  }
+  return { sent };
+}
+
 export async function sendApplicationReceivedEmail(params: {
   userId: number;
   registrationId: number;
