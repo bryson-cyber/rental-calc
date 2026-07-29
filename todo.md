@@ -13519,3 +13519,24 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Part C: HubSpot priority properties verification after YES reply
 - [ ] Part C: Daily digest arrives after 14:00 UTC
 - [ ] Part D: Compressed dress rehearsal with test webinar
+
+
+## Stripe LLC Formation Checkout Integration (Jul 28, 2026)
+
+- [x] Create server/llc/stripeCheckout.ts — Stripe Checkout Session creation with dynamic pricing from llc_state_pricing
+- [x] Create tRPC mutation llc.createCheckoutSession (protected, owner-checked)
+- [x] Register Stripe webhook at /api/stripe/webhook BEFORE JSON body parser (raw body for signature verification)
+- [x] Webhook: checkout.session.completed → markPaid + auto-file (reuse existing fileDoolaRegistration)
+- [x] Webhook: idempotent (dedupe by checkoutSessionId on llcRegistrations)
+- [x] Wire FormationStatus.tsx pay card to call createCheckoutSession and redirect to Stripe
+- [x] action_required flow: if auto-file fails after payment, set action_required + ops alert + client email
+- [ ] Document auto-release stamp gate: auto-release EIN letter + operating agreement; withhold Articles until state confirmation
+- [x] Refund/dispute webhook handlers: flag order + ops alert, no auto-un-filing
+- [x] LLC_AUTO_FILE_ENABLED kill switch: all auto-filing behind this env flag
+- [x] Test: checkout for two states shows correct totals from llc_state_pricing
+- [x] Test: payment auto-marks Paid AND auto-submits (order advances with zero admin action)
+- [ ] Test: incomplete registration does NOT submit → action_required + ops alert + client email
+- [x] Test: state with no published retail price cannot check out
+- [x] Test: replaying same webhook event doesn't double-process
+- [ ] Test: document auto-release withholds Articles until state confirmation
+- [ ] Test: no wholesale/provider info visible to clients

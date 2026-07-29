@@ -70,8 +70,10 @@ import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
+import { createLlcCheckoutSession } from "./stripeCheckout";
 import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
 import { syncStateFeesFromProvider } from "./pricing";
+import { ENV } from "../_core/env";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -327,6 +329,39 @@ export const llcRouter = router({
         paymentLinkUrl: pricing.paymentLinkUrl,
         active: pricing.active,
       };
+    }),
+
+  createCheckoutSession: protectedProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ ctx, input }) => {
+      enforceRateLimit(ctx.user.id, "llc.checkout", 10);
+      try {
+        const origin =
+          ctx.req.headers.origin ??
+          (typeof ctx.req.headers.referer === "string"
+            ? ctx.req.headers.referer.replace(/\/[^/]*$/, "")
+            : undefined) ??
+          ENV.appUrl;
+        const result = await createLlcCheckoutSession({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email,
+          userName: ctx.user.name,
+          registrationId: input.id,
+          origin: origin || "https://coachinayahturnkeytool.com",
+        });
+        return { checkoutUrl: result.checkoutUrl };
+      } catch (error) {
+        const msg =
+          error instanceof Error ? error.message : "Checkout session failed";
+        throw new TRPCError({
+          code: msg.includes("not payment_required") || msg.includes("already paid")
+            ? "BAD_REQUEST"
+            : msg.includes("not found") || msg.includes("Not found")
+              ? "NOT_FOUND"
+              : "INTERNAL_SERVER_ERROR",
+          message: msg,
+        });
+      }
     }),
 
   refreshStatus: protectedProcedure

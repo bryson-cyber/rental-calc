@@ -65,6 +65,10 @@ async function startServer() {
   // before the JSON parser consumes the stream.
   const { registerDoolaWebhook } = await import("../llc/doolaWebhook");
   registerDoolaWebhook(app);
+  // Stripe webhooks require raw body for signature verification — must be
+  // mounted before the JSON parser consumes the stream.
+  const { registerStripeWebhook } = await import("../llc/stripeCheckout");
+  registerStripeWebhook(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

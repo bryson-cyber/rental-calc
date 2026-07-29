@@ -35,4 +35,9 @@ export const ENV = {
   cronSecret: process.env.CRON_SECRET ?? "",
   /** Public base URL of the deployed app (used for promo unsubscribe links) */
   appUrl: process.env.VITE_APP_URL ?? "",
+  // Stripe payment processing
+  get stripeSecretKey() { return process.env.STRIPE_SECRET_KEY ?? ""; },
+  get stripeWebhookSecret() { return process.env.STRIPE_WEBHOOK_SECRET ?? ""; },
+  /** When true, auto-file with Doola after Stripe payment confirmed */
+  get llcAutoFileEnabled() { return process.env.LLC_AUTO_FILE_ENABLED === "true"; },
 };

@@ -179,6 +179,17 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
       toast.success(result.message);
     },
   });
+  const checkoutMutation = trpc.llc.createCheckoutSession.useMutation({
+    onSuccess: (result) => {
+      toast.success("Redirecting to secure checkout...");
+      const win = window.open(result.checkoutUrl, "_blank");
+      if (!win) {
+        // Popup blocked — fall back to same-tab redirect
+        window.location.href = result.checkoutUrl;
+      }
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const retryMutation = trpc.llc.submit.useMutation({
     onSuccess: (result) => {
       if (result.outcome === "validation_error") {
@@ -229,7 +240,7 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const isProviderStatus = ["payment_required", "processing", "completed"].includes(
     registration.status,
   );
-  const isBusy = refreshMutation.isPending || retryMutation.isPending;
+  const isBusy = refreshMutation.isPending || retryMutation.isPending || checkoutMutation.isPending;
 
   // Payment card: the registration has been submitted (beyond draft/ready)
   // but the retail payment has not been confirmed yet.
@@ -359,22 +370,25 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
                   Pay now
                   <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
                 </Button>
-              ) : paymentLinkUrl ? (
+              ) : (
                 <>
-                  <Button asChild className="mt-3">
-                    <a href={paymentLinkUrl} target="_blank" rel="noopener noreferrer">
-                      Pay now
-                      <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
-                    </a>
+                  <Button
+                    className="mt-3"
+                    disabled={checkoutMutation.isPending}
+                    onClick={() =>
+                      checkoutMutation.mutate({ id: registrationId })
+                    }
+                  >
+                    {checkoutMutation.isPending ? (
+                      <Loader2 className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
+                    ) : null}
+                    Pay now
+                    <ArrowUpRight className="ml-1.5 size-4" aria-hidden="true" />
                   </Button>
                   <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
                     Filing payments are final and non-refundable.
                   </p>
                 </>
-              ) : (
-                <p className="mt-2 text-[13px] font-medium text-foreground">
-                  We&rsquo;ll send your secure payment link right away.
-                </p>
               )}
             </div>
           </div>
