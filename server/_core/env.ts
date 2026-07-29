@@ -35,9 +35,28 @@ export const ENV = {
   cronSecret: process.env.CRON_SECRET ?? "",
   /** Public base URL of the deployed app (used for promo unsubscribe links) */
   appUrl: process.env.VITE_APP_URL ?? "",
-  // Stripe payment processing
-  get stripeSecretKey() { return process.env.STRIPE_SECRET_KEY ?? ""; },
-  get stripeWebhookSecret() { return process.env.STRIPE_WEBHOOK_SECRET ?? ""; },
+  // LLC test mode toggle — when true, all LLC provider credentials (Doola + Stripe)
+  // switch to their test/sandbox counterparts. Live values remain untouched.
+  get llcTestMode() { return process.env.LLC_TEST_MODE === "true"; },
+  // Stripe payment processing — respects LLC_TEST_MODE
+  get stripeSecretKey() {
+    if (process.env.LLC_TEST_MODE === "true" && process.env.STRIPE_TEST_SECRET_KEY) {
+      return process.env.STRIPE_TEST_SECRET_KEY;
+    }
+    return process.env.STRIPE_SECRET_KEY ?? "";
+  },
+  get stripePublishableKey() {
+    if (process.env.LLC_TEST_MODE === "true" && process.env.VITE_STRIPE_TEST_PUBLISHABLE_KEY) {
+      return process.env.VITE_STRIPE_TEST_PUBLISHABLE_KEY;
+    }
+    return process.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "";
+  },
+  get stripeWebhookSecret() {
+    if (process.env.LLC_TEST_MODE === "true" && process.env.STRIPE_TEST_WEBHOOK_SECRET) {
+      return process.env.STRIPE_TEST_WEBHOOK_SECRET;
+    }
+    return process.env.STRIPE_WEBHOOK_SECRET ?? "";
+  },
   /** When true, auto-file with Doola after Stripe payment confirmed */
   get llcAutoFileEnabled() { return process.env.LLC_AUTO_FILE_ENABLED === "true"; },
 };

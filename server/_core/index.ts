@@ -1281,6 +1281,25 @@ async function startServer() {
     // is set, so it cannot misfire in dev; production scheduling normally runs
     // through the /api/scheduled/llc-status-poll heartbeat instead.
     void ensureLlcTables();
+
+    // Log active LLC provider mode on startup
+    import("../llc/doola").then(({ isLlcTestMode, getDoolaEnvironment }) => {
+      const testMode = isLlcTestMode();
+      if (testMode) {
+        console.log("[LLC] \u26A0\uFE0F  TEST MODE ACTIVE \u2014 using sandbox credentials (Doola + Stripe)");
+        if (!process.env.DOOLA_TEST_API_KEY) {
+          console.error("[LLC] FATAL: LLC_TEST_MODE=true but DOOLA_TEST_API_KEY is missing!");
+        }
+      } else {
+        try {
+          const env = getDoolaEnvironment();
+          console.log(`[LLC] Mode: ${env.toUpperCase()} (Doola ${env})`);
+        } catch {
+          console.log("[LLC] Mode: LIVE (Doola not configured)");
+        }
+      }
+    }).catch(() => { /* doola module not critical for startup logging */ });
+
   startStatusPoller();
   });
 }

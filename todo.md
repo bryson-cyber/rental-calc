@@ -13533,6 +13533,11 @@ Files fixed (operating costs now based on revenue, not rent):
 - [ ] Document auto-release stamp gate: auto-release EIN letter + operating agreement; withhold Articles until state confirmation
 - [x] Refund/dispute webhook handlers: flag order + ops alert, no auto-un-filing
 - [x] LLC_AUTO_FILE_ENABLED kill switch: all auto-filing behind this env flag
+- [x] LLC_TEST_MODE toggle: single env var switches Doola + Stripe between live/test credentials
+- [x] Test mode: getDoolaConfig reads DOOLA_TEST_API_KEY and auto-derives sandbox URL
+- [x] Test mode: getDoolaWebhookSecret reads DOOLA_TEST_WEBHOOK_SECRET
+- [x] Test mode: ENV.stripeSecretKey reads STRIPE_TEST_SECRET_KEY
+- [x] Test mode: startup logging shows active mode (TEST/LIVE)
 - [x] Test: checkout for two states shows correct totals from llc_state_pricing
 - [x] Test: payment auto-marks Paid AND auto-submits (order advances with zero admin action)
 - [ ] Test: incomplete registration does NOT submit → action_required + ops alert + client email

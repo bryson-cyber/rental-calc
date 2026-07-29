@@ -57,14 +57,40 @@ export interface DoolaConfig {
   baseUrl: string;
 }
 
+/**
+ * Returns true when LLC_TEST_MODE is explicitly "true". This toggles all
+ * provider credentials (Doola + Stripe) to their sandbox/test counterparts
+ * without overwriting the live values.
+ */
+export function isLlcTestMode(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.LLC_TEST_MODE === "true";
+}
+
 export function getDoolaConfig(env: NodeJS.ProcessEnv = process.env): DoolaConfig {
-  const apiKey = env.DOOLA_API_KEY?.trim();
+  const testMode = isLlcTestMode(env);
+
+  // In test mode, read from DOOLA_TEST_API_KEY; in live mode, read DOOLA_API_KEY.
+  const apiKey = testMode
+    ? env.DOOLA_TEST_API_KEY?.trim()
+    : env.DOOLA_API_KEY?.trim();
+
   if (!apiKey || !DOOLA_KEY_PATTERN.test(apiKey)) {
+    const varName = testMode ? "DOOLA_TEST_API_KEY" : "DOOLA_API_KEY";
     throw new DoolaConfigurationError(
-      "DOOLA_API_KEY is missing or invalid. Configure the partner API key (dk_live_… or dk_test_…).",
+      `${varName} is missing or invalid. Configure the partner API key (dk_live_… or dk_test_…).`,
     );
   }
-  const rawBaseUrl = (env.DOOLA_API_BASE_URL ?? DEFAULT_DOOLA_API_BASE_URL).trim().replace(/\/+$/, "");
+
+  // In test mode, auto-derive sandbox URL from the test key prefix;
+  // in live mode, use DOOLA_API_BASE_URL (defaulting to production).
+  let rawBaseUrl: string;
+  if (testMode) {
+    // Test mode always uses sandbox URL regardless of DOOLA_API_BASE_URL
+    rawBaseUrl = DOOLA_SANDBOX_API_BASE_URL;
+  } else {
+    rawBaseUrl = (env.DOOLA_API_BASE_URL ?? DEFAULT_DOOLA_API_BASE_URL).trim().replace(/\/+$/, "");
+  }
+
   let parsed: URL;
   try {
     parsed = new URL(rawBaseUrl);
@@ -79,10 +105,7 @@ export function getDoolaConfig(env: NodeJS.ProcessEnv = process.env): DoolaConfi
       "DOOLA_API_BASE_URL must point at the Doola production or sandbox API.",
     );
   }
-  // Key and host must belong to the SAME environment. A leftover sandbox
-  // base URL with a freshly-flipped live key (or vice versa) would otherwise
-  // pass validation and only surface after a client's retail payment, at the
-  // filing call.
+  // Key and host must belong to the SAME environment.
   const liveKey = apiKey.startsWith("dk_live_");
   const productionHost = parsed.host === new URL(DEFAULT_DOOLA_API_BASE_URL).host;
   if (liveKey !== productionHost) {
@@ -108,7 +131,10 @@ export function getDoolaEnvironment(env: NodeJS.ProcessEnv = process.env): Doola
 }
 
 export function getDoolaWebhookSecret(env: NodeJS.ProcessEnv = process.env): string | null {
-  const secret = env.DOOLA_WEBHOOK_SECRET?.trim();
+  const testMode = isLlcTestMode(env);
+  const secret = testMode
+    ? env.DOOLA_TEST_WEBHOOK_SECRET?.trim()
+    : env.DOOLA_WEBHOOK_SECRET?.trim();
   return secret && secret.length >= 16 ? secret : null;
 }
 
