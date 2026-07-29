@@ -86,11 +86,18 @@ function companyDisplayName(params: {
   return legal ? `${legal} ${params.entitySuffix}` : "Your LLC";
 }
 
-/** Branded status page for one registration; absolute when APP_BASE_URL is set. */
+/**
+ * Branded status page for one registration — ALWAYS absolute. The old
+ * version silently fell back to a bare path when APP_BASE_URL was unset,
+ * which shipped a dead 'Track your filing any time: /llc/status/…' line in
+ * the live payment-received email (operator screenshot, 2026-07-28). A
+ * client email must never depend on an optional env var for its links.
+ */
 function statusUrl(registrationId: number): string {
-  const base = process.env.APP_BASE_URL?.trim().replace(/\/+$/, "");
-  const path = `/llc/status/${registrationId}`;
-  return base ? `${base}${path}` : path;
+  const base = (process.env.APP_BASE_URL || process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com")
+    .trim()
+    .replace(/\/+$/, "");
+  return `${base}/llc/status/${registrationId}`;
 }
 
 function escapeHtml(value: string): string {

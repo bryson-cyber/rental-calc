@@ -205,10 +205,18 @@ describe("white-label template guarantees", () => {
     expect(email.text).not.toContain("pay.example.com");
   });
 
-  it("falls back to a relative status link when APP_BASE_URL is unset", () => {
-    vi.stubEnv("APP_BASE_URL", "");
-    const email = renderFormationCompleteEmail(base);
-    expect(email.text).toContain("View your filing: /llc/status/41");
+  it("status links are ALWAYS absolute — hardcoded production fallback when env is unset (live bug 2026-07-28)", () => {
+    delete process.env.APP_BASE_URL;
+    delete process.env.VITE_APP_URL;
+    const email = renderFormationCompleteEmail({
+      registrationId: 41,
+      legalName: "Northstar Studio",
+      entitySuffix: "LLC",
+    });
+    // The old behavior shipped 'View your filing: /llc/status/41' — a dead
+    // non-link in real client inboxes (operator screenshot).
+    expect(email.text).toContain("https://coachinayahturnkeytool.com/llc/status/41");
+    expect(email.text).not.toContain(": /llc/status/");
   });
 
   it("flattens injected newlines in client-controlled names", () => {

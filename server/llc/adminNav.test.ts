@@ -153,3 +153,12 @@ describe('provider truth in the ops table (operator: "I need to know via API")',
     expect(ops).toContain('Verify with doola');
   });
 });
+
+describe('client-email links are always absolute (live bug 2026-07-28)', () => {
+  it('statusUrl carries a hardcoded production fallback and no relative branch', () => {
+    const emails = read('server/llc/clientEmails.ts');
+    expect(emails).toContain('|| "https://coachinayahturnkeytool.com"');
+    // The silent relative-path fallback is gone for good.
+    expect(emails).not.toContain('return base ? `${base}${path}` : path;');
+  });
+});
