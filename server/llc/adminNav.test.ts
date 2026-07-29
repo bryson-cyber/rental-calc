@@ -143,14 +143,17 @@ describe('provider truth in the ops table (operator: "I need to know via API")',
     expect(router).toContain('state_registered?: boolean');
     expect(router).toContain('ein_registered?: boolean');
     const ops = read('client/src/pages/admin/LlcOpsPage.tsx');
-    expect(ops).toContain('doola confirmed {timeAgo(order.lastProviderSyncAt)}');
+    // Neutral term 2026-07-29: white-label review — provider name must
+    // not ship in client bundles. Same ops meaning, same placement.
+    expect(ops).toContain('Provider confirmed {timeAgo(order.lastProviderSyncAt)}');
     expect(ops).toContain('State stamp:');
     // Never-confirmed non-draft rows warn instead of pretending.
-    expect(ops).toContain('Not yet confirmed by doola');
+    expect(ops).toContain('Not yet confirmed by the provider');
     // Stale confirmations (>24h) go amber.
     expect(ops).toContain('24 * 60 * 60 * 1000');
     // The button says what it actually does.
-    expect(ops).toContain('Verify with doola');
+    expect(ops).toContain('Verify with provider');
+    expect(ops.toLowerCase()).not.toContain('doola');
   });
 });
 

@@ -470,7 +470,7 @@ function StatePricingSection() {
             variant="outline"
             className="ml-2"
             disabled={referenceFeesMutation.isPending}
-            title="Loads the operator fee sheet (matches doola production fees, confirmed 2026-07-28) into every state's fee. 'Sync state fees' instead pulls the provider's live table — both should agree in production."
+            title="Loads the operator fee sheet (matches provider production fees, confirmed 2026-07-28) into every state's fee. 'Sync state fees' instead pulls the provider's live table — both should agree in production."
             onClick={() => {
               if (window.confirm('Load the operator fee sheet into ALL state fees? Retail prices are untouched.')) {
                 referenceFeesMutation.mutate();
@@ -1089,13 +1089,13 @@ export default function LlcOpsPage() {
                           >
                             {order.status.replaceAll('_', ' ')}
                           </span>
-                          {/* Provider truth — what doola's API actually said,
+                          {/* Provider truth — what the provider's API actually said,
                               and how fresh that answer is (operator: "I need
                               to know via API if it's actually going through"). */}
                           {order.lastProviderSyncAt ? (
                             <div className="mt-2 space-y-0.5">
                               <p className={`text-[11px] font-medium ${Date.now() - order.lastProviderSyncAt > 24 * 60 * 60 * 1000 ? 'text-amber-600' : 'text-emerald-700'}`}>
-                                doola confirmed {timeAgo(order.lastProviderSyncAt)}
+                                Provider confirmed {timeAgo(order.lastProviderSyncAt)}
                               </p>
                               <p className="text-[11px] text-slate-500">
                                 State stamp: {order.stateRegistered ? '\u2713 registered' : 'pending'} \u00b7 EIN: {order.einRegistered ? '\u2713' : 'pending'}
@@ -1103,7 +1103,7 @@ export default function LlcOpsPage() {
                             </div>
                           ) : order.status !== 'draft' ? (
                             <p className="mt-2 text-[11px] font-medium text-amber-600">
-                              Not yet confirmed by doola \u2014 hit Verify
+                              Not yet confirmed by the provider — hit Verify
                             </p>
                           ) : null}
                           {order.lastErrorMessage ? (
@@ -1146,7 +1146,7 @@ export default function LlcOpsPage() {
                               ) : (
                                 <RefreshCw className="w-3 h-3" />
                               )}
-                              <span className="ml-1">Verify with doola</span>
+                              <span className="ml-1">Verify with provider</span>
                             </Button>
                             <Button
                               size="sm"
