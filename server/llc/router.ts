@@ -5,7 +5,10 @@ import {
   llcDraftSchema,
   issuesByField,
   validateLlcStep,
+  DOOLA_DIRECT_MARKER,
+  isValidDoolaIndustry,
 } from "../../shared/llc";
+import { deriveDoolaIndustry } from "./doola";
 import {
   createLlcRegistration,
   findLlcRegistrationOwner,
@@ -292,6 +295,19 @@ export const llcRouter = router({
         return {
           valid: false as const,
           fieldErrors: { formationState: inactiveError },
+        };
+      }
+
+      // Pre-submission industry guard: if the industry doesn't resolve to a
+      // valid Doola label, block BEFORE payment can ever lead to a filing.
+      const resolvedIndustry = deriveDoolaIndustry(bundle.registration);
+      if (!resolvedIndustry) {
+        return {
+          valid: false as const,
+          fieldErrors: {
+            industryType:
+              "Your selected industry could not be mapped to a valid filing category. Please select a different industry from the list.",
+          },
         };
       }
 

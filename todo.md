@@ -13545,3 +13545,9 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Test: replaying same webhook event doesn't double-process
 - [ ] Test: document auto-release withholds Articles until state confirmation
 - [ ] Test: no wholesale/provider info visible to clients
+
+## Doola Industry Validation Fix (Jul 28, 2026)
+- [x] Pull Doola's full industry reference list from their partner API into the codebase
+- [x] Make wizard industry step offer ONLY values that map to Doola's valid list (searchable dropdown)
+- [x] Add pre-submission guard: fail validation before payment leads to filing if industry is invalid
+- [x] Re-run full E2E test with valid industry showing: payment → auto-file → doola accepts → status processing

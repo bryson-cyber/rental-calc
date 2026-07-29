@@ -4,10 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { LlcDraft } from "@shared/llc";
 import { LLC_ACTIVITY_PRESETS, LLC_ENTITY_SUFFIXES, LLC_FORMATION_STATES } from "@shared/llc";
-import {
-  WHOP_BUSINESS_TAXONOMY,
-  humanizeWhopTaxonomyValue,
-} from "@shared/whop-taxonomy";
+import { IndustryCombobox } from "./IndustryCombobox";
 import { AlertCircle, ArrowUpRight, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
 import {
   AddressFields,
@@ -95,10 +92,7 @@ type StepProps = {
   onChange: (draft: LlcDraft) => void;
 };
 
-const taxonomy = WHOP_BUSINESS_TAXONOMY as Record<
-  string,
-  Record<string, readonly string[]>
->;
+// Legacy taxonomy reference removed — industry now uses Doola-direct system
 
 export function BusinessStep({ draft, errors, onChange }: StepProps) {
   const patch = (values: Partial<LlcDraft>) => onChange({ ...draft, ...values });
@@ -171,29 +165,20 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
 }
 
 export function ActivityStep({ draft, errors, onChange }: StepProps) {
-  const businessTypes = Object.keys(taxonomy);
-  const groups = draft.businessType ? Object.keys(taxonomy[draft.businessType] ?? {}) : [];
-  const industries =
-    draft.businessType && draft.industryGroup
-      ? [...(taxonomy[draft.businessType]?.[draft.industryGroup] ?? [])]
-      : [];
-
   return (
     <div>
       <SectionHeading
         eyebrow="Step 2 · Activity"
-        title="Describe what the business does."
-        description="Filings use a three-level industry taxonomy. The choices below are constrained to valid combinations so your filing is not rejected for mismatched categories."
+        title="What does the business do?"
+        description="Select the industry that best describes your business. This is used for your state filing and IRS classification."
       />
       <div className="mb-6">
         <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Quick pick
+          Quick pick — common for rental investors
         </p>
         <div className="flex flex-wrap gap-2">
           {LLC_ACTIVITY_PRESETS.map((preset) => {
-            const active =
-              draft.businessType === preset.businessType &&
-              draft.industryGroup === preset.industryGroup;
+            const active = draft.industryType === preset.doolaIndustry;
             return (
               <button
                 key={preset.key}
@@ -202,9 +187,9 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
                 onClick={() =>
                   onChange({
                     ...draft,
-                    businessType: preset.businessType,
-                    industryGroup: preset.industryGroup,
-                    industryType: preset.industryType,
+                    businessType: "doola_direct",
+                    industryGroup: preset.naicsCode,
+                    industryType: preset.doolaIndustry,
                   })
                 }
                 className={`rounded-xl border p-4 text-left transition-colors ${
@@ -217,67 +202,30 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {preset.description}
                 </span>
-                {"naicsCode" in preset ? (
-                  <span className="mt-1.5 block text-[11px] font-medium text-primary">
-                    Recommended NAICS: {preset.naicsCode} · {preset.naicsLabel}
-                  </span>
-                ) : null}
+                <span className="mt-1.5 block text-[11px] font-medium text-primary">
+                  NAICS: {preset.naicsCode}
+                </span>
               </button>
             );
           })}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Pick the closest style below if the default isn't quite right. We map your
-          selection to the filing's required categories for you.
+          Or search from all 800+ industries below.
         </p>
       </div>
 
       <div className="grid gap-4">
-        <NativeSelect
-          id="businessType"
-          label="Business type"
-          value={draft.businessType ?? ""}
-          onChange={(event) =>
+        <IndustryCombobox
+          value={draft.industryType ?? ""}
+          onChange={(value) =>
             onChange({
               ...draft,
-              businessType: event.target.value,
-              industryGroup: "",
-              industryType: "",
+              businessType: "doola_direct",
+              industryGroup: "doola_direct",
+              industryType: value,
             })
           }
-          options={businessTypes.map((value) => ({
-            value,
-            label: humanizeWhopTaxonomyValue(value),
-          }))}
-          error={errors.businessType}
-        />
-        <NativeSelect
-          id="industryGroup"
-          label="Industry group"
-          value={draft.industryGroup ?? ""}
-          onChange={(event) =>
-            onChange({ ...draft, industryGroup: event.target.value, industryType: "" })
-          }
-          options={groups.map((value) => ({
-            value,
-            label: humanizeWhopTaxonomyValue(value),
-          }))}
-          error={errors.industryGroup}
-          disabled={!draft.businessType}
-          placeholder={draft.businessType ? "Select an industry group" : "Choose a business type first"}
-        />
-        <NativeSelect
-          id="industryType"
-          label="Specific industry"
-          value={draft.industryType ?? ""}
-          onChange={(event) => onChange({ ...draft, industryType: event.target.value })}
-          options={industries.map((value) => ({
-            value,
-            label: humanizeWhopTaxonomyValue(value),
-          }))}
           error={errors.industryType}
-          disabled={!draft.industryGroup}
-          placeholder={draft.industryGroup ? "Select the closest industry" : "Choose an industry group first"}
         />
       </div>
     </div>
@@ -719,9 +667,7 @@ export function ReviewStep({
             <EditSection label="activity" onClick={() => onEdit(2)} />
           </div>
           <dl className="mt-1 divide-y divide-border">
-            <SummaryLine label="Business type" value={humanizeWhopTaxonomyValue(draft.businessType ?? "")} />
-            <SummaryLine label="Industry group" value={humanizeWhopTaxonomyValue(draft.industryGroup ?? "")} />
-            <SummaryLine label="Specific industry" value={humanizeWhopTaxonomyValue(draft.industryType ?? "")} />
+            <SummaryLine label="Industry" value={draft.industryType || "Not selected"} />
           </dl>
         </section>
 

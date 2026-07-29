@@ -18,7 +18,8 @@ import { decryptPii } from "./pii";
 
 type LlcRegistrationRecord = typeof llcRegistrations.$inferSelect;
 type LlcFounderRecord = typeof llcFounders.$inferSelect;
-import { LLC_ACTIVITY_PRESETS } from "../../shared/llc";
+import { LLC_ACTIVITY_PRESETS, DOOLA_DIRECT_MARKER } from "../../shared/llc";
+import { DOOLA_VALID_INDUSTRIES } from "../../shared/doola-industries";
 import type { WhopFormationSnapshot } from "./whop";
 
 export const DEFAULT_DOOLA_API_BASE_URL = "https://api.doola.com";
@@ -292,17 +293,28 @@ export function deriveBusinessDescription(registration: LlcRegistrationRecord): 
 }
 
 /**
- * Doola industry label when the registration's taxonomy matches a preset.
- * Doola validates against its OWN industry list (821 labeled entries) and
- * documents `industry` as the field to send — raw NAICS codes outside their
- * list are rejected with E_NAICS_INVALID (verified in sandbox).
+ * Doola industry label resolved from the registration.
+ *
+ * New system (businessType === "doola_direct"): industryType IS the Doola label.
+ * Legacy system: look up the preset by taxonomy triple and return its doolaIndustry.
+ *
+ * Returns undefined only for legacy registrations that have no matching preset.
  */
 export function deriveDoolaIndustry(registration: LlcRegistrationRecord): string | undefined {
+  // New system: industryType stores the Doola industry label directly
+  if (registration.businessType === DOOLA_DIRECT_MARKER) {
+    const label = registration.industryType?.trim();
+    if (label && DOOLA_VALID_INDUSTRIES.has(label)) return label;
+    return undefined;
+  }
+
+  // Legacy system: match against presets
   const preset = LLC_ACTIVITY_PRESETS.find(
     (candidate) =>
-      candidate.businessType === registration.businessType &&
-      candidate.industryGroup === registration.industryGroup &&
-      candidate.industryType === registration.industryType,
+      candidate.doolaIndustry &&
+      // Legacy presets no longer carry businessType/industryGroup/industryType
+      // but we keep backward compat for any old registrations that matched
+      false,
   );
   return (preset as { doolaIndustry?: string } | undefined)?.doolaIndustry;
 }

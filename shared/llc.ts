@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidWhopTaxonomySelection } from "./whop-taxonomy";
+import { DOOLA_VALID_INDUSTRIES } from "./doola-industries";
 
 export const LLC_FORMATION_STATES = [
   "AL",
@@ -159,25 +160,65 @@ export const LLC_CLIENT_STATUS_LABELS: Record<
 };
 
 /**
- * One-tap activity presets: verified provider-taxonomy triples for common
- * client profiles. A validity test guards these against taxonomy
- * regeneration drift.
+ * One-tap activity presets: common client profiles with direct Doola industry labels.
+ * Each preset stores the exact Doola industry string (validated against their API).
+ * The wizard uses businessType="doola_direct" as a marker that the new system is in use.
  */
 export const LLC_ACTIVITY_PRESETS = [
   {
     key: "short_term_rental",
     label: "Short-term rental",
-    description: "Airbnb, vacation rental, or rental property business",
-    businessType: "brick_and_mortar",
-    industryGroup: "hospitality_and_lodging",
-    industryType: "vacation_rental_property",
-    /** Recommended federal classification, shown for reference on Step 2. */
-    naicsCode: "531110",
-    naicsLabel: "Vacation Rentals",
-    /** The filing provider's unique industry label (validated by their API). */
+    description: "Airbnb, vacation rental, or VRBO property business",
+    doolaIndustry: "Short term rentals",
+    naicsCode: "721310",
+  },
+  {
+    key: "airbnb_rentals",
+    label: "Airbnb rentals",
+    description: "Airbnb-specific rental hosting business",
+    doolaIndustry: "Airbnb rentals",
+    naicsCode: "721310",
+  },
+  {
+    key: "vacation_rentals",
+    label: "Vacation rentals",
+    description: "Vacation rental or seasonal property business",
     doolaIndustry: "Vacation rentals",
+    naicsCode: "531110",
+  },
+  {
+    key: "rental_property",
+    label: "Rental property",
+    description: "Long-term or mixed rental property management",
+    doolaIndustry: "Rental property",
+    naicsCode: "531110",
+  },
+  {
+    key: "real_estate_investing",
+    label: "Real estate investing",
+    description: "Real estate investment and holding company",
+    doolaIndustry: "Real estate investing",
+    naicsCode: "531390",
+  },
+  {
+    key: "property_management",
+    label: "Property management",
+    description: "Managing rental properties for owners",
+    doolaIndustry: "Property management",
+    naicsCode: "531311",
   },
 ] as const;
+
+/** Marker value for businessType when using the Doola-direct industry system */
+export const DOOLA_DIRECT_MARKER = "doola_direct";
+
+/**
+ * Returns true if the industry value is a valid Doola industry label.
+ * Used for both step-level and complete-schema validation.
+ */
+export function isValidDoolaIndustry(industry: string): boolean {
+  return DOOLA_VALID_INDUSTRIES.has(industry);
+}
 
 export const LLC_WIZARD_STEPS = [
   { id: 1, slug: "business", title: "Business" },
@@ -349,6 +390,18 @@ export const llcActivityStepSchema = z
     industryType: requiredTrimmedString("Industry", 128),
   })
   .superRefine((value, context) => {
+    // New system: businessType === "doola_direct" means industryType is a Doola label
+    if (value.businessType === DOOLA_DIRECT_MARKER) {
+      if (!isValidDoolaIndustry(value.industryType)) {
+        context.addIssue({
+          code: "custom",
+          path: ["industryType"],
+          message: "Select a valid industry from the list",
+        });
+      }
+      return;
+    }
+    // Legacy path: whop-taxonomy validation for old registrations
     if (
       !isValidWhopTaxonomySelection(
         value.businessType,
@@ -456,7 +509,16 @@ export const llcCompleteSchema = z
       .max(10, "A maximum of 10 founders is supported"),
   })
   .superRefine((value, context) => {
-    if (
+    // New system: businessType === "doola_direct" means industryType is a Doola label
+    if (value.businessType === DOOLA_DIRECT_MARKER) {
+      if (!isValidDoolaIndustry(value.industryType)) {
+        context.addIssue({
+          code: "custom",
+          path: ["industryType"],
+          message: "Select a valid industry from the list",
+        });
+      }
+    } else if (
       !isValidWhopTaxonomySelection(
         value.businessType,
         value.industryGroup,

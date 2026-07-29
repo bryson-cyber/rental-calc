@@ -121,16 +121,13 @@ describe("LLC step validation", () => {
 });
 
 describe("LLC activity presets", () => {
-  it("every preset is a valid Whop taxonomy combination", async () => {
+  it("every preset has a valid Doola industry label", async () => {
     const { LLC_ACTIVITY_PRESETS } = await import("../../shared/llc");
-    const { isValidWhopTaxonomySelection } = await import("../../shared/whop-taxonomy");
+    const { DOOLA_VALID_INDUSTRIES } = await import("../../shared/doola-industries");
     for (const preset of LLC_ACTIVITY_PRESETS) {
       expect(
-        isValidWhopTaxonomySelection(
-          preset.businessType,
-          preset.industryGroup,
-          preset.industryType,
-        ),
+        DOOLA_VALID_INDUSTRIES.has(preset.doolaIndustry),
+        `Preset "${preset.key}" has invalid doolaIndustry: "${preset.doolaIndustry}"`,
       ).toBe(true);
     }
   });

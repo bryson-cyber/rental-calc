@@ -16,12 +16,14 @@ import { getStatePricing } from "./pricing";
 import {
   findLlcRegistrationOwner,
   getLlcRegistrationById,
+  transitionLlcStatus,
   updateLlcRegistrationProviderFields,
 } from "./store";
 import { fileDoolaRegistration } from "./doolaSubmission";
 import { sendPaymentConfirmedEmail } from "./clientEmails";
-import { sendOpsAlert } from "../ops/notify";
+import { sendOpsAlert, submissionProblemAlert } from "../ops/notify";
 import type { OpsAlert } from "../ops/notify";
+import { deriveDoolaIndustry } from "./doola";
 
 // ---------------------------------------------------------------------------
 // Stripe client (lazy singleton)
@@ -225,8 +227,51 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Ops alert
   void sendOpsAlert(stripePaymentReceivedAlert(registration)).catch(() => {});
 
-  // Auto-file if enabled
+  // Pre-filing industry guard: verify the industry resolves to a valid Doola
+  // label BEFORE attempting to file. If it doesn't, transition to action_required
+  // and alert ops + client, so the filing never reaches Doola with bad data.
   if (ENV.llcAutoFileEnabled) {
+    const bundle = await getLlcRegistrationById(registration.userId, registration.id);
+    const industry = bundle ? deriveDoolaIndustry(bundle.registration) : undefined;
+
+    if (!industry) {
+      console.error(
+        `[StripeWebhook] Industry validation failed for #${registration.id}: no valid Doola industry resolved`,
+      );
+
+      // Transition to action_required so the client sees a clear status
+      await transitionLlcStatus({
+        userId: registration.userId,
+        registrationId: registration.id,
+        toStatus: "action_required",
+        source: "system",
+        note: "Industry could not be mapped to a valid filing category. Our team will resolve this.",
+        expectedStatuses: ["payment_required", "ready"],
+        updates: {
+          lastErrorType: "industry_unmappable",
+          lastErrorMessage:
+            "Your selected industry could not be mapped to a valid filing category. Our team is reviewing and will update your filing shortly.",
+          retryable: false,
+        },
+      }).catch(() => {});
+
+      // Ops alert (covers the 'Slack' requirement via existing ops channels)
+      void sendOpsAlert(
+        submissionProblemAlert({
+          registrationId: registration.id,
+          legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+          errorType: "industry_unmappable",
+          message: `Payment received but industry cannot be resolved to a valid Doola label. Registration businessType/industryType needs manual correction before filing can proceed.`,
+          uncertain: false,
+        }),
+      ).catch(() => {});
+
+      // Client email is already handled by the action_required transition
+      // (the status page shows the message to the client)
+      return;
+    }
+
+    // Industry is valid — proceed with auto-filing
     void fileDoolaRegistration({
       userId: registration.userId,
       registrationId: registration.id,
