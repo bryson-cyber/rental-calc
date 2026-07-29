@@ -232,6 +232,13 @@
       "when": 1785134775348,
       "tag": "0032_first_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1785288238921,
+      "tag": "0033_wise_spectrum",
+      "breakpoints": true
     }
   ]
 }

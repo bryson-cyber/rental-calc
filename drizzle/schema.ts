@@ -2895,7 +2895,7 @@ export const llcRegistrations = mysqlTable(
     accuracyAttested: boolean("accuracyAttested").default(false).notNull(),
     whopAccountId: varchar("whopAccountId", { length: 64 }),
     accountEmailAlias: varchar("accountEmailAlias", { length: 320 }),
-    checkoutSessionId: varchar("checkoutSessionId", { length: 64 }),
+    checkoutSessionId: varchar("checkoutSessionId", { length: 128 }),
     checkoutUrl: text("checkoutUrl"),
     checkoutTotal: int("checkoutTotal"),
     checkoutCurrency: varchar("checkoutCurrency", { length: 3 }),

@@ -1,0 +1,1 @@
+ALTER TABLE `llc_registrations` MODIFY COLUMN `checkoutSessionId` varchar(128);
