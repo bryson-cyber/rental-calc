@@ -15,11 +15,11 @@ async function resolveUser(req: Request): Promise<User | null> {
 }
 
 /**
- * GET /api/funding/report-pdf — streams the member's credit-report PDF from
- * the funding system through this server, so it can be embedded in the
- * Funding Readiness page. Funding-system URL and credentials stay
- * server-side; the member is identified by their own session cookie and can
- * only ever receive the PDF linked to their connection row.
+ * GET /api/funding/report-pdf — streams a credit-report PDF from
+ * the funding system through this server.
+ *
+ * Normal users: identified by session cookie, can only see their own PDF.
+ * Admin users: may pass ?email=<target> to view any user's report.
  */
 export function registerFundingPdfProxy(app: Express) {
   app.get("/api/funding/report-pdf", async (req: Request, res: Response) => {
@@ -36,17 +36,29 @@ export function registerFundingPdfProxy(app: Express) {
         return;
       }
 
-      const rows = await db.select().from(fundingConnections)
-        .where(eq(fundingConnections.userId, user.id)).limit(1);
-      const connection = rows[0];
-      if (!connection || connection.status !== "connected") {
-        res.status(404).json({ error: "No funding report linked yet" });
-        return;
+      // Determine which email to fetch the PDF for
+      let targetEmail: string | null = null;
+
+      const emailParam = typeof req.query.email === "string" ? req.query.email.trim() : "";
+
+      if (emailParam && user.role === "admin") {
+        // Admin override: fetch PDF for the specified email directly
+        targetEmail = emailParam;
+      } else {
+        // Normal path: look up the user's own funding connection
+        const rows = await db.select().from(fundingConnections)
+          .where(eq(fundingConnections.userId, user.id)).limit(1);
+        const connection = rows[0];
+        if (!connection || connection.status !== "connected") {
+          res.status(404).json({ error: "No funding report linked yet" });
+          return;
+        }
+        targetEmail = connection.email;
       }
 
-      const pdf = await fetchReportPdf(connection.email);
+      const pdf = await fetchReportPdf(targetEmail);
       if (!pdf) {
-        res.status(404).json({ error: "Your report PDF isn't available yet — try again shortly" });
+        res.status(404).json({ error: "Report PDF isn't available yet — try again shortly" });
         return;
       }
 
@@ -55,7 +67,7 @@ export function registerFundingPdfProxy(app: Express) {
       res.setHeader("Content-Length", pdf.length.toString());
       res.setHeader(
         "Content-Disposition",
-        `${download ? "attachment" : "inline"}; filename="my-credit-report.pdf"`,
+        `${download ? "attachment" : "inline"}; filename="credit-report.pdf"`,
       );
       res.setHeader("Cache-Control", "private, max-age=300");
       res.send(pdf);

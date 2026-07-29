@@ -13551,3 +13551,6 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Make wizard industry step offer ONLY values that map to Doola's valid list (searchable dropdown)
 - [x] Add pre-submission guard: fail validation before payment leads to filing if industry is invalid
 - [x] Re-run full E2E test with valid industry showing: payment → auto-file → doola accepts → status processing
+
+## Admin Credit Report PDF Fix (Jul 29, 2026)
+- [x] Fix /api/funding/report-pdf to allow admin to view any user's credit report via ?email= param
