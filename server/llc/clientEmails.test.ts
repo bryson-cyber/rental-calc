@@ -165,9 +165,9 @@ describe("white-label template guarantees", () => {
     expect(application.text).toContain("Wyoming");
     expect(application.text).toContain("Total: $549.00");
     expect(application.text).toContain("https://pay.example.com/wy");
-    expect(application.text).toContain(
-      "Your filing begins as soon as payment is received.",
-    );
+    // 2026-07-28: the stale 'begins as soon as payment is received' line is
+    // gone (self-serve checkout); the filing page is now the hub line.
+    expect(application.text).toContain("your filing hub");
     expect(application.text).toContain("https://tools.example.com/llc/status/41");
 
     const payment = renderPaymentConfirmedEmail(base);
@@ -196,12 +196,19 @@ describe("white-label template guarantees", () => {
     expect(documents.text).toContain("https://tools.example.com/llc/status/41");
   });
 
-  it("renders the no-link variant when no payment link is configured", () => {
+  it("no-link variant points at the filing page — never promises a link is coming (operator 2026-07-28)", () => {
+    // Self-serve Stripe checkout: payment happens in the flow, so this email
+    // exists to rescue tab-closers. The old copy ('We'll send your payment
+    // link shortly') described a manual step that no longer exists.
     const email = renderApplicationReceivedEmail({
       ...base,
       paymentLinkUrl: null,
     });
-    expect(email.text).toContain("We'll send your payment link shortly.");
+    expect(email.text).toContain("Complete your payment from your filing page");
+    expect(email.text).toContain("/llc/status/41"); // absolute via the suite's APP_BASE_URL stub
+    expect(email.text).toContain("Already paid? You're all set");
+    expect(email.text).not.toContain("We'll send your payment link shortly");
+    expect(email.text).not.toContain("as soon as payment is received");
     expect(email.text).not.toContain("pay.example.com");
   });
 

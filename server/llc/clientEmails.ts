@@ -166,14 +166,17 @@ export function renderApplicationReceivedEmail(params: {
   }
   if (params.paymentLinkUrl) {
     lines.push(`Complete your payment here: ${params.paymentLinkUrl}`);
-    lines.push(`Filing payments are final and non-refundable.`);
   } else {
-    lines.push(`We'll send your payment link shortly.`);
+    // Self-serve Stripe checkout (2026-07-28): payment happens right in the
+    // flow — never promise that a link is coming later. This email's job is
+    // rescuing the client who closed the tab before paying: their filing
+    // page carries the payment button and everything else.
+    lines.push(`Complete your payment from your filing page and your filing starts the moment it goes through:`);
   }
   lines.push(
-    `Your filing begins as soon as payment is received.`,
+    `${statusUrl(params.registrationId)}`,
     ``,
-    `Track your filing any time: ${statusUrl(params.registrationId)}`,
+    `Filing payments are final and non-refundable. Already paid? You're all set — a confirmation is on its way, and the link above is your filing hub from here on out: live status, and every document (Articles, EIN letter, operating agreement) lands there the moment it's ready.`,
     ``,
     SIGN_OFF,
   );

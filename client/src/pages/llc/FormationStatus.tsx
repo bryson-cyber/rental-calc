@@ -138,6 +138,14 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [viewerDocument, setViewerDocument] = useState<VaultDocument | null>(null);
+  // Stripe sends the client back with ?payment=success|cancelled. The
+  // webhook that flips the order to paid can land a few seconds AFTER the
+  // redirect, so without this the payer briefly sees "payment required" —
+  // exactly the moment a new customer panics. Read once at mount.
+  const [paymentReturn] = useState<"success" | "cancelled" | null>(() => {
+    const value = new URLSearchParams(window.location.search).get("payment");
+    return value === "success" || value === "cancelled" ? value : null;
+  });
   const registrationQuery = trpc.llc.get.useQuery(
     { id: registrationId },
     {
@@ -145,7 +153,13 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
       refetchOnWindowFocus: false,
       // Test rows live-update during a webinar so the presenter can advance
       // the stage from a second window or phone and the shared screen follows.
-      refetchInterval: (query) => (query.state.data?.isTest ? 5000 : false),
+      // After a Stripe success return, poll until the webhook flips the row
+      // past payment_required (then stop).
+      refetchInterval: (query) => {
+        if (query.state.data?.isTest) return 5000;
+        if (paymentReturn === "success" && query.state.data?.status === "payment_required") return 3000;
+        return false;
+      },
     },
   );
   const isTestRow = registrationQuery.data?.isTest ?? false;
@@ -282,6 +296,32 @@ function StatusWorkspace({ registrationId }: { registrationId: number }) {
           </span>
         </div>
       </div>
+
+      {paymentReturn === "success" ? (
+        <div className="apple-card border-emerald-600/25 bg-emerald-600/5 p-4" role="status">
+          <div className="flex items-start gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-emerald-600/10">
+              <FileCheck2 className="size-4 text-emerald-700" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Payment received — you're all set</h3>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+                {registration.status === "payment_required"
+                  ? "Confirming your payment now — this page updates itself in a few seconds. Your filing starts automatically; nothing else is needed from you."
+                  : "Your filing is underway. This page is your hub: live status, and every document lands here the moment it's ready. We'll also email you at each step."}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {paymentReturn === "cancelled" && registration.status === "payment_required" ? (
+        <div className="apple-card border-amber-300 bg-amber-50/60 p-4" role="status">
+          <p className="text-sm text-amber-900">
+            Your payment wasn't completed — no charge was made. Your application is
+            saved; use the payment button below whenever you're ready.
+          </p>
+        </div>
+      ) : null}
 
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
