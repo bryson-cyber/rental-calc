@@ -39,11 +39,19 @@ interface SendEmailOptions {
   headers?: Record<string, string>;
 }
 
+/**
+ * Wraps a raw email address with the configured display name if not already formatted.
+ */
+function formatFrom(addr: string): string {
+  if (addr.includes("<") && addr.includes(">")) return addr;
+  return `"${ENV.emailFromName}" <${addr}>`;
+}
+
 export async function sendWebinarEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     const transport = getTransporter();
     const result = await transport.sendMail({
-      from: options.from || ENV.hubspotSmtpFrom,
+      from: formatFrom(options.from || ENV.hubspotSmtpFrom),
       to: options.to,
       subject: options.subject,
       html: options.html,

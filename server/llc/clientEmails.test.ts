@@ -310,7 +310,8 @@ describe("send-once claims (types 1–3)", () => {
     });
     database.getDb.mockResolvedValue(db);
     await sendPaymentConfirmedEmail({ userId: 7, registrationId: 41 });
-    expect(smtp.sendMail.mock.calls[0][0].from).toBe("filings@coachinayah.com");
+    // resolveFromAddress wraps plain addresses with the "Inayah" display name
+    expect(smtp.sendMail.mock.calls[0][0].from).toBe('"Inayah" <filings@coachinayah.com>');
 
     vi.stubEnv("LLC_EMAIL_FROM", "");
     const again = makeFakeDb({
@@ -318,8 +319,10 @@ describe("send-once claims (types 1–3)", () => {
     });
     database.getDb.mockResolvedValue(again.db);
     await sendFormationCompleteEmail({ userId: 7, registrationId: 41 });
-    // No SMTP_FROM/HUBSPOT_SMTP_FROM stubbed, so the config's from is OPS_EMAIL.
-    expect(smtp.sendMail.mock.calls[1][0].from).toBe("ops@example.com");
+    // No SMTP_FROM stubbed, so getOpsConfig falls back to HUBSPOT_SMTP_FROM (from real env) or OPS_EMAIL.
+    // resolveFromAddress wraps whatever address it gets with the "Inayah" display name.
+    const fallbackFrom = smtp.sendMail.mock.calls[1][0].from as string;
+    expect(fallbackFrom).toMatch(/^"Inayah" <.+@.+>$/);
   });
 
   it("never sends the application email with wholesale figures even when the row carries them", async () => {

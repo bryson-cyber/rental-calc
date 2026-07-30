@@ -37,7 +37,7 @@ const smtpTransporter = HUBSPOT_SMTP_USER && HUBSPOT_SMTP_PASS ? nodemailer.crea
 
 // Email sender configuration
 const FROM_EMAIL = 'bryson@coachinayah.com';
-const FROM_NAME = 'Coach Inayah';
+const FROM_NAME = 'Inayah';
 const REPLY_TO = 'support@coachinayah.com';
 
 // Brand URLs

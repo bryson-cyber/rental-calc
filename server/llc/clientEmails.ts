@@ -301,9 +301,14 @@ export function renderDocumentsReleasedEmail(params: {
 /**
  * From address for client emails: LLC_EMAIL_FROM when set, otherwise the
  * SMTP config's from (which already falls back HUBSPOT_SMTP_FROM → OPS_EMAIL).
+ * Always wraps the address with the display name "Inayah" so recipients see
+ * the sender as "Inayah" rather than the raw local-part (e.g. "support").
  */
 function resolveFromAddress(smtpFrom: string): string {
-  return process.env.LLC_EMAIL_FROM?.trim() || smtpFrom;
+  const addr = process.env.LLC_EMAIL_FROM?.trim() || smtpFrom;
+  // If already formatted with a display name (contains < and >), return as-is
+  if (addr.includes("<") && addr.includes(">")) return addr;
+  return `"Inayah" <${addr}>`;
 }
 
 /** Best-effort delivery; returns false (never throws) on any failure. */

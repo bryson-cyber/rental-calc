@@ -22,6 +22,8 @@ export const ENV = {
   hubspotSmtpUser: process.env.HUBSPOT_SMTP_USER ?? "",
   hubspotSmtpPass: process.env.HUBSPOT_SMTP_PASS ?? "",
   hubspotSmtpFrom: process.env.HUBSPOT_SMTP_FROM ?? "support@coachinayah.com",
+  /** Display name used in the From header for all outbound emails */
+  emailFromName: "Inayah",
   golpoApiKey: process.env.GOLPO_API_KEY ?? "",
   golpoBaseUrl: process.env.GOLPO_BASE_URL ?? "https://api.golpoai.com",
   googleCalendarServiceAccountJson: process.env.GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON ?? "",
