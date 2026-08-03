@@ -13554,3 +13554,8 @@ Files fixed (operating costs now based on revenue, not rent):
 
 ## Admin Credit Report PDF Fix (Jul 29, 2026)
 - [x] Fix /api/funding/report-pdf to allow admin to view any user's credit report via ?email= param
+
+## LLC Price Change (Aug 3, 2026)
+- [x] Change LLC service price to $100 + state fee (updated all active states in DB)
+- [x] Update frontend pricing display to show "$100 service + state fee" breakdown
+- [x] Update demo.ts retail price to match new pricing model

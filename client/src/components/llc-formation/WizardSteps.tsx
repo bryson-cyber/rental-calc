@@ -75,12 +75,12 @@ function StatePricePanel({ state }: { state: string | null | undefined }) {
         {pricing.stateFeeCents !== null ? (
           <span className="font-normal text-muted-foreground">
             {" "}
-            — includes the {formatUsdFromCents(pricing.stateFeeCents)} state filing fee
+            ($100 service + {formatUsdFromCents(pricing.stateFeeCents)} state fee)
           </span>
         ) : null}
       </p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        State filing, registered agent service, and your federal EIN are all included.
+        Includes LLC formation, registered agent service, and your federal EIN.
       </p>
     </div>
   );

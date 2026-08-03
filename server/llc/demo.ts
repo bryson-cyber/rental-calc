@@ -78,7 +78,7 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     accuracyAttested: true,
     // Demo marker: ops-only recognition; never exposed to clients.
     submissionKey: `${DEMO_SUBMISSION_KEY_PREFIX}${randomBytes(8).toString("hex")}`,
-    retailPriceCents: 59900,
+    retailPriceCents: 20240, // $100 service + $102.40 WY state fee
     retailPaidAt: acceptedAt,
     submittedAt: new Date(now - 14 * DAY_MS + 2 * HOUR_MS + 5 * 60 * 1000),
     lastProviderSyncAt: new Date(now - 1 * HOUR_MS),
