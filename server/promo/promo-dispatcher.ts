@@ -38,7 +38,7 @@ import { sendSms } from "../routers/webinar-sms";
 import { buildPromoExclusionSets, type PromoExclusionSets } from "./promo-webinar-exclusion";
 import { buildPromoUnsubscribeUrl, chunk, renderPromoVars } from "./promo-util";
 import { PROMO_POSTAL_ADDRESS } from "./promo-content";
-import { buildTrackedPromoContent, openPixelHtml } from "./promo-tracking";
+import { applyTrackedHrefs, buildTrackedPromoContent, openPixelHtml } from "./promo-tracking";
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 const PROMO_TICK_BUDGET_MS = 75_000; // stay under the 2-min heartbeat handler timeout
@@ -463,6 +463,10 @@ async function sendToRecipient(
         body,
       });
       let html = plainTextToEmailHtml(trackedContent.body);
+      // Route clicks through tracking while the reader still sees the real
+      // destination. Must run BEFORE the footer is appended so the unsubscribe
+      // link is never rewritten.
+      html = applyTrackedHrefs(html, trackedContent.hrefMap);
       // Open pixel + CAN-SPAM footer: physical postal address + working unsubscribe.
       const pixel = trackedContent.openCode ? openPixelHtml(trackedContent.openCode) : "";
       html = html.replace(

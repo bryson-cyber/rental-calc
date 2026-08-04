@@ -325,3 +325,57 @@ describe("webinar id sanity (the Aug 2026 outage class)", () => {
     expect(looksLikeRealWebinarId("")).toBe(false);
   });
 });
+
+describe("email links show the destination, not the tracker", () => {
+  it("EMAIL keeps the body untouched and returns an href map instead", async () => {
+    const inserts: any[] = [];
+    const stubDb = { insert: () => ({ values: async (v: any) => inserts.push(v) }) };
+    const { buildTrackedPromoContent } = await import("./promo/promo-tracking");
+    const body = "Go here:\n\nhttps://buildmyllc.com/\n\nThanks.";
+    const t = await buildTrackedPromoContent(stubDb, {
+      campaignId: 1, stepKey: "email_d9", channel: "email", recipientEmail: "a@b.com", body,
+    });
+    // Reader still sees the real brand in the text
+    expect(t.body).toBe(body);
+    expect(t.body).toContain("https://buildmyllc.com/");
+    expect(t.body).not.toContain("/l/");
+    // ...but a tracked href is available
+    expect(t.hrefMap.get("https://buildmyllc.com/")).toMatch(/^https:\/\/coachinayahturnkeytool\.com\/l\/[a-z2-9]{10}$/);
+  });
+
+  it("SMS still substitutes inline (no href to hide the tracker in)", async () => {
+    const stubDb = { insert: () => ({ values: async () => {} }) };
+    const { buildTrackedPromoContent } = await import("./promo/promo-tracking");
+    const t = await buildTrackedPromoContent(stubDb, {
+      campaignId: 1, stepKey: "sms_d9", channel: "sms", recipientEmail: null,
+      body: "Go: https://buildmyllc.com/",
+    });
+    expect(t.body).not.toContain("buildmyllc.com");
+    expect(t.body).toMatch(/https:\/\/coachinayahturnkeytool\.com\/l\/[a-z2-9]{10}/);
+  });
+
+  it("applyTrackedHrefs swaps only the href, never the visible text", async () => {
+    const { applyTrackedHrefs } = await import("./promo/promo-tracking");
+    const { plainTextToEmailHtml } = await import("./hubspot-smtp");
+    const html = plainTextToEmailHtml("Start here:\n\nhttps://buildmyllc.com/");
+    const map = new Map([["https://buildmyllc.com/", "https://coachinayahturnkeytool.com/l/abcdefghjk"]]);
+    const out = applyTrackedHrefs(html, map);
+    expect(out).toContain('href="https://coachinayahturnkeytool.com/l/abcdefghjk"');
+    // the anchor TEXT is still the real destination
+    expect(out).toContain(">https://buildmyllc.com/<");
+  });
+
+  it("leaves the unsubscribe link alone (it is not in the map)", async () => {
+    const { applyTrackedHrefs } = await import("./promo/promo-tracking");
+    const html = '<a href="https://buildmyllc.com/">x</a><a href="https://app/api/promo/unsubscribe?c=1">Unsubscribe</a>';
+    const out = applyTrackedHrefs(html, new Map([["https://buildmyllc.com/", "https://t/l/zzzzzzzzzz"]]));
+    expect(out).toContain('href="https://t/l/zzzzzzzzzz"');
+    expect(out).toContain('href="https://app/api/promo/unsubscribe?c=1"');
+  });
+
+  it("an empty map is a no-op", async () => {
+    const { applyTrackedHrefs } = await import("./promo/promo-tracking");
+    const html = '<a href="https://x.com/">x</a>';
+    expect(applyTrackedHrefs(html, new Map())).toBe(html);
+  });
+});

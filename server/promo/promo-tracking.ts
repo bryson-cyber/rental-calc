@@ -59,15 +59,28 @@ export function promoStatsKey(campaignId: number, stepKey: string): string {
 }
 
 export interface TrackedContent {
+  /** SMS: URLs swapped for short links. EMAIL: unchanged — see hrefMap. */
   body: string;
   /** Set for emails: shortCode of the open-pixel row */
   openCode: string | null;
+  /**
+   * EMAIL only: destination URL → tracked URL. Applied to the rendered HTML's
+   * hrefs by applyTrackedHrefs, so the reader SEES the real branded
+   * destination while the click still routes through tracking.
+   *
+   * Why: emails render a bare URL as its own link text. Swapping the text for
+   * "https://…/l/anzf3t2ah9" shows recipients an opaque shortlink, which reads
+   * as phishing and tanks clicks (Day 1 of the live campaign: ~651 opens, 6
+   * clicks — 0.3%, against ~16% on the same offer by SMS, where a shortlink is
+   * normal). SMS keeps the substitution because there is no href to hide it in.
+   */
+  hrefMap: Map<string, string>;
 }
 
 /**
- * Replace every URL in the body with a per-recipient tracked short link and
- * (for emails) mint an open-pixel row. Falls back to the original body on any
- * error — a send must never fail because tracking failed.
+ * Mint per-recipient tracked links for every URL in the body, and (for emails)
+ * an open-pixel row. Falls back to the original content on any error — a send
+ * must never fail because tracking failed.
  */
 export async function buildTrackedPromoContent(
   db: any,
@@ -84,7 +97,7 @@ export async function buildTrackedPromoContent(
   const { campaignId, stepKey, channel, body } = params;
   try {
     const baseUrl = ENV.appUrl.replace(/\/+$/, "");
-    if (!baseUrl) return { body, openCode: null };
+    if (!baseUrl) return { body, openCode: null, hrefMap: new Map() };
 
     // Trailing sentence punctuation is trimmed exactly like the email HTML
     // auto-linker does, so tracked destinations never bake in a stray "." .
@@ -109,12 +122,21 @@ export async function buildTrackedPromoContent(
       });
       codeByUrl.set(url, shortCode);
     }
-    const tracked = body.replace(URL_PATTERN, (match) => {
-      const trimmed = match.replace(/[.,!?;:]+$/, "");
-      const trailing = match.slice(trimmed.length);
-      const code = codeByUrl.get(trimmed);
-      return code ? `${baseUrl}/l/${code}${trailing}` : match;
-    });
+    // EMAIL: leave the body alone so the reader sees the real destination;
+    // the tracked URL goes into the href instead (applyTrackedHrefs).
+    // SMS: substitute inline — there is no href to hide the tracker in.
+    const hrefMap = new Map<string, string>();
+    codeByUrl.forEach((code, url) => hrefMap.set(url, `${baseUrl}/l/${code}`));
+
+    const tracked =
+      channel === "email"
+        ? body
+        : body.replace(URL_PATTERN, (match) => {
+            const trimmed = match.replace(/[.,!?;:]+$/, "");
+            const trailing = match.slice(trimmed.length);
+            const code = codeByUrl.get(trimmed);
+            return code ? `${baseUrl}/l/${code}${trailing}` : match;
+          });
 
     let openCode: string | null = null;
     if (channel === "email") {
@@ -129,11 +151,29 @@ export async function buildTrackedPromoContent(
       });
     }
 
-    return { body: tracked, openCode };
+    return { body: tracked, openCode, hrefMap };
   } catch (err: any) {
     console.warn(`[PromoDrip] link tracking failed for ${stepKey} — sending untracked:`, err?.message);
-    return { body, openCode: null };
+    return { body, openCode: null, hrefMap: new Map() };
   }
+}
+
+/**
+ * Point every anchor whose href is a tracked destination at the tracked URL,
+ * leaving the visible link text untouched. Call this on the rendered HTML
+ * BEFORE the unsubscribe footer is appended, so the unsubscribe link (which is
+ * not in the map) is never rewritten.
+ *
+ * plainTextToEmailHtml escapes hrefs, so "&" arrives as "&amp;" — decode before
+ * looking up. Anything not in the map is left exactly as-is.
+ */
+export function applyTrackedHrefs(html: string, hrefMap: Map<string, string>): string {
+  if (hrefMap.size === 0) return html;
+  return html.replace(/href="([^"]*)"/g, (whole, rawHref: string) => {
+    const decoded = rawHref.replace(/&amp;/g, "&");
+    const tracked = hrefMap.get(decoded) ?? hrefMap.get(decoded.replace(/[.,!?;:]+$/, ""));
+    return tracked ? `href="${tracked}"` : whole;
+  });
 }
 
 /** The <img> tag appended to tracked emails (before the unsubscribe footer). */

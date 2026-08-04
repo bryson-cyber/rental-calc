@@ -248,7 +248,7 @@ describe("engagement tracking", () => {
   it("tracking failure falls back to the untracked body (send never blocked)", () => {
     const idx = tracking.indexOf("sending untracked");
     expect(idx).toBeGreaterThan(-1);
-    expect(tracking.substring(idx, idx + 200)).toContain("return { body, openCode: null }");
+    expect(tracking.substring(idx, idx + 200)).toContain("return { body, openCode: null, hrefMap: new Map() }");
   });
 
   it("open pixel endpoint is mounted before tRPC and never cached", () => {
@@ -295,5 +295,27 @@ describe("one bad webinar id cannot block the whole campaign", () => {
 
   it("partial failures notify the owner instead of failing quietly", () => {
     expect(exclusion).toMatch(/unresolved\.length > 0[\s\S]{0,400}notifyOwner/);
+  });
+});
+
+describe("email link presentation", () => {
+  const tracking = read("promo/promo-tracking.ts");
+
+  it("email bodies are NOT url-substituted; only sms is", () => {
+    expect(tracking).toContain('channel === "email"\n        ? body');
+  });
+
+  it("dispatcher rewrites hrefs before appending the unsubscribe footer", () => {
+    // Ordering matters: the unsubscribe link is added AFTER, so it is not in
+    // the map and can never be rewritten into a tracked promo link.
+    const sendIdx = dispatcher.indexOf("async function sendToRecipient");
+    const hrefIdx = dispatcher.indexOf("applyTrackedHrefs(html", sendIdx);
+    const footerIdx = dispatcher.indexOf('html.replace(\n        "</body></html>"', sendIdx);
+    expect(hrefIdx).toBeGreaterThan(sendIdx);
+    expect(footerIdx).toBeGreaterThan(hrefIdx);
+  });
+
+  it("test sends render identically to real sends", () => {
+    expect(router).toContain("applyTrackedHrefs(html");
   });
 });

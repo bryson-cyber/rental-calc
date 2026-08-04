@@ -31,7 +31,7 @@ import {
   AFFILIATE_ARBITRAGE_STEPS,
 } from "../promo/promo-content";
 import { buildAudienceSnapshot, snapshotProgress } from "../promo/promo-snapshot";
-import { buildTrackedPromoContent, getPromoEngagement, openPixelHtml } from "../promo/promo-tracking";
+import { applyTrackedHrefs, buildTrackedPromoContent, getPromoEngagement, openPixelHtml } from "../promo/promo-tracking";
 import { computeStepScheduledAt, zonedCalendarDate } from "../promo/promo-time";
 import { buildPromoUnsubscribeUrl, normalizePromoPhone, renderPromoVars } from "../promo/promo-util";
 import { PROMO_POSTAL_ADDRESS } from "../promo/promo-content";
@@ -254,6 +254,7 @@ export const promoCampaignRouter = router({
         isTest: true,
       });
       let html = plainTextToEmailHtml(trackedContent.body);
+      html = applyTrackedHrefs(html, trackedContent.hrefMap);
       // Same footer as real sends so the test is a faithful preview.
       const pixel = trackedContent.openCode ? openPixelHtml(trackedContent.openCode) : "";
       html = html.replace(
