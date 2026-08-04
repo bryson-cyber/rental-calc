@@ -16,6 +16,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { webinarCredentials, webinarRegistrants } from "../../drizzle/schema";
 import { ENV } from "../_core/env";
+import { notifyOwner } from "../_core/notification";
 import { parseWebinarJamScheduleToUtc } from "./promo-time";
 import { normalizeEmail, normalizePromoPhone } from "./promo-util";
 
@@ -24,16 +25,36 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const WEBINARJAM_TIMEOUT_MS = 15_000;
 
 export type UpcomingWebinarsResult =
-  | { ok: true; upcomingWebinarIds: string[]; checkedWebinars: number }
+  | {
+      ok: true;
+      upcomingWebinarIds: string[];
+      /** Real webinars WebinarJam wouldn't resolve — their registrants are
+       *  excluded too, since we can't prove their webinar has passed. */
+      unresolvedWebinarIds: string[];
+      checkedWebinars: number;
+    }
   | { ok: false; error: string };
+
+/**
+ * WebinarJam webinar IDs are numeric. Rows carrying anything else (e.g.
+ * "settings-test-webinar" written by the admin settings test) are local test
+ * artifacts, not real webinars — they can never resolve against the API, so
+ * they must be ignored rather than treated as an unverifiable webinar.
+ * Without this, one seed row blocks every promo send indefinitely.
+ */
+export function looksLikeRealWebinarId(webinarId: string): boolean {
+  return /^\d+$/.test(webinarId.trim());
+}
 
 export type PromoExclusionSets =
   | {
       ok: true;
       upcomingWebinarIds: string[];
-      /** Lowercased emails of registrants with an upcoming webinar */
+      /** Real webinars we couldn't verify — their registrants are held out too */
+      unresolvedWebinarIds: string[];
+      /** Lowercased emails of registrants held out (upcoming or unverifiable webinar) */
       upcomingEmails: Set<string>;
-      /** Normalized phones of registrants with an upcoming webinar */
+      /** Normalized phones of registrants held out (upcoming or unverifiable webinar) */
       upcomingPhones: Set<string>;
       /** Normalized phones that texted STOP to the webinar system (any webinar) */
       optedOutPhones: Set<string>;
@@ -100,10 +121,15 @@ export async function resolveUpcomingWebinarIds(db: any): Promise<UpcomingWebina
     const idRows: Array<{ webinarId: string | null }> = await db
       .selectDistinct({ webinarId: webinarRegistrants.webinarId })
       .from(webinarRegistrants);
-    const webinarIds = idRows.map((r) => r.webinarId).filter((v): v is string => !!v && v.trim().length > 0);
+    const allIds = idRows.map((r) => r.webinarId).filter((v): v is string => !!v && v.trim().length > 0);
+    const webinarIds = allIds.filter(looksLikeRealWebinarId);
+    const ignored = allIds.filter((id) => !looksLikeRealWebinarId(id));
+    if (ignored.length > 0) {
+      console.warn(`[PromoDrip] Ignoring ${ignored.length} non-WebinarJam webinar id(s) on registrant rows: ${ignored.join(", ")}`);
+    }
 
     if (webinarIds.length === 0) {
-      const result: UpcomingWebinarsResult = { ok: true, upcomingWebinarIds: [], checkedWebinars: 0 };
+      const result: UpcomingWebinarsResult = { ok: true, upcomingWebinarIds: [], unresolvedWebinarIds: [], checkedWebinars: 0 };
       upcomingCache = { at: Date.now(), result };
       return result;
     }
@@ -116,16 +142,44 @@ export async function resolveUpcomingWebinarIds(db: any): Promise<UpcomingWebina
 
     const now = new Date();
     const upcoming: string[] = [];
+    const unresolved: string[] = [];
     for (const webinarId of webinarIds) {
       const details = await fetchWebinarDetails(webinarId, keyByWebinar.get(webinarId));
       if (!details) {
-        // Fail-safe: unknown schedule → callers must defer, not guess.
-        return { ok: false, error: `WebinarJam details unavailable for webinar ${webinarId}` };
+        // Fail closed for THIS webinar only: we can't prove its date has
+        // passed, so its registrants get held out. Deferring the entire
+        // campaign over one unreachable webinar is what silently killed
+        // Days 3/5/7 in Aug 2026 — never do that again.
+        unresolved.push(webinarId);
+        continue;
       }
       if (hasUpcomingSchedule(details, now)) upcoming.push(webinarId);
     }
 
-    const result: UpcomingWebinarsResult = { ok: true, upcomingWebinarIds: upcoming, checkedWebinars: webinarIds.length };
+    // Every real webinar failing means WebinarJam itself is down, not one bad
+    // row. Excluding the entire audience would silently gut the send, so this
+    // is the one case that still defers.
+    if (unresolved.length === webinarIds.length) {
+      return {
+        ok: false,
+        error: `WebinarJam unreachable for all ${webinarIds.length} webinar(s) — deferring rather than excluding everyone`,
+      };
+    }
+
+    if (unresolved.length > 0) {
+      console.warn(`[PromoDrip] ${unresolved.length} webinar(s) unresolved; holding out their registrants: ${unresolved.join(", ")}`);
+      notifyOwner({
+        title: "⚠️ Promo drip: some webinars unreachable",
+        content: `Couldn't verify schedules for webinar(s) ${unresolved.join(", ")}. Their registrants are being held out of promo sends as a precaution. Everyone else is sending normally.`,
+      }).catch(() => {});
+    }
+
+    const result: UpcomingWebinarsResult = {
+      ok: true,
+      upcomingWebinarIds: upcoming,
+      unresolvedWebinarIds: unresolved,
+      checkedWebinars: webinarIds.length,
+    };
     upcomingCache = { at: Date.now(), result };
     return result;
   } catch (err: any) {
@@ -144,11 +198,14 @@ export async function buildPromoExclusionSets(db: any): Promise<PromoExclusionSe
   const upcomingEmails = new Set<string>();
   const upcomingPhones = new Set<string>();
   try {
-    if (up.upcomingWebinarIds.length > 0) {
+    // Hold out registrants of upcoming webinars AND of webinars we couldn't
+    // verify (can't prove those have passed).
+    const holdOutIds = [...up.upcomingWebinarIds, ...up.unresolvedWebinarIds];
+    if (holdOutIds.length > 0) {
       const rows: Array<{ email: string | null; phone: string }> = await db
         .select({ email: webinarRegistrants.email, phone: webinarRegistrants.phone })
         .from(webinarRegistrants)
-        .where(inArray(webinarRegistrants.webinarId, up.upcomingWebinarIds));
+        .where(inArray(webinarRegistrants.webinarId, holdOutIds));
       for (const r of rows) {
         const e = normalizeEmail(r.email);
         if (e) upcomingEmails.add(e);
@@ -167,7 +224,14 @@ export async function buildPromoExclusionSets(db: any): Promise<PromoExclusionSe
       if (p.length === 10) optedOutPhones.add(p);
     }
 
-    return { ok: true, upcomingWebinarIds: up.upcomingWebinarIds, upcomingEmails, upcomingPhones, optedOutPhones };
+    return {
+      ok: true,
+      upcomingWebinarIds: up.upcomingWebinarIds,
+      unresolvedWebinarIds: up.unresolvedWebinarIds,
+      upcomingEmails,
+      upcomingPhones,
+      optedOutPhones,
+    };
   } catch (err: any) {
     return { ok: false, error: `Failed to build exclusion sets: ${err?.message}` };
   }

@@ -313,3 +313,15 @@ describe("promo link tracking", () => {
     expect(tracked.openCode).toBeNull();
   });
 });
+
+describe("webinar id sanity (the Aug 2026 outage class)", () => {
+  it("only numeric ids are treated as real WebinarJam webinars", async () => {
+    const { looksLikeRealWebinarId } = await import("./promo/promo-webinar-exclusion");
+    expect(looksLikeRealWebinarId("387")).toBe(true);
+    expect(looksLikeRealWebinarId(" 384 ")).toBe(true);
+    // The exact row that silently killed Days 3, 5 and 7 of the live campaign
+    expect(looksLikeRealWebinarId("settings-test-webinar")).toBe(false);
+    expect(looksLikeRealWebinarId("test")).toBe(false);
+    expect(looksLikeRealWebinarId("")).toBe(false);
+  });
+});

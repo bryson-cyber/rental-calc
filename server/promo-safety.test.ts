@@ -72,10 +72,19 @@ describe("upcoming-webinar exclusion (straight from WebinarJam)", () => {
     expect(deferBlock).toContain("claimedAt: null");
   });
 
-  it("exclusion resolver fails closed when any webinar's schedule is unavailable", () => {
-    expect(exclusion).toContain("if (!details)");
+  // NOTE: this originally asserted the resolver bail out entirely ("ok: false")
+  // the moment ANY webinar failed to resolve. That behavior shipped, and in
+  // Aug 2026 a single bogus registrant row (webinarId "settings-test-webinar")
+  // made every promo send defer until the 20h guard cancelled Days 3, 5 and 7
+  // — the whole campaign died silently. The contract is now fail-closed
+  // PER WEBINAR; see the dedicated describe block below. Do not restore the
+  // old global-bail assertion.
+  it("an unresolvable webinar fails closed for its own registrants, not for everyone", () => {
     const idx = exclusion.indexOf("if (!details)");
-    expect(exclusion.substring(idx, idx + 300)).toContain("ok: false");
+    expect(idx).toBeGreaterThan(-1);
+    const block = exclusion.substring(idx, idx + 500);
+    expect(block).toContain("unresolved.push(webinarId)");
+    expect(block).not.toMatch(/return \{ ok: false/);
   });
 
   it("per-recipient check covers both email and phone identity", () => {
@@ -252,5 +261,39 @@ describe("engagement tracking", () => {
   it("step stats exclude test sends", () => {
     expect(tracking).toContain('["promo_drip", "promo_drip_open"]');
     expect(tracking).toContain('"promo_drip_test"');
+  });
+});
+
+describe("one bad webinar id cannot block the whole campaign", () => {
+  const exclusion = read("promo/promo-webinar-exclusion.ts");
+
+  it("non-numeric webinar ids are filtered out before any API call", () => {
+    expect(exclusion).toContain("looksLikeRealWebinarId");
+    expect(exclusion).toContain("allIds.filter(looksLikeRealWebinarId)");
+  });
+
+  it("an unresolvable webinar holds out ONLY its own registrants, it does not abort", () => {
+    const idx = exclusion.indexOf("if (!details)");
+    expect(idx).toBeGreaterThan(-1);
+    const block = exclusion.substring(idx, idx + 500);
+    expect(block).toContain("unresolved.push(webinarId)");
+    expect(block).toContain("continue");
+    // The old behavior — bailing out of the entire resolve — must be gone
+    expect(block).not.toMatch(/return \{ ok: false/);
+  });
+
+  it("unresolved webinars' registrants are still held out of sends", () => {
+    expect(exclusion).toContain("const holdOutIds = [...up.upcomingWebinarIds, ...up.unresolvedWebinarIds]");
+    expect(exclusion).toContain("inArray(webinarRegistrants.webinarId, holdOutIds)");
+  });
+
+  it("deferring is reserved for a total WebinarJam outage", () => {
+    expect(exclusion).toContain("if (unresolved.length === webinarIds.length)");
+    const idx = exclusion.indexOf("if (unresolved.length === webinarIds.length)");
+    expect(exclusion.substring(idx, idx + 400)).toContain("ok: false");
+  });
+
+  it("partial failures notify the owner instead of failing quietly", () => {
+    expect(exclusion).toMatch(/unresolved\.length > 0[\s\S]{0,400}notifyOwner/);
   });
 });
