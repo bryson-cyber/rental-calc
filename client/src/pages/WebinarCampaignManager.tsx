@@ -3400,7 +3400,7 @@ function formatPhoneDisplay(phone: string): string {
 function NoShowNudge({ webinarId, scheduleDate }: { webinarId: string; scheduleDate: string | null }) {
   const [showDialog, setShowDialog] = useState(false);
   const [nudgeMessage, setNudgeMessage] = useState(
-    `Hey %FIRST_NAME%! We started without you \u2014 jump in now before you miss the good stuff! \ud83d\udd25 Join here: [WEBINAR_LINK]`
+    `Hey %FIRST_NAME%! We're live right now \u2014 I'm breaking down how the arbitrage numbers work and how my team sets everything up. Jump in before you miss it: [WEBINAR_LINK]`
   );
   const sendNudge = trpc.webinarSms.sendNoShowNudge.useMutation({
     onSuccess: (data) => {

@@ -343,7 +343,7 @@ export function buildWebinarReminderEmail(
       <p>Hey ${firstName}! 👋</p>
       <p>Just a friendly reminder — <strong>${eventName}</strong> is happening <strong>TOMORROW</strong>!</p>
       ${eventDate ? `<p>📅 <strong>${eventDate}</strong></p>` : ""}
-      <p>This is going to be a game-changer. I'm sharing my exact 5-step system that's helped hundreds of people launch their short-term rental business.</p>
+      <p>This is going to be a game-changer. I'm walking you through the whole rental arbitrage model — how it works, how the numbers break down, and how my team can set up everything for you.</p>
       <p>Make sure you show up on time — the best stuff happens in the first 15 minutes.</p>
       <p style="margin: 24px 0;">
         <a href="${joinUrl}" style="background-color: #C9A962; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
@@ -450,7 +450,7 @@ export function buildPostWebinarEmail(
       <p>Hey ${firstName}!</p>
       <p>Today is the day. <strong>${eventName}</strong> is happening <strong>TONIGHT</strong>.</p>
       ${eventDate ? `<p>📅 <strong>${eventDate}</strong></p>` : `<p>📅 <strong>Tonight at 7:00 PM ET</strong></p>`}
-      <p>I'm going to break down my exact system for finding properties that cash flow from day one — even if you're starting with zero experience.</p>
+      <p>I'm going to break down rental arbitrage start to finish — the model, the numbers, and what one property could actually profit — even if you're starting with zero experience.</p>
       <p>Here's how to get the most out of tonight:</p>
       <ul style="padding-left: 20px; margin: 16px 0;">
         <li>Grab a notebook and pen</li>
@@ -467,9 +467,9 @@ export function buildPostWebinarEmail(
     `,
     "3h": `
       <p>Hey ${firstName}!</p>
-      <p><strong>3 hours.</strong> That's all that's between you and the blueprint that's helped hundreds of people launch their first short-term rental.</p>
+      <p><strong>3 hours.</strong> That's all that's between you and the full picture of the rental arbitrage model.</p>
       <p><strong>${eventName}</strong> starts at 7:00 PM ET tonight.</p>
-      <p>This isn't theory. I'm sharing the exact 5-step system I use — including how to find properties that cash flow $3,000-$5,000/month without owning them.</p>
+      <p>This isn't theory. I'm sharing the exact system I use — including how to find properties that could profit $1,000-$3,000/month without owning them.</p>
       <p>If you've been thinking about getting into short-term rentals but don't know where to start... tonight is your answer.</p>
       <p style="margin: 24px 0;">
         <a href="${joinUrl}" style="background-color: #C9A962; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
