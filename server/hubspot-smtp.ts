@@ -326,11 +326,11 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${h2(`${name}, today's the day.`)}
           ${p(`Tonight at <strong>${time}</strong> is your Airbnb Masterclass.`)}
           ${p("Here's my promise:")}
-          ${p("If you bring a notebook and focus for 90 minutes, you'll walk away knowing:")}
-          ${ul([
-            "What rental arbitrage is and exactly how it makes money \u2014 no mortgage, no down payment",
-            "The funding piece: how my team helps you access 0% interest business funding (for a set period) so you're not draining your savings to start — good credit helps",
-            "The timeline to go from zero to first cash\u2011flowing unit in about 90 days",
+         ${p("If you bring a notebook and focus for 90 minutes, you'll walk away knowing:")}
+         ${ul([
+           "What rental arbitrage is and exactly how it makes money \u2014 no mortgage, no down payment",
+            "The funding piece: how my team helps you access 0% interest business funding (for a set period) so you're not draining your savings to start — good credit required",
+           "The timeline to go from zero to first cash\u2011flowing unit in about 90 days",
           ])}
           ${propertyModule(data.personalization)}
           ${p("For most people, the real cost isn't the money. It's more months of their life trading every hour for a paycheck.")}
@@ -469,10 +469,10 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("Now, if you want my team handling the hard parts \u2014 funding, property research, landlord negotiations, design, setup coordination \u2014 here's your next step:")}
           ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
           ${p("On that call my team will:")}
-          ${ul([
-            "Look at your city and budget",
-            "Walk through the funding options, including 0% interest business funding for a set period if you don't want to use your own cash (good credit helps)",
-            "Map out a realistic 90\u2011day plan and see if you're a fit for us to set it up with you",
+         ${ul([
+           "Look at your city and budget",
+            "Walk through the funding options, including 0% interest business funding for a set period if you don't want to use your own cash (good credit required)",
+           "Map out a realistic 90\u2011day plan and see if you're a fit for us to set it up with you",
           ])}
           ${p("You already proved you're not Group A. Let's keep that momentum.")}
           ${signoff("Proud of you")}
@@ -495,8 +495,8 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             return p("And while you were busy, the numbers near you didn't slow down:") + module +
               p("Finding and setting up units like that is exactly what my team does for Turnkey clients.");
           })()}
-          ${p("If you're still serious about adding $1K\u2013$3K/mo per property without buying a home, here's the best next step:")}
-          ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
+          ${p("If you're still serious \u2014 one property could profit $1K\u2013$3K/mo without buying a home \u2014 here's the best next step:")}
+         ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
           ${p("On that call we'll look at:")}
           ${ul([
             "Whether your market and budget make sense",

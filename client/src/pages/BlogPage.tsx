@@ -134,8 +134,8 @@ The people who succeed in this business are not the ones who jump in fastest. Th
         answer: 'Rental arbitrage is legal in many cities, but regulations vary. Some cities require short-term rental permits, some limit the number of rental days, and some ban non-owner-occupied short-term rentals. Always check your local regulations and get written permission from your landlord before starting.'
       },
       {
-        question: 'How much can you make with Airbnb rental arbitrage?',
-        answer: 'Profit varies by market, property, and how well you operate. A typical one-bedroom apartment might generate $500 to $1,500 per month in profit after all expenses. Larger properties in strong markets can generate $2,000 to $5,000 or more per month. Use market data tools to estimate revenue for specific properties before committing.'
+       question: 'How much can you make with Airbnb rental arbitrage?',
+        answer: 'Profit varies by market, property, and how well you operate. A typical one-bedroom apartment might generate $500 to $1,500 per month in profit after all expenses. Larger properties in strong markets could profit $1,000 to $3,000 per month. Use market data tools to estimate revenue for specific properties before committing.'
       },
       {
         question: 'Do I need an LLC for Airbnb rental arbitrage?',

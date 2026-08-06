@@ -176,7 +176,7 @@ MARKET EVALUATION: Look at total active listings, average revenue by bedroom cou
 DEAL EVALUATION: Use 3-5 comparable properties in the same neighborhood. Red flags: rent-to-revenue above 0.55, break-even occupancy above 60%, declining occupancy trends, strict regulations, oversaturated market.
 
 FIVE-STEP MONEY MAKING SYSTEM (from Coach Inayah's webinar):
-Step 1: Budget — Understand startup costs ($10K-$20K typically)
+Step 1: Budget — Understand startup costs and funding options (including 0% interest business funding for a set period, good credit required)
 Step 2: Research — Find profitable markets and properties using the Turnkey Tool
 Step 3: Get Your First Yes — Approach landlords with a professional business proposal (83% yes rate)
 Step 4: Design & Furnish — Turn the space into a guest-ready property

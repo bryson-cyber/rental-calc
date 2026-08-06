@@ -46,7 +46,7 @@ const SITE_URL = 'https://coachinayahturnkeytool.com';
 const aboutPageSchema = createWebPageSchema({
   name: 'About Coach Inayah — Short-Term Rental Expert & Entrepreneur',
   description:
-    'Learn about Coach Inayah (Inayah McMillan), a 23-year-old entrepreneur who built a portfolio of 50+ rental properties and has helped hundreds of investors start profitable Airbnb businesses. Featured in Business Insider, AfroTech, and Daily Mail.',
+    'Learn about Coach Inayah (Inayah McMillan), a 23-year-old entrepreneur who built a portfolio of 50+ rental properties and helps professionals start profitable Airbnb businesses through rental arbitrage. Featured in Business Insider, AfroTech, and Daily Mail.',
   url: '/about',
   datePublished: '2024-01-01',
   dateModified: '2026-03-23',
