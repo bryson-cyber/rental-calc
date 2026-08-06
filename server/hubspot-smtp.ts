@@ -245,28 +245,28 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
     // ─────────────────────────────────────────────────────────
     case "confirmation":
       return {
-        subject: "You just grabbed a seat in the Airbnb \"gold rush\"",
+        subject: "You're in \u2014 here's the full picture",
         html: wrap(`
           ${h2(`You're locked in, ${name}!`)}
           ${p(`You're locked in for my Free Airbnb Masterclass on <strong>${day}, ${date} at ${time}</strong>.`)}
-          ${p("In 90 minutes, I'll show you how:")}
+          ${p("Doctors, nurses, engineers, designers, teachers \u2014 you've built a career most people would kill for, and this is the opportunity sitting right in front of you. In 90 minutes, I'll walk you through the whole thing:")}
           ${ul([
-            "Busy professionals are adding $2,000\u2013$5,000/mo with Airbnb",
-            "Using properties they don't own",
-            "While still working full\u2011time",
+            "How rental arbitrage works \u2014 rent it, furnish it, list it on Airbnb, keep the difference",
+            "How the numbers break down: one property could profit $1,000\u2013$3,000/mo, no mortgage, no down payment",
+            "How my team can set up everything for you \u2014 funding, property research, landlord negotiations, design, setup",
           ])}
-          ${p('This is the same 5\u2011step "Get Your First Yes" system I used to go from broke nanny to 50+ properties and 7 figures before 25.')}
+          ${p("It's the same system I used to go from broke nanny to 50+ properties and 7 figures before 25.")}
           ${p("If you stay live until the end, you'll also get:")}
           ${ul([
             'My Landlord "Yes" script',
             "The 90\u2011Day Launch Checklist",
             "A surprise bonus training I normally reserve for paid clients",
           ])}
-          ${p("Block the time on your calendar now. I'll text and email your private join link 15 minutes before we go live.")}
+          ${p("You'll leave with the full picture \u2014 so you can decide if this fits in with your life. Block the time on your calendar now. I'll text and email your private join link 15 minutes before we go live.")}
           ${ctaButton("Add to Calendar", joinLink)}
           ${p("P.S. Keep an eye on your texts \u2014 I'm going to ask you something quick, and if you're in, I'll send you what my scanner found near you.")}
           ${signoff("Talk soon")}
-        `, "In 90 minutes I'll show you how busy professionals add $2K\u2013$5K/mo with Airbnb..."),
+        `, "In 90 minutes I'll walk you through the whole rental arbitrage model \u2014 the full picture..."),
       };
 
     // ─────────────────────────────────────────────────────────
@@ -281,15 +281,15 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p(`<strong>Airbnb Masterclass</strong><br>${day}, ${date} at ${time}`)}
           ${p("Here's what you're walking into:")}
           ${ul([
-            "Why owning property is the slowest way most beginners start",
-            "How rental arbitrage turns a $2K rent payment into $4K\u2013$6K revenue",
+            "Why you don't have to buy a property to win in this market \u2014 no mortgage, no down payment",
+            "How rental arbitrage works: rent from a landlord, furnish it, list it on Airbnb, keep the difference",
             "The exact tool I use to see if a unit can profit $1K\u2013$3K/mo before I ever sign a lease",
           ])}
           ${propertyModule(data.personalization)}
           ${p('Most people will register and forget. The ones who show up live are usually the ones sending me messages 6 months later saying, "I got my first unit."')}
           ${p("You already raised your hand. Next step is just showing up.")}
           ${signoff("See you soon")}
-        `, "Why owning property is the slowest way most beginners start..."),
+        `, "Why you don't have to buy a property to win in this market..."),
       };
 
     // ─────────────────────────────────────────────────────────
@@ -302,7 +302,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           : "Tomorrow: 5 steps to your first \"yes\" from a landlord",
         html: wrap(`
           ${h2(`Hi ${name},`)}
-          ${p(`Tomorrow at <strong>${time}</strong> we go deep on the 5\u2011step money\u2011making system behind my 7\u2011figure Airbnb portfolio.`)}
+          ${p(`Tomorrow at <strong>${time}</strong> I walk you through the whole model behind my 7\u2011figure Airbnb portfolio \u2014 how arbitrage works, how the numbers break down, and how my team can set everything up for you.`)}
           ${p("You'll see:")}
           ${ul([
             "How to check if your city is legal (so you don't get shut down)",
@@ -310,10 +310,10 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "Why my mom's two units passed $116,000 in less than 10 months while she kept her hospital job",
           ])}
           ${propertyModule(data.personalization)}
-          ${p('If you\'ve ever thought, "I work too hard to only have one income," this class was built for you.')}
+          ${p("If you make good money but the number at the end of the month barely changes — that's not a spending issue, it's a structure issue. A salary adds a little at a time. This class is about an income stream that scales. That's what we fix tomorrow.")}
           ${p("Watch for your join link tomorrow. Do whatever you need to do so you're not stuck at work or in traffic when we start.")}
           ${signoff("With you")}
-        `, "Tomorrow night: stop scrolling Airbnb and own a piece of it..."),
+        `, "Tomorrow night: the whole arbitrage model, start to finish..."),
       };
 
     // ─────────────────────────────────────────────────────────
@@ -328,8 +328,8 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("Here's my promise:")}
           ${p("If you bring a notebook and focus for 90 minutes, you'll walk away knowing:")}
           ${ul([
-            "What rental arbitrage is and exactly how it makes money",
-            "How much you realistically need to start ($10K\u2013$20K, or business credit)",
+            "What rental arbitrage is and exactly how it makes money \u2014 no mortgage, no down payment",
+            "The funding piece: how my team helps you access 0% interest business funding (for a set period) so you're not draining your savings to start — good credit helps",
             "The timeline to go from zero to first cash\u2011flowing unit in about 90 days",
           ])}
           ${propertyModule(data.personalization)}
@@ -373,9 +373,9 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${ctaButton("Join the Masterclass \u2192", joinLink)}
           ${p("On this session I'll break down:")}
           ${ul([
-            "How we generated 7 figures from mostly rented units",
-            "Why this isn't flipping, wholesaling, or being a landlord in the old\u2011school way",
-            "The exact 5 steps you'll follow if you decide to start",
+            "How arbitrage works \u2014 and why you don't have to buy a property to win in this market",
+            "How the numbers break down on real units (one property could profit $1K\u2013$3K/mo)",
+            "How my team can set up everything for you \u2014 funding, research, landlord negotiations, design, launch",
           ])}
           ${p("Show up live and stay until the end to get:")}
           ${ul([
@@ -384,7 +384,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "Bonus training access",
           ])}
           ${signoff("See you in a bit")}
-        `, "60 minutes: your seat in the Airbnb gold rush..."),
+        `, "60 minutes: the full picture of the arbitrage model, live..."),
       };
 
     // ─────────────────────────────────────────────────────────
@@ -398,7 +398,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("We're starting in 15 minutes.")}
           ${p("Here's your private link:")}
           ${ctaButton("Join Now \u2192", joinLink)}
-          ${p("First thing I'm covering: what rental arbitrage actually is and how hosts are making $300+ per night on properties they don't own.")}
+          ${p("First thing I'm covering: what rental arbitrage actually is and how one property could profit $1K–$3K/mo — without owning it.")}
           ${p("Hop on a few minutes early so you don't miss step 1.")}
           ${signoff("On in a moment")}
         `, "Last call before the room fills..."),
@@ -415,8 +415,8 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("I'm live right now walking through:")}
           ${ul([
             'Why Airbnb is still growing (despite all the "it\'s dead" posts)',
+            "How rental arbitrage works \u2014 no mortgage, no down payment",
             "The numbers behind a real deal we ran",
-            'Step 1 of the 5\u2011step "Get Your First Yes" system',
           ])}
           ${p("You can still join here:")}
           ${ctaButton("JOIN LIVE NOW \u2192", joinLink)}
@@ -436,7 +436,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("We're about 10 minutes into the Airbnb Masterclass.")}
           ${p("I've already covered:")}
           ${ul([
-            'The difference between "pretty but broke" units and boring but profitable ones',
+            "What rental arbitrage actually is and how the numbers break down on a real unit",
             "How I went from nanny to $1M+ a year in bookings in my early 20s",
           ])}
           ${p("If you jump in now, you'll still catch:")}
@@ -466,13 +466,13 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             "90\u2011Day Launch Checklist",
             "Bonus training access link",
           ])}
-          ${p("Now, if you want hands\u2011on help launching your first (or next) unit in the next 90 days, here's your next step:")}
+          ${p("Now, if you want my team handling the hard parts \u2014 funding, property research, landlord negotiations, design, setup coordination \u2014 here's your next step:")}
           ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
           ${p("On that call my team will:")}
           ${ul([
             "Look at your city and budget",
-            "Map out a realistic 90\u2011day plan",
-            "See if you're a fit for us to help you implement it",
+            "Walk through the funding options, including 0% interest business funding for a set period if you don't want to use your own cash (good credit helps)",
+            "Map out a realistic 90\u2011day plan and see if you're a fit for us to set it up with you",
           ])}
           ${p("You already proved you're not Group A. Let's keep that momentum.")}
           ${signoff("Proud of you")}
@@ -495,7 +495,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
             return p("And while you were busy, the numbers near you didn't slow down:") + module +
               p("Finding and setting up units like that is exactly what my team does for Turnkey clients.");
           })()}
-          ${p("If you're still serious about adding $2K\u2013$5K/mo without quitting your W2, here's the best next step:")}
+          ${p("If you're still serious about adding $1K\u2013$3K/mo per property without buying a home, here's the best next step:")}
           ${ctaButton("Apply for a Turnkey Strategy Call \u2192", callLink)}
           ${p("On that call we'll look at:")}
           ${ul([
@@ -525,8 +525,8 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${propertyModule(data.personalization)}
           ${p("If you're Group B, here's what to do:")}
           ${ctaButton("Book Your Turnkey Strategy Call \u2192", callLink)}
-          ${p("We'll review your situation, lay out a clear 90\u2011day plan, and see if we can be the team that walks you through getting your first \"yes.\"")}
-          ${p("The information alone won't change your life. What you do in the next 24 hours might.")}
+          ${p("We'll review your situation, lay out a clear 90\u2011day plan, and see if we're the team that should handle the hard parts for you \u2014 funding, property research, landlord negotiations, design, setup.")}
+          ${p("The window is open, the demand is there, the model works. The people positioning themselves right now are going to look like geniuses in the next 18 months. The only question is whether you move now or watch other people do it first.")}
           ${signoff("See you on the call")}
         `, "Which group are you in? (be honest)..."),
       };

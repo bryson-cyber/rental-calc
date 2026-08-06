@@ -89,7 +89,7 @@ function fakeDb(tableRows: Map<object, any[]>): FakeDb {
 }
 
 // The exact production seed bodies (kept in sync by the upgradeBody specs)
-const DAY_BEFORE_SEED = `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`;
+const DAY_BEFORE_SEED = `Reminder from Inayah: your free Airbnb Masterclass is tomorrow — how arbitrage works, how the numbers break down, and how my team can set everything up for you.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`;
 
 const VEGAS_DEAL_ROW = {
   id: 7,
@@ -158,7 +158,7 @@ describe("persona A — HubSpot address + claimable deal (the target experience)
     });
 
     expect(sms).toBe(
-      "Reminder from Inayah: your Airbnb Masterclass is tomorrow. My deal scanner found a property near Las Vegas renting for $1,850/mo that comps say could do $4,100/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it. Stay tuned for your join link.",
+      "Reminder from Inayah: your free Airbnb Masterclass is tomorrow — how arbitrage works, how the numbers break down, and how my team can set everything up for you. My deal scanner found a property near Las Vegas renting for $1,850/mo that comps say could do $4,100/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it. Stay tuned for your join link.",
     );
   });
 
@@ -203,7 +203,7 @@ describe("persona B — opt-in city, no deal yet, failed regulation research", (
 
     const sms = renderMessageTemplate(DAY_BEFORE_SEED, { ...buildPersonalizationVars(p), name: "Sam" });
     expect(sms).toBe(
-      "Reminder from Inayah: your Airbnb Masterclass is tomorrow. The system I teach finds opportunities in markets like Butte — you'll see it start to finish. Stay tuned for your join link.",
+      "Reminder from Inayah: your free Airbnb Masterclass is tomorrow — how arbitrage works, how the numbers break down, and how my team can set everything up for you. The system I teach finds opportunities in markets like Butte — you'll see it start to finish. Stay tuned for your join link.",
     );
     expect(sms).not.toContain("$");
   });
@@ -279,7 +279,7 @@ describe("persona C — no location anywhere", () => {
     expect(p).toBeNull();
 
     const sms = renderMessageTemplate(DAY_BEFORE_SEED, { ...buildPersonalizationVars(p), name: "Alex" });
-    expect(sms).toBe("Reminder from Inayah: your Airbnb Masterclass is tomorrow. Stay tuned for your join link.");
+    expect(sms).toBe("Reminder from Inayah: your free Airbnb Masterclass is tomorrow — how arbitrage works, how the numbers break down, and how my team can set everything up for you. Stay tuned for your join link.");
     expect(sms).not.toMatch(/\[IF_|%[A-Z_]+%|\{\{/);
   });
 });

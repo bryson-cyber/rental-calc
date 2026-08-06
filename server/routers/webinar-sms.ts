@@ -65,16 +65,14 @@ import { maybeSendDailyDigest } from "../webinar-digest";
 
 const DEFAULT_CALENDAR_EVENT_NAME = "LIVE: Coach Inayah's 5-Step Airbnb Masterclass";
 
-const DEFAULT_CALENDAR_DESCRIPTION = `Join Coach Inayah for an exclusive live masterclass where you'll learn the proven 5-Step System to launch your short-term rental business — even with no experience, no property, and no perfect credit.
+const DEFAULT_CALENDAR_DESCRIPTION = `Join Coach Inayah for a free live masterclass on rental arbitrage — how to launch an Airbnb business without buying property. No mortgage, no down payment.
 
 What You'll Learn:
-• Step 1: Setting Up Your Business Entity (LLC)
-• Step 2: Building Business Credit
-• Step 3: Securing Your First Property
-• Step 4: Funding Your Deal
-• Step 5: Launching & Scaling
+• How rental arbitrage works — rent it, furnish it, list it on Airbnb, keep the difference
+• How the numbers break down — one property could profit $1,000–$3,000/mo
+• How Inayah's team can set up everything for you — funding (including 0% interest business funding for a set period, good credit required), property research, landlord negotiations, design, and setup
 
-This is the exact system Coach Inayah used to build a multi-property portfolio and has helped hundreds of students do the same.`;
+This is the model Inayah walks doctors, nurses, engineers, designers, and teachers through — an income stream that scales instead of a salary that only adds. You'll leave with the full picture — so you can decide if it fits your life.`;
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 
@@ -734,7 +732,7 @@ export const webinarSmsRouter = router({
 
         (async () => {
           try {
-            let tpl = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
+            let tpl = `Hey %FIRST_NAME%, you're confirmed for the free Airbnb Masterclass. I'll send your join link here before we start. Save this number! - Inayah`;
             const [tplRow] = await db.select({ settingValue: webinarSmsSettings.settingValue })
               .from(webinarSmsSettings).where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template")).limit(1);
             if (tplRow?.settingValue) tpl = tplRow.settingValue;
@@ -1496,7 +1494,7 @@ export const webinarSmsRouter = router({
       // SimpleTexting list sync
       simpleTextingListName: settings["simpletexting_list_name"] || null,
       // Evergreen Registration Confirmation SMS template
-      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`,
+      confirmationSmsTemplate: settings["confirmation_sms_template"] || `Hey %FIRST_NAME%, you're confirmed for the free Airbnb Masterclass. I'll send your join link here before we start. Save this number! - Inayah`,
       // Calendar settings
       calendarAutoSend: true, // Always on — cannot be disabled
       calendarEventName: settings["calendar_event_name"] || DEFAULT_CALENDAR_EVENT_NAME,
@@ -2085,63 +2083,63 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "2 Days Before Reminder",
           sequenceOrder: 1,
-          messageBody: `Hey %FIRST_NAME%, it's Inayah. In 2 days I'm going to walk you through how 500+ professionals added $2K\u2013$5K/mo on Airbnb without owning property. We do the research LIVE in class \u2014 real listings, real numbers.[IF_CITY] And yes, it works for %CITY% too.[/IF_CITY] Block 90 mins so you can focus.`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. In 2 days I'm walking you through how doctors, nurses, engineers, designers and teachers are using rental arbitrage \u2014 no mortgage, no down payment, and one property could profit $1K\u2013$3K/mo.[IF_CITY] And yes, it works for %CITY% too.[/IF_CITY] Block 90 mins so you can focus.`,
           scheduledAt: offset(t.twoDaysBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Day Before Reminder",
           sequenceOrder: 2,
-          messageBody: `Reminder from Inayah: your Airbnb Masterclass is tomorrow.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`,
+          messageBody: `Reminder from Inayah: your free Airbnb Masterclass is tomorrow — how arbitrage works, how the numbers break down, and how my team can set everything up for you.[IF_DEAL] My deal scanner found a property near %CITY% renting for %DEAL_RENT%/mo that comps say could do %DEAL_REVENUE%/mo on Airbnb. Tomorrow I show you exactly how to find and check deals like it.[/IF_DEAL][IF_CITY_ONLY] The system I teach finds opportunities in markets like %CITY% — you'll see it start to finish.[/IF_CITY_ONLY] Stay tuned for your join link.`,
           scheduledAt: offset(t.dayBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Morning Of",
           sequenceOrder: 3,
-          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: regulations, real listings, and what they'd actually make on Airbnb.[IF_DEAL] A unit near %CITY% is showing numbers that could clear %DEAL_PROFIT%/mo — tonight you'll see the exact system people use to get units like it.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
+          messageBody: `%FIRST_NAME%, today's the day — it's Inayah. Tonight we're live: real listings, real numbers, and what one property could actually profit each month.[IF_DEAL] A unit near %CITY% is showing numbers that could clear %DEAL_PROFIT%/mo — tonight you'll see the exact system people use to get units like it.[/IF_DEAL] If you show up live, you'll get my 'Landlord Yes' script + 90-day launch checklist.`,
           scheduledAt: offset(t.morningOf),
           audience: "all" as const,
         },
         {
           sequenceName: "3 Hours Before",
           sequenceOrder: 4,
-          messageBody: `3-hour heads up: your Airbnb Masterclass with me starts soon today. Find a quiet spot, bring a notebook, and be ready to map out your first cash-flowing unit.`,
+          messageBody: `3-hour heads up: your Airbnb Masterclass with me starts today. Find a quiet spot and bring a notebook — I'll walk you through the whole model, the numbers, and how my team handles the setup.`,
           scheduledAt: offset(t.threeHoursBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "1 Hour Warning",
           sequenceOrder: 5,
-          messageBody: `We're 1 hour out. I'll break down how busy professionals are replacing W2 income with Airbnb without owning property.[IF_CITY] The same system spots opportunities near %CITY% — you'll see how it works tonight.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
+          messageBody: `We're 1 hour out. I'll break down how career professionals are using rental arbitrage — and how one property could profit $1K–$3K/mo without buying property.[IF_CITY] The same system spots opportunities near %CITY% — you'll see how it works tonight.[/IF_CITY] I'll send your join link 15 minutes before go time.`,
           scheduledAt: offset(t.oneHourWarning),
           audience: "all" as const,
         },
         {
           sequenceName: "15 Min Before",
           sequenceOrder: 6,
-          messageBody: `%FIRST_NAME%, we start in 15 minutes. Here's your private link to join live: ${link}\n\nHop on a few minutes early so you don't miss the landlord scripts.`,
+          messageBody: `%FIRST_NAME%, we start in 15 minutes. Here's your private link to join live: ${link}\n\nHop on a few minutes early — we open with how arbitrage actually works and the numbers behind it.`,
           scheduledAt: offset(t.fifteenMinBefore),
           audience: "all" as const,
         },
         {
           sequenceName: "Starting NOW",
           sequenceOrder: 7,
-          messageBody: `We're starting now. I'm walking through step 1 of the Turnkey Airbnb system. Join us here: ${link}\n\nIf you don't hop on in the next few minutes, the room may lock.`,
+          messageBody: `We're starting now. I'm breaking down the exact rental arbitrage model — no mortgage, no down payment, real numbers. Join us here: ${link}\n\nIf you don't hop on in the next few minutes, the room may lock.`,
           scheduledAt: offset(t.goingLiveNow),
           audience: "all" as const,
         },
         {
           sequenceName: "No-Show Nudge",
           sequenceOrder: 8,
-          messageBody: `Hey %FIRST_NAME%, it's Inayah. We're 10 minutes into the Airbnb Masterclass and just covered how to pick your first unit. You can still jump in live here: ${link}\n\nIf you miss this, there's no replay.`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. We're 10 minutes into the Airbnb Masterclass — I just broke down how the arbitrage numbers work. You can still catch how my team sets everything up for you: ${link}\n\nIf you miss this, there's no replay.`,
           scheduledAt: offset(t.noShowNudge),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Thank You (Attended)",
           sequenceOrder: 9,
-          messageBody: `%FIRST_NAME%, thank you for showing up live tonight. Proud of you for investing in yourself. Next step if you want help launching your first unit: apply for a Turnkey Strategy Call here: ${callLink}`,
+          messageBody: `%FIRST_NAME%, thank you for showing up live tonight. You've seen the full picture — the model, the numbers, and what my team can handle for you. If it fits your life, your next step is a Turnkey Strategy Call: ${callLink}`,
           // MANUAL-ONLY: This message should never auto-fire. Set far-future date so
           // it only sends when the user clicks "Send Now" during the webinar.
           scheduledAt: new Date('2030-12-31T23:59:59Z'),
@@ -2150,14 +2148,14 @@ export const webinarSmsRouter = router({
         {
           sequenceName: "Missed You (No-Show)",
           sequenceOrder: 10,
-          messageBody: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens.[IF_DEAL] While you were gone, my scanner kept working \u2014 a property near %CITY% rents for %DEAL_RENT%/mo with comps projecting %DEAL_REVENUE%/mo on Airbnb.[/IF_DEAL] If you're still serious about adding $2K\u2013$5K/mo without owning property, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: ${callLink}`,
+          messageBody: `Hey %FIRST_NAME%, it's Inayah. I didn't see you on the Airbnb Masterclass tonight. Life happens.[IF_DEAL] While you were gone, my scanner kept working \u2014 a property near %CITY% rents for %DEAL_RENT%/mo with comps projecting %DEAL_REVENUE%/mo on Airbnb.[/IF_DEAL] If you're still serious about adding $1K\u2013$3K/mo per property without buying a home, you can either:\nA) Register for the next live class, or\nB) Apply for a 1:1 Turnkey Strategy Call now\nGrab your best next step here: ${callLink}`,
           scheduledAt: offset(t.missedYouNoShow),
           audience: "not_attended" as const,
         },
         {
           sequenceName: "Follow-Up CTA",
           sequenceOrder: 11,
-          messageBody: `%FIRST_NAME%, yesterday's class was about clarity. Today is about action. If you want help launching your first Airbnb in the next 90 days, apply for a Turnkey Strategy Call here: ${callLink}\n\nWe'll see if and how we can help.`,
+          messageBody: `%FIRST_NAME%, yesterday you saw how this works. Now it's a decision: move, or watch other people do it first. If you want my team handling the hard parts of your first Airbnb, apply for a Turnkey Strategy Call: ${callLink}\n\nWe'll see if and how we can help.`,
           scheduledAt: offset(t.followUpCta),
           audience: "all" as const,
         },
@@ -4121,7 +4119,7 @@ async function runWebinarImportInner(
       // SELECT the same pending rows before either marked them.
 
       // Get the evergreen confirmation template from settings (not from the timed sequence)
-      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the Airbnb class. I'll send your join link here before we start. Save this number! - Inayah`;
+      let confirmationTemplate = `Hey %FIRST_NAME%, you're confirmed for the free Airbnb Masterclass. I'll send your join link here before we start. Save this number! - Inayah`;
       const [templateSetting] = await db.select({ settingValue: webinarSmsSettings.settingValue })
         .from(webinarSmsSettings)
         .where(eq(webinarSmsSettings.settingKey, "confirmation_sms_template"))

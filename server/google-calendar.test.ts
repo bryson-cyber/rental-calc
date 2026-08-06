@@ -276,8 +276,8 @@ describe("Google Calendar Integration", () => {
       const settings = await trpc.webinarSms.getSettings();
       expect(settings.calendarEventDescription).toBeTruthy();
       expect(settings.calendarEventDescription.length).toBeGreaterThan(50);
-      // Should mention the 5-step system
-      expect(settings.calendarEventDescription).toContain("5-Step");
+      // Should pitch the ad-aligned model
+      expect(settings.calendarEventDescription).toContain("rental arbitrage");
       // Should have default event name
       expect(settings.calendarEventName).toBeTruthy();
       expect(settings.calendarEventName).toContain("Coach Inayah");

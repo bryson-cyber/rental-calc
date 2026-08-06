@@ -24,7 +24,7 @@ Hey {{contact.firstname}}!
 
 Welcome to the Coach Inayah community! I'm so excited you're here.
 
-You're clearly serious about exploring short-term rental investing in {{contact.data_perfection__city}}, {{contact.data_perfection__state}} - and I want to help you make smart decisions from day one.
+Doctors, nurses, engineers, designers, teachers - if you've built a career most people would kill for, there's an opportunity sitting right in front of you: short-term rentals can add an income stream that actually scales. You're clearly serious about exploring what that could look like in {{contact.data_perfection__city}}, {{contact.data_perfection__state}} - and I want to help you make smart decisions from day one.
 
 I built a free tool that shows you exactly what properties in your area could earn as Airbnb rentals. No guesswork, just real market data.
 
@@ -81,7 +81,7 @@ One of the biggest myths I hear: "I need to buy a house first before I can do Ai
 
 Not true.
 
-Some of my most successful students started with rental arbitrage - renting a property and subletting it on Airbnb. No down payment. No mortgage. Just smart market research.
+Some of my most successful students started with rental arbitrage - renting a property from a landlord, furnishing it, and listing it on Airbnb. You keep the difference between what guests pay and what you pay in expenses. No down payment. No mortgage. One property could profit $1,000-$3,000/month.
 
 The key? Knowing which properties in which areas actually cash flow.
 
@@ -134,9 +134,9 @@ Coach Inayah
 Just a quick reminder - our live webinar is in 2 days (Sunday, 7PM ET).
 
 I'll be covering:
-- How to find profitable properties in any market
-- The rental arbitrage strategy (no money down)
-- Common mistakes that cost beginners thousands
+- How rental arbitrage works (no mortgage, no down payment)
+- How the numbers break down - what one property can really profit each month
+- How my team can set everything up for you: funding (including 0% interest business funding for a set period, good credit required), property research, landlord negotiations, design, and setup
 - Live Q&A where I'll answer your specific questions
 
 If you haven't already, play around with the calculator before we meet:
