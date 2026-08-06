@@ -51,8 +51,8 @@ ${preheaderHtml}
 <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:0 0 16px;">Tonight at <strong>7:00 PM ET</strong> we're live.</p>
 <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:0 0 16px;">I'll walk you through:</p>
 <ul style="color:${BRAND.textDark};font-size:16px;line-height:1.8;padding-left:20px;margin:0 0 16px;">
-<li>The 5-step money-making system I use with my 50+ unit portfolio</li>
-<li>How to budget $10K–$20K and decide if you should use cash or business credit</li>
+<li>How rental arbitrage works — no mortgage, no down payment — and what one property could actually profit</li>
+<li>The funding piece: 0% interest business funding for a set period (good credit helps) so you're not draining savings to start</li>
 <li>Real client examples (like my mom's $116K in under 10 months from 2 units)</li>
 </ul>
 <p style="color:${BRAND.textDark};font-size:16px;line-height:1.6;margin:0 0 16px;">If you've ever thought, "I know I'm meant for more than just my paycheck," this class is for you.</p>

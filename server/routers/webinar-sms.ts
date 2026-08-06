@@ -70,9 +70,9 @@ const DEFAULT_CALENDAR_DESCRIPTION = `Join Coach Inayah for a free live mastercl
 What You'll Learn:
 • How rental arbitrage works — rent it, furnish it, list it on Airbnb, keep the difference
 • How the numbers break down — one property could profit $1,000–$3,000/mo
-• How Inayah's team can set up everything for you — funding (including 0% interest business funding for qualified credit), property research, landlord negotiations, design, and setup
+• How Inayah's team can set up everything for you — funding (including 0% interest business funding for a set period, good credit required), property research, landlord negotiations, design, and setup
 
-This is the exact model doctors, nurses, engineers, designers, and teachers are using to add an income stream that scales. You'll leave with the full picture — so you can decide if it fits your life.`;
+This is the model Inayah walks doctors, nurses, engineers, designers, and teachers through — an income stream that scales instead of a salary that only adds. You'll leave with the full picture — so you can decide if it fits your life.`;
 
 // ─── Helper: SimpleTexting API ───────────────────────────────────────────────
 

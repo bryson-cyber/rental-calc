@@ -24,7 +24,7 @@ Hey {{contact.firstname}}!
 
 Welcome to the Coach Inayah community! I'm so excited you're here.
 
-Doctors, nurses, engineers, designers, teachers - people who built careers most would kill for - are using short-term rentals to add an income stream that actually scales. You're clearly serious about exploring what that could look like in {{contact.data_perfection__city}}, {{contact.data_perfection__state}} - and I want to help you make smart decisions from day one.
+Doctors, nurses, engineers, designers, teachers - if you've built a career most people would kill for, there's an opportunity sitting right in front of you: short-term rentals can add an income stream that actually scales. You're clearly serious about exploring what that could look like in {{contact.data_perfection__city}}, {{contact.data_perfection__state}} - and I want to help you make smart decisions from day one.
 
 I built a free tool that shows you exactly what properties in your area could earn as Airbnb rentals. No guesswork, just real market data.
 
@@ -136,7 +136,7 @@ Just a quick reminder - our live webinar is in 2 days (Sunday, 7PM ET).
 I'll be covering:
 - How rental arbitrage works (no mortgage, no down payment)
 - How the numbers break down - what one property can really profit each month
-- How my team can set everything up for you: funding (including 0% interest business funding for qualified credit), property research, landlord negotiations, design, and setup
+- How my team can set everything up for you: funding (including 0% interest business funding for a set period, good credit required), property research, landlord negotiations, design, and setup
 - Live Q&A where I'll answer your specific questions
 
 If you haven't already, play around with the calculator before we meet:

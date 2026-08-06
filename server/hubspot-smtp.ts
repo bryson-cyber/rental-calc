@@ -313,7 +313,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("If you make good money but the number at the end of the month barely changes — that's not a spending issue, it's a structure issue. A salary adds a little at a time. This class is about an income stream that scales. That's what we fix tomorrow.")}
           ${p("Watch for your join link tomorrow. Do whatever you need to do so you're not stuck at work or in traffic when we start.")}
           ${signoff("With you")}
-        `, "Tomorrow night: stop scrolling Airbnb and own a piece of it..."),
+        `, "Tomorrow night: the whole arbitrage model, start to finish..."),
       };
 
     // ─────────────────────────────────────────────────────────
@@ -471,7 +471,7 @@ export function buildWebinarEmail(type: string, data: WebinarEmailData): { subje
           ${p("On that call my team will:")}
           ${ul([
             "Look at your city and budget",
-            "Walk through the funding options, including 0% interest business funding if you don't want to use your own cash (good credit helps)",
+            "Walk through the funding options, including 0% interest business funding for a set period if you don't want to use your own cash (good credit helps)",
             "Map out a realistic 90\u2011day plan and see if you're a fit for us to set it up with you",
           ])}
           ${p("You already proved you're not Group A. Let's keep that momentum.")}
