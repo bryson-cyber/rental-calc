@@ -142,6 +142,7 @@ export async function ensureLlcTables(): Promise<void> {
         \`source\` enum('provider','ops_upload') NOT NULL DEFAULT 'provider',
         \`storageKey\` varchar(512) NOT NULL,
         \`releasedAt\` timestamp,
+        \`opsHeldAt\` timestamp,
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         CONSTRAINT \`llc_documents_id\` PRIMARY KEY(\`id\`),
         CONSTRAINT \`llc_document_mirror_unique\` UNIQUE(\`registrationId\`,\`documentType\`,\`name\`),
@@ -227,6 +228,12 @@ export async function ensureLlcTables(): Promise<void> {
         CONSTRAINT \`llc_webhook_event_unique\` UNIQUE(\`eventId\`)
       )
     `);
+    // Durable ops hold (2026-08-06): a manual unrelease stamps opsHeldAt and
+    // the auto-release sweep skips the row from then on, so ops can pull a
+    // document back without the next Doola poll re-releasing it.
+    await db
+      .execute(sql.raw("ALTER TABLE `llc_documents` ADD `opsHeldAt` timestamp"))
+      .catch(() => undefined);
     await db
       .execute(sql.raw("ALTER TABLE `llc_state_pricing` ADD `paymentLinkUrl` varchar(1000)"))
       .catch(() => undefined);

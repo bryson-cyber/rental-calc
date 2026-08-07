@@ -312,12 +312,25 @@ export async function findLlcDocumentById(documentId: number) {
   return rows[0] ?? null;
 }
 
-/** Release (or hide again) a document for the client vault. */
+/**
+ * Release (or hide again) a document for the client vault.
+ *
+ * DURABLE OPS HOLD (2026-08-06): opsHeldAt moves in the SAME write, opposite
+ * releasedAt. Hiding a document stamps it, which makes the auto-release sweep
+ * skip the row on every later refresh — before this, an ops hold survived only
+ * until the next Doola poll re-released the document ("the robot fights ops").
+ * Releasing clears it, handing the row back to the sweep. The sweep's own
+ * releases can never clear somebody's hold: it selects only rows where
+ * opsHeldAt IS NULL.
+ */
 export async function setDocumentReleased(documentId: number, released: boolean) {
   const db = requireDb(await getDb());
   await db
     .update(llcDocuments)
-    .set({ releasedAt: released ? new Date() : null })
+    .set({
+      releasedAt: released ? new Date() : null,
+      opsHeldAt: released ? null : new Date(),
+    })
     .where(eq(llcDocuments.id, documentId));
   return findLlcDocumentById(documentId);
 }

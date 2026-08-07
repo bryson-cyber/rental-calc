@@ -3095,6 +3095,14 @@ export const llcDocuments = mysqlTable(
     storageKey: varchar("storageKey", { length: 512 }).notNull(),
     /** Null = hidden from the client; set when ops releases the document. */
     releasedAt: timestamp("releasedAt"),
+    /**
+     * Durable ops hold. Stamped when an admin MANUALLY unreleases a document
+     * and cleared when an admin releases one. The auto-release sweep skips
+     * every held row carrying this stamp, so an ops decision to pull a
+     * document back survives each later provider refresh — before this
+     * column the sweep simply re-released it on the next poll.
+     */
+    opsHeldAt: timestamp("opsHeldAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => [

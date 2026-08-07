@@ -396,6 +396,13 @@ export async function refreshDoolaRegistrationStatus(params: {
  * checked alongside the label: a provider OA mirrored moments ago, before
  * the completion-time flagging pass, must still stay locked.
  *
+ * NEVER: a document ops MANUALLY unreleased. That write stamps opsHeldAt
+ * (see setDocumentReleased), and the hold is durable — the sweep would
+ * otherwise re-release it on the very next poll, so ops could never win an
+ * argument with the robot. Redundant with the isNull(opsHeldAt) clause in
+ * the sweep's own query, deliberately: the hold holds even if a future
+ * caller hands this predicate an unfiltered row.
+ *
  * YES: every other provider-mirrored document (articles, EIN letter, RA
  * mail, …) and our own branded operating agreement (source "ops_upload",
  * attached by attachClientOperatingAgreement under the
@@ -405,7 +412,10 @@ export function isAutoReleasableHeldDocument(document: {
   source: string | null;
   documentType: string | null;
   label: string | null;
+  opsHeldAt?: Date | null;
 }): boolean {
+  // A manual ops unrelease outranks everything else about the row.
+  if (document.opsHeldAt) return false;
   // Any do-not-release marker (flagProviderOperatingAgreementCopies, or an
   // ops-applied label) locks the row regardless of source.
   if (document.label && /provider copy|do not release/i.test(document.label)) {
@@ -426,6 +436,10 @@ export function isAutoReleasableHeldDocument(document: {
  * release (setDocumentReleased), then notify — client email first-class
  * (batched + send-once inside the sender), plus a one-line ops alert.
  * Test/demo registrations never release or email.
+ *
+ * Rows ops manually unreleased are excluded by the query itself
+ * (isNull(opsHeldAt)) so the sweep can neither re-release them nor clear
+ * their hold.
  */
 export async function autoReleaseFormationDocuments(params: {
   userId: number;
@@ -443,12 +457,15 @@ export async function autoReleaseFormationDocuments(params: {
       source: llcDocuments.source,
       documentType: llcDocuments.documentType,
       label: llcDocuments.label,
+      opsHeldAt: llcDocuments.opsHeldAt,
     })
     .from(llcDocuments)
     .where(
       and(
         eq(llcDocuments.registrationId, params.registrationId),
         isNull(llcDocuments.releasedAt),
+        // Durable ops hold: never re-release what ops deliberately pulled.
+        isNull(llcDocuments.opsHeldAt),
       ),
     );
 

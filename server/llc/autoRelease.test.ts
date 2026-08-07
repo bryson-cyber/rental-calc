@@ -14,6 +14,9 @@
  *  3. Test/demo registrations never auto-release or notify.
  *  4. Wiring: the sweep runs in refreshDoolaRegistrationStatus right after
  *     mirrorFormationDocuments, and the client OA attaches released.
+ *  5. The DURABLE OPS HOLD (2026-08-06 follow-up): a manual unrelease stamps
+ *     opsHeldAt and the sweep never touches that row again, so the robot
+ *     stops re-releasing what ops deliberately pulled back.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -80,12 +83,14 @@ function heldRow(overrides: Partial<{
   source: string;
   documentType: string;
   label: string | null;
+  opsHeldAt: Date | null;
 }>) {
   return {
     id: 1,
     source: "provider",
     documentType: "ein_letter",
-    label: null,
+    label: null as string | null,
+    opsHeldAt: null as Date | null,
     ...overrides,
   };
 }
@@ -177,6 +182,28 @@ describe("isAutoReleasableHeldDocument", () => {
       ),
     ).toBe(false);
   });
+
+  it("NEVER releases a document ops manually held, releasable type or not", () => {
+    // Both rows would otherwise sail through: a provider EIN letter and our
+    // own branded OA are exactly what the sweep exists to release. Neither
+    // carries a do-not-release label — opsHeldAt is the only thing stopping
+    // them, which is the whole point in an app where ops can also label.
+    const providerDoc = heldRow({ source: "provider", documentType: "ein_letter" });
+    const brandedOa = heldRow({
+      source: "ops_upload",
+      documentType: "operating_agreement",
+    });
+    expect(isAutoReleasableHeldDocument(providerDoc)).toBe(true);
+    expect(isAutoReleasableHeldDocument(brandedOa)).toBe(true);
+
+    const held = new Date("2026-08-06T18:00:00Z");
+    expect(
+      isAutoReleasableHeldDocument({ ...providerDoc, opsHeldAt: held }),
+    ).toBe(false);
+    expect(isAutoReleasableHeldDocument({ ...brandedOa, opsHeldAt: held })).toBe(
+      false,
+    );
+  });
 });
 
 describe("autoReleaseFormationDocuments sweep", () => {
@@ -260,6 +287,30 @@ describe("autoReleaseFormationDocuments sweep", () => {
     expect(notify.sendOpsAlert).not.toHaveBeenCalled();
   });
 
+  it("skips an ops-held document and still releases its releasable neighbour", async () => {
+    store.getLlcRegistrationById.mockResolvedValue(makeBundle());
+    database.getDb.mockResolvedValue(
+      makeFakeDb([
+        // Ops pulled this one back by hand — the sweep must leave it alone
+        // even though its source/type are perfectly releasable.
+        heldRow({
+          id: 11,
+          source: "provider",
+          documentType: "ein_letter",
+          opsHeldAt: new Date("2026-08-06T18:00:00Z"),
+        }),
+        heldRow({ id: 12, source: "provider", documentType: "articles_of_organization" }),
+      ]),
+    );
+
+    const result = await autoReleaseFormationDocuments({ userId: 7, registrationId: 41 });
+
+    expect(result).toEqual({ released: 1 });
+    expect(documents.setDocumentReleased).toHaveBeenCalledTimes(1);
+    expect(documents.setDocumentReleased).toHaveBeenCalledWith(12, true);
+    expect(documents.setDocumentReleased).not.toHaveBeenCalledWith(11, true);
+  });
+
   it("test registrations (isTest) never release or notify", async () => {
     store.getLlcRegistrationById.mockResolvedValue(makeBundle({ isTest: true }));
     database.getDb.mockResolvedValue(makeFakeDb([heldRow({ id: 11 })]));
@@ -284,6 +335,76 @@ describe("autoReleaseFormationDocuments sweep", () => {
     expect(documents.setDocumentReleased).not.toHaveBeenCalled();
     expect(clientEmails.sendDocumentsReleasedEmail).not.toHaveBeenCalled();
     expect(notify.sendOpsAlert).not.toHaveBeenCalled();
+  });
+});
+
+describe("durable ops hold", () => {
+  /**
+   * update().set().where() recorder for the REAL store operation, plus the
+   * select().from().where().limit() the function re-reads the row through.
+   */
+  function makeUpdateRecorder() {
+    const writes: Record<string, unknown>[] = [];
+    return {
+      writes,
+      db: {
+        update: () => ({
+          set: (values: Record<string, unknown>) => ({
+            where: async () => {
+              writes.push(values);
+              return [{ affectedRows: 1 }];
+            },
+          }),
+        }),
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: async () => [{ id: 11 }] }),
+          }),
+        }),
+      },
+    };
+  }
+
+  /** The unmocked store operation both ops and the sweep write through. */
+  async function realSetDocumentReleased() {
+    const actual = await vi.importActual<typeof import("./documents")>("./documents");
+    return actual.setDocumentReleased;
+  }
+
+  it("a manual UNRELEASE stamps opsHeldAt in the same write as releasedAt", async () => {
+    const { db, writes } = makeUpdateRecorder();
+    database.getDb.mockResolvedValue(db);
+    const setDocumentReleased = await realSetDocumentReleased();
+
+    await setDocumentReleased(11, false);
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0].releasedAt).toBeNull();
+    expect(writes[0].opsHeldAt).toBeInstanceOf(Date);
+  });
+
+  it("a manual RELEASE clears opsHeldAt, handing the row back to the sweep", async () => {
+    const { db, writes } = makeUpdateRecorder();
+    database.getDb.mockResolvedValue(db);
+    const setDocumentReleased = await realSetDocumentReleased();
+
+    await setDocumentReleased(11, true);
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0].releasedAt).toBeInstanceOf(Date);
+    expect(writes[0].opsHeldAt).toBeNull();
+  });
+
+  it("the hold survives a re-hold/re-release cycle write for write", async () => {
+    const { db, writes } = makeUpdateRecorder();
+    database.getDb.mockResolvedValue(db);
+    const setDocumentReleased = await realSetDocumentReleased();
+
+    await setDocumentReleased(11, false);
+    await setDocumentReleased(11, true);
+    await setDocumentReleased(11, false);
+
+    expect(writes.map((w) => w.opsHeldAt === null)).toEqual([false, true, false]);
   });
 });
 
@@ -317,6 +438,28 @@ describe("auto-release wiring (structural)", () => {
     expect(release).toBeGreaterThan(-1);
     expect(email).toBeGreaterThan(release);
     expect(alert).toBeGreaterThan(release);
+  });
+
+  it("the sweep's own query excludes ops-held rows", () => {
+    const source = read("doolaSubmission.ts");
+    const start = source.indexOf("export async function autoReleaseFormationDocuments");
+    const body = source.slice(
+      start,
+      source.indexOf("export async function attachClientOperatingAgreement"),
+    );
+    // Both hold conditions live in the WHERE, so an ops-held row is never
+    // even read — the predicate's own opsHeldAt check is the second belt.
+    expect(body).toContain("isNull(llcDocuments.releasedAt)");
+    expect(body).toContain("isNull(llcDocuments.opsHeldAt)");
+  });
+
+  it("the manual release/unrelease write moves opsHeldAt opposite releasedAt", () => {
+    const source = read("documents.ts");
+    const start = source.indexOf("export async function setDocumentReleased");
+    expect(start).toBeGreaterThan(-1);
+    const body = source.slice(start, start + 900);
+    expect(body).toContain("releasedAt: released ? new Date() : null");
+    expect(body).toContain("opsHeldAt: released ? null : new Date()");
   });
 
   it("the branded client OA now attaches released", () => {
