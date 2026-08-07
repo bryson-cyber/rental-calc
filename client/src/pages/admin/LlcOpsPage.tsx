@@ -131,6 +131,37 @@ function RetailPriceCell({
   );
 }
 
+function GeneratePaymentLinkButton({ orderId }: { orderId: number }) {
+  const utils = trpc.useUtils();
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      size="sm"
+      className="h-8 rounded-lg px-3 text-xs font-bold"
+      disabled={loading}
+      onClick={async () => {
+        setLoading(true);
+        try {
+          const result = await (trpc as any).llcOps.generateCheckoutLink.mutate({ id: orderId });
+          if (result?.checkoutUrl) {
+            navigator.clipboard.writeText(result.checkoutUrl).catch(() => {});
+            toast.success('Payment link copied to clipboard!');
+            window.open(result.checkoutUrl, '_blank');
+            void utils.llcOps.listAll.invalidate();
+          }
+        } catch (err: any) {
+          toast.error('Failed: ' + (err.message || 'Unknown error'));
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {loading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
+      Generate payment link
+    </Button>
+  );
+}
+
 function CreateDemoButton() {
   const utils = trpc.useUtils();
   const mutation = trpc.llcOps.createDemoFiling.useMutation({
@@ -1127,12 +1158,14 @@ export default function LlcOpsPage() {
                         <td className="border-b border-slate-100 px-4 py-3">
                           <div className="flex flex-wrap items-center gap-2">
                             {order.status === 'payment_required' && order.checkoutUrl ? (
-                              <Button asChild size="sm" className="h-8 rounded-lg px-3 text-xs font-bold">
-                                <a href={order.checkoutUrl} target="_blank" rel="noopener noreferrer">
-                                  Pay checkout
-                                  <ArrowUpRight className="ml-1 w-3 h-3" />
-                                </a>
-                              </Button>
+                             <Button asChild size="sm" className="h-8 rounded-lg px-3 text-xs font-bold">
+                               <a href={order.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                                 Pay checkout
+                                 <ArrowUpRight className="ml-1 w-3 h-3" />
+                               </a>
+                             </Button>
+                            ) : order.status === 'payment_required' ? (
+                              <GeneratePaymentLinkButton orderId={order.id} />
                             ) : null}
                             <Button
                               size="sm"

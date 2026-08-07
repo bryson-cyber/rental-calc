@@ -80,6 +80,9 @@ import { createLlcCheckoutSession } from "./stripeCheckout";
 import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
 import { syncStateFeesFromProvider } from "./pricing";
 import { ENV } from "../_core/env";
+import { getDb } from "../db";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -463,6 +466,32 @@ export const llcRouter = router({
 });
 
 export const llcOpsRouter = router({
+  // Admin: generate a live checkout link for any registration
+  generateCheckoutLink: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      const bundle = await getLlcRegistrationById(owner.userId, input.id);
+      if (!bundle) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      const db = await getDb();
+      let ownerEmail: string | undefined;
+      let ownerName: string | undefined;
+      if (db) {
+        const [user] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, owner.userId));
+        ownerEmail = user?.email ?? undefined;
+        ownerName = user?.name ?? undefined;
+      }
+      const result = await createLlcCheckoutSession({
+        userId: owner.userId,
+        userEmail: ownerEmail,
+        userName: ownerName,
+        registrationId: input.id,
+        origin: "https://coachinayahturnkeytool.com",
+      });
+      return { checkoutUrl: result.checkoutUrl };
+    }),
+
   listAll: adminProcedure.query(async () => {
     const rows = await listAllLlcRegistrations();
     // Pass-through state fees for Doola wholesale math, loaded once per list.
