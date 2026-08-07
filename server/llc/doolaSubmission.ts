@@ -30,13 +30,18 @@ import {
   retrieveDoolaCompany,
 } from "./doola";
 import { isFormationStatusRegression } from "./whop";
-import { mirrorFormationDocuments, uploadOpsDocument } from "./documents";
+import {
+  mirrorFormationDocuments,
+  setDocumentReleased,
+  uploadOpsDocument,
+} from "./documents";
 import { sendOpsAlert, statusChangeAlert, submissionProblemAlert } from "../ops/notify";
-import { sendFormationCompleteEmail } from "./clientEmails";
+import { sendDocumentsReleasedEmail, sendFormationCompleteEmail } from "./clientEmails";
 import { buildClientOperatingAgreementPdf, demoStateName } from "./demo";
+import { isTestRegistration } from "./demoMarker";
 import { llcDocuments } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { LlcStatus } from "../../shared/llc";
 
 /**
@@ -251,8 +256,9 @@ const REFRESHABLE: LlcStatus[] = ["payment_required", "processing", "action_requ
 /**
  * Pull current state from Doola, enrich document download URLs (Doola issues
  * them per document with ~1h validity), mirror new documents into the vault
- * (HELD until ops release), and advance the local status under the monotonic
- * guard. Used by the poller, manual refresh, and webhook processing.
+ * (auto-released same sweep, provider OA copies excepted), and advance the
+ * local status under the monotonic guard. Used by the poller, manual
+ * refresh, and webhook processing.
  */
 export async function refreshDoolaRegistrationStatus(params: {
   userId: number;
@@ -311,6 +317,17 @@ export async function refreshDoolaRegistrationStatus(params: {
     snapshot: normalized.snapshot,
   }).catch(() => ({ mirrored: 0, skipped: 0 }));
 
+  // AUTO-RELEASE (operator decision 2026-08-06): document release is
+  // automatic — the manual ops gate once left a completed order's EIN letter
+  // and operating agreement held and invisible while the completion email
+  // was already out. Runs on EVERY refresh over held rows, so pre-decision
+  // orders heal on their first poll after deploy. Provider OA copies stay
+  // locked forever (see isAutoReleasableHeldDocument).
+  await autoReleaseFormationDocuments({
+    userId: params.userId,
+    registrationId: params.registrationId,
+  }).catch(() => ({ released: 0 }));
+
   const nextStatus = normalized.localStatus;
   const currentStatus = registration.status as LlcStatus;
   if (
@@ -344,7 +361,7 @@ export async function refreshDoolaRegistrationStatus(params: {
     // WHITE-LABEL: the provider's generated operating agreement names the
     // provider's own legal entity in its organizer block — it must never be
     // released. Generate OUR branded agreement from the filing's own data
-    // (held for ops review) and flag the provider copy in the review queue.
+    // (released immediately) and flag the provider copy so it stays locked.
     void attachClientOperatingAgreement({
       userId: params.userId,
       registrationId: params.registrationId,
@@ -369,11 +386,101 @@ export async function refreshDoolaRegistrationStatus(params: {
   return { refreshed: true, changed: true };
 }
 
+/**
+ * Can this HELD document auto-release? (operator decision 2026-08-06)
+ *
+ * NEVER: the provider's own operating agreement — it names the provider's
+ * legal entity in its organizer block. That class is exactly what
+ * flagProviderOperatingAgreementCopies labels (documentType
+ * "operating_agreement" + source "provider"), so the structural match is
+ * checked alongside the label: a provider OA mirrored moments ago, before
+ * the completion-time flagging pass, must still stay locked.
+ *
+ * YES: every other provider-mirrored document (articles, EIN letter, RA
+ * mail, …) and our own branded operating agreement (source "ops_upload",
+ * attached by attachClientOperatingAgreement under the
+ * 'operating_agreement:ops_upload' dedupe key).
+ */
+export function isAutoReleasableHeldDocument(document: {
+  source: string | null;
+  documentType: string | null;
+  label: string | null;
+}): boolean {
+  // Any do-not-release marker (flagProviderOperatingAgreementCopies, or an
+  // ops-applied label) locks the row regardless of source.
+  if (document.label && /provider copy|do not release/i.test(document.label)) {
+    return false;
+  }
+  if (document.source === "provider") {
+    return document.documentType !== "operating_agreement";
+  }
+  return (
+    document.source === "ops_upload" &&
+    document.documentType === "operating_agreement"
+  );
+}
+
+/**
+ * Auto-release sweep: release every held releasable document for the
+ * registration using the same store-level operation as the manual ops
+ * release (setDocumentReleased), then notify — client email first-class
+ * (batched + send-once inside the sender), plus a one-line ops alert.
+ * Test/demo registrations never release or email.
+ */
+export async function autoReleaseFormationDocuments(params: {
+  userId: number;
+  registrationId: number;
+}): Promise<{ released: number }> {
+  const bundle = await getLlcRegistrationById(params.userId, params.registrationId);
+  if (!bundle) return { released: 0 };
+  if (isTestRegistration(bundle.registration)) return { released: 0 };
+
+  const db = await getDb();
+  if (!db) return { released: 0 };
+  const held = await db
+    .select({
+      id: llcDocuments.id,
+      source: llcDocuments.source,
+      documentType: llcDocuments.documentType,
+      label: llcDocuments.label,
+    })
+    .from(llcDocuments)
+    .where(
+      and(
+        eq(llcDocuments.registrationId, params.registrationId),
+        isNull(llcDocuments.releasedAt),
+      ),
+    );
+
+  const releasable = held.filter(isAutoReleasableHeldDocument);
+  let released = 0;
+  for (const document of releasable) {
+    await setDocumentReleased(document.id, true);
+    released += 1;
+  }
+  if (released === 0) return { released };
+
+  // Ordering: every release above has committed before either notification
+  // fires, so the email's document list can never precede visibility.
+  void sendDocumentsReleasedEmail({
+    userId: params.userId,
+    registrationId: params.registrationId,
+  }).catch(() => {});
+  await sendOpsAlert({
+    subject: `Documents auto-released (order #${params.registrationId})`,
+    lines: [
+      `Auto-released ${released} document(s) for order #${params.registrationId} — provider OA copies remain locked.`,
+    ],
+  }).catch(() => {});
+
+  return { released };
+}
 
 /**
  * Attach the company's client-facing operating agreement (generated from the
- * filing's own data, no provider branding, HELD for ops release) and mark
- * the provider's mirrored agreement as an internal copy.
+ * filing's own data, no provider branding, released immediately — operator
+ * decision 2026-08-06) and mark the provider's mirrored agreement as an
+ * internal copy that never releases.
  */
 export async function attachClientOperatingAgreement(params: {
   userId: number;
@@ -404,7 +511,9 @@ export async function attachClientOperatingAgreement(params: {
       documentType: "operating_agreement",
       dataBase64: pdf.toString("base64"),
       mimeType: "application/pdf",
-      release: false,
+      // Auto-release policy (2026-08-06): the branded client OA goes straight
+      // to the vault — holding it once stranded a completed order's documents.
+      release: true,
     });
   }
 

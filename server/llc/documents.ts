@@ -37,8 +37,10 @@ function requireDb<T>(db: T | null): T {
  * downloads survive the provider relationship and are served from our domain
  * (white-label: members never touch a provider URL).
  *
- * Mirrored rows are recorded UNRELEASED (releasedAt null): ops reviews each
- * document and releases it to the client vault explicitly.
+ * Mirrored rows are recorded UNRELEASED (releasedAt null); the auto-release
+ * sweep in the Doola refresh path releases every releasable class right
+ * after mirroring (provider OA copies never release — see
+ * isAutoReleasableHeldDocument). Ops can still release/unrelease manually.
  *
  * Idempotent via the (registrationId, documentType, name) unique key; each
  * document is best-effort — failures are logged and never thrown so a status
