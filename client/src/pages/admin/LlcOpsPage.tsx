@@ -133,30 +133,25 @@ function RetailPriceCell({
 
 function GeneratePaymentLinkButton({ orderId }: { orderId: number }) {
   const utils = trpc.useUtils();
-  const [loading, setLoading] = useState(false);
+  const mutation = trpc.llcOps.generateCheckoutLink.useMutation({
+    onSuccess: (result) => {
+      if (result?.checkoutUrl) {
+        navigator.clipboard.writeText(result.checkoutUrl).catch(() => {});
+        toast.success('Payment link copied to clipboard!');
+        window.open(result.checkoutUrl, '_blank');
+        void utils.llcOps.listAll.invalidate();
+      }
+    },
+    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error')),
+  });
   return (
     <Button
       size="sm"
       className="h-8 rounded-lg px-3 text-xs font-bold"
-      disabled={loading}
-      onClick={async () => {
-        setLoading(true);
-        try {
-          const result = await (trpc as any).llcOps.generateCheckoutLink.mutate({ id: orderId });
-          if (result?.checkoutUrl) {
-            navigator.clipboard.writeText(result.checkoutUrl).catch(() => {});
-            toast.success('Payment link copied to clipboard!');
-            window.open(result.checkoutUrl, '_blank');
-            void utils.llcOps.listAll.invalidate();
-          }
-        } catch (err: any) {
-          toast.error('Failed: ' + (err.message || 'Unknown error'));
-        } finally {
-          setLoading(false);
-        }
-      }}
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate({ id: orderId })}
     >
-      {loading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
+      {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
       Generate payment link
     </Button>
   );
