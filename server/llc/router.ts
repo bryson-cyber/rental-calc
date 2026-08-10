@@ -81,7 +81,7 @@ import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
 import { syncStateFeesFromProvider } from "./pricing";
 import { ENV } from "../_core/env";
 import { getDb } from "../db";
-import { users } from "../../drizzle/schema";
+import { users, llcRegistrations } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -481,6 +481,13 @@ export const llcOpsRouter = router({
         const [user] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, owner.userId));
         ownerEmail = user?.email ?? undefined;
         ownerName = user?.name ?? undefined;
+      }
+      // Always clear the old session so createLlcCheckoutSession generates a fresh one
+      if (db && bundle.registration.checkoutSessionId) {
+        await db.update(llcRegistrations).set({
+          checkoutSessionId: null,
+          checkoutUrl: null,
+        }).where(eq(llcRegistrations.id, input.id));
       }
       const result = await createLlcCheckoutSession({
         userId: owner.userId,
