@@ -599,6 +599,55 @@ export async function sendPaymentRescueEmails(): Promise<{ sent: number }> {
   return { sent };
 }
 
+/**
+ * Completion-email rescue sweep (live incident 2026-08-17): two completed
+ * filings' clients (orders #270003 and #300001) learned their LLCs were done
+ * only by logging in — the completion email fires exactly once at the status
+ * transition, so a single relay hiccup at that moment silently lost the send
+ * forever. This sweep runs from the same poll heartbeat as the payment
+ * rescue: any completed, non-test registration with NO formation_complete
+ * claim row gets the send retried. The claim-once insert inside
+ * sendFormationCompleteEmail keeps re-sweeps harmless (a delivered email is
+ * never repeated), and the sweep retroactively heals orders whose send
+ * failed before this deploy.
+ */
+export async function sendCompletionRescueEmails(): Promise<{ sent: number }> {
+  const db = await getDb();
+  if (!db) return { sent: 0 };
+  const rows = await db
+    .select({
+      id: llcRegistrations.id,
+      userId: llcRegistrations.userId,
+    })
+    .from(llcRegistrations)
+    .leftJoin(
+      llcEmailLog,
+      and(
+        eq(llcEmailLog.registrationId, llcRegistrations.id),
+        eq(llcEmailLog.emailType, "formation_complete"),
+      ),
+    )
+    .where(
+      and(
+        eq(llcRegistrations.status, "completed"),
+        eq(llcRegistrations.isTest, false),
+        isNull(llcEmailLog.id),
+      ),
+    )
+    .limit(10);
+  let sent = 0;
+  for (const row of rows) {
+    // Test/demo rows are re-filtered inside the send (without burning a
+    // claim), so a demo completion can sit in this query forever harmlessly.
+    const result = await sendFormationCompleteEmail({
+      userId: row.userId,
+      registrationId: row.id,
+    }).catch(() => "failed" as const);
+    if (result === "sent") sent += 1;
+  }
+  return { sent };
+}
+
 export async function sendApplicationReceivedEmail(params: {
   userId: number;
   registrationId: number;

@@ -409,6 +409,37 @@ export async function uploadOpsDocument(params: {
   return findLlcDocumentById(documentId);
 }
 
+/**
+ * Swap the FILE behind an existing ops-uploaded document without touching its
+ * row identity: name, label, release state, and any ops hold all survive. The
+ * new bytes go to a fresh storage key (the old object is left for audit, same
+ * policy as deleteLlcDocument). Built for the filed-name correction path —
+ * a branded operating agreement generated under a stale company name is
+ * regenerated and replaced in place, so a client who already has the vault
+ * link simply sees the corrected document.
+ */
+export async function replaceOpsDocumentContent(params: {
+  documentId: number;
+  dataBase64: string;
+  mimeType: string;
+}) {
+  const db = requireDb(await getDb());
+  const document = await findLlcDocumentById(params.documentId);
+  if (!document || document.source !== "ops_upload") return null;
+  const { buffer, mimeType, extension } = decodeOpsUpload(params);
+  const uniqueSuffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const { key } = await storagePut(
+    `pdfs/${document.userId}/llc/${document.registrationId}/${slugify(document.name ?? "document")}-${uniqueSuffix}.${extension}`,
+    buffer,
+    mimeType,
+  );
+  await db
+    .update(llcDocuments)
+    .set({ storageKey: key })
+    .where(eq(llcDocuments.id, params.documentId));
+  return findLlcDocumentById(params.documentId);
+}
+
 /** Remove a document row (the storage object is left for audit). */
 export async function deleteLlcDocument(documentId: number) {
   const db = requireDb(await getDb());

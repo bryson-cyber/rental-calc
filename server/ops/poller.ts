@@ -41,6 +41,12 @@ export async function runStatusPollOnce(): Promise<{
     .then(({ sendPaymentRescueEmails }) => sendPaymentRescueEmails())
     .then((r) => { if (r.sent > 0) console.log(`[LLC] Payment-rescue emails sent: ${r.sent}`); })
     .catch(() => {});
+  // Completion-rescue sweep (2026-08-17): re-sends the formation-complete
+  // email for any completed order whose one-shot send failed silently.
+  import("../llc/clientEmails")
+    .then(({ sendCompletionRescueEmails }) => sendCompletionRescueEmails())
+    .then((r) => { if (r.sent > 0) console.log(`[LLC] Completion-rescue emails sent: ${r.sent}`); })
+    .catch(() => {});
   let polled = 0;
   let failed = 0;
 

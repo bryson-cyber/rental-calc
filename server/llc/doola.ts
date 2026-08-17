@@ -466,10 +466,55 @@ export interface DoolaCompany {
   formationSubmissionStatus?: string;
   ein?: string | null;
   formationFilingDate?: string | null;
+  nameOptions?: Array<{ name?: string; entityTypeEnding?: string; position?: number }>;
   services?: Array<{ name?: string; variant?: string; status?: string; subStatus?: string }>;
   signatureRequirements?: Array<{ documentType?: string; status?: string }>;
   adminNotes?: Array<{ note?: string; status?: string }>;
   [key: string]: unknown;
+}
+
+/**
+ * The company's CURRENT name as the provider's records hold it. Doola files
+ * "the first name that clears the state's availability check" and its team
+ * edits the name in place when it is corrected with the client — so the
+ * application-side name can be stale the moment the state stamp lands (live
+ * case 2026-08-14: order #270003 applied as "Faith Properties" and the state
+ * registered "Properties by Faith"). The API exposes no dedicated filed-name
+ * field, so this reads, in order: any top-level name string the payload
+ * carries, then the position-1 name option. Callers must only trust the
+ * result once the filing is state-registered.
+ */
+export function extractDoolaFiledName(company: DoolaCompany): {
+  /** Name as the provider records it (may or may not carry the ending). */
+  name: string;
+  /** Entity ending when the provider stores it separately (nameOptions). */
+  entityEnding: string | null;
+} | null {
+  for (const key of ["legalName", "companyName", "name"] as const) {
+    const value = company[key];
+    if (typeof value === "string" && value.trim()) {
+      return { name: value.trim().slice(0, 160), entityEnding: null };
+    }
+  }
+  const options = Array.isArray(company.nameOptions) ? company.nameOptions : [];
+  const sorted = options
+    .filter(
+      (option): option is { name: string; entityTypeEnding?: string; position?: number } =>
+        typeof option?.name === "string" && option.name.trim().length > 0,
+    )
+    .sort(
+      (a, b) =>
+        (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER),
+    );
+  const first = sorted[0];
+  if (!first) return null;
+  return {
+    name: first.name.trim().slice(0, 160),
+    entityEnding:
+      typeof first.entityTypeEnding === "string" && first.entityTypeEnding.trim()
+        ? first.entityTypeEnding.trim().slice(0, 40)
+        : null,
+  };
 }
 
 export async function createDoolaCompany(params: {

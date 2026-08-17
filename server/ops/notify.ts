@@ -253,3 +253,60 @@ export function submissionProblemAlert(params: {
     ],
   };
 }
+
+/**
+ * The state registered a different name than the application carried (the
+ * filing service resolves name availability with the client, and its record
+ * is authoritative once the state stamp exists). Fired by the refresh sweep
+ * after it syncs our records and regenerates the branded operating
+ * agreement — this alert is confirmation, not a to-do.
+ */
+export function filedNameCorrectionAlert(params: {
+  registrationId: number;
+  previousName: string;
+  filedName: string;
+  operatingAgreementRegenerated: boolean;
+}): OpsAlert {
+  const filedName = clean(params.filedName, 180);
+  return {
+    subject: `Name corrected to match the state filing — ${filedName} (order #${params.registrationId})`,
+    lines: [
+      `Order #${params.registrationId}`,
+      `Application name: ${clean(params.previousName, 180)}`,
+      `Registered name: ${filedName}`,
+      ``,
+      `The order record, status page, and client emails now use the registered name.`,
+      params.operatingAgreementRegenerated
+        ? `The branded operating agreement was regenerated under the registered name and replaced in the client's vault.`
+        : `No branded operating agreement was attached yet — the one generated at completion will use the registered name.`,
+    ],
+  };
+}
+
+/**
+ * A client lifecycle email could not be delivered (or had no recipient).
+ * Live incident 2026-08-17: two completed filings' clients learned their
+ * LLCs were done only by logging in — the completion send failed silently.
+ * The rescue sweep retries sends automatically; this alert exists so ops
+ * KNOWS a client is currently uninformed and can reach out directly.
+ */
+export function clientEmailProblemAlert(params: {
+  registrationId: number;
+  legalName: string;
+  emailType: string;
+  outcome: string;
+}): OpsAlert {
+  const legalName = clean(params.legalName, 180);
+  return {
+    subject: `ATTENTION: client email not delivered — ${legalName} (order #${params.registrationId})`,
+    lines: [
+      `Order #${params.registrationId} — ${legalName}`,
+      `Email: ${clean(params.emailType, 64)}`,
+      `Outcome: ${clean(params.outcome, 64)}`,
+      ``,
+      params.outcome === "skipped_no_email"
+        ? `The account has no email address on file — contact the client another way.`
+        : `The send failed (likely a transient email-relay problem). The rescue sweep retries automatically every few minutes; if this alert repeats, check the SMTP configuration.`,
+    ],
+  };
+}

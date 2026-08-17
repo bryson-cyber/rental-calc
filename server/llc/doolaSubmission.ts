@@ -23,19 +23,28 @@ import {
   DoolaConfigurationError,
   createDoolaCompany,
   createDoolaCustomer,
+  extractDoolaFiledName,
   getDoolaDocumentDownload,
   getDoolaEnvironment,
   listDoolaDocuments,
   normalizeDoolaCompanyStatus,
   retrieveDoolaCompany,
+  type DoolaCompany,
 } from "./doola";
 import { isFormationStatusRegression } from "./whop";
 import {
   mirrorFormationDocuments,
+  replaceOpsDocumentContent,
   setDocumentReleased,
   uploadOpsDocument,
 } from "./documents";
-import { sendOpsAlert, statusChangeAlert, submissionProblemAlert } from "../ops/notify";
+import {
+  clientEmailProblemAlert,
+  filedNameCorrectionAlert,
+  sendOpsAlert,
+  statusChangeAlert,
+  submissionProblemAlert,
+} from "../ops/notify";
 import { sendDocumentsReleasedEmail, sendFormationCompleteEmail } from "./clientEmails";
 import { buildClientOperatingAgreementPdf, demoStateName } from "./demo";
 import { isTestRegistration } from "./demoMarker";
@@ -305,6 +314,21 @@ export async function refreshDoolaRegistrationStatus(params: {
 
   const normalized = normalizeDoolaCompanyStatus(company, documents);
 
+  // NAME OF RECORD (live incident 2026-08-14): the provider resolves name
+  // availability with the client, so once the state stamp exists ITS record
+  // is the registered name — order #270003 applied as "Faith Properties" but
+  // the state registered "Properties by Faith", and the branded operating
+  // agreement went out under the stale name. Sync BEFORE the status
+  // transition below so the completion email and the generated agreement
+  // both read the corrected registration row. Best-effort: a sync failure
+  // never blocks the refresh.
+  await syncFiledCompanyName({
+    userId: params.userId,
+    registrationId: params.registrationId,
+    company,
+    stateRegistered: normalized.snapshot.state_registered === true,
+  }).catch(() => ({ changed: false }));
+
   await updateLlcRegistrationProviderFields(params.userId, params.registrationId, {
     providerStatus: normalized.snapshot,
     lastProviderSyncAt: new Date(),
@@ -354,10 +378,27 @@ export async function refreshDoolaRegistrationStatus(params: {
   if (!transition.changed) return { refreshed: true, changed: false };
 
   if (nextStatus === "completed") {
+    // Outcome-aware send (live incident 2026-08-17: two completed filings'
+    // clients were never emailed and nobody knew): a failed or
+    // recipient-less send raises an ops alert instead of vanishing. The
+    // completion-rescue sweep on the poll heartbeat retries failed sends
+    // automatically; the alert is so ops knows a client is uninformed NOW.
     void sendFormationCompleteEmail({
       userId: params.userId,
       registrationId: params.registrationId,
-    }).catch(() => {});
+    })
+      .then((outcome) => {
+        if (outcome !== "failed" && outcome !== "skipped_no_email") return;
+        return sendOpsAlert(
+          clientEmailProblemAlert({
+            registrationId: params.registrationId,
+            legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+            emailType: "formation_complete",
+            outcome,
+          }),
+        ).then(() => undefined);
+      })
+      .catch(() => {});
     // WHITE-LABEL: the provider's generated operating agreement names the
     // provider's own legal entity in its organizer block — it must never be
     // released. Generate OUR branded agreement from the filing's own data
@@ -561,4 +602,186 @@ async function flagProviderOperatingAgreementCopies(registrationId: number): Pro
         eq(llcDocuments.source, "provider"),
       ),
     );
+}
+
+// ─── Registered-name reconciliation (live incident 2026-08-14) ───────────────
+
+/**
+ * Longest-match-first so "Limited Liability Company" is recognized before the
+ * bare "LLC" inside it, and "L.L.C." before "L.L.C".
+ */
+const ENTITY_SUFFIX_VARIANTS = [
+  "Limited Liability Company",
+  "L.L.C.",
+  "L.L.C",
+  "LLC",
+] as const;
+
+type EntitySuffix = (typeof ENTITY_SUFFIX_VARIANTS)[number];
+
+/** Case-, punctuation-, and whitespace-insensitive company-name identity. */
+export function canonicalCompanyName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Split a provider-recorded name into (base, enum-canonical suffix). When the
+ * provider stores the entity ending separately (nameOptions), the name is the
+ * base as-is; otherwise any recognized ending — optionally comma-separated,
+ * as in "Royal Haven Stays, LLC" — is stripped off the tail. A name with no
+ * recognizable ending keeps the registration's current suffix so the display
+ * form `${base} ${suffix}` stays well-formed either way.
+ */
+export function splitFiledCompanyName(
+  name: string,
+  entityEnding: string | null,
+  fallbackSuffix: EntitySuffix,
+): { base: string; suffix: EntitySuffix } {
+  if (entityEnding) {
+    const trimmed = entityEnding.trim();
+    // Exact enum value first; otherwise a canonical match resolved in
+    // STANDARD-FORM priority ("llc." → "LLC", not the dotted variants that
+    // canonicalize identically).
+    const exact = ENTITY_SUFFIX_VARIANTS.find((variant) => variant === trimmed);
+    const canonical = canonicalCompanyName(trimmed);
+    const suffix =
+      exact ??
+      (["LLC", "L.L.C.", "L.L.C", "Limited Liability Company"] as const).find(
+        (variant) => canonicalCompanyName(variant) === canonical,
+      );
+    return { base: name.trim(), suffix: suffix ?? fallbackSuffix };
+  }
+  for (const variant of ENTITY_SUFFIX_VARIANTS) {
+    const pattern = new RegExp(
+      `[,\\s]+${variant.replace(/\./g, "\\.")}\\.?$`,
+      "i",
+    );
+    if (pattern.test(name)) {
+      return { base: name.replace(pattern, "").trim(), suffix: variant };
+    }
+  }
+  return { base: name.trim(), suffix: fallbackSuffix };
+}
+
+/**
+ * Reconcile OUR name of record with the name the state actually registered.
+ *
+ * The wizard's name field is client free-text — sometimes a candidate list
+ * ("Avora, Avora Stays, Maison Avora"), sometimes a name the state later
+ * rejects — and the provider resolves availability with the client without
+ * telling us. Order #270003 applied as "Faith Properties LLC", the state
+ * registered "Properties by Faith LLC", and the client received a branded
+ * operating agreement for a company that does not exist. Once the state
+ * stamp exists the provider record is authoritative: this syncs the
+ * registration row (status page, client emails, and future documents all
+ * render from it), regenerates a stale branded operating agreement in place
+ * — release state untouched — and confirms to ops. Runs on every refresh, so
+ * already-completed orders heal on their first poll after deploy.
+ */
+export async function syncFiledCompanyName(params: {
+  userId: number;
+  registrationId: number;
+  company: DoolaCompany;
+  stateRegistered: boolean;
+}): Promise<{ changed: boolean }> {
+  if (!params.stateRegistered) return { changed: false };
+  const filed = extractDoolaFiledName(params.company);
+  if (!filed) return { changed: false };
+
+  const bundle = await getLlcRegistrationById(params.userId, params.registrationId);
+  if (!bundle) return { changed: false };
+  const registration = bundle.registration;
+  if (registration.isTest) return { changed: false };
+
+  const currentSuffix = registration.entitySuffix as EntitySuffix;
+  const { base, suffix } = splitFiledCompanyName(
+    filed.name,
+    filed.entityEnding,
+    currentSuffix,
+  );
+  if (!base) return { changed: false };
+
+  const filedDisplay = `${base} ${suffix}`;
+  const localDisplay = `${registration.legalName ?? ""} ${registration.entitySuffix}`;
+  if (canonicalCompanyName(filedDisplay) === canonicalCompanyName(localDisplay)) {
+    return { changed: false };
+  }
+
+  await updateLlcRegistrationProviderFields(params.userId, params.registrationId, {
+    legalName: base,
+    entitySuffix: suffix,
+  });
+
+  const regenerated = await regenerateClientOperatingAgreement({
+    userId: params.userId,
+    registrationId: params.registrationId,
+  }).catch(() => false);
+
+  await sendOpsAlert(
+    filedNameCorrectionAlert({
+      registrationId: params.registrationId,
+      previousName: localDisplay.trim(),
+      filedName: filedDisplay,
+      operatingAgreementRegenerated: regenerated,
+    }),
+  ).catch(() => {});
+
+  return { changed: true };
+}
+
+/**
+ * Rebuild the BRANDED operating agreement from the (just-corrected)
+ * registration row and swap the file behind the existing vault document.
+ * Row identity survives — name, label, release state, any ops hold — so a
+ * client with the vault open simply sees the corrected agreement. Returns
+ * false when no branded agreement exists yet (the completion-time attach
+ * will generate it from the corrected row instead). Never touches provider
+ * copies: only the ops_upload row is eligible.
+ */
+async function regenerateClientOperatingAgreement(params: {
+  userId: number;
+  registrationId: number;
+}): Promise<boolean> {
+  const bundle = await getLlcRegistrationById(params.userId, params.registrationId);
+  if (!bundle) return false;
+  const registration = bundle.registration;
+
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: llcDocuments.id })
+    .from(llcDocuments)
+    .where(
+      and(
+        eq(llcDocuments.registrationId, params.registrationId),
+        eq(llcDocuments.documentType, "operating_agreement"),
+        eq(llcDocuments.source, "ops_upload"),
+      ),
+    )
+    .limit(1);
+  const existing = rows[0];
+  if (!existing) return false;
+
+  const companyName = `${registration.legalName ?? "Your Company"} ${registration.entitySuffix}`;
+  const pdf = buildClientOperatingAgreementPdf({
+    companyName,
+    stateName: demoStateName(registration.formationState),
+    effectiveDate: new Date(),
+    members: bundle.founders.map((founder) => ({
+      name:
+        `${founder.firstName ?? ""} ${founder.lastName ?? ""}`.trim() ||
+        "Member of Record",
+      ownershipPercent: (founder.ownershipBasisPoints ?? 0) / 100,
+    })),
+  });
+  const replaced = await replaceOpsDocumentContent({
+    documentId: existing.id,
+    dataBase64: pdf.toString("base64"),
+    mimeType: "application/pdf",
+  });
+  return replaced !== null;
 }
