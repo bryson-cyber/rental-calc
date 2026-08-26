@@ -78,10 +78,14 @@ import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
 import { createLlcCheckoutSession } from "./stripeCheckout";
 import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
+import {
+  createSs4SigningSessionForAction,
+  submitNameOptionsForAction,
+} from "./requiredActions";
 import { syncStateFeesFromProvider } from "./pricing";
 import { ENV } from "../_core/env";
 import { getDb } from "../db";
-import { users, llcRegistrations } from "../../drizzle/schema";
+import { users, llcRegistrations, llcRequiredActions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -96,6 +100,18 @@ function enforceRateLimit(userId: number, action: string, limit: number) {
 }
 
 const registrationIdInput = z.object({ id: z.number().int().positive() });
+const requiredActionInput = registrationIdInput.extend({
+  actionId: z.number().int().positive(),
+});
+const tokenRequiredActionInput = requiredActionInput.extend({
+  token: z.string().min(32).max(64),
+});
+const nameOptionsInput = z.object({
+  names: z
+    .array(z.string().trim().min(2).max(160))
+    .min(1)
+    .max(3),
+});
 
 // Payment links render as client-side hrefs; zod's .url() alone accepts
 // javascript: and data: schemes, so restrict to plain web URLs.
@@ -117,6 +133,33 @@ async function requireRegistrationBundle(userId: number, registrationId: number)
     });
   }
   return bundle;
+}
+
+async function requireTokenRegistrationOwner(id: number, token: string) {
+  const owner = await findLlcRegistrationOwner(id);
+  if (!owner) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "This filing could not be found." });
+  }
+  const bundle = await getLlcRegistrationById(owner.userId, id);
+  if (!bundle || !statusTokenMatches(bundle.registration.statusToken, token)) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "This filing could not be found." });
+  }
+  return owner;
+}
+
+function requiredActionProcedureError(error: unknown): TRPCError {
+  const message = error instanceof Error ? error.message : "Required action failed";
+  if (/not found/i.test(message)) {
+    return new TRPCError({ code: "NOT_FOUND", message: "This filing action could not be found." });
+  }
+  if (/already closed|does not|at least one|must be different/i.test(message)) {
+    return new TRPCError({ code: "BAD_REQUEST", message });
+  }
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "We could not complete that filing action. Please try again or contact support.",
+    cause: error,
+  });
 }
 
 export const llcRouter = router({
@@ -463,6 +506,78 @@ export const llcRouter = router({
         });
       }
     }),
+
+  submitRequiredActionNames: protectedProcedure
+    .input(requiredActionInput.merge(nameOptionsInput))
+    .mutation(async ({ ctx, input }) => {
+      enforceRateLimit(ctx.user.id, "llc.required_action.names", 10);
+      try {
+        await submitNameOptionsForAction({
+          userId: ctx.user.id,
+          registrationId: input.id,
+          actionId: input.actionId,
+          names: input.names,
+        });
+        const bundle = await requireRegistrationBundle(ctx.user.id, input.id);
+        return { submitted: true as const, registration: bundleToRegistrationView(bundle) };
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
+    }),
+
+  submitRequiredActionNamesByToken: publicProcedure
+    .input(tokenRequiredActionInput.merge(nameOptionsInput))
+    .mutation(async ({ input }) => {
+      if (!checkRateLimit(`llc.required_action.names.token:${input.id}`, 10, HOUR_MS)) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Please wait and try again." });
+      }
+      const owner = await requireTokenRegistrationOwner(input.id, input.token);
+      try {
+        await submitNameOptionsForAction({
+          userId: owner.userId,
+          registrationId: input.id,
+          actionId: input.actionId,
+          names: input.names,
+        });
+        const bundle = await requireRegistrationBundle(owner.userId, input.id);
+        return { submitted: true as const, registration: bundleToRegistrationView(bundle) };
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
+    }),
+
+  createSs4SigningSession: protectedProcedure
+    .input(requiredActionInput)
+    .mutation(async ({ ctx, input }) => {
+      enforceRateLimit(ctx.user.id, "llc.required_action.ss4", 20);
+      try {
+        return await createSs4SigningSessionForAction({
+          userId: ctx.user.id,
+          registrationId: input.id,
+          actionId: input.actionId,
+        });
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
+    }),
+
+  createSs4SigningSessionByToken: publicProcedure
+    .input(tokenRequiredActionInput)
+    .mutation(async ({ input }) => {
+      if (!checkRateLimit(`llc.required_action.ss4.token:${input.id}`, 20, HOUR_MS)) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Please wait and try again." });
+      }
+      const owner = await requireTokenRegistrationOwner(input.id, input.token);
+      try {
+        return await createSs4SigningSessionForAction({
+          userId: owner.userId,
+          registrationId: input.id,
+          actionId: input.actionId,
+        });
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
+    }),
 });
 
 export const llcOpsRouter = router({
@@ -501,6 +616,20 @@ export const llcOpsRouter = router({
 
   listAll: adminProcedure.query(async () => {
     const rows = await listAllLlcRegistrations();
+    const db = await getDb();
+    const openActionRows = db
+      ? await db
+          .select({ registrationId: llcRequiredActions.registrationId })
+          .from(llcRequiredActions)
+          .where(eq(llcRequiredActions.open, true))
+      : [];
+    const openActionCount = new Map<number, number>();
+    for (const row of openActionRows) {
+      openActionCount.set(
+        row.registrationId,
+        (openActionCount.get(row.registrationId) ?? 0) + 1,
+      );
+    }
     // Pass-through state fees for Doola wholesale math, loaded once per list.
     const stateFeeByState = new Map<string, number>(
       (await listStatePricingWithWholesale()).map((row) => [
@@ -552,6 +681,7 @@ export const llcOpsRouter = router({
       submittedAt: registration.submittedAt?.getTime() ?? null,
       lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
       updatedAt: registration.updatedAt.getTime(),
+      openRequiredActionCount: openActionCount.get(registration.id) ?? 0,
     }));
   }),
 
@@ -567,6 +697,41 @@ export const llcOpsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
       }
       return bundleToOpsView(bundle);
+    }),
+
+  submitRequiredActionNames: adminProcedure
+    .input(requiredActionInput.merge(nameOptionsInput))
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      try {
+        await submitNameOptionsForAction({
+          userId: owner.userId,
+          registrationId: input.id,
+          actionId: input.actionId,
+          names: input.names,
+        });
+        const bundle = await requireRegistrationBundle(owner.userId, input.id);
+        return { submitted: true as const, registration: bundleToOpsView(bundle) };
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
+    }),
+
+  createSs4SigningSession: adminProcedure
+    .input(requiredActionInput)
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      try {
+        return await createSs4SigningSessionForAction({
+          userId: owner.userId,
+          registrationId: input.id,
+          actionId: input.actionId,
+        });
+      } catch (error) {
+        throw requiredActionProcedureError(error);
+      }
     }),
 
   setRetailPrice: adminProcedure

@@ -1,5 +1,19 @@
 # Rental Calculator - Lead Magnet Tool
 
+## Doola Required Actions API (August 2026)
+
+- [x] Verify Doola Required Actions API endpoints, webhook payloads, and signature requirements against current documentation.
+- [x] Audit existing Doola webhook, filing status, notification, and reconciliation code paths.
+- [x] Persist required actions idempotently and map them to LLC registrations and filing blockers.
+- [x] Handle `company_name_options_required` and submit replacement names back to Doola.
+- [x] Handle `signature_ss4_reset` and surface a secure SS-4 signing action to the customer.
+- [x] Add missed-action reconciliation using `GET /v1/partner/required-actions`.
+- [x] Send client email plus ops alert when a required action opens or cannot be delivered.
+- [x] Add admin and customer UI for open/resolved required actions.
+- [x] Add Vitest coverage for webhook idempotency, reconciliation, notifications, and response submission.
+- [x] Verify customer `3HpjnN1GwP5aihDUlFiXfXtcNVw` is surfaced with the SS-4 signing blocker.
+- [x] Deploy and validate the complete Required Actions workflow in production.
+
 ## Current State (January 4, 2026)
 
 A simplified Airbnb rental profitability calculator that serves as a lead magnet for Coach Inayah's Turnkey Program.

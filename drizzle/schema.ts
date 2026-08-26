@@ -2962,6 +2962,37 @@ export const llcWebhookEvents = mysqlTable(
   (table) => [uniqueIndex("llc_webhook_event_unique").on(table.eventId)],
 );
 
+/** First-class Doola work items that block a formation until handled. */
+export const llcRequiredActions = mysqlTable(
+  "llc_required_actions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registrationId: int("registrationId").notNull(),
+    requiredActionId: varchar("requiredActionId", { length: 160 }).notNull(),
+    doolaCompanyId: varchar("doolaCompanyId", { length: 64 }).notNull(),
+    actionCode: varchar("actionCode", { length: 96 }).notNull(),
+    actionName: varchar("actionName", { length: 200 }).notNull(),
+    reason: text("reason").notNull(),
+    status: varchar("status", { length: 32 }).notNull(),
+    open: boolean("open").default(true).notNull(),
+    source: varchar("source", { length: 32 }).default("reconciliation").notNull(),
+    providerUpdatedAt: timestamp("providerUpdatedAt"),
+    history: json("history").$type<Array<Record<string, unknown>> | null>(),
+    submittedPayload: json("submittedPayload").$type<Record<string, unknown> | null>(),
+    clientNotifiedAt: timestamp("clientNotifiedAt"),
+    opsNotifiedAt: timestamp("opsNotifiedAt"),
+    resolvedAt: timestamp("resolvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("llc_required_action_provider_unique").on(table.requiredActionId),
+    index("llc_required_action_registration_idx").on(table.registrationId),
+    index("llc_required_action_open_idx").on(table.open, table.registrationId),
+    index("llc_required_action_company_idx").on(table.doolaCompanyId),
+  ],
+);
+
 export const llcFounders = mysqlTable(
   "llc_founders",
   {
@@ -3069,6 +3100,7 @@ export type LlcFounderRecord = typeof llcFounders.$inferSelect;
 export type InsertLlcFounderRecord = typeof llcFounders.$inferInsert;
 export type LlcSubmissionAttempt = typeof llcSubmissionAttempts.$inferSelect;
 export type LlcStatusHistoryRecord = typeof llcStatusHistory.$inferSelect;
+export type LlcRequiredActionRecord = typeof llcRequiredActions.$inferSelect;
 
 /**
  * Formation documents in the client vault. Rows come from two sources:

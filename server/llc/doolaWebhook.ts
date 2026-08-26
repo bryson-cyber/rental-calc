@@ -20,6 +20,7 @@ import { getDoolaWebhookSecret } from "./doola";
 import { refreshDoolaRegistrationStatus } from "./doolaSubmission";
 import { transitionLlcStatus } from "./store";
 import { sendOpsAlert, submissionProblemAlert } from "../ops/notify";
+import { ingestDoolaRequiredActionWebhook } from "./requiredActions";
 
 export interface DoolaWebhookEvent {
   eventId?: string;
@@ -32,6 +33,10 @@ export interface DoolaWebhookEvent {
     reasonCode?: string;
     message?: string;
     daysSinceRequested?: number;
+    requiredActionId?: string;
+    actionCode?: string;
+    actionName?: string;
+    reason?: string;
   };
   timestamp?: number;
 }
@@ -108,6 +113,21 @@ export async function processDoolaEvent(event: DoolaWebhookEvent): Promise<void>
 
   const claimed = await claimEvent(event, registration.id);
   if (!claimed) return;
+
+  if (
+    eventName === "company_name_options_required" ||
+    eventName === "signature_ss4_reset"
+  ) {
+    await ingestDoolaRequiredActionWebhook({
+      eventName,
+      eventPayload: event.eventPayload ?? {},
+    });
+    await refreshDoolaRegistrationStatus({
+      userId: registration.userId,
+      registrationId: registration.id,
+    }).catch(() => {});
+    return;
+  }
 
   if (eventName === "company_formation_failed") {
     await transitionLlcStatus({

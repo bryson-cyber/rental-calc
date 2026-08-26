@@ -33,10 +33,12 @@ import {
   CreditCard,
   Download,
   FileCheck2,
+  FileSignature,
   Eye,
   FileText,
   FlaskConical,
   Loader2,
+  PenLine,
   RefreshCw,
   RotateCcw,
   ShieldCheck,
@@ -109,9 +111,9 @@ const STATUS_COPY = {
     body: "Congratulations — your company is official. Your formation documents appear below as our team delivers them, and your saved details are always available here.",
   },
   action_required: {
-    eyebrow: "In review",
-    title: "Our team is reviewing a detail on your filing.",
-    body: "Nothing is lost — your saved registration details are intact. We’ll reach out if we need anything from you.",
+    eyebrow: "Action needed",
+    title: "One detail is holding your filing.",
+    body: "Complete any action shown below. If no action appears, our team is reviewing the filing and will contact you directly.",
   },
   failed: {
     eyebrow: "Submission interrupted",
@@ -144,6 +146,172 @@ type VaultDocument = {
   documentType: string | null;
   url: string;
 };
+
+type RequiredActionView = {
+  id: number;
+  type: "name_options" | "ss4_signature" | "support";
+  title: string;
+  reason: string;
+  status: string;
+  open: boolean;
+  canRespond: boolean;
+  submitted: boolean;
+  updatedAt: number;
+};
+
+function RequiredActionCard({
+  action,
+  registrationId,
+  statusToken,
+  onUpdated,
+}: {
+  action: RequiredActionView;
+  registrationId: number;
+  statusToken: string | null;
+  onUpdated: () => void;
+}) {
+  const tokenMode = statusToken !== null;
+  const [names, setNames] = useState(["", "", ""]);
+  const submitNames = trpc.llc.submitRequiredActionNames.useMutation({
+    onSuccess: () => {
+      toast.success("Your replacement names were submitted.");
+      onUpdated();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const submitNamesByToken = trpc.llc.submitRequiredActionNamesByToken.useMutation({
+    onSuccess: () => {
+      toast.success("Your replacement names were submitted.");
+      onUpdated();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const openSigningUrl = (url: string) => {
+    const win = window.open(url, "_blank", "noopener,noreferrer");
+    if (!win) window.location.href = url;
+  };
+  const createSigningSession = trpc.llc.createSs4SigningSession.useMutation({
+    onSuccess: (result) => openSigningUrl(result.url),
+    onError: (error) => toast.error(error.message),
+  });
+  const createSigningSessionByToken = trpc.llc.createSs4SigningSessionByToken.useMutation({
+    onSuccess: (result) => openSigningUrl(result.url),
+    onError: (error) => toast.error(error.message),
+  });
+  const isPending =
+    submitNames.isPending ||
+    submitNamesByToken.isPending ||
+    createSigningSession.isPending ||
+    createSigningSessionByToken.isPending;
+
+  const submit = () => {
+    const cleaned = names.map((name) => name.trim()).filter(Boolean);
+    if (cleaned.length < 1) {
+      toast.error("Enter at least one replacement company name.");
+      return;
+    }
+    if (tokenMode) {
+      submitNamesByToken.mutate({
+        id: registrationId,
+        actionId: action.id,
+        token: statusToken,
+        names: cleaned,
+      });
+    } else {
+      submitNames.mutate({ id: registrationId, actionId: action.id, names: cleaned });
+    }
+  };
+
+  const sign = () => {
+    if (tokenMode) {
+      createSigningSessionByToken.mutate({
+        id: registrationId,
+        actionId: action.id,
+        token: statusToken,
+      });
+    } else {
+      createSigningSession.mutate({ id: registrationId, actionId: action.id });
+    }
+  };
+
+  return (
+    <div className="apple-card border-amber-500/30 bg-amber-50/70 p-5" role="alert">
+      <div className="flex items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-800">
+          {action.type === "ss4_signature" ? (
+            <FileSignature className="size-4" aria-hidden="true" />
+          ) : (
+            <PenLine className="size-4" aria-hidden="true" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-800">
+            Filing paused
+          </p>
+          <h3 className="mt-1 text-base font-semibold text-foreground">{action.title}</h3>
+          <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{action.reason}</p>
+
+          {action.type === "name_options" && action.open ? (
+            action.submitted ? (
+              <p className="mt-4 rounded-lg bg-white/80 px-4 py-3 text-sm text-foreground">
+                Your replacement names were received. The filing remains paused while the state reviews them.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {names.map((name, index) => (
+                  <label key={index} className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-foreground">
+                      {index === 0
+                        ? "First choice"
+                        : `${index + 1}${index === 1 ? "nd" : "rd"} choice (optional)`}
+                    </span>
+                    <input
+                      value={name}
+                      onChange={(event) =>
+                        setNames((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? event.target.value : item,
+                          ),
+                        )
+                      }
+                      maxLength={160}
+                      autoComplete="organization"
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      placeholder={index === 0 ? "Enter a new company name" : "Optional backup name"}
+                    />
+                  </label>
+                ))}
+                <Button onClick={submit} disabled={isPending}>
+                  {isPending ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : null}
+                  Submit replacement names
+                </Button>
+              </div>
+            )
+          ) : null}
+
+          {action.type === "ss4_signature" && action.open ? (
+            <div className="mt-4">
+              <p className="mb-3 text-[13px] leading-5 text-muted-foreground">
+                Your company name and IRS Form SS-4 must match. The secure signing link is created when you click and expires shortly afterward.
+              </p>
+              <Button onClick={sign} disabled={isPending}>
+                {isPending ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : null}
+                Sign updated SS-4
+                <ArrowUpRight className="ml-2 size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          ) : null}
+
+          {action.type === "support" && action.open ? (
+            <p className="mt-4 rounded-lg bg-white/80 px-4 py-3 text-sm text-foreground">
+              Reply to your filing email or contact our team so we can help complete this item.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatusWorkspace({
   registrationId,
@@ -341,6 +509,8 @@ function StatusWorkspace({
     (statePricing && statePricing.active ? statePricing.retailPriceCents : null);
   const paymentLinkUrl = statePricing?.paymentLinkUrl ?? null;
   const formationStateName = stateDisplayName(registration.draft.formationState);
+  const openRequiredActions = registration.requiredActions.filter((action) => action.open);
+  const resolvedRequiredActions = registration.requiredActions.filter((action) => !action.open);
 
   return (
     <div className="space-y-6">
@@ -561,6 +731,7 @@ function StatusWorkspace({
       ) : null}
 
       {(registration.status === "failed" || registration.status === "action_required") &&
+      openRequiredActions.length === 0 &&
       registration.safeErrorMessage ? (
         <div role="alert" className="apple-card border-destructive/25 bg-destructive/5 p-5">
           <div className="flex items-start gap-3">
@@ -572,6 +743,43 @@ function StatusWorkspace({
               </p>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {openRequiredActions.map((action) => (
+        <RequiredActionCard
+          key={action.id}
+          action={action}
+          registrationId={registrationId}
+          statusToken={statusToken}
+          onUpdated={() => {
+            if (tokenMode) void trackQuery.refetch();
+            else void registrationQuery.refetch();
+          }}
+        />
+      ))}
+
+      {resolvedRequiredActions.length > 0 ? (
+        <div className="apple-card p-5">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="size-4 text-emerald-700" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-foreground">Completed filing actions</h3>
+          </div>
+          <ul className="mt-3 divide-y divide-border">
+            {resolvedRequiredActions.map((action) => (
+              <li key={action.id} className="flex items-start justify-between gap-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{action.title}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                    {action.reason}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                  {action.status}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

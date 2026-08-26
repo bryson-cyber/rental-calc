@@ -9,6 +9,11 @@ const submissionMock = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 
+const requiredActionsMock = vi.hoisted(() => ({
+  reconcile: vi.fn(async () => ({ providerOpen: 0, synced: 0, failed: 0 })),
+  rescue: vi.fn(async () => ({ checked: 0 })),
+}));
+
 vi.mock("../llc/store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../llc/store")>();
   return {
@@ -20,6 +25,11 @@ vi.mock("../llc/store", async (importOriginal) => {
 
 vi.mock("../llc/submission", () => ({
   refreshLlcRegistrationStatus: submissionMock.refresh,
+}));
+
+vi.mock("../llc/requiredActions", () => ({
+  reconcileDoolaRequiredActions: requiredActionsMock.reconcile,
+  rescueRequiredActionNotifications: requiredActionsMock.rescue,
 }));
 
 import { runStatusPollOnce } from "./poller";
@@ -108,6 +118,10 @@ describe("ops configuration and account alias", () => {
     vi.stubEnv("OPS_EMAIL", "ops@example.com");
     vi.stubEnv("SMTP_HOST", "smtp.hubapi.com");
     vi.stubEnv("SMTP_USER", "hs-user");
+    vi.stubEnv("SMTP_PASS", "");
+    vi.stubEnv("HUBSPOT_SMTP_PASS", "");
+    vi.stubEnv("SMTP_FROM", "");
+    vi.stubEnv("HUBSPOT_SMTP_FROM", "");
     expect(getOpsConfig().smtp).toBeNull();
     vi.stubEnv("SMTP_PASS", "hs-pass");
     const smtp = getOpsConfig().smtp;
@@ -147,6 +161,8 @@ describe("status poller sweep", () => {
     expect(submissionMock.refresh).toHaveBeenCalledTimes(2);
     expect(submissionMock.refresh).toHaveBeenCalledWith({ userId: 7, registrationId: 1 });
     expect(submissionMock.refresh).toHaveBeenCalledWith({ userId: 8, registrationId: 2 });
+    expect(requiredActionsMock.reconcile).toHaveBeenCalledTimes(1);
+    expect(requiredActionsMock.rescue).toHaveBeenCalledTimes(1);
   });
 
   it("skips a sweep while another is in flight", async () => {

@@ -473,6 +473,38 @@ export interface DoolaCompany {
   [key: string]: unknown;
 }
 
+export type DoolaRequiredActionStatus =
+  | "created"
+  | "delivered"
+  | "delivery_failed"
+  | "submitted"
+  | "resolved"
+  | "rejected";
+
+export interface DoolaRequiredAction {
+  requiredActionId: string;
+  doolaCompanyId: string;
+  actionCode: string;
+  actionName: string;
+  status: DoolaRequiredActionStatus | string;
+  reason: string;
+  open: boolean;
+  updatedAt?: string;
+  history?: Array<{
+    status?: string;
+    submittedPayload?: Record<string, unknown>;
+    createdAt?: string;
+  }>;
+}
+
+export interface DoolaRequiredActionPage {
+  content: DoolaRequiredAction[];
+  page: number;
+  size: number;
+  total: number;
+  totalPages: number;
+}
+
 /**
  * The company's CURRENT name as the provider's records hold it. Doola files
  * "the first name that clears the state's availability check" and its team
@@ -541,6 +573,60 @@ export async function retrieveDoolaCompany(doolaCompanyId: string): Promise<Dool
   const { payload } = await doolaRequest<DoolaCompany>({
     method: "GET",
     path: `/v1/partner/companies/${encodeURIComponent(doolaCompanyId)}`,
+  });
+  return payload;
+}
+
+export async function listOpenDoolaRequiredActions(
+  page = 0,
+  size = 100,
+): Promise<DoolaRequiredActionPage> {
+  const safePage = Math.max(0, Math.trunc(page));
+  const safeSize = Math.min(100, Math.max(1, Math.trunc(size)));
+  const { payload } = await doolaRequest<DoolaRequiredActionPage>({
+    method: "GET",
+    path: `/v1/partner/required-actions?page=${safePage}&size=${safeSize}`,
+  });
+  return payload;
+}
+
+export async function listDoolaRequiredActionsForCompany(
+  doolaCompanyId: string,
+): Promise<DoolaRequiredAction[]> {
+  const { payload } = await doolaRequest<DoolaRequiredAction[]>({
+    method: "GET",
+    path: `/v1/partner/companies/${encodeURIComponent(doolaCompanyId)}/required-actions`,
+  });
+  return payload;
+}
+
+export async function getDoolaRequiredAction(
+  doolaCompanyId: string,
+  requiredActionId: string,
+): Promise<DoolaRequiredAction> {
+  const { payload } = await doolaRequest<DoolaRequiredAction>({
+    method: "GET",
+    path: `/v1/partner/companies/${encodeURIComponent(doolaCompanyId)}/required-actions/${encodeURIComponent(requiredActionId)}`,
+  });
+  return payload;
+}
+
+export async function resolveDoolaNameOptionsRequiredAction(params: {
+  doolaCompanyId: string;
+  requiredActionId: string;
+  nameOptions: Array<{
+    name: string;
+    entityTypeEnding: "LLC" | "L.L.C" | "L.L.C." | "Limited Liability Company";
+    position: number;
+  }>;
+}): Promise<DoolaRequiredAction> {
+  const { payload } = await doolaRequest<DoolaRequiredAction>({
+    method: "POST",
+    path: `/v1/partner/companies/${encodeURIComponent(params.doolaCompanyId)}/required-actions/${encodeURIComponent(params.requiredActionId)}/resolution`,
+    body: {
+      actionCode: "FORMATION_NAME_OPTIONS_EXHAUSTED",
+      nameOptions: params.nameOptions,
+    },
   });
   return payload;
 }

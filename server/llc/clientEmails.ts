@@ -4,6 +4,7 @@ import {
   llcDocuments,
   llcEmailLog,
   llcRegistrations,
+  llcRequiredActions,
   users,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -294,6 +295,45 @@ export function renderDocumentsReleasedEmail(params: {
     SIGN_OFF,
   );
   return finalize(`New documents for ${company}`, lines);
+}
+
+export function renderRequiredActionEmail(params: {
+  registrationId: number;
+  legalName: string | null;
+  entitySuffix: string;
+  actionCode: string;
+  reason: string;
+  statusToken?: string | null;
+}): ClientEmailContent {
+  const company = companyDisplayName(params);
+  const isSignature =
+    params.actionCode === "FORMATION_SIGNATURE_SS4_RESET" ||
+    params.actionCode === "FORMATION_SIGNATURE_SS4_PENDING";
+  const lines = [
+    `We need one more item from you to keep ${company} moving.`,
+    ``,
+    clean(params.reason, 1000),
+    ``,
+  ];
+  if (isSignature) {
+    lines.push(
+      `Your company name and IRS Form SS-4 must match. Open your filing page below to generate a secure, short-lived signing link and sign the updated form.`,
+      ``,
+    );
+  } else {
+    lines.push(
+      `Open your filing page below and submit your replacement company names. Your filing will remain paused until this is completed.`,
+      ``,
+    );
+  }
+  lines.push(
+    `${statusUrl(params.registrationId, params.statusToken)}`,
+    ``,
+    `Questions? Reply to this email and our team will help.`,
+    ``,
+    SIGN_OFF,
+  );
+  return finalize(`Action needed for ${company}`, lines);
 }
 
 // ─── Transport (same SMTP relay + HubSpot fallback as ops alerts) ───
@@ -695,6 +735,65 @@ export async function sendFormationCompleteEmail(params: {
       statusToken: await resolveStatusToken(registration),
     }),
   );
+}
+
+export async function sendRequiredActionEmail(params: {
+  userId: number;
+  registrationId: number;
+  actionId: number;
+}): Promise<ClientEmailSendOutcome> {
+  try {
+    const context = await loadRecipientContext(params.userId, params.registrationId);
+    if (!context) return "skipped_unavailable";
+    if (
+      context.registration.isTest ||
+      isDemoSubmissionKey(context.registration.submissionKey)
+    ) {
+      return "skipped_test";
+    }
+    if (!context.email) return "skipped_no_email";
+    const actionRows = await context.db
+      .select()
+      .from(llcRequiredActions)
+      .where(
+        and(
+          eq(llcRequiredActions.id, params.actionId),
+          eq(llcRequiredActions.registrationId, params.registrationId),
+          eq(llcRequiredActions.open, true),
+        ),
+      )
+      .limit(1);
+    const action = actionRows[0];
+    if (!action) return "skipped_unavailable";
+    const emailType = `required_action:${action.id}`;
+    const claimed = await claimSendOnce(
+      context.db,
+      params.registrationId,
+      emailType,
+    );
+    if (!claimed) return "skipped_duplicate";
+    const content = renderRequiredActionEmail({
+      registrationId: params.registrationId,
+      legalName: context.registration.legalName,
+      entitySuffix: context.registration.entitySuffix,
+      actionCode: action.actionCode,
+      reason: action.reason,
+      statusToken: await resolveStatusToken(context.registration),
+    });
+    const delivered = await deliverClientEmail(context.email, content);
+    if (!delivered) {
+      await releaseClaim(context.db, params.registrationId, emailType).catch(() => {});
+      return "failed";
+    }
+    return "sent";
+  } catch (error) {
+    console.warn("[LLC ClientEmail] required_action errored", {
+      registrationId: params.registrationId,
+      actionId: params.actionId,
+      error: error instanceof Error ? error.name : "UnknownError",
+    });
+    return "failed";
+  }
 }
 
 /**

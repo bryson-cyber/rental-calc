@@ -10,6 +10,9 @@ const notify = vi.hoisted(() => ({
   statusChangeAlert: vi.fn((params: unknown) => params),
 }));
 const store = vi.hoisted(() => ({ transitionLlcStatus: vi.fn(async () => ({ changed: true })) }));
+const requiredActions = vi.hoisted(() => ({
+  ingestDoolaRequiredActionWebhook: vi.fn(async () => ({ row: { id: 1 }, opened: true })),
+}));
 
 vi.mock("../db", () => ({ getDb: database.getDb }));
 vi.mock("./doolaSubmission", () => ({
@@ -21,6 +24,9 @@ vi.mock("../ops/notify", () => ({
   statusChangeAlert: notify.statusChangeAlert,
 }));
 vi.mock("./store", () => ({ transitionLlcStatus: store.transitionLlcStatus }));
+vi.mock("./requiredActions", () => ({
+  ingestDoolaRequiredActionWebhook: requiredActions.ingestDoolaRequiredActionWebhook,
+}));
 
 import {
   processDoolaEvent,
@@ -190,6 +196,33 @@ describe("Doola event processing", () => {
     });
     expect(notify.sendOpsAlert).toHaveBeenCalled();
     expect(refresh.refreshDoolaRegistrationStatus).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["company_name_options_required", "FORMATION_NAME_OPTIONS_EXHAUSTED"],
+    ["signature_ss4_reset", "FORMATION_SIGNATURE_SS4_RESET"],
+  ])("persists %s as a first-class blocker and refreshes the company", async (eventName, actionCode) => {
+    database.getDb.mockResolvedValue(
+      makeFakeDb([{ id: 41, userId: 7, status: "processing", legalName: "X", entitySuffix: "LLC" }]),
+    );
+    await processDoolaEvent({
+      eventId: `evt_${eventName}`,
+      eventName,
+      eventPayload: {
+        doolaCompanyId: "dc_1",
+        requiredActionId: "ra_1",
+        actionCode,
+        actionName: "Action needed",
+        reason: "Customer response needed.",
+      },
+    });
+    expect(requiredActions.ingestDoolaRequiredActionWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({ eventName }),
+    );
+    expect(refresh.refreshDoolaRegistrationStatus).toHaveBeenCalledWith({
+      userId: 7,
+      registrationId: 41,
+    });
   });
 
   it("webhook-disabled alerts ops without needing a registration", async () => {

@@ -51,6 +51,25 @@ export async function runStatusPollOnce(): Promise<{
   let failed = 0;
 
   try {
+    // Recover Doola Required Actions missed during webhook downtime. This is a
+    // tenant-wide cheap read; per-company refreshes below maintain full history
+    // and the legacy SS-4 signature fallback.
+    await import("../llc/requiredActions")
+      .then(async ({ reconcileDoolaRequiredActions, rescueRequiredActionNotifications }) => {
+        const result = await reconcileDoolaRequiredActions();
+        await rescueRequiredActionNotifications();
+        return result;
+      })
+      .then((result) => {
+        if (result.providerOpen > 0 || result.failed > 0) {
+          console.log("[DoolaRequiredActions] reconciliation", result);
+        }
+      })
+      .catch((error) => {
+        console.warn("[DoolaRequiredActions] reconciliation failed", {
+          error: error instanceof Error ? error.name : "UnknownError",
+        });
+      });
     const registrations = await listRegistrationsForStatusPolling();
     for (const registration of registrations) {
       // Pollable = the provider leg exists: a Whop connected account or a

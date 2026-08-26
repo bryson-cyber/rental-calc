@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, notLike, or, sql }
 import {
   llcFounders,
   llcRegistrations,
+  llcRequiredActions,
   llcStatusHistory,
   llcSubmissionAttempts,
   users,
@@ -150,7 +151,7 @@ export async function getLlcRegistrationById(
   const registration = await findRegistrationById(db, userId, registrationId);
   if (!registration) return null;
 
-  const [founders, history] = await Promise.all([
+  const [founders, history, requiredActions] = await Promise.all([
     db
       .select()
       .from(llcFounders)
@@ -161,9 +162,14 @@ export async function getLlcRegistrationById(
       .from(llcStatusHistory)
       .where(eq(llcStatusHistory.registrationId, registration.id))
       .orderBy(desc(llcStatusHistory.createdAt), desc(llcStatusHistory.id)),
+    db
+      .select()
+      .from(llcRequiredActions)
+      .where(eq(llcRequiredActions.registrationId, registration.id))
+      .orderBy(desc(llcRequiredActions.createdAt), desc(llcRequiredActions.id)),
   ]);
 
-  return { registration, founders, history };
+  return { registration, founders, history, requiredActions };
 }
 
 /** Every registration across all users, newest first, for the ops dashboard. */

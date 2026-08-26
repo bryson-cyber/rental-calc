@@ -84,6 +84,7 @@ export function bundleToDraft(bundle: RegistrationBundle): LlcDraft {
  */
 export function bundleToRegistrationView(bundle: RegistrationBundle) {
   const { registration, history } = bundle;
+  const requiredActions = bundle.requiredActions ?? [];
 
   return {
     id: registration.id,
@@ -109,6 +110,27 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     ein: registration.ein ?? null,
     submittedAt: registration.submittedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
+    requiredActions: requiredActions.map((action) => ({
+      id: action.id,
+      type:
+        action.actionCode === "FORMATION_NAME_OPTIONS_EXHAUSTED"
+          ? ("name_options" as const)
+          : action.actionCode === "FORMATION_SIGNATURE_SS4_RESET" ||
+              action.actionCode === "FORMATION_SIGNATURE_SS4_PENDING"
+            ? ("ss4_signature" as const)
+            : ("support" as const),
+      title: action.actionName,
+      reason: action.reason,
+      status: action.status,
+      open: action.open,
+      canRespond:
+        action.open &&
+        (action.actionCode === "FORMATION_NAME_OPTIONS_EXHAUSTED" ||
+          action.actionCode === "FORMATION_SIGNATURE_SS4_RESET" ||
+          action.actionCode === "FORMATION_SIGNATURE_SS4_PENDING"),
+      submitted: action.status === "submitted",
+      updatedAt: action.updatedAt.getTime(),
+    })),
     history: history.map((item) => ({
       id: item.id,
       fromStatus: item.fromStatus,
@@ -143,6 +165,7 @@ export function registrationRowToSummary(row: RegistrationRow) {
  */
 export function bundleToOpsView(bundle: RegistrationBundle) {
   const { registration, history } = bundle;
+  const requiredActions = bundle.requiredActions ?? [];
   const snapshot =
     (registration.providerStatus as WhopFormationSnapshot | null) ?? null;
   const margin =
@@ -189,6 +212,23 @@ export function bundleToOpsView(bundle: RegistrationBundle) {
     lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
     opsNotifiedAt: registration.opsNotifiedAt?.getTime() ?? null,
     updatedAt: registration.updatedAt.getTime(),
+    requiredActions: requiredActions.map((action) => ({
+      id: action.id,
+      requiredActionId: action.requiredActionId,
+      actionCode: action.actionCode,
+      actionName: action.actionName,
+      reason: action.reason,
+      status: action.status,
+      open: action.open,
+      source: action.source,
+      history: action.history,
+      submittedPayload: action.submittedPayload,
+      providerUpdatedAt: action.providerUpdatedAt?.getTime() ?? null,
+      clientNotifiedAt: action.clientNotifiedAt?.getTime() ?? null,
+      opsNotifiedAt: action.opsNotifiedAt?.getTime() ?? null,
+      resolvedAt: action.resolvedAt?.getTime() ?? null,
+      updatedAt: action.updatedAt.getTime(),
+    })),
     history: history.map((item) => ({
       id: item.id,
       fromStatus: item.fromStatus,

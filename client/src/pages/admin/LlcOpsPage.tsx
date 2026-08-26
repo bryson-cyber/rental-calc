@@ -22,10 +22,12 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  FileSignature,
   FileText,
   Home,
   Loader2,
   Mail,
+  PenLine,
   RefreshCw,
   Shield,
   Sparkles,
@@ -919,6 +921,177 @@ function DocumentsPanel({ registrationId }: { registrationId: number }) {
   );
 }
 
+type OpsRequiredAction = {
+  id: number;
+  actionCode: string;
+  actionName: string;
+  reason: string;
+  status: string;
+  open: boolean;
+  clientNotifiedAt: number | null;
+  opsNotifiedAt: number | null;
+};
+
+function OpsRequiredActionItem({
+  registrationId,
+  action,
+  onUpdated,
+}: {
+  registrationId: number;
+  action: OpsRequiredAction;
+  onUpdated: () => void;
+}) {
+  const [names, setNames] = useState(["", "", ""]);
+  const submitNames = trpc.llcOps.submitRequiredActionNames.useMutation({
+    onSuccess: () => {
+      toast.success("Replacement names submitted.");
+      onUpdated();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const createSigningSession = trpc.llcOps.createSs4SigningSession.useMutation({
+    onSuccess: async (result) => {
+      await navigator.clipboard?.writeText(result.url).catch(() => {});
+      toast.success("Fresh signing link copied.");
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const isNameAction = action.actionCode === "FORMATION_NAME_OPTIONS_EXHAUSTED";
+  const isSignatureAction =
+    action.actionCode === "FORMATION_SIGNATURE_SS4_RESET" ||
+    action.actionCode === "FORMATION_SIGNATURE_SS4_PENDING";
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-start gap-3">
+        {isSignatureAction ? (
+          <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        ) : (
+          <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">{action.actionName}</p>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+              {action.status}
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{action.reason}</p>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Client email: {action.clientNotifiedAt ? formatDate(action.clientNotifiedAt) : "pending retry"}
+            {" · "}Ops alert: {action.opsNotifiedAt ? formatDate(action.opsNotifiedAt) : "pending retry"}
+          </p>
+
+          {isNameAction && action.status !== "submitted" ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {names.map((name, index) => (
+                <Input
+                  key={index}
+                  value={name}
+                  maxLength={160}
+                  placeholder={index === 0 ? "First choice" : `Backup ${index}`}
+                  onChange={(event) =>
+                    setNames((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? event.target.value : item,
+                      ),
+                    )
+                  }
+                />
+              ))}
+              <div className="sm:col-span-3">
+                <Button
+                  size="sm"
+                  disabled={submitNames.isPending}
+                  onClick={() =>
+                    submitNames.mutate({
+                      id: registrationId,
+                      actionId: action.id,
+                      names: names.map((name) => name.trim()).filter(Boolean),
+                    })
+                  }
+                >
+                  {submitNames.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                  Submit names for client
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {isSignatureAction ? (
+            <Button
+              size="sm"
+              className="mt-3"
+              disabled={createSigningSession.isPending}
+              onClick={() =>
+                createSigningSession.mutate({ id: registrationId, actionId: action.id })
+              }
+            >
+              {createSigningSession.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+              Generate fresh SS-4 link
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequiredActionsPanel({ registrationId }: { registrationId: number }) {
+  const utils = trpc.useUtils();
+  const query = trpc.llcOps.get.useQuery({ id: registrationId });
+  const openActions = query.data?.requiredActions.filter((action) => action.open) ?? [];
+  const closedActions = query.data?.requiredActions.filter((action) => !action.open) ?? [];
+  if (query.isLoading) return <Skeleton className="mb-5 h-24 w-full rounded-xl" />;
+  if (openActions.length === 0 && closedActions.length === 0) return null;
+  return (
+    <div className="mb-5 space-y-3">
+      {openActions.length > 0 ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">
+            Required actions
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            The filing is blocked until these items are completed.
+          </p>
+        </div>
+      ) : null}
+      {openActions.map((action) => (
+        <OpsRequiredActionItem
+          key={action.id}
+          registrationId={registrationId}
+          action={action}
+          onUpdated={() => {
+            void query.refetch();
+            void utils.llcOps.listAll.invalidate();
+          }}
+        />
+      ))}
+      {closedActions.length > 0 ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
+            Resolved action history
+          </p>
+          <ul className="mt-2 divide-y divide-emerald-100">
+            {closedActions.map((action) => (
+              <li key={action.id} className="flex items-start justify-between gap-4 py-2.5">
+                <div>
+                  <p className="text-xs font-semibold text-slate-800">{action.actionName}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{action.reason}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                  {action.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function LlcOpsPage() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
@@ -1137,6 +1310,11 @@ export default function LlcOpsPage() {
                               {order.lastErrorMessage}
                             </p>
                           ) : null}
+                          {order.openRequiredActionCount > 0 ? (
+                            <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                              {order.openRequiredActionCount} client action{order.openRequiredActionCount === 1 ? "" : "s"}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="border-b border-slate-100 px-4 py-3 text-right text-sm tabular-nums text-slate-900">
                           {formatCents(order.checkoutTotal)}
@@ -1203,6 +1381,7 @@ export default function LlcOpsPage() {
                         <tr>
                           <td colSpan={8} className="border-b border-slate-100 px-4 pb-6 pt-1">
                             <p className="mb-2 font-sans text-[11px] text-slate-400">Last provider sync: {formatDate(order.lastProviderSyncAt)}</p>
+                            <RequiredActionsPanel registrationId={order.id} />
                             <DocumentsPanel registrationId={order.id} />
                           </td>
                         </tr>

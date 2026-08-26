@@ -52,6 +52,10 @@ import { llcDocuments } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { and, eq, isNull } from "drizzle-orm";
 import type { LlcStatus } from "../../shared/llc";
+import {
+  syncDoolaRequiredActionsForCompany,
+  syncSignatureRequirementFallback,
+} from "./requiredActions";
 
 /**
  * File a paid Doola registration. Idempotent and single-flight: the
@@ -313,6 +317,25 @@ export async function refreshDoolaRegistrationStatus(params: {
   );
 
   const normalized = normalizeDoolaCompanyStatus(company, documents);
+
+  // Required Actions are first-class blockers. The per-company list preserves
+  // closed history, while the company snapshot fallback covers older SS-4
+  // requirements that Doola did not backfill into the new Required Actions API.
+  const requiredActionRegistration = {
+    id: registration.id,
+    userId: registration.userId,
+    status: registration.status,
+    legalName: registration.legalName,
+    entitySuffix: registration.entitySuffix,
+    doolaCompanyId: registration.doolaCompanyId,
+  };
+  await syncDoolaRequiredActionsForCompany({
+    registration: requiredActionRegistration,
+  }).catch(() => ({ synced: 0 }));
+  await syncSignatureRequirementFallback({
+    registration: requiredActionRegistration,
+    company,
+  }).catch(() => {});
 
   // NAME OF RECORD (live incident 2026-08-14): the provider resolves name
   // availability with the client, so once the state stamp exists ITS record

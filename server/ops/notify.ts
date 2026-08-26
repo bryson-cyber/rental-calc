@@ -310,3 +310,24 @@ export function clientEmailProblemAlert(params: {
     ],
   };
 }
+
+export function requiredActionAlert(params: {
+  registrationId: number;
+  legalName: string;
+  actionName: string;
+  actionCode: string;
+  reason: string;
+}): OpsAlert {
+  const legalName = clean(params.legalName, 180);
+  return {
+    subject: `ACTION: client must respond — ${legalName} (order #${params.registrationId})`,
+    lines: [
+      `Order #${params.registrationId} — ${legalName}`,
+      `Required action: ${clean(params.actionName, 200)}`,
+      `Code: ${clean(params.actionCode, 96)}`,
+      `Reason: ${clean(params.reason, 1000)}`,
+      ``,
+      `The filing is blocked until this action is completed. The client status page now carries the response workflow, and the client email is retried automatically if delivery fails.`,
+    ],
+  };
+}

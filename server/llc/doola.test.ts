@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DoolaApiError,
   DoolaConfigurationError,
@@ -8,6 +8,8 @@ import {
   getDoolaConfig,
   getDoolaEnvironment,
   getDoolaWebhookSecret,
+  listOpenDoolaRequiredActions,
+  resolveDoolaNameOptionsRequiredAction,
   mapRegistrationToDoolaCompany,
   mapRegistrationToDoolaCustomer,
   normalizeDoolaCompanyStatus,
@@ -96,6 +98,84 @@ function makeFounder(overrides: Record<string, unknown> = {}) {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+describe("Doola Required Actions API", () => {
+  beforeEach(() => {
+    vi.stubEnv("LLC_TEST_MODE", "false");
+    vi.stubEnv("DOOLA_API_KEY", "dk_live_abcdefghijklmnop");
+    vi.stubEnv("DOOLA_API_BASE_URL", "https://api.doola.com");
+  });
+
+  it("lists tenant-wide open actions with bounded pagination", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          payload: {
+            content: [
+              {
+                requiredActionId: "ra_1",
+                doolaCompanyId: "dc_1",
+                actionCode: "FORMATION_SIGNATURE_SS4_RESET",
+                actionName: "SS-4 signature needed again",
+                status: "delivered",
+                reason: "SS4 must be signed again.",
+                open: true,
+              },
+            ],
+            page: 0,
+            size: 100,
+            total: 1,
+            totalPages: 1,
+          },
+          error: null,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await listOpenDoolaRequiredActions(0, 500);
+    expect(result.total).toBe(1);
+    expect(result.content[0]?.requiredActionId).toBe("ra_1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.doola.com/v1/partner/required-actions?page=0&size=100",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("submits replacement names with the exact action code and no idempotency key", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      new Response(
+        JSON.stringify({
+          payload: {
+            requiredActionId: "ra_2",
+            doolaCompanyId: "dc_2",
+            actionCode: "FORMATION_NAME_OPTIONS_EXHAUSTED",
+            actionName: "New company names needed",
+            status: "submitted",
+            reason: "Names rejected.",
+            open: true,
+          },
+          error: null,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await resolveDoolaNameOptionsRequiredAction({
+      doolaCompanyId: "dc_2",
+      requiredActionId: "ra_2",
+      nameOptions: [{ name: "New Stays", entityTypeEnding: "LLC", position: 1 }],
+    });
+    expect(result.status).toBe("submitted");
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.headers).not.toHaveProperty("Idempotency-Key");
+    expect(JSON.parse(String(init.body))).toEqual({
+      actionCode: "FORMATION_NAME_OPTIONS_EXHAUSTED",
+      nameOptions: [{ name: "New Stays", entityTypeEnding: "LLC", position: 1 }],
+    });
+  });
 });
 
 describe("Doola configuration", () => {
