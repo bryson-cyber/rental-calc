@@ -48,6 +48,14 @@ Each action has one client notification claim keyed as `required_action:{require
 
 The existing `/api/scheduled/llc-status-poll` heartbeat will call the partner-wide open-action list (`size=100`, paging when needed) every run. Returned actions are upserted and notified. Locally open provider-backed actions missing from the latest complete provider list are refreshed individually before being closed, preventing a partial page or temporary inconsistency from clearing valid work. The existing per-company status refresh also synthesizes/clears legacy SS-4 work from `signatureRequirements`.
 
+### Production scheduling
+
+- Heartbeat name: `llc-status-sync`
+- Task UID: `Kw8hcSzvxAAdzFBcKfoLr2`
+- Callback: `POST /api/scheduled/llc-status-poll`
+- Cron: `0 * * * * *` (every minute, UTC)
+- `POLL_INTERVAL_MINUTES=10` remains active as fallback coverage. Production timestamps confirmed this fallback is currently reconciling the affected SS-4 action. The Heartbeat record is enabled, but its execution-history service returned no runs during deployment verification, so operations should monitor that task in the Schedules panel while the fallback remains active.
+
 ## Client and operations surfaces
 
 The client status page receives a provider-neutral `requiredActions` array. Name actions render three inputs with one required name and a submit button. SS-4 actions render a “Sign updated SS-4” button that generates a fresh signing session at click time. Submitted name actions are read-only.
