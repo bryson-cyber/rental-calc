@@ -1,5 +1,13 @@
 # Rental Calculator - Lead Magnet Tool
 
+## Webinar Delivery Audit — August 30, 2026
+
+- [x] Identify the active webinar, full registrant audience, and every due email/SMS sequence step.
+- [x] Reconcile every eligible registrant against today’s email and SMS send records.
+- [x] Classify missing and failed sends by opt-out, invalid contact, suppression, provider rejection, dispatcher error, or duplicate handling.
+- [x] Verify webinar import, email-dispatch, and SMS-dispatch heartbeat health.
+- [x] Produce a no-duplicate remediation list and report findings before any resend.
+
 ## Doola Required Actions API (August 2026)
 
 - [x] Verify Doola Required Actions API endpoints, webhook payloads, and signature requirements against current documentation.
