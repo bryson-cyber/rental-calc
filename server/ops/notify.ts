@@ -147,21 +147,32 @@ export function checkoutReadyAlert(params: {
       ? formatCents(params.retailPriceCents - params.checkoutTotal)
       : "set a retail price to track";
   const legalName = clean(params.legalName, 180);
+  // Provider-aware (live incident 2026-09-05): the doola path routes through
+  // this builder too, passing a sentinel note instead of a checkout URL —
+  // and its alerts were shipping the Whop wholesale wording, telling ops to
+  // pay a checkout that does not exist. Only a real hosted-checkout URL is
+  // a wholesale checkout.
+  const wholesale = /^https?:\/\//i.test(params.checkoutUrl);
   return {
-    subject: `ACTION: Pay Whop checkout — ${legalName} (order #${params.registrationId})`,
+    subject: wholesale
+      ? `ACTION: Pay Whop checkout — ${legalName} (order #${params.registrationId})`
+      : `ACTION: New LLC filing — ${legalName} (order #${params.registrationId})`,
     lines: [
-      `A new LLC filing is ready. Whop will submit it to the state as soon as the checkout below is paid with the company card.`,
+      wholesale
+        ? `A new LLC filing is ready. Whop will submit it to the state as soon as the checkout below is paid with the company card.`
+        : `A new LLC filing was received. It files automatically once the client's payment is confirmed (Mark paid on the order page) — there is nothing to pay here.`,
       ``,
       `Company: ${legalName}`,
       `Formation state: ${clean(params.formationState, 20)}`,
       `Order: #${params.registrationId}`,
-      `Whop account email alias: ${clean(params.accountEmailAlias, 320)}`,
+      ...(wholesale
+        ? [`Whop account email alias: ${clean(params.accountEmailAlias, 320)}`]
+        : []),
       ``,
       `Wholesale total (COGS): ${formatCents(params.checkoutTotal)}`,
       `Margin: ${margin}`,
       `Retail collected at submit: ${params.retailPaid ? "yes" : "no"}`,
-      ``,
-      `Pay here: ${params.checkoutUrl}`,
+      ...(wholesale ? [``, `Pay here: ${params.checkoutUrl}`] : []),
     ],
   };
 }

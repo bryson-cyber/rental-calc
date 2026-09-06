@@ -23,6 +23,9 @@ import {
 import { mirrorFormationDocuments } from "./documents";
 import { getInactiveStateError, getStatePricing } from "./pricing";
 import { getConfiguredLlcProvider } from "./provider";
+import { getDb } from "../db";
+import { llcEmailLog } from "../../drizzle/schema";
+import { and, eq } from "drizzle-orm";
 import { fileDoolaRegistration, refreshDoolaRegistrationStatus } from "./doolaSubmission";
 import {
   WhopApiError,
@@ -472,7 +475,8 @@ export async function submitLlcRegistration(params: {
     });
     const held = await getLlcRegistrationById(params.userId, params.registrationId);
     if (!held) throw new Error("Submitted LLC registration could not be reloaded");
-    await sendOpsAlert(
+    await sendCheckoutReadyAlertOnce(
+      params.registrationId,
       checkoutReadyAlert({
         registrationId: params.registrationId,
         legalName: `${validated.complete.legalName} ${validated.complete.entitySuffix}`,
@@ -703,7 +707,8 @@ export async function submitLlcRegistration(params: {
     );
     if (!current) throw new Error("Submitted LLC registration could not be reloaded");
 
-    const delivered = await sendOpsAlert(
+    const delivered = await sendCheckoutReadyAlertOnce(
+      params.registrationId,
       checkoutReadyAlert({
         registrationId: params.registrationId,
         legalName: `${validated.complete.legalName} ${validated.complete.entitySuffix}`,
@@ -715,8 +720,8 @@ export async function submitLlcRegistration(params: {
           current.registration.accountEmailAlias ?? "not recorded",
         retailPaid: Boolean(current.registration.retailPaidAt),
       }),
-    );
-    if (delivered) {
+    ).catch(() => "failed" as const);
+    if (delivered === "sent") {
       await updateLlcRegistrationProviderFields(
         params.userId,
         params.registrationId,
@@ -742,7 +747,8 @@ export async function submitLlcRegistration(params: {
         registrationId: params.registrationId,
         error: error instanceof Error ? error.name : "UnknownError",
       });
-      await sendOpsAlert(
+      await sendCheckoutReadyAlertOnce(
+        params.registrationId,
         checkoutReadyAlert({
           registrationId: params.registrationId,
           legalName: `${validated.complete.legalName} ${validated.complete.entitySuffix}`,
@@ -1043,3 +1049,46 @@ export async function refreshLlcRegistrationStatus(params: {
     };
   }
 }
+/** Claim type for the send-once checkout/order-received ops alert. */
+const OPS_CHECKOUT_ALERT_TYPE = "ops_checkout_ready";
+
+/**
+ * Send-once doorbell for the checkout-ready ops alert (live incident
+ * 2026-09-05: one order's alert re-fired on every submit retry — nothing
+ * ever read opsNotifiedAt, so a retrying client rang the ops bell all day).
+ * The unique (registrationId, emailType) row in llc_email_log is claimed
+ * BEFORE sending; when no channel delivers, the claim is released so the
+ * next submit can ring once more. A repeat submit of an already-alerted
+ * order is silent — the order page shows the checkout either way.
+ */
+async function sendCheckoutReadyAlertOnce(
+  registrationId: number,
+  alert: ReturnType<typeof checkoutReadyAlert>,
+): Promise<"sent" | "skipped" | "failed"> {
+  const db = await getDb();
+  if (!db) return "failed";
+  try {
+    await db
+      .insert(llcEmailLog)
+      .values({ registrationId, emailType: OPS_CHECKOUT_ALERT_TYPE });
+  } catch (error) {
+    if (error instanceof Error && /duplicate|ER_DUP/i.test(error.message)) {
+      return "skipped";
+    }
+    throw error;
+  }
+  const delivered = await sendOpsAlert(alert).catch(() => false);
+  if (delivered) return "sent";
+  await db
+    .delete(llcEmailLog)
+    .where(
+      and(
+        eq(llcEmailLog.registrationId, registrationId),
+        eq(llcEmailLog.emailType, OPS_CHECKOUT_ALERT_TYPE),
+      ),
+    )
+    .catch(() => {});
+  return "failed";
+}
+
+
