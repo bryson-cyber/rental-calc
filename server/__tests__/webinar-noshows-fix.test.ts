@@ -108,6 +108,11 @@ describe("webinarSms.saveWebinarSelection — schedule date", () => {
     );
     expect(scheduleDateCall).toBeDefined();
     expect(scheduleDateCall![0].settingValue).toBe("February 25, 2026 8:00 PM");
+    const cronDefaultCall = allCalls.find(
+      (call: any) => call[0]?.settingKey === "cron_enabled"
+    );
+    expect(cronDefaultCall).toBeDefined();
+    expect(cronDefaultCall![0].settingValue).toBe("true");
   });
 
   it("works without scheduleDate parameter", async () => {

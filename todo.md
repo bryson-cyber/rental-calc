@@ -1,5 +1,16 @@
 # Rental Calculator - Lead Magnet Tool
 
+## Webinar Delivery Accuracy and Past-Opt-In Re-engagement
+
+- [x] Identify today’s webinar, exact schedule, complete registrant audience, and enrollment exclusions.
+- [x] Reconcile every due webinar email and SMS against local send records and downstream provider outcomes.
+- [x] Correct live scheduling, audience, content, or delivery defects without duplicating messages.
+- [ ] Define eligible past webinar opt-ins and attendees who did not enroll, excluding customers, unsubscribes, invalid contacts, and recent recipients.
+- [ ] Produce audience counts and suppression reasons before campaign creation.
+- [ ] Draft the re-engagement email/SMS message and schedule for approval.
+- [ ] Send tests and launch the re-engagement campaign only after explicit approval.
+- [ ] Verify post-launch delivery and document monitoring controls.
+
 ## Webinar Delivery Audit — August 30, 2026
 
 - [x] Identify the active webinar, full registrant audience, and every due email/SMS sequence step.

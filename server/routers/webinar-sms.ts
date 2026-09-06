@@ -791,17 +791,13 @@ export const webinarSmsRouter = router({
 
             // ═══ ATOMIC CLAIM (unique index email_log_claim_uq) ═══
             // Insert-first so the import cron can never double-send this registrant.
-            const claimRes = await db.insert(emailSendLog).values({
-              webinarId: selectedWebinarId || "unknown",
-              registrantId: Number(result.insertId),
-              recipientEmail: input.email!,
-              recipientName: input.name,
-              channel: "hubspot_smtp",
-              emailType: "confirmation",
-              status: "pending",
-              errorMessage: null,
-            }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
-            if (((claimRes as any)[0]?.affectedRows ?? 0) !== 1) return;
+            const claimRes = await db.execute(sql`
+              INSERT IGNORE INTO email_send_log
+                (webinarId, registrantId, recipientEmail, recipientName, channel, emailType, status, errorMessage)
+              VALUES
+                (${selectedWebinarId || "unknown"}, ${Number(result.insertId)}, ${input.email!}, ${input.name}, 'hubspot_smtp', 'confirmation', 'pending', NULL)
+            `);
+            if (Number((claimRes as any)[0]?.affectedRows ?? 0) !== 1) return;
 
             const emailContent = buildWebinarEmail("confirmation", {
               firstName,
@@ -1559,6 +1555,18 @@ export const webinarSmsRouter = router({
             },
           });
       }
+
+      // Older selections may not have a cron_enabled row at all. Create the
+      // safe default without overriding an explicit admin disable.
+      await db.insert(webinarSmsSettings)
+        .values({
+          settingKey: "cron_enabled",
+          settingValue: "true",
+          description: "Whether auto-import cron is enabled",
+        })
+        .onDuplicateKeyUpdate({
+          set: { settingKey: sql`${webinarSmsSettings.settingKey}` },
+        });
 
       // Restart cron so it picks up the new webinar selection
       await restartWebinarImportCron();
@@ -3167,17 +3175,13 @@ Respond with ONLY valid JSON: {"subject": "...", "body": "..."}`;
             message: `The ${input.reminderType} reminder already went out for this webinar — skipping so attendees don't get duplicate emails. Pass force to resend on purpose.`,
           };
         }
-        const markerClaim = await db.insert(emailSendLog).values({
-          webinarId: input.webinarId,
-          registrantId: 0,
-          recipientEmail: "__calendar_reminder__",
-          recipientName: null,
-          channel: "calendar_update",
-          emailType: reminderMarkerType,
-          status: "sent",
-          errorMessage: null,
-        }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
-        if (((markerClaim as any)[0]?.affectedRows ?? 0) !== 1) {
+        const markerClaim = await db.execute(sql`
+          INSERT IGNORE INTO email_send_log
+            (webinarId, registrantId, recipientEmail, recipientName, channel, emailType, status, errorMessage)
+          VALUES
+            (${input.webinarId}, 0, '__calendar_reminder__', NULL, 'calendar_update', ${reminderMarkerType}, 'sent', NULL)
+        `);
+        if (Number((markerClaim as any)[0]?.affectedRows ?? 0) !== 1) {
           return {
             updated: 0,
             failed: 0,
@@ -4128,11 +4132,14 @@ async function runWebinarImportInner(
         confirmationTemplate = templateSetting.settingValue;
       }
 
-      console.log(`[Confirmation SMS] Sending to ${phoneMap.size} unique phone(s) (${pendingSmsRegistrants.length} rows) for webinar ${webinarId}`);
+      // Bound each callback so the platform heartbeat does not time out. The
+      // next cycle atomically claims the remainder.
+      const confirmationPhoneGroups = Array.from(phoneMap.values()).slice(0, 20);
+      console.log(`[Confirmation SMS] Sending this cycle to ${confirmationPhoneGroups.length}/${phoneMap.size} unique phone(s) (${pendingSmsRegistrants.length} rows) for webinar ${webinarId}`);
       let confirmSent = 0;
       let confirmFailed = 0;
 
-      for (const [, registrants] of phoneMap) {
+      for (const registrants of confirmationPhoneGroups) {
         // Deterministic owner row: the lowest id in the phone group.
         registrants.sort((a: any, b: any) => a.id - b.id);
         const registrant = registrants[0];
@@ -4176,7 +4183,7 @@ async function runWebinarImportInner(
             confirmFailed++;
           }
           // Rate limit: small delay between sends to avoid API throttling
-          if (phoneMap.size > 5) {
+          if (confirmationPhoneGroups.length > 5) {
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (err: any) {
@@ -4200,7 +4207,7 @@ async function runWebinarImportInner(
         if (apiKey) {
           console.log(`[SimpleTexting List] Adding ${confirmSent} contact(s) to list "${listName}"`);
           // Collect phones that were successfully sent
-          for (const [normPhone, registrants] of phoneMap) {
+          for (const registrants of confirmationPhoneGroups) {
             // Only add phones that got a successful SMS (check if confirmationSmsSent was set)
             const reg = registrants[0];
             const [checkRow] = await db.select({ confirmationSmsSent: webinarRegistrants.confirmationSmsSent })
@@ -4299,7 +4306,9 @@ async function runWebinarImportInner(
       if (!cronEmailJoinUrl) {
         console.error(`[Confirmation Email] No join URL for webinar ${webinarId} — deferring ${needsEmail.length} email(s) to the next cycle instead of sending a wrong link`);
       }
-      const confirmationSendList = cronEmailJoinUrl ? needsEmail : [];
+      // Bound confirmation email work for the same reason; unclaimed rows are
+      // picked up on the next import heartbeat.
+      const confirmationSendList = cronEmailJoinUrl ? needsEmail.slice(0, 25) : [];
       let emailSent = 0;
       let emailFailed = 0;
       for (const reg of confirmationSendList) {
@@ -4307,17 +4316,17 @@ async function runWebinarImportInner(
           // ═══ ATOMIC CLAIM (unique index email_log_claim_uq) ═══
           // The INSERT is the lock: whichever process inserts this registrant's
           // 'confirmation' row owns the send; everyone else sees affectedRows 0.
-          const claimRes = await db.insert(emailSendLog).values({
-            webinarId,
-            registrantId: reg.id,
-            recipientEmail: reg.email!,
-            recipientName: reg.name,
-            channel: "hubspot_smtp" as const,
-            emailType: "confirmation" as const,
-            status: "pending" as const,
-            errorMessage: null,
-          }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
-          if (((claimRes as any)[0]?.affectedRows ?? 0) !== 1) continue;
+          // INSERT IGNORE reports affectedRows=1 only for the process that
+          // actually inserted the claim. A no-op upsert can report 1 for a
+          // duplicate row under CLIENT_FOUND_ROWS, which allowed overlapping
+          // dispatchers to send the same email twice.
+          const claimRes = await db.execute(sql`
+            INSERT IGNORE INTO email_send_log
+              (webinarId, registrantId, recipientEmail, recipientName, channel, emailType, status, errorMessage)
+            VALUES
+              (${webinarId}, ${reg.id}, ${reg.email!}, ${reg.name}, 'hubspot_smtp', 'confirmation', 'pending', NULL)
+          `);
+          if (Number((claimRes as any)[0]?.affectedRows ?? 0) !== 1) continue;
 
           const firstName = (reg.name || "there").split(" ")[0];
           const emailContent = buildWebinarEmail("confirmation", {
@@ -4340,6 +4349,7 @@ async function runWebinarImportInner(
             .set({
               status: emailResult.success ? "sent" : "failed",
               errorMessage: emailResult.error?.slice(0, 1000) || null,
+              messageId: emailResult.messageId || null,
             })
             .where(and(
               eq(emailSendLog.webinarId, webinarId),
@@ -4559,7 +4569,9 @@ export async function runScheduledImport(): Promise<{ imported: number; skipped:
   const currentWebinarName = freshSettings["selected_webinar_name"] || "Unknown";
   const currentScheduleIdStr = freshSettings["selected_schedule_id"];
   const currentScheduleId = currentScheduleIdStr ? parseInt(currentScheduleIdStr, 10) : undefined;
-  const cronEnabled = freshSettings["cron_enabled"] === "true";
+  // Missing used to mean disabled, so an active selected webinar could be
+  // silently skipped. Missing now defaults to enabled; explicit false is kept.
+  const cronEnabled = freshSettings["cron_enabled"] !== "false";
 
   if (!cronEnabled || !currentWebinarId) {
     return { imported: 0, skipped: true, webinarId: currentWebinarId, webinarName: currentWebinarName };
@@ -4994,16 +5006,13 @@ async function dispatchDueEmailBlasts(
       const claimed: typeof emailRecipients = [];
       for (const r of emailRecipients) {
         try {
-          const res = await db.insert(emailSendLog).values({
-            webinarId: msg.webinarId,
-            registrantId: r.id,
-            recipientEmail: r.email!,
-            recipientName: r.name,
-            channel: "hubspot_smtp" as const,
-            emailType: logEmailType,
-            status: "pending" as const,
-          }).onDuplicateKeyUpdate({ set: { id: sql`${emailSendLog.id}` } });
-          if (((res as any)[0]?.affectedRows ?? 0) === 1) claimed.push(r);
+          const res = await db.execute(sql`
+            INSERT IGNORE INTO email_send_log
+              (webinarId, registrantId, recipientEmail, recipientName, channel, emailType, status)
+            VALUES
+              (${msg.webinarId}, ${r.id}, ${r.email!}, ${r.name}, 'hubspot_smtp', ${logEmailType}, 'pending')
+          `);
+          if (Number((res as any)[0]?.affectedRows ?? 0) === 1) claimed.push(r);
         } catch (_) { /* lost the claim */ }
       }
 
