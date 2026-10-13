@@ -13604,3 +13604,10 @@ Files fixed (operating costs now based on revenue, not rent):
 October 13 validation: GitHub main bc5d1194 fast-forwarded from 35b4925; 163/163 scoped regressions passed; frontend/backend production build passed; 101 TypeScript diagnostics match baseline after union-order normalization. Core LLC, promo, webinar dispatcher, SMTP templates, and schema paths are unchanged. Campaign result record restored from inherited summary with provenance; no campaign resend. Production verification follows checkpoint publication.
 
 Production verified October 13 at 22:25 UTC via live browser: entry index-CTEXdG-S.js; report chunk ShareableReportViewer-DLYQMwVe.js returned HTTP 200 JavaScript and contains both new walkthrough section markers. Isolated component full/fallback render checks also passed. Details: docs/github-sync-deployment-2026-10-13.md.
+
+## GitHub Resync and Deploy — October 13, 2026, 16:39 Pacific
+- [x] Merge GitHub main 0d39f08 from current checkpoint 926f9305 without discarding compatible work.
+- [x] Validate real-market occupancy logic, phone layout, and protected LLC/webinar/promo regressions.
+- [x] Run production build and compare TypeScript diagnostics against the existing baseline.
+- [ ] Save a checkpoint and publish the updated build.
+- [ ] Verify the new production bundle/UI and record deployment evidence.
