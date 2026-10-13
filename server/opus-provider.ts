@@ -1,15 +1,16 @@
 /**
- * LLM Provider — Claude Opus 4.6
+ * LLM Provider — Claude Opus 5.5
  * 
  * Handles precision judgment tasks: deal verdicts, AI advisor tool loop, deal alert memos.
  * Uses the Anthropic Messages API with adaptive thinking.
  * 
- * MODEL: claude-opus-4-6
- * - Adaptive thinking: thinking: {type: "adaptive"}
- * - Effort: output_config.effort = "high" (always — these are high-stakes tasks)
- * - Max output: 128K tokens (Opus 4.6 supports 128K vs Sonnet's 64K)
- * - temperature CANNOT be modified when thinking is enabled
- * - No assistant prefills (returns 400 on 4.6)
+ * MODEL: claude-opus-5-5
+ * - Adaptive thinking: thinking: {type: "adaptive"} (thinking can't be disabled on 5.5)
+ * - Effort: output_config.effort always sent explicitly (5.5 defaults to "medium")
+ * - Max output: 128K tokens
+ * - No temperature / sampling params, no assistant prefills, no forced tool_choice (all 400)
+ * - Server-side fallback: fallbacks "default" re-runs a safety-classifier refusal
+ *   on Anthropic's recommended model instead of returning the refusal
  * 
  * BENCHMARK JUSTIFICATION:
  * - Humanity's Last Exam w/ tools: 53.1% (best — catches nuances in complex reasoning)
@@ -50,7 +51,9 @@ export interface OpusToolExecutor {
 // CONFIGURATION
 // ---------------------------------------------------------------------------
 
-const MODEL_ID = 'claude-opus-4-6';
+const MODEL_ID = 'claude-opus-5-5';
+// Beta header for fallbacks: "default" (the scalar form needs this exact date)
+const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 const MAX_OUTPUT_TOKENS = 128000; // Opus 4.6 supports 128K output
 
 const EFFORT_MAP: Record<string, 'low' | 'medium' | 'high'> = {
@@ -104,6 +107,7 @@ async function callOpusInternal(
       max_tokens: maxTokens,
       thinking: { type: 'adaptive' },
       output_config: { effort },
+      fallbacks: 'default',
       messages,
       stream: true,
     };
@@ -118,6 +122,7 @@ async function callOpusInternal(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': FALLBACK_BETA,
         'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),
@@ -240,6 +245,7 @@ export async function callOpusWithToolLoop(
         max_tokens: maxTokens,
         thinking: { type: 'adaptive' },
         output_config: { effort },
+        fallbacks: 'default',
         tools,
         tool_choice: { type: 'auto' },
         messages,
@@ -255,6 +261,7 @@ export async function callOpusWithToolLoop(
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
+          'anthropic-beta': FALLBACK_BETA,
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
@@ -450,6 +457,7 @@ export async function* callOpusStreaming(
       max_tokens: maxTokens,
       thinking: { type: 'adaptive' },
       output_config: { effort },
+      fallbacks: 'default',
       messages,
       stream: true,
     };
@@ -464,6 +472,7 @@ export async function* callOpusStreaming(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': FALLBACK_BETA,
         'Connection': 'keep-alive',
       },
       body: JSON.stringify(requestBody),

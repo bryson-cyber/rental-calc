@@ -25,6 +25,7 @@ import { SharedRegulationDisplay } from '@/components/SharedRegulationDisplay';
 import { SharedAIAdvisorDisplay } from '@/components/SharedAIAdvisorDisplay';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
 import { ReportDisclaimer } from '@/components/ReportDisclaimer';
+import { DealWalkthrough } from '@/components/DealWalkthrough';
 import {
   Loader2,
   ArrowLeft,
@@ -339,6 +340,8 @@ export default function ShareableReportViewer() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
   const [showShareOptions, setShowShareOptions] = useState(false);
+  // Our team works in the full analysis; clients only get the walkthrough
+  const isDealTeam = isAdmin || Boolean(isAuthenticated && user?.email?.toLowerCase().endsWith('@coachinayah.com'));
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [isSendingSMS, setIsSendingSMS] = useState(false);
@@ -566,6 +569,9 @@ export default function ShareableReportViewer() {
     const storedExpensePercent = reportData?._expensePercent ?? 20;
     const storedFurnitureCost = reportData?._furnitureCost ?? 0;
     const storedMode = reportData?._mode || 'rent';
+    const hasWalkthrough = Boolean(reportData?._dealFacts && reportData?._dealBrief);
+    // Without a walkthrough the report is exactly as before (dashboard always shown)
+    const fullAnalysisOpen = !hasWalkthrough || isDealTeam;
     // Purchase mode props stored alongside the report
     const storedPurchasePrice = reportData?._purchasePrice || undefined;
     const storedLoanType = reportData?._loanType || undefined;
@@ -621,6 +627,24 @@ export default function ShareableReportViewer() {
                   </a>
                 )}
               </div>
+              {/* Client walkthrough first (profitable rent deals), then the full analysis */}
+              {hasWalkthrough && (
+                <>
+                  <DealWalkthrough
+                    facts={reportData._dealFacts}
+                    brief={reportData._dealBrief}
+                    imageUrl={reportData._imageUrl}
+                    forecast={reportData.forecast}
+                  />
+                  {fullAnalysisOpen && (
+                    <div className="mb-6 border-t border-slate-200 pt-8">
+                      <h3 className="text-xl font-bold text-slate-900">The full analysis</h3>
+                      <p className="text-sm text-slate-500">Team view — clients see only the walkthrough above.</p>
+                    </div>
+                  )}
+                </>
+              )}
+              {fullAnalysisOpen && (
               <TeslaDashboard
                 result={reportData}
                 address={validatorAddress}
@@ -648,6 +672,7 @@ export default function ShareableReportViewer() {
                 propertyLatitude={reportData?.latitude || report.latitude}
                 propertyLongitude={reportData?.longitude || report.longitude}
               />
+              )}
             </div>
           </section>
 

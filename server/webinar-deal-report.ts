@@ -13,7 +13,9 @@
 import { and, desc, eq } from "drizzle-orm";
 import { universalShareableReports } from "../drizzle/schema";
 import { getDb } from "./db";
-import { getRentalizerEstimate, type RentalizerResponse } from "./airdna";
+import { getRentalizerEstimate, REVENUE_BOOST_FACTOR, type RentalizerResponse } from "./airdna";
+import { getBnbCalcArbAnalysis } from "./bnbcalc";
+import { buildDealFacts, generateDealBrief, projectionFromEstimate, type DealBrief, type DealFacts } from "./deal-brief";
 import { createShareableReport } from "./shareable-reports";
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -28,6 +30,7 @@ export interface DealForReport {
   monthlyRent?: number | null;
   propertyType?: string | null;
   sourceUrl?: string | null;
+  imageUrl?: string | null;
 }
 
 /**
@@ -35,15 +38,20 @@ export interface DealForReport {
  * (TeslaDashboard) renders, plus the underscore-prefixed metadata the viewer
  * reads alongside it (same convention as the tool's own share flow).
  */
-export function buildDealReportData(deal: DealForReport, estimate: RentalizerResponse): Record<string, unknown> {
+export function buildDealReportData(
+  deal: DealForReport,
+  estimate: RentalizerResponse,
+  enrichment?: { facts: DealFacts; brief: DealBrief | null } | null,
+): Record<string, unknown> {
   const bedrooms = deal.bedrooms ?? estimate.property.bedrooms ?? 2;
   const bathrooms = Number(deal.bathrooms ?? estimate.property.bathrooms ?? Math.max(1, Math.ceil(bedrooms * 0.75)));
   const accommodates = estimate.property.accommodates || bedrooms * 2 + 2;
   const annual = estimate.estimates.annual_revenue;
   const monthlyRevenue = annual / 12;
   const monthlyRent = deal.monthlyRent ?? 0;
-  // Same profitability model as the deal scan: revenue − rent − 20% opex
-  const monthlyProfit = monthlyRevenue - monthlyRent - monthlyRevenue * 0.2;
+  // revenue − rent − opex; opex is BNB Calc's AI estimate when we have one, else 20%
+  const expensePercent = enrichment ? Math.round(enrichment.facts.expenseRatio * 100) : 20;
+  const monthlyProfit = monthlyRevenue - monthlyRent - monthlyRevenue * (expensePercent / 100);
 
   const forecastSource = estimate.stats?.future?.metrics?.length
     ? estimate.stats.future.metrics
@@ -76,8 +84,10 @@ export function buildDealReportData(deal: DealForReport, estimate: RentalizerRes
       bedrooms: c.bedrooms ?? bedrooms,
       bathrooms: c.bathrooms ?? bathrooms,
       accommodates: c.accommodates ?? accommodates,
-      revenue: c.annual_revenue ?? 0,
-      adr: c.adr ?? 0,
+      // Comps show their real numbers (estimate comps carry the boost) so
+      // clients can check them on Airbnb; the projection stays optimized
+      revenue: Math.round((c.annual_revenue ?? 0) / REVENUE_BOOST_FACTOR),
+      adr: Math.round((c.adr ?? 0) / REVENUE_BOOST_FACTOR),
       occupancy: c.occupancy ?? 0,
       rating: c.rating ?? 0,
       reviews: c.reviews ?? 0,
@@ -86,12 +96,65 @@ export function buildDealReportData(deal: DealForReport, estimate: RentalizerRes
       distanceMeters: c.distance_meters ?? undefined,
       latitude: c.latitude ?? undefined,
       longitude: c.longitude ?? undefined,
+      amenities: c.amenities ?? undefined,
     })),
     // Viewer metadata (underscore convention used by the tool's share flow)
     _listingUrl: deal.sourceUrl || undefined,
-    _expensePercent: 20,
+    _imageUrl: deal.imageUrl || undefined,
+    _expensePercent: expensePercent,
     _mode: "rent",
+    // Startup budget → the dashboard's payback section
+    ...(enrichment ? { _furnitureCost: enrichment.facts.startupCost } : {}),
+    // Client deal brief ("why this deal works") — rendered above the dashboard
+    ...(enrichment ? { _dealFacts: enrichment.facts, _dealBrief: enrichment.brief } : {}),
   };
+}
+
+// Report creation never waits longer than this on the arb call + brief
+const ENRICHMENT_TIMEOUT_MS = 180_000;
+
+/**
+ * BNB Calc arbitrage analysis + Claude brief for a deal. Returns null when the
+ * deal has no rent or the arb call fails/times out — the report still ships.
+ */
+async function enrichDeal(
+  deal: DealForReport,
+  estimate: RentalizerResponse,
+): Promise<{ facts: DealFacts; brief: DealBrief | null } | null> {
+  const monthlyRent = deal.monthlyRent ?? 0;
+  if (monthlyRent <= 0) return null;
+  const bedrooms = deal.bedrooms ?? estimate.property.bedrooms ?? 2;
+  const bathrooms = Number(deal.bathrooms ?? estimate.property.bathrooms ?? Math.max(1, Math.ceil(bedrooms * 0.75)));
+
+  const work = (async () => {
+    const arb = await getBnbCalcArbAnalysis({
+      address: deal.address,
+      bedrooms,
+      bathrooms,
+      accommodates: estimate.property.accommodates || bedrooms * 2 + 2,
+      monthlyRent,
+    });
+    const facts = buildDealFacts({ bedrooms, bathrooms, monthlyRent, projection: projectionFromEstimate(estimate), arb });
+    // Only deals that make money get a sales brief
+    const brief = facts.monthlyProfit > 0 ? await generateDealBrief(deal, facts) : null;
+    return { facts, brief };
+  })();
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`[DealReport] Enrichment timed out for ${deal.address} — creating report without brief`);
+      resolve(null);
+    }, ENRICHMENT_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } catch (err: any) {
+    console.warn(`[DealReport] Enrichment failed for ${deal.address}:`, err.message);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -125,6 +188,8 @@ export async function ensureShareReportForDeal(
   }
   if (!est) return null;
 
+  const enrichment = await enrichDeal(deal, est);
+
   const result = await createShareableReport({
     reportType: "validator",
     address: deal.address,
@@ -134,7 +199,7 @@ export async function ensureShareReportForDeal(
     bedrooms: deal.bedrooms ?? est.property.bedrooms,
     bathrooms: Number(deal.bathrooms ?? est.property.bathrooms ?? 1),
     monthlyRent: deal.monthlyRent ?? undefined,
-    reportData: buildDealReportData(deal, est),
+    reportData: buildDealReportData(deal, est, enrichment),
     title: `Property Analysis — ${deal.city}, ${deal.state}`,
     summary: `Scanner-found rental in ${deal.city} analyzed for Airbnb potential`,
     annualRevenue: Math.round(est.estimates.annual_revenue),
