@@ -5,11 +5,11 @@
 - [x] Identify today’s webinar, exact schedule, complete registrant audience, and enrollment exclusions.
 - [x] Reconcile every due webinar email and SMS against local send records and downstream provider outcomes.
 - [x] Correct live scheduling, audience, content, or delivery defects without duplicating messages.
-- [ ] Define eligible past webinar opt-ins and attendees who did not enroll, excluding customers, unsubscribes, invalid contacts, and recent recipients.
-- [ ] Produce audience counts and suppression reasons before campaign creation.
-- [ ] Draft the re-engagement email/SMS message and schedule for approval.
-- [ ] Send tests and launch the re-engagement campaign only after explicit approval.
-- [ ] Verify post-launch delivery and document monitoring controls.
+- [x] Define eligible past webinar opt-ins and attendees who did not enroll, excluding customers, unsubscribes, invalid contacts, and recent recipients.
+- [x] Produce audience counts and suppression reasons before campaign creation.
+- [x] Draft the re-engagement email/SMS message and schedule for approval.
+- [x] Send tests and launch the re-engagement campaign only after explicit approval.
+- [x] Verify post-launch delivery and document monitoring controls.
 
 ## Webinar Delivery Audit — August 30, 2026
 
@@ -13592,3 +13592,13 @@ Files fixed (operating costs now based on revenue, not rent):
 - [x] Change LLC service price to $100 + state fee (updated all active states in DB)
 - [x] Update frontend pricing display to show "$100 service + state fee" breakdown
 - [x] Update demo.ts retail price to match new pricing model
+
+## GitHub Sync, Merge, and Redeploy — October 13, 2026
+- [x] Fetch and compare GitHub rental-calc main with restored checkpoint 35b4925; retain backup reference.
+- [x] Preserve completed webinar re-engagement documentation; do not resend any campaign.
+- [x] Merge compatible GitHub and checkpoint changes without losing Required Actions or duplicate-send protections.
+- [x] Run relevant regression tests, production build, and TypeScript diagnostics.
+- [x] Save checkpoint and publish the merged application.
+- [ ] Verify production deployment and record final revision and validation results.
+
+October 13 validation: GitHub main bc5d1194 fast-forwarded from 35b4925; 163/163 scoped regressions passed; frontend/backend production build passed; 101 TypeScript diagnostics match baseline after union-order normalization. Core LLC, promo, webinar dispatcher, SMTP templates, and schema paths are unchanged. Campaign result record restored from inherited summary with provenance; no campaign resend. Production verification follows checkpoint publication.
