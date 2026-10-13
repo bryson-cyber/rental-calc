@@ -51,7 +51,7 @@ export interface DealBriefComp {
 }
 
 /** Bump when facts change meaning; older walkthroughs rebuild on next open. */
-export const DEAL_FACTS_VERSION = 2;
+export const DEAL_FACTS_VERSION = 3;
 
 export interface DealFacts {
   version: number;
@@ -335,10 +335,10 @@ Hard rules:
 - Output ONLY a JSON object, no markdown fences, matching this shape:
 {
   "headline": "≤ 12 words, the deal's strongest point",
-  "summary": "2-3 sentences: what this deal is and why it's attractive",
+  "summary": "2 sentences, ≤ 45 words total: what this deal is and why it's attractive",
   "whyItWorks": ["exactly 3 bullets, each ≤ 20 words: one concrete reason tied to a number in <facts>"],
-  "upsideMoves": [{"move": "a specific improvement", "why": "how it moves this listing toward the top earners"}],
-  "watchOuts": [{"risk": "one real risk", "howTopOperatorsHandleIt": "how good operators handle it"}],
+  "upsideMoves": [{"move": "a specific improvement, ≤ 12 words", "why": "≤ 25 words: how it moves this listing toward the top earners"}],
+  "watchOuts": [{"risk": "one real risk, ≤ 15 words", "howTopOperatorsHandleIt": "≤ 25 words: how good operators handle it"}],
   "closingNote": "1 sentence, encouraging, about what winning this deal looks like"
 }
 whyItWorks sits directly under tiles that already show monthly profit, payback months and break-even occupancy — don't just restate those; each bullet should add a new reason (e.g. the slow-year floor, what the comps prove, the gap to the data-model median, demand for this bedroom count).

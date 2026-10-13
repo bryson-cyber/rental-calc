@@ -94,18 +94,19 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-      <div className="flex items-start gap-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0F172A] font-semibold text-[#C9A962]">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+      {/* Phones: number sits beside the title and content runs full width */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F172A] text-sm font-semibold text-[#C9A962] sm:h-9 sm:w-9 sm:text-base">
           {step}
         </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-xl font-semibold text-slate-900 sm:text-2xl">
-            {title}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">{lead}</p>
-          <div className="mt-5">{children}</div>
-        </div>
+        <h2 className="font-serif text-xl font-semibold text-slate-900 sm:text-2xl">
+          {title}
+        </h2>
+      </div>
+      <div className="sm:pl-[52px]">
+        <p className="mt-2 text-sm text-slate-500">{lead}</p>
+        <div className="mt-5 min-w-0">{children}</div>
       </div>
     </section>
   );
@@ -308,7 +309,7 @@ export function DealWalkthrough({
             className="h-56 w-full object-cover sm:h-72"
           />
         )}
-        <div className="p-6 sm:p-8">
+        <div className="p-5 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#C9A962]">
               Why this deal works
@@ -318,12 +319,12 @@ export function DealWalkthrough({
               Analysis powered by Claude
             </span>
           </div>
-          <p className="mt-3 font-serif text-3xl font-semibold leading-tight text-white sm:text-4xl">
+          <p className="mt-3 font-serif text-[28px] font-semibold leading-tight text-white sm:text-4xl">
             {brief?.headline ||
               `${usd(facts.monthlyProfit)}/mo after rent and expenses`}
           </p>
           {brief?.summary && (
-            <p className="mt-4 max-w-3xl text-lg text-white/75">
+            <p className="mt-4 max-w-3xl text-base text-white/75 sm:text-lg">
               {brief.summary}
             </p>
           )}
@@ -479,21 +480,21 @@ export function DealWalkthrough({
           title="Check the proof yourself"
           lead="Real Airbnb listings near this home and what they actually earn. Tap one to see it live."
         >
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {facts.comps.map((c, i) => (
               <a
                 key={i}
                 href={c.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:border-[#C9A962]"
+                className="group flex min-w-0 gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:border-[#C9A962]"
               >
                 {c.imageUrl && (
                   <img
                     onError={e => (e.currentTarget.style.display = "none")}
                     src={c.imageUrl}
                     alt=""
-                    className="h-20 w-20 shrink-0 rounded-lg object-cover"
+                    className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-20 sm:w-20"
                     loading="lazy"
                   />
                 )}
@@ -539,7 +540,9 @@ export function DealWalkthrough({
                   <ul className="mt-3 space-y-3">
                     {brief.upsideMoves.map((m, i) => (
                       <li key={i}>
-                        <p className="font-medium text-slate-900">{m.move}</p>
+                        <p className="text-[15px] font-semibold leading-snug text-slate-900">
+                          {m.move}
+                        </p>
                         <p className="text-sm text-slate-600">{m.why}</p>
                       </li>
                     ))}
@@ -555,7 +558,9 @@ export function DealWalkthrough({
                   <ul className="mt-3 space-y-3">
                     {brief.watchOuts.map((w, i) => (
                       <li key={i}>
-                        <p className="font-medium text-slate-900">{w.risk}</p>
+                        <p className="text-[15px] font-semibold leading-snug text-slate-900">
+                          {w.risk}
+                        </p>
                         <p className="text-sm text-slate-600">
                           {w.howTopOperatorsHandleIt}
                         </p>
@@ -569,7 +574,7 @@ export function DealWalkthrough({
         )}
 
       {/* Same ask as the team's Slack message — turn the read into a decision */}
-      <div className="rounded-2xl border-2 border-[#C9A962] bg-white p-6 sm:p-8">
+      <div className="rounded-2xl border-2 border-[#C9A962] bg-white p-5 sm:p-8">
         {brief?.closingNote && (
           <p className="mb-5 font-serif text-xl text-slate-800">
             {brief.closingNote}
