@@ -45,7 +45,8 @@ export interface DealFacts {
   monthlyExpenses: number;
   monthlyProfit: number;
   breakEvenOccupancy: number;
-  marketMedianOccupancy: number;
+  /** null when there's no real market data (never the deal's own projection) */
+  marketMedianOccupancy: number | null;
   startupCost: number;
   paybackMonths: number | null;
   annualCashOnCash: number;
@@ -285,7 +286,8 @@ export function DealWalkthrough({
   imageUrl?: string;
   forecast?: ForecastMonth[];
 }) {
-  const cushion = facts.marketMedianOccupancy - facts.breakEvenOccupancy;
+  const market = facts.marketMedianOccupancy;
+  const cushion = market != null ? market - facts.breakEvenOccupancy : 0;
   const annualProfit = facts.monthlyProfit * 12;
   const afterLaunchYearOne = annualProfit - facts.startupCost;
   const usableForecast = (forecast ?? [])
@@ -344,7 +346,11 @@ export function DealWalkthrough({
             <HeroStat
               label="Break-even"
               value={`${pct(facts.breakEvenOccupancy)} booked`}
-              note={`Similar homes nearby run ${pct(facts.marketMedianOccupancy)}`}
+              note={
+                market != null
+                  ? `Similar homes nearby run ${pct(market)}`
+                  : `Projection assumes ${pct(facts.projectedOccupancy)} booked`
+              }
             />
           </div>
 
@@ -424,18 +430,27 @@ export function DealWalkthrough({
       <Section
         step={++step}
         title="Why it's safe"
-        lead="How booked this home needs to be to cover rent and costs, next to how booked similar homes already are."
+        lead="How booked this home needs to be to cover rent and costs, next to how booked similar homes nearby actually are."
       >
-        <OccupancyBar
-          breakEven={facts.breakEvenOccupancy}
-          market={facts.marketMedianOccupancy}
-        />
-        {cushion > 0 && (
-          <p className="mt-4 text-slate-700">
+        {market != null ? (
+          <>
+            <OccupancyBar
+              breakEven={facts.breakEvenOccupancy}
+              market={market}
+            />
+            {cushion > 0 && (
+              <p className="mt-4 text-slate-700">
+                You only need <strong>{pct(facts.breakEvenOccupancy)}</strong>{" "}
+                of nights booked. Similar homes already get{" "}
+                <strong>{pct(market)}</strong> — a{" "}
+                <strong>{Math.round(cushion * 100)}-point cushion</strong>.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-slate-700">
             You only need <strong>{pct(facts.breakEvenOccupancy)}</strong> of
-            nights booked. Similar homes already get{" "}
-            <strong>{pct(facts.marketMedianOccupancy)}</strong> — a{" "}
-            <strong>{Math.round(cushion * 100)}-point cushion</strong>.
+            nights booked to cover rent and costs.
           </p>
         )}
         <div className="mt-4 rounded-lg border border-slate-200 p-4">

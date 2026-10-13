@@ -377,6 +377,8 @@ export interface BnbCalcArbComparable {
   superhost?: boolean;
   guest_favorite?: boolean;
   active_days_count_ltm?: number;
+  average_occupancy_rate_ltm?: number;
+  average_daily_rate_ltm?: number;
   metrics?: BnbCalcCompMetrics;
 }
 
@@ -394,9 +396,12 @@ export interface BnbCalcArbAnalysis {
   url: string;
   ratePerNightUSD: number;
   occupancyRatePercentage: number;
+  // The live API returns percentile `quartiles` (as /create/cohost does); the
+  // docs example shows `revenue`/`adr`/`occupancy` bands. Accept both.
   revenue?: BnbCalcBands;
   adr?: BnbCalcBands;
   occupancy?: BnbCalcBands;
+  quartiles?: Partial<Record<'25th_percentile' | '50th_percentile' | '75th_percentile' | '90th_percentile', BnbCalcQuartile>>;
   comparables?: BnbCalcArbComparable[];
   monthlyRentUSD: number;
   monthlyRevenueUSD: number;
