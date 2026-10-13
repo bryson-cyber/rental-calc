@@ -50,7 +50,11 @@ export interface DealBriefComp {
   reviews?: number;
 }
 
+/** Bump when facts change meaning; older walkthroughs rebuild on next open. */
+export const DEAL_FACTS_VERSION = 3;
+
 export interface DealFacts {
+  version: number;
   bedrooms: number;
   bathrooms: number;
   monthlyRent: number;
@@ -73,7 +77,8 @@ export interface DealFacts {
   /** Occupancy needed to cover rent + expenses */
   breakEvenOccupancy: number;
   /** How booked a typical comparable home is */
-  marketMedianOccupancy: number;
+  /** How booked a typical comparable home is; null when no real market data */
+  marketMedianOccupancy: number | null;
 
   startupCost: number;
   paybackMonths: number | null;
@@ -96,14 +101,15 @@ function toDecimal(rate: number | undefined | null): number | undefined {
 
 function mapArbComp(c: BnbCalcArbComparable): DealBriefComp {
   const id = c.airbnbId || c.listing_id;
+  const ttm = c.metrics?.ttm;
   return {
     title: c.name || 'Comparable rental',
     url: c.listingUrl || (id ? `https://www.airbnb.com/rooms/${id}` : undefined),
     imageUrl: c.photo_urls?.[0] || c.thumbnail_url,
     bedrooms: c.bedrooms,
-    annualRevenue: Math.round(c.annualRevenueUSD ?? c.annual_revenue_ltm ?? 0),
-    occupancy: toDecimal(c.occupancyRatePercentage) ?? 0,
-    adr: Math.round(c.averageDailyRateUSD ?? 0),
+    annualRevenue: Math.round(c.annualRevenueUSD ?? ttm?.revenue ?? c.annual_revenue_ltm ?? 0),
+    occupancy: toDecimal(c.occupancyRatePercentage ?? ttm?.adjusted_occupancy ?? c.average_occupancy_rate_ltm) ?? 0,
+    adr: Math.round(c.averageDailyRateUSD ?? ttm?.adr ?? c.average_daily_rate_ltm ?? 0),
     distanceMiles: c.distanceMiles ?? (c.distance_meters != null ? c.distance_meters / 1609.34 : undefined),
     rating: c.rating,
     reviews: c.reviews,
@@ -113,12 +119,35 @@ function mapArbComp(c: BnbCalcArbComparable): DealBriefComp {
 /**
  * Comps go in front of clients as "check the proof yourself" links, so skip
  * ones that look delisted: no bookings in the last 90 days. Comps without
- * recent-activity data are kept (nothing to judge them on).
+ * recent-activity numbers are kept (nothing to judge them on).
  */
 export function looksActive(c: BnbCalcArbComparable): boolean {
   const l90d = c.metrics?.l90d;
-  if (l90d) return l90d.days_reserved > 0 || l90d.revenue > 0;
-  return true;
+  const reserved = l90d?.days_reserved;
+  const revenue = l90d?.revenue;
+  if (typeof reserved !== 'number' && typeof revenue !== 'number') return true;
+  return (reserved ?? 0) > 0 || (revenue ?? 0) > 0;
+}
+
+function median(values: number[]): number | undefined {
+  const v = values.filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+  if (v.length < 3) return undefined;
+  const mid = Math.floor(v.length / 2);
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+}
+
+/** A BNB Calc percentile from either response shape (raw, unboosted). */
+function arbPercentile(
+  arb: BnbCalcArbAnalysis | null | undefined,
+  pctl: 'p25' | 'p50',
+  field: 'revenue' | 'occupancy',
+): number | undefined {
+  if (!arb) return undefined;
+  const band = arb[field]?.[pctl];
+  if (typeof band === 'number') return field === 'occupancy' ? toDecimal(band) : band;
+  const q = arb.quartiles?.[pctl === 'p25' ? '25th_percentile' : '50th_percentile'];
+  if (!q) return undefined;
+  return field === 'occupancy' ? toDecimal(q.occupancy_rate) : q.revenue;
 }
 
 function compAmenities(c: BnbCalcArbComparable): string[] {
@@ -214,8 +243,8 @@ export function buildDealFacts(params: {
   const adr = projectedOccupancy > 0 ? monthlyRevenue / (projectedOccupancy * DAYS_PER_MONTH) : p.adr;
 
   // Unboosted bands: prefer BNB Calc's arb bands, else undo the boost
-  const dataModelMonthlyRevenue = (arb?.revenue?.p50 ?? p.annualRevenue / boost) / 12;
-  const slowYearMonthlyRevenue = (arb?.revenue?.p25 ?? p.annualRevenueLow / boost) / 12;
+  const dataModelMonthlyRevenue = (arbPercentile(arb, 'p50', 'revenue') ?? p.annualRevenue / boost) / 12;
+  const slowYearMonthlyRevenue = (arbPercentile(arb, 'p25', 'revenue') ?? p.annualRevenueLow / boost) / 12;
 
   // BNB Calc's AI expense estimate (excludes rent), as a share of its own revenue
   const arbRatio = arb && arb.monthlyRevenueUSD > 0 ? arb.monthlyExpensesUSD / arb.monthlyRevenueUSD : NaN;
@@ -231,16 +260,25 @@ export function buildDealFacts(params: {
 
   const revenueToBreakEven = monthlyRent / (1 - expenseRatio);
   const breakEvenOccupancy = adr > 0 ? revenueToBreakEven / (adr * DAYS_PER_MONTH) : 1;
-  const marketMedianOccupancy = toDecimal(arb?.occupancy?.p50) ?? projectedOccupancy;
+  const liveArbComps = (arb?.comparables ?? []).filter(looksActive);
+  const mappedArbComps = liveArbComps.map(mapArbComp);
+  // How booked similar homes really are — BNB Calc's median, else the median
+  // of real comps. Never the projection itself: that would compare the deal's
+  // own assumption to itself.
+  const marketMedianOccupancy =
+    arbPercentile(arb, 'p50', 'occupancy') ??
+    median(mappedArbComps.map(c => c.occupancy)) ??
+    median(p.comps.map(c => c.occupancy)) ??
+    null;
 
   const startupCost = p.startupCost && p.startupCost > 0 ? p.startupCost : arbStartupCost(bedrooms);
   const paybackMonths = monthlyProfit > 0 ? startupCost / monthlyProfit : null;
   const annualCashOnCash = (monthlyProfit * 12) / startupCost;
 
-  const liveArbComps = (arb?.comparables ?? []).filter(looksActive);
-  const comps: DealBriefComp[] = liveArbComps.length ? liveArbComps.map(mapArbComp) : p.comps;
+  const comps: DealBriefComp[] = mappedArbComps.some(c => c.annualRevenue > 0) ? mappedArbComps : p.comps;
 
   return {
+    version: DEAL_FACTS_VERSION,
     bedrooms,
     bathrooms,
     monthlyRent,
@@ -297,16 +335,16 @@ Hard rules:
 - Output ONLY a JSON object, no markdown fences, matching this shape:
 {
   "headline": "≤ 12 words, the deal's strongest point",
-  "summary": "2-3 sentences: what this deal is and why it's attractive",
+  "summary": "2 sentences, ≤ 45 words total: what this deal is and why it's attractive",
   "whyItWorks": ["exactly 3 bullets, each ≤ 20 words: one concrete reason tied to a number in <facts>"],
-  "upsideMoves": [{"move": "a specific improvement", "why": "how it moves this listing toward the top earners"}],
-  "watchOuts": [{"risk": "one real risk", "howTopOperatorsHandleIt": "how good operators handle it"}],
+  "upsideMoves": [{"move": "a specific improvement, ≤ 12 words", "why": "≤ 25 words: how it moves this listing toward the top earners"}],
+  "watchOuts": [{"risk": "one real risk, ≤ 15 words", "howTopOperatorsHandleIt": "≤ 25 words: how good operators handle it"}],
   "closingNote": "1 sentence, encouraging, about what winning this deal looks like"
 }
 whyItWorks sits directly under tiles that already show monthly profit, payback months and break-even occupancy — don't just restate those; each bullet should add a new reason (e.g. the slow-year floor, what the comps prove, the gap to the data-model median, demand for this bedroom count).
 upsideMoves: 2-3 items, grounded in topEarnerAmenities when present, otherwise in what top-quarter listings for this bedroom count typically offer. watchOuts: 1-2 items.`;
 
-const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 export function formatFactsForPrompt(deal: { address: string; city?: string | null; state?: string | null }, f: DealFacts): string {
@@ -319,7 +357,9 @@ export function formatFactsForPrompt(deal: { address: string; city?: string | nu
     `Operating expenses: ${pct(f.expenseRatio)} of revenue = ${usd(f.monthlyExpenses)}/mo (${f.expenseSource === 'bnbcalc_ai' ? 'AI estimate for this property' : 'standard estimate'}), not including rent`,
     `Profit after rent and expenses (optimized): ${usd(f.monthlyProfit)}/mo`,
     `Break-even occupancy: ${pct(f.breakEvenOccupancy)} booked covers rent + expenses`,
-    `Typical comparable home is booked: ${pct(f.marketMedianOccupancy)}`,
+    f.marketMedianOccupancy != null
+      ? `Typical comparable home is booked: ${pct(f.marketMedianOccupancy)}`
+      : `Typical comparable occupancy: not available — don't claim how booked similar homes are`,
     `Startup cost (furniture, setup, deposit, first month): ${usd(f.startupCost)}`,
     f.paybackMonths != null
       ? `Payback on startup: ${f.paybackMonths.toFixed(1)} months; year-one cash-on-cash return ${pct(f.annualCashOnCash)}`

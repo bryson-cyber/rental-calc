@@ -687,7 +687,8 @@ export default function ShareableReportViewer() {
             <ReportDisclaimer />
           </div>
         </div>
-        <ShareBar />
+        {/* Sharing is a team tool; on client deal pages it just covers the text on phones */}
+        {fullAnalysisOpen && <ShareBar />}
       </>
     );
   }

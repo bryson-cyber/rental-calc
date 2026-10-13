@@ -63,3 +63,41 @@ describe('isDealTeamUser', () => {
     expect(isDealTeamUser(null)).toBe(false);
   });
 });
+
+describe('market occupancy (live regression: 623 East Gates St, Oct 13 2026)', () => {
+  it("never reports the team's own occupancy as the market's", () => {
+    // Live BNB Calc arb response had no bands we could read, so the old code
+    // fell back to the projection (66%) and called it "similar homes"
+    const comps = [77, 43, 60, 56, 56].map((occ, i) => ({ title: `c${i}`, airbnbUrl: 'https://www.airbnb.com/rooms/1', revenue: 50000, adr: 200, occupancy: occ }));
+    const projection = projectionFromReport({ ...row, reportData: { ...row.reportData, comparables: comps } })!;
+    const f = buildDealFacts({ bedrooms: 2, bathrooms: 1, monthlyRent: 1375, projection, arb: null });
+    expect(f.projectedOccupancy).toBe(0.66);
+    expect(f.marketMedianOccupancy).toBe(0.56); // median of the real comps
+  });
+
+  it('reads BNB Calc quartiles (the live response shape)', () => {
+    const arb = {
+      monthlyRevenueUSD: 4000, monthlyExpensesUSD: 1200,
+      quartiles: {
+        '25th_percentile': { revenue: 24000, occupancy_rate: 38, average_daily_rate: 150 },
+        '50th_percentile': { revenue: 36000, occupancy_rate: 52, average_daily_rate: 190 },
+      },
+      comparables: [],
+    } as any;
+    const f = buildDealFacts({ bedrooms: 2, bathrooms: 1, monthlyRent: 1375, projection: projectionFromReport(row)!, arb });
+    expect(f.marketMedianOccupancy).toBe(0.52);
+    expect(f.dataModelMonthlyRevenue).toBe(3000);
+    expect(f.slowYearMonthlyRevenue).toBe(2000);
+  });
+
+  it('reads comps in the live (cohost-style) shape and says nothing without market data', () => {
+    const arb = {
+      monthlyRevenueUSD: 0, monthlyExpensesUSD: 0,
+      comparables: [{ airbnbId: '9', name: 'Live comp', metrics: { ttm: { revenue: 48000, adjusted_occupancy: 61, adr: 210 } } }],
+    } as any;
+    const noComps = projectionFromReport({ ...row, reportData: { ...row.reportData, comparables: [] } })!;
+    const f = buildDealFacts({ bedrooms: 2, bathrooms: 1, monthlyRent: 1375, projection: noComps, arb });
+    expect(f.comps[0]).toMatchObject({ title: 'Live comp', annualRevenue: 48000, occupancy: 0.61, adr: 210 });
+    expect(f.marketMedianOccupancy).toBeNull(); // 1 comp isn't enough for a median
+  });
+});

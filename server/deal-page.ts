@@ -17,7 +17,7 @@ import { eq } from "drizzle-orm";
 import { universalShareableReports } from "../drizzle/schema";
 import { getDb } from "./db";
 import { getBnbCalcArbAnalysis } from "./bnbcalc";
-import { buildDealFacts, generateDealBrief, type DealBriefComp, type DealProjection } from "./deal-brief";
+import { buildDealFacts, DEAL_FACTS_VERSION, generateDealBrief, type DealBriefComp, type DealProjection } from "./deal-brief";
 
 type ReportRow = typeof universalShareableReports.$inferSelect;
 
@@ -187,7 +187,9 @@ export function ensureDealWalkthroughOnView(row: {
   reportData: unknown;
 }): void {
   const rd = (row.reportData ?? {}) as any;
-  if (rd._dealGeneratedAt || rd._dealFacts) return;
+  // Built and current → nothing to do. Built on an older facts version → rebuild.
+  if (rd._dealFacts && (rd._dealFacts.version ?? 1) >= DEAL_FACTS_VERSION) return;
+  if (!rd._dealFacts && rd._dealGeneratedAt) return; // built, but no facts (e.g. unprofitable) — don't retry every open
   if (row.reportType !== "validator" || (row.monthlyRent ?? 0) <= 0 || (rd._mode && rd._mode !== "rent")) return;
   if (!isDealTeamUser({ email: row.creatorEmail })) return;
   queueDealPage(row.shareCode);
