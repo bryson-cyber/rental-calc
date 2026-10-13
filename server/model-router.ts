@@ -35,7 +35,7 @@ export const FEATURES = {
   FULL_REPORT_SUMMARY: 'full-report-summary',
   ENHANCED_NARRATIVE: 'enhanced-narrative',
 
-  // --- Opus 4.6 (Precision Judgment) ---
+  // --- Opus 5.5 (Precision Judgment) ---
   DEAL_VERDICT: 'deal-verdict',
   AI_ADVISOR_TOOL_LOOP: 'ai-advisor-tool-loop',
   DEAL_ALERT_MEMO: 'deal-alert-memo',
@@ -93,7 +93,7 @@ const ROUTING_TABLE: Record<FeatureName, RouteConfig> = {
   [FEATURES.FULL_REPORT_SUMMARY]: { provider: 'gemini', effort: 'low', label: 'Full Report Summary' },
   [FEATURES.ENHANCED_NARRATIVE]: { provider: 'gemini', effort: 'high', label: 'Enhanced Narrative' },
 
-  // Opus 4.6 — Precision Judgment
+  // Opus 5.5 — Precision Judgment
   [FEATURES.DEAL_VERDICT]: { provider: 'opus', effort: 'high', label: 'Deal Verdict' },
   [FEATURES.AI_ADVISOR_TOOL_LOOP]: { provider: 'opus', effort: 'high', label: 'AI Advisor Tool Loop' },
   [FEATURES.DEAL_ALERT_MEMO]: { provider: 'opus', effort: 'high', label: 'Deal Alert AI Memo' },
