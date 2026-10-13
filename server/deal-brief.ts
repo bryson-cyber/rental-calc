@@ -298,11 +298,12 @@ Hard rules:
 {
   "headline": "≤ 12 words, the deal's strongest point",
   "summary": "2-3 sentences: what this deal is and why it's attractive",
-  "whyItWorks": ["3-4 bullets, each one concrete reason tied to a number in <facts>"],
+  "whyItWorks": ["exactly 3 bullets, each ≤ 20 words: one concrete reason tied to a number in <facts>"],
   "upsideMoves": [{"move": "a specific improvement", "why": "how it moves this listing toward the top earners"}],
   "watchOuts": [{"risk": "one real risk", "howTopOperatorsHandleIt": "how good operators handle it"}],
   "closingNote": "1 sentence, encouraging, about what winning this deal looks like"
 }
+whyItWorks sits directly under tiles that already show monthly profit, payback months and break-even occupancy — don't just restate those; each bullet should add a new reason (e.g. the slow-year floor, what the comps prove, the gap to the data-model median, demand for this bedroom count).
 upsideMoves: 2-3 items, grounded in topEarnerAmenities when present, otherwise in what top-quarter listings for this bedroom count typically offer. watchOuts: 1-2 items.`;
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;

@@ -1,14 +1,15 @@
 /**
- * Deal walkthrough — the top of a rental-arbitrage /share report.
+ * Deal walkthrough — what clients see on a rental-arbitrage /share report.
  *
- * A guided, plain-English read of one deal for our clients: the money, why
- * it's safe, what it takes to start, proof they can check, and how to reach
- * the top earners. Each section says what the client is looking at. The full
- * analysis (TeslaDashboard) continues below it on the same page.
+ * Built to end in a decision, not more analysis: the verdict and the three
+ * numbers that matter sit at the top, then a short read of the money, every
+ * month checked against rent, why it's safe, proof they can check, how to win
+ * it, and the reply we need in Slack. The team still sees the full analysis
+ * below it; clients don't.
  *
- * Numbers come from the server's deterministic facts (`_dealFacts`); Claude
- * only writes the prose (`_dealBrief`). See server/deal-brief.ts and
- * server/deal-page.ts.
+ * Numbers come from the server's deterministic facts (`_dealFacts`) and the
+ * report's monthly forecast; Claude only writes the prose (`_dealBrief`).
+ * See server/deal-brief.ts and server/deal-page.ts.
  */
 
 import type { ReactNode } from "react";
@@ -16,6 +17,7 @@ import {
   CheckCircle2,
   ExternalLink,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
 } from "lucide-react";
 
@@ -59,19 +61,35 @@ export interface DealBrief {
   closingNote: string;
 }
 
+/** One month of the report's revenue forecast, as stored in reportData.forecast */
+export interface ForecastMonth {
+  month: string;
+  revenue: number;
+}
+
 const usd = (n: number) =>
   `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
+function monthLabel(raw: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(raw);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, 1).toLocaleString("en-US", {
+      month: "short",
+    });
+  }
+  return raw.slice(0, 3);
+}
+
 function Section({
   step,
   title,
-  explainer,
+  lead,
   children,
 }: {
   step: number;
   title: string;
-  explainer: string;
+  lead: string;
   children: ReactNode;
 }) {
   return (
@@ -81,19 +99,32 @@ function Section({
           {step}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-xl sm:text-2xl font-semibold text-slate-900">
+          <h2 className="font-serif text-xl font-semibold text-slate-900 sm:text-2xl">
             {title}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            <span className="font-medium text-slate-600">
-              What you're looking at:{" "}
-            </span>
-            {explainer}
-          </p>
+          <p className="mt-1 text-sm text-slate-500">{lead}</p>
           <div className="mt-5">{children}</div>
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroStat({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="text-xs uppercase tracking-wide text-white/60">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+      <p className="mt-1 text-xs text-white/60">{note}</p>
+    </div>
   );
 }
 
@@ -126,7 +157,7 @@ function MoneyRow({
   );
 }
 
-/** Horizontal 0–100% bar with a marker for break-even and one for the market. */
+/** Horizontal 0–100% bar: break-even bookings vs. how booked similar homes are. */
 function OccupancyBar({
   breakEven,
   market,
@@ -136,7 +167,7 @@ function OccupancyBar({
 }) {
   const clamp = (n: number) => Math.max(0, Math.min(1, n)) * 100;
   return (
-    <div className="mt-2">
+    <div>
       <div className="relative h-4 rounded-full bg-slate-100">
         <div
           className="absolute inset-y-0 left-0 rounded-l-full bg-amber-200"
@@ -164,20 +195,108 @@ function OccupancyBar({
   );
 }
 
+/**
+ * The report's 12-month forecast, scaled to this deal's projected revenue,
+ * with each month checked against rent + running costs.
+ */
+function MonthByMonth({
+  forecast,
+  facts,
+}: {
+  forecast: ForecastMonth[];
+  facts: DealFacts;
+}) {
+  const total = forecast.reduce((sum, m) => sum + (m.revenue || 0), 0);
+  const scale = total > 0 ? (facts.monthlyRevenue * 12) / total : 1;
+  const months = forecast.map(m => {
+    const revenue = (m.revenue || 0) * scale;
+    return {
+      label: monthLabel(m.month),
+      revenue,
+      profit: revenue * (1 - facts.expenseRatio) - facts.monthlyRent,
+    };
+  });
+  const breakEvenRevenue = facts.monthlyRent / (1 - facts.expenseRatio);
+  const max = Math.max(breakEvenRevenue, ...months.map(m => m.revenue)) * 1.05;
+  const covered = months.filter(m => m.profit >= 0).length;
+  const slowest = months.reduce((a, b) => (b.revenue < a.revenue ? b : a));
+  const yearProfit = months.reduce((sum, m) => sum + m.profit, 0);
+
+  return (
+    <div>
+      <div className="relative flex h-40 items-end gap-1 sm:gap-2">
+        <div
+          className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-slate-700"
+          style={{ bottom: `${(breakEvenRevenue / max) * 100}%` }}
+        />
+        {months.map((m, i) => (
+          <div key={i} className="flex h-full flex-1 flex-col justify-end">
+            <div
+              className={`rounded-t ${m.profit >= 0 ? "bg-emerald-400" : "bg-amber-300"}`}
+              style={{ height: `${(m.revenue / max) * 100}%` }}
+              title={`${m.label}: ${usd(m.revenue)} revenue, ${usd(m.profit)} profit`}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex gap-1 sm:gap-2">
+        {months.map((m, i) => (
+          <span
+            key={i}
+            className="flex-1 text-center text-[10px] text-slate-500 sm:text-xs"
+          >
+            {m.label}
+          </span>
+        ))}
+      </div>
+      <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <span className="w-6 border-t-2 border-dashed border-slate-400" />
+        Rent + running costs ({usd(breakEvenRevenue)}/mo)
+      </p>
+      <p className="mt-4 text-slate-700">
+        {covered === months.length ? (
+          <>
+            <strong>Every month covers rent and costs on its own</strong> — even{" "}
+            {slowest.label}, the slowest, brings in {usd(slowest.revenue)}.
+          </>
+        ) : (
+          <>
+            <strong>
+              {covered} of {months.length} months
+            </strong>{" "}
+            cover rent and costs on their own. The busy months carry the slow
+            ones — over the full year you keep{" "}
+            <strong>{usd(yearProfit)}</strong>.
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 export function DealWalkthrough({
   facts,
   brief,
   imageUrl,
+  forecast,
 }: {
   facts: DealFacts;
   brief?: DealBrief | null;
   imageUrl?: string;
+  forecast?: ForecastMonth[];
 }) {
   const cushion = facts.marketMedianOccupancy - facts.breakEvenOccupancy;
+  const annualProfit = facts.monthlyProfit * 12;
+  const afterLaunchYearOne = annualProfit - facts.startupCost;
+  const usableForecast = (forecast ?? [])
+    .filter(m => m.revenue > 0)
+    .slice(0, 12);
+  const hasForecast = usableForecast.length >= 6;
+  let step = 0;
 
   return (
     <div className="mb-10 space-y-6">
-      {/* Headline */}
+      {/* Verdict at a glance */}
       <div className="overflow-hidden rounded-2xl bg-[#0F172A]">
         {imageUrl && (
           <img
@@ -188,10 +307,16 @@ export function DealWalkthrough({
           />
         )}
         <div className="p-6 sm:p-8">
-          <p className="text-sm font-semibold text-[#C9A962]">
-            Why this deal works
-          </p>
-          <p className="mt-2 font-serif text-3xl font-semibold leading-tight text-white sm:text-4xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#C9A962]">
+              Why this deal works
+            </p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70">
+              <Sparkles className="h-3.5 w-3.5 text-[#C9A962]" />
+              Analysis powered by Claude
+            </span>
+          </div>
+          <p className="mt-3 font-serif text-3xl font-semibold leading-tight text-white sm:text-4xl">
             {brief?.headline ||
               `${usd(facts.monthlyProfit)}/mo after rent and expenses`}
           </p>
@@ -200,7 +325,41 @@ export function DealWalkthrough({
               {brief.summary}
             </p>
           )}
-          <p className="mt-4 text-sm text-white/50">
+
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <HeroStat
+              label="Your profit"
+              value={`${usd(facts.monthlyProfit)}/mo`}
+              note={`About ${usd(annualProfit)} a year, after rent and costs`}
+            />
+            <HeroStat
+              label="Launch cost back in"
+              value={
+                facts.paybackMonths != null
+                  ? `${facts.paybackMonths.toFixed(1)} months`
+                  : "—"
+              }
+              note={`${usd(facts.startupCost)} to furnish and launch`}
+            />
+            <HeroStat
+              label="Break-even"
+              value={`${pct(facts.breakEvenOccupancy)} booked`}
+              note={`Similar homes nearby run ${pct(facts.marketMedianOccupancy)}`}
+            />
+          </div>
+
+          {brief && brief.whyItWorks.length > 0 && (
+            <ul className="mt-6 space-y-2">
+              {brief.whyItWorks.map((point, i) => (
+                <li key={i} className="flex gap-3 text-white/85">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mt-6 text-sm text-white/50">
             {facts.bedrooms} bed · {facts.bathrooms} bath ·{" "}
             {usd(facts.monthlyRent)}/mo rent
           </p>
@@ -208,9 +367,9 @@ export function DealWalkthrough({
       </div>
 
       <Section
-        step={1}
+        step={++step}
         title="The money"
-        explainer="what this home earns each month on Airbnb, minus what you pay the landlord and what it costs to run. What's left is yours."
+        lead="What this home earns on Airbnb, minus rent and running costs. What's left is yours."
       >
         <MoneyRow
           label="Airbnb revenue (optimized scenario)"
@@ -231,19 +390,41 @@ export function DealWalkthrough({
           value={`${usd(facts.monthlyProfit)}/mo`}
           tone="total"
         />
+        <p className="mt-4 text-slate-700">
+          That's about <strong>{usd(annualProfit)} a year</strong>
+          {afterLaunchYearOne > 0 ? (
+            <>
+              . Even after paying back your {usd(facts.startupCost)} launch
+              budget, year one still leaves{" "}
+              <strong>{usd(afterLaunchYearOne)}</strong> in your pocket.
+            </>
+          ) : (
+            <>, which pays back your {usd(facts.startupCost)} launch budget.</>
+          )}
+        </p>
         <p className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-          <strong>Optimized scenario</strong> means what a well-run,
-          well-furnished listing earns here ({usd(facts.adr)}/night,{" "}
-          {pct(facts.projectedOccupancy)} booked). Big data models show a
+          <strong>Optimized scenario</strong> = what a well-run, well-furnished
+          listing earns here ({usd(facts.adr)}/night,{" "}
+          {pct(facts.projectedOccupancy)} booked). Big data models put a
           typical, unoptimized listing at {usd(facts.dataModelMonthlyRevenue)}
           /mo — they're built conservative.
         </p>
       </Section>
 
+      {hasForecast && (
+        <Section
+          step={++step}
+          title="Every month, checked"
+          lead="Airbnb income rises and falls with the seasons. Green months cover rent and costs on their own."
+        >
+          <MonthByMonth forecast={usableForecast} facts={facts} />
+        </Section>
+      )}
+
       <Section
-        step={2}
+        step={++step}
         title="Why it's safe"
-        explainer="how many nights a month you need booked just to cover rent and costs, compared with how booked similar homes nearby already are. The bigger the gap, the safer the deal."
+        lead="How booked this home needs to be to cover rent and costs, next to how booked similar homes already are."
       >
         <OccupancyBar
           breakEven={facts.breakEvenOccupancy}
@@ -277,66 +458,11 @@ export function DealWalkthrough({
         </div>
       </Section>
 
-      <Section
-        step={3}
-        title="What it takes to start"
-        explainer="your one-time launch budget (furniture, setup, deposit and first month) and how fast the profit pays it back."
-      >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Launch budget
-            </p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {usd(facts.startupCost)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Paid back in
-            </p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {facts.paybackMonths != null
-                ? `${facts.paybackMonths.toFixed(1)} months`
-                : "—"}
-            </p>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Year-one return
-            </p>
-            <p className="mt-1 text-2xl font-bold text-emerald-700">
-              {pct(facts.annualCashOnCash)}
-            </p>
-            <p className="text-xs text-slate-500">
-              year of profit ÷ launch budget
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {brief && brief.whyItWorks.length > 0 && (
-        <Section
-          step={4}
-          title="The case for this deal"
-          explainer="the strongest reasons this deal works, tied to the numbers above."
-        >
-          <ul className="space-y-3">
-            {brief.whyItWorks.map((point, i) => (
-              <li key={i} className="flex gap-3 text-slate-700">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                {point}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
       {facts.comps.length > 0 && (
         <Section
-          step={brief ? 5 : 4}
+          step={++step}
           title="Check the proof yourself"
-          explainer="real Airbnb listings near this home with their actual earnings. Tap any of them to see it live on Airbnb."
+          lead="Real Airbnb listings near this home and what they actually earn. Tap one to see it live."
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {facts.comps.map((c, i) => (
@@ -384,9 +510,9 @@ export function DealWalkthrough({
       {brief &&
         (brief.upsideMoves.length > 0 || brief.watchOuts.length > 0) && (
           <Section
-            step={facts.comps.length > 0 ? 6 : 5}
+            step={++step}
             title="How to win this deal"
-            explainer="what the top-earning listings nearby do differently, and the few things good operators keep an eye on."
+            lead="What the top earners nearby do differently, and what good operators keep an eye on."
           >
             <div className="grid gap-6 sm:grid-cols-2">
               {brief.upsideMoves.length > 0 && (
@@ -427,14 +553,13 @@ export function DealWalkthrough({
           </Section>
         )}
 
-      {brief?.closingNote && (
-        <p className="px-2 text-center font-serif text-xl text-slate-800">
-          {brief.closingNote}
-        </p>
-      )}
-
       {/* Same ask as the team's Slack message — turn the read into a decision */}
       <div className="rounded-2xl border-2 border-[#C9A962] bg-white p-6 sm:p-8">
+        {brief?.closingNote && (
+          <p className="mb-5 font-serif text-xl text-slate-800">
+            {brief.closingNote}
+          </p>
+        )}
         <p className="text-sm font-semibold text-[#9E7B2F]">Your next step</p>
         <h2 className="mt-1 font-serif text-2xl font-semibold text-slate-900">
           Reply in Slack with your decision
@@ -460,6 +585,12 @@ export function DealWalkthrough({
           Availability can change, so reply when you can.
         </p>
       </div>
+
+      <p className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
+        <Sparkles className="h-3.5 w-3.5" />
+        Deal analysis written by Claude from BNBCalc market data and our team's
+        numbers
+      </p>
     </div>
   );
 }
