@@ -585,6 +585,9 @@ function applyRetroactiveBoost(reportData: any, scaleFactor: number): any {
 
     for (const key of Object.keys(obj)) {
       const val = obj[key];
+      // Client deal page facts are a self-consistent snapshot (profit = revenue − rent − costs);
+      // scaling some of their fields would break the math. They're regenerated instead.
+      if (key.startsWith('_deal')) continue;
 
       if (typeof val === 'number' && revenueKeys.includes(key)) {
         obj[key] = Math.round(val * scaleFactor);

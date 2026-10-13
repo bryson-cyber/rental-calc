@@ -602,6 +602,7 @@ export async function ensureCityData(
         monthlyRent: target.monthlyRent,
         propertyType: target.propertyType,
         sourceUrl: target.sourceUrl,
+        imageUrl: target.imageUrl,
       });
       if (share) reportEnsured = true;
       if (share?.created) reportsCreated++;
@@ -721,6 +722,7 @@ export async function ensureCityData(
           monthlyRent: deal.monthlyRent,
           propertyType: deal.propertyType,
           sourceUrl: deal.sourceUrl,
+          imageUrl: deal.imageUrl,
         }, estimate);
         if (share) reportEnsured = true;
         if (share?.created) reportsCreated++;
@@ -764,6 +766,7 @@ export async function ensureDealReportForCity(db: DbClient, city: string, state:
       monthlyRent: deal.monthlyRent,
       propertyType: deal.propertyType,
       sourceUrl: deal.sourceUrl,
+      imageUrl: deal.imageUrl,
     });
     if (!share) console.warn(`[Personalization] On-demand report unavailable for ${deal.address} (no estimate)`);
     return Boolean(share);

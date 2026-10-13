@@ -55,9 +55,9 @@ describe('FEATURES constants', () => {
     expect(FEATURES.HEALTH_CHECK).toBe('health-check');
   });
 
-  it('has exactly 25 features', () => {
+  it('has exactly 26 features', () => {
     const featureCount = Object.keys(FEATURES).length;
-    expect(featureCount).toBe(25);
+    expect(featureCount).toBe(26);
   });
 
   it('has no duplicate feature values', () => {
@@ -113,13 +113,14 @@ describe('Provider Assignments', () => {
     expect(geminiFeatures).toContain(FEATURES.ENHANCED_NARRATIVE);
   });
 
-  it('routes exactly 4 features to Opus', () => {
+  it('routes exactly 5 features to Opus', () => {
     const opusFeatures = getFeaturesByProvider('opus');
-    expect(opusFeatures).toHaveLength(4);
+    expect(opusFeatures).toHaveLength(5);
     expect(opusFeatures).toContain(FEATURES.DEAL_VERDICT);
     expect(opusFeatures).toContain(FEATURES.AI_ADVISOR_TOOL_LOOP);
     expect(opusFeatures).toContain(FEATURES.DEAL_ALERT_MEMO);
     expect(opusFeatures).toContain(FEATURES.CONTENT_HUB_SCRIPT);
+    expect(opusFeatures).toContain(FEATURES.DEAL_BRIEF);
   });
 
   it('routes exactly 17 features to Sonnet', () => {
@@ -127,11 +128,11 @@ describe('Provider Assignments', () => {
     expect(sonnetFeatures).toHaveLength(17);
   });
 
-  it('total features across all providers equals 25', () => {
+  it('total features across all providers equals 26', () => {
     const gemini = getFeaturesByProvider('gemini').length;
     const opus = getFeaturesByProvider('opus').length;
     const sonnet = getFeaturesByProvider('sonnet').length;
-    expect(gemini + opus + sonnet).toBe(25);
+    expect(gemini + opus + sonnet).toBe(26);
   });
 });
 

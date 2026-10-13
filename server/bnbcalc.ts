@@ -349,3 +349,164 @@ export async function getBnbCalcEstimate(
     return null;
   }
 }
+
+// ============================================
+// ARBITRAGE ANALYSIS (raw, unboosted)
+// ============================================
+
+export interface BnbCalcArbComparable {
+  airbnbId?: string;
+  listing_id?: string;
+  name?: string;
+  listingUrl?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  accommodates?: number;
+  annualRevenueUSD?: number;
+  annual_revenue_ltm?: number;
+  occupancyRatePercentage?: number;
+  averageDailyRateUSD?: number;
+  distanceMiles?: number;
+  distance_meters?: number | null;
+  rating?: number;
+  reviews?: number;
+  thumbnail_url?: string;
+  photo_urls?: string[];
+  amenities_raw?: string[];
+  amenities?: Record<string, boolean>;
+  superhost?: boolean;
+  guest_favorite?: boolean;
+  active_days_count_ltm?: number;
+  metrics?: BnbCalcCompMetrics;
+}
+
+/** Percentile bands as BNB Calc returns them. Occupancy is a decimal (0.44). */
+interface BnbCalcBands {
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  avg: number;
+}
+
+export interface BnbCalcArbAnalysis {
+  _id: string;
+  url: string;
+  ratePerNightUSD: number;
+  occupancyRatePercentage: number;
+  revenue?: BnbCalcBands;
+  adr?: BnbCalcBands;
+  occupancy?: BnbCalcBands;
+  comparables?: BnbCalcArbComparable[];
+  monthlyRentUSD: number;
+  monthlyRevenueUSD: number;
+  monthlyExpensesUSD: number;
+  yearOneRevenueUSD: number;
+  yearOneCashFlowUSD: number;
+  totalCashInvestment: number;
+  /** AI steps BNB Calc skipped (still a valid analysis) */
+  warnings?: string[];
+}
+
+/**
+ * Rental-arbitrage analysis from BNB Calc's /create/arb endpoint, with
+ * AI-selected comps and AI expense estimates. Numbers are returned RAW —
+ * no REVENUE_BOOST_FACTOR — so comps match what clients see on Airbnb.
+ *
+ * Slow (AI steps can take ~90s) and billed per AI step, so call it only for
+ * deals that are actually sent to clients, not for every scanned listing.
+ */
+export async function getBnbCalcArbAnalysis(request: {
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  monthlyRent: number;
+}): Promise<BnbCalcArbAnalysis | null> {
+  const apiKey = ENV.bnbcalcApiKey;
+  if (!apiKey) {
+    console.error('[BnbCalc] No API key configured (BNBCALC_API_KEY)');
+    return null;
+  }
+
+  const endpoint = '/v1/external/analysis/create/arb';
+  const cacheKey = apiCache.generateKey('bnbcalc_arb', request);
+  const cached = await apiCache.getAsync<BnbCalcArbAnalysis>(cacheKey);
+  if (cached) {
+    logCacheHit('bnbcalc_arb');
+    return cached;
+  }
+
+  const startTime = Date.now();
+  // BNB Calc asks for a client timeout of at least 300s on AI requests
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 300_000);
+
+  try {
+    console.log(`[BnbCalc] Calling arb endpoint for: ${request.address} (${request.bedrooms}BR, $${request.monthlyRent}/mo rent)`);
+
+    const response = await fetch(`${BNBCALC_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'x-bnbcalc-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fullAddress: request.address,
+        bedrooms: request.bedrooms,
+        bathrooms: request.bathrooms,
+        accomodates: request.accommodates, // NOTE: BNB Calc API has typo (single 'm')
+        monthlyRentUSD: request.monthlyRent,
+        addAIComps: true,
+        addAIExpenseEstimates: true,
+      }),
+      signal: controller.signal,
+    });
+
+    logApiCall({
+      provider: 'bnbcalc',
+      endpoint,
+      statusCode: response.status,
+      success: response.ok,
+      responseTimeMs: Date.now() - startTime,
+      cacheHit: false,
+      source: 'bnbcalc_arb',
+    });
+
+    if (!response.ok) {
+      console.error(`[BnbCalc] Arb API error ${response.status}: ${await response.text()}`);
+      return null;
+    }
+
+    const apiResponse = await response.json() as { success: boolean; data?: BnbCalcArbAnalysis; warnings?: string[]; error?: string };
+    if (!apiResponse.success || !apiResponse.data) {
+      console.error('[BnbCalc] Arb API returned success=false:', apiResponse.error);
+      return null;
+    }
+
+    const result: BnbCalcArbAnalysis = {
+      ...apiResponse.data,
+      warnings: apiResponse.warnings ?? apiResponse.data.warnings,
+    };
+    if (result.warnings?.length) {
+      console.warn(`[BnbCalc] Arb AI warnings for ${request.address}:`, result.warnings);
+    }
+
+    apiCache.set(cacheKey, result, 'rentalizer');
+    return result;
+  } catch (error) {
+    logApiCall({
+      provider: 'bnbcalc',
+      endpoint,
+      statusCode: 500,
+      success: false,
+      responseTimeMs: Date.now() - startTime,
+      cacheHit: false,
+      source: 'bnbcalc_arb',
+    });
+    console.error('[BnbCalc] Arb request failed:', error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}

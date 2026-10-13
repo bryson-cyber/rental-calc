@@ -39,6 +39,7 @@ export const FEATURES = {
   DEAL_VERDICT: 'deal-verdict',
   AI_ADVISOR_TOOL_LOOP: 'ai-advisor-tool-loop',
   DEAL_ALERT_MEMO: 'deal-alert-memo',
+  DEAL_BRIEF: 'deal-brief',
 
   // --- Sonnet 4.6 (Everything Else) ---
   CHAT_STREAMING: 'chat-streaming',
@@ -96,6 +97,7 @@ const ROUTING_TABLE: Record<FeatureName, RouteConfig> = {
   [FEATURES.DEAL_VERDICT]: { provider: 'opus', effort: 'high', label: 'Deal Verdict' },
   [FEATURES.AI_ADVISOR_TOOL_LOOP]: { provider: 'opus', effort: 'high', label: 'AI Advisor Tool Loop' },
   [FEATURES.DEAL_ALERT_MEMO]: { provider: 'opus', effort: 'high', label: 'Deal Alert AI Memo' },
+  [FEATURES.DEAL_BRIEF]: { provider: 'opus', effort: 'high', label: 'Client Deal Brief' },
 
   // Sonnet 4.6 — Everything Else
   [FEATURES.CHAT_STREAMING]: { provider: 'sonnet', effort: 'low', label: 'Chat Streaming' },

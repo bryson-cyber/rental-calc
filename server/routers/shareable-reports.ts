@@ -5,6 +5,7 @@ import { notifications, universalShareableReports } from "../../drizzle/schema";
 import { createAndNotifyShareableReport, createShareableReport, getNotificationAnalytics, getShareableReport, sendShareableReportNotifications, type ShareableReportType } from "../shareable-reports";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
+import { ensureDealWalkthroughOnView, isDealTeamUser, queueDealPage, refreshDealPageIfPresent } from "../deal-page";
 
 export const shareableReportsRouter = router({
     // Create a shareable report for any tool type
@@ -48,6 +49,10 @@ export const shareableReportsRouter = router({
           creatorName: input.creatorName || ctx.user?.name || undefined,
           creatorEmail: input.creatorEmail || ctx.user?.email || undefined,
         });
+        // Team rent reports get their client walkthrough built in the background
+        if (result.success && result.shareCode && input.reportType === 'validator' && (input.monthlyRent ?? 0) > 0 && isDealTeamUser(ctx.user)) {
+          queueDealPage(result.shareCode);
+        }
         return result;
       }),
 
@@ -61,6 +66,7 @@ export const shareableReportsRouter = router({
         if (!report) {
           return { success: false, error: 'Report not found' };
         }
+        ensureDealWalkthroughOnView(report);
         return { success: true, data: report };
       }),
 
@@ -178,6 +184,8 @@ export const shareableReportsRouter = router({
         await db.update(universalShareableReports)
           .set({ revenueOverride: input.revenueOverride })
           .where(eq(universalShareableReports.shareCode, input.shareCode));
+        // Keep the client walkthrough in step with the team's numbers
+        void refreshDealPageIfPresent(input.shareCode);
         
         return { success: true, revenueOverride: input.revenueOverride };
       }),
@@ -202,6 +210,7 @@ export const shareableReportsRouter = router({
         await db.update(universalShareableReports)
           .set({ occupancyOverride: occupancyValue })
           .where(eq(universalShareableReports.shareCode, input.shareCode));
+        void refreshDealPageIfPresent(input.shareCode);
         
         return { success: true, occupancyOverride: input.occupancyOverride };
       }),
@@ -226,6 +235,7 @@ export const shareableReportsRouter = router({
         await db.update(universalShareableReports)
           .set({ adrOverride: adrValue })
           .where(eq(universalShareableReports.shareCode, input.shareCode));
+        void refreshDealPageIfPresent(input.shareCode);
         
         return { success: true, adrOverride: input.adrOverride };
       }),
