@@ -326,13 +326,17 @@ export function mapLlcToWhopRequest(registration: LlcComplete) {
     business_type: registration.businessType,
     industry_group: registration.industryGroup,
     industry_type: registration.industryType,
-    use_registered_agent: registration.useRegisteredAgent,
+    // Legacy opt-in leg (LLC_PROVIDER=whop): its one switch decides the
+    // business address, so it follows the business-address choice
+    // (2026-10-14). It cannot route mail separately from that; submit
+    // refuses a split choice on this leg before anything is sent.
+    use_registered_agent: registration.businessAddressMode === "registered_agent",
     expedite_ein: registration.expediteEin && !anyFounderSsn,
   };
 
   if (registration.businessPhone) businessInfo.phone = registration.businessPhone;
   if (registration.website) businessInfo.website = registration.website;
-  if (!registration.useRegisteredAgent) {
+  if (registration.businessAddressMode !== "registered_agent") {
     businessInfo.address = {
       line1: registration.companyAddress.line1,
       ...(registration.companyAddress.line2

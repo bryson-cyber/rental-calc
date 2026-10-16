@@ -73,7 +73,18 @@ export async function createDemoFiling(ownerUserId: number): Promise<{ id: numbe
     businessType: "brick_and_mortar",
     industryGroup: "hospitality_and_lodging",
     industryType: "vacation_rental_property",
-    useRegisteredAgent: true,
+    // The sample shows the new defaults (2026-10-14): the client's own street
+    // address as the business address and for mail, the professional agent
+    // included.
+    businessPhone: "+14045550100",
+    useRegisteredAgent: false,
+    businessAddressMode: "customer",
+    mailingAddressMode: "customer",
+    companyAddressLine1: "1204 Peachtree Walk NE",
+    companyAddressCity: "Atlanta",
+    companyAddressState: "GA",
+    companyAddressPostalCode: "30309",
+    companyAddressCountry: "US",
     expediteEin: false,
     accuracyAttested: true,
     // Demo marker: ops-only recognition; never exposed to clients.

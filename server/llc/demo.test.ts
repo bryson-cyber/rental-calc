@@ -153,7 +153,11 @@ describe("createDemoFiling", () => {
       businessType: "brick_and_mortar",
       industryGroup: "hospitality_and_lodging",
       industryType: "vacation_rental_property",
-      useRegisteredAgent: true,
+      // Pin moved (2026-10-14): the sample filing shows the new defaults, the client's own street address for the business address and mail (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
+      useRegisteredAgent: false,
+      businessAddressMode: "customer",
+      mailingAddressMode: "customer",
+      companyAddressLine1: "1204 Peachtree Walk NE",
       expediteEin: false,
       accuracyAttested: true,
       retailPriceCents: 59900,

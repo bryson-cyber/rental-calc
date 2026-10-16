@@ -3,6 +3,7 @@ import { llcRegistrations } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
+import { ensureAddressColumns } from "./addressChoices";
 
 /**
  * Boot-time idempotent creation of the LLC tables (mirrors migrations
@@ -271,6 +272,16 @@ export async function ensureLlcTables(): Promise<void> {
     await db
       .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `statusToken` varchar(64)"))
       .catch(() => undefined);
+    // LLC address choices (2026-10-14, server/llc/addressChoices.ts): the
+    // business address and the mail address are chosen separately, with an
+    // acknowledgment time and wording version for each opt-in to the agent's
+    // address, and the evidence of what was sent. All NULL-able, so older
+    // orders keep working with no backfill. Idempotent like the columns above
+    // (a duplicate-column error once applied is silent), but any OTHER failure
+    // is logged by column name: every order read selects these columns, so a
+    // quietly failed ADD would break the LLC pages while this boot still
+    // logged "Schema ensured".
+    await ensureAddressColumns((statement) => db.execute(sql.raw(statement)));
 
     // statusToken backfill (2026-07-28): rows created before the column each
     // get their own unguessable token at boot so tokenized email links work

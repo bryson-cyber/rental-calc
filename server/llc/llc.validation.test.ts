@@ -5,6 +5,7 @@ import {
   validateLlcStep,
 } from "../../shared/llc";
 import { validDraft } from "./test-fixtures";
+import { BUSINESS_AGENT_ACK, MAILING_AGENT_ACK } from "../../shared/llcAddress";
 
 describe("LLC step validation", () => {
   it("accepts a complete documented Whop registration", () => {
@@ -33,13 +34,25 @@ describe("LLC step validation", () => {
       postalCode: "",
       country: "US" as const,
     };
+    // Pin moved (2026-10-14): no address is needed only when BOTH addresses are the agent's, each opt-in acknowledged; the old switch alone no longer counts (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
+    expect(
+      validateLlcStep(3, {
+        ...validDraft,
+        useRegisteredAgent: true,
+        businessAddressMode: "registered_agent",
+        mailingAddressMode: "registered_agent",
+        businessAgentAckVersion: BUSINESS_AGENT_ACK.version,
+        mailingAgentAckVersion: MAILING_AGENT_ACK.version,
+        companyAddress: emptyAddress,
+      }).success,
+    ).toBe(true);
     expect(
       validateLlcStep(3, {
         ...validDraft,
         useRegisteredAgent: true,
         companyAddress: emptyAddress,
       }).success,
-    ).toBe(true);
+    ).toBe(false);
 
     const result = validateLlcStep(3, {
       ...validDraft,
@@ -101,9 +114,14 @@ describe("LLC step validation", () => {
       );
     }
 
+    // Pin moved (2026-10-14): the phone rides with the client's own address, so it is optional only when both addresses are the agent's (acknowledged) (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
     const withAgent = llcCompleteSchema.safeParse({
       ...withoutPhone,
       useRegisteredAgent: true,
+      businessAddressMode: "registered_agent",
+      mailingAddressMode: "registered_agent",
+      businessAgentAckVersion: BUSINESS_AGENT_ACK.version,
+      mailingAgentAckVersion: MAILING_AGENT_ACK.version,
     });
     expect(withAgent.success).toBe(true);
   });
