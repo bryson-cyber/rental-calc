@@ -13613,3 +13613,10 @@ Production verified October 13 at 22:25 UTC via live browser: entry index-CTEXdG
 - [x] Verify the new production bundle/UI and record deployment evidence.
 
 Verified 2026-10-13T23:47:50.954233+00:00: live entry /assets/index-BMCeq5tU.js; report ShareableReportViewer-DWb2Z0MZ.js contains both the new missing-market fallback and phone-layout marker. 166 regressions passed; production build passed; 101 TypeScript errors unchanged; fixture widths 320/375/390/1024px had no horizontal overflow. No campaign resend, payment, filing, or secret/schema changes.
+
+## Remove Client Projection-versus-Comp Warning — October 16, 2026
+- [x] Hide the screenshot's projection-versus-comparable underwriting warning on existing shared reports without changing stored calculations or other risk notes.
+- [x] Prevent this warning category in future generated deal briefs with a shared deterministic filter and prompt instruction.
+- [x] Add regressions for the exact screenshot, wording variants, and preservation of other watch-outs, facts, and mobile layout.
+- [x] Run scoped tests, production build, and TypeScript baseline comparison.
+- [ ] Publish the fix and verify the new production report bundle.

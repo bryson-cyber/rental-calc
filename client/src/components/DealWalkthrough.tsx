@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from "react";
+import { clientDealWatchOuts } from "@shared/deal-brief-content";
 import {
   CheckCircle2,
   ExternalLink,
@@ -290,6 +291,8 @@ export function DealWalkthrough({
   const market = facts.marketMedianOccupancy;
   const cushion = market != null ? market - facts.breakEvenOccupancy : 0;
   const annualProfit = facts.monthlyProfit * 12;
+  // Apply to stored briefs too: existing links update without a paid rebuild.
+  const watchOuts = clientDealWatchOuts(brief?.watchOuts);
   const afterLaunchYearOne = annualProfit - facts.startupCost;
   const usableForecast = (forecast ?? [])
     .filter(m => m.revenue > 0)
@@ -524,13 +527,15 @@ export function DealWalkthrough({
       )}
 
       {brief &&
-        (brief.upsideMoves.length > 0 || brief.watchOuts.length > 0) && (
+        (brief.upsideMoves.length > 0 || watchOuts.length > 0) && (
           <Section
             step={++step}
             title="How to win this deal"
-            lead="What the top earners nearby do differently, and what good operators keep an eye on."
+            lead={watchOuts.length > 0
+              ? "What the top earners nearby do differently, and what good operators keep an eye on."
+              : "What the top earners nearby do differently."}
           >
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className={`grid gap-6 ${brief.upsideMoves.length > 0 && watchOuts.length > 0 ? "sm:grid-cols-2" : ""}`}>
               {brief.upsideMoves.length > 0 && (
                 <div>
                   <p className="flex items-center gap-2 font-semibold text-slate-900">
@@ -549,14 +554,14 @@ export function DealWalkthrough({
                   </ul>
                 </div>
               )}
-              {brief.watchOuts.length > 0 && (
+              {watchOuts.length > 0 && (
                 <div>
                   <p className="flex items-center gap-2 font-semibold text-slate-900">
                     <ShieldCheck className="h-5 w-5 text-amber-600" /> Keep an
                     eye on
                   </p>
                   <ul className="mt-3 space-y-3">
-                    {brief.watchOuts.map((w, i) => (
+                    {watchOuts.map((w, i) => (
                       <li key={i}>
                         <p className="text-[15px] font-semibold leading-snug text-slate-900">
                           {w.risk}
