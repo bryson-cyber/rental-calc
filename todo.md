@@ -13619,4 +13619,6 @@ Verified 2026-10-13T23:47:50.954233+00:00: live entry /assets/index-BMCeq5tU.js;
 - [x] Prevent this warning category in future generated deal briefs with a shared deterministic filter and prompt instruction.
 - [x] Add regressions for the exact screenshot, wording variants, and preservation of other watch-outs, facts, and mobile layout.
 - [x] Run scoped tests, production build, and TypeScript baseline comparison.
-- [ ] Publish the fix and verify the new production report bundle.
+- [x] Publish the fix and verify the new production report bundle (b98936ca).
+
+Production verified 2026-10-16T19:36:55.635446+00:00: entry /assets/index-Ukkm7HoT.js and report ShareableReportViewer-BIPLiwkK.js contain the shared projection-comparison filter. Live production renderer browser-only fixture (exact screenshot warning) hid the warning/empty column while retaining $6,075/mo, $37,597/yr, and upside advice; no report writes or paid rebuilds. 180 tests passed; build passed; 101 TypeScript diagnostics unchanged; no overflow at 320/390/1024px.
