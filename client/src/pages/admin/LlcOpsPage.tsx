@@ -1092,6 +1092,53 @@ function RequiredActionsPanel({ registrationId }: { registrationId: number }) {
   );
 }
 
+/**
+ * Address choices on an order (2026-10-14), ops wording: which address is
+ * the principal place of business and where mail and the EIN letter go.
+ * Modes only; the address itself stays on the client's order.
+ */
+function addressModeLabel(kind: 'business' | 'mail', mode: 'customer' | 'registered_agent') {
+  if (mode === 'registered_agent') return "Registered agent's address (opted in)";
+  return kind === 'business' ? "Client's own street address" : "Client's own address";
+}
+
+function AddressChoicesLine({
+  order,
+}: {
+  order: {
+    addressChoiceNeeded: boolean;
+    addressModes: {
+      business: 'customer' | 'registered_agent';
+      mailing: 'customer' | 'registered_agent';
+      source: 'stored' | 'legacy' | 'default';
+    };
+  };
+}) {
+  return (
+    <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Address choices</p>
+      <dl className="mt-2 grid gap-1 text-xs text-slate-700 sm:grid-cols-[13rem_1fr]">
+        <dt className="font-semibold">Principal place of business</dt>
+        <dd>{addressModeLabel('business', order.addressModes.business)}</dd>
+        <dt className="font-semibold">Mail and EIN letter</dt>
+        <dd>{addressModeLabel('mail', order.addressModes.mailing)}</dd>
+      </dl>
+      {order.addressModes.source === 'legacy' ? (
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          Placed before 2026-10-14 with the old single registered-agent switch.
+        </p>
+      ) : null}
+      {order.addressChoiceNeeded ? (
+        <p className="mt-2 text-xs font-medium leading-5 text-amber-700">
+          Held before filing: the client is asked on the status page to choose the business
+          address and where mail goes. The filing starts by itself once they save and the
+          payment is in. Nothing to retry until then.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function LlcOpsPage() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
@@ -1310,6 +1357,11 @@ export default function LlcOpsPage() {
                               {order.lastErrorMessage}
                             </p>
                           ) : null}
+                          {order.addressChoiceNeeded ? (
+                            <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                              Address choice needed
+                            </p>
+                          ) : null}
                           {order.openRequiredActionCount > 0 ? (
                             <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
                               {order.openRequiredActionCount} client action{order.openRequiredActionCount === 1 ? "" : "s"}
@@ -1381,6 +1433,7 @@ export default function LlcOpsPage() {
                         <tr>
                           <td colSpan={8} className="border-b border-slate-100 px-4 pb-6 pt-1">
                             <p className="mb-2 font-sans text-[11px] text-slate-400">Last provider sync: {formatDate(order.lastProviderSyncAt)}</p>
+                            <AddressChoicesLine order={order} />
                             <RequiredActionsPanel registrationId={order.id} />
                             <DocumentsPanel registrationId={order.id} />
                           </td>

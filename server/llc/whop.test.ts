@@ -85,12 +85,35 @@ describe("Whop LLC contract", () => {
     const request = mapLlcToWhopRequest({
       ...validDraft,
       useRegisteredAgent: true,
+      // Pin moved (2026-10-14): the legacy leg's switch follows the business-address choice, not the old flag (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
+      businessAddressMode: "registered_agent",
       businessPhone: "",
       website: "",
     });
     expect(request.business_info).not.toHaveProperty("address");
     expect(request.business_info).not.toHaveProperty("phone");
     expect(request.business_info).not.toHaveProperty("website");
+  });
+
+  it("the legacy leg's one switch follows the business-address choice, never the old flag alone (2026-10-14)", () => {
+    // Owner: an LLC was filed with the registered agent's address as its
+    // business address; fix it in every app. A stale old flag must not send
+    // the agent's address, and an explicit opt-in must not send the client's.
+    const staleFlag = mapLlcToWhopRequest({
+      ...validDraft,
+      useRegisteredAgent: true,
+      businessAddressMode: "customer",
+    });
+    expect(staleFlag.business_info.use_registered_agent).toBe(false);
+    expect(staleFlag.business_info).toHaveProperty("address");
+
+    const optedIn = mapLlcToWhopRequest({
+      ...validDraft,
+      useRegisteredAgent: false,
+      businessAddressMode: "registered_agent",
+    });
+    expect(optedIn.business_info.use_registered_agent).toBe(true);
+    expect(optedIn.business_info).not.toHaveProperty("address");
   });
 
   it("normalizes only approved provider signals and discards unknown or sensitive keys", () => {

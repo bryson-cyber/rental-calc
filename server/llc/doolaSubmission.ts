@@ -48,7 +48,7 @@ import {
 import { sendDocumentsReleasedEmail, sendFormationCompleteEmail } from "./clientEmails";
 import { buildClientOperatingAgreementPdf, demoStateName } from "./demo";
 import { isTestRegistration } from "./demoMarker";
-import { llcDocuments } from "../../drizzle/schema";
+import { llcDocuments, llcEmailLog } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { and, eq, isNull } from "drizzle-orm";
 import type { LlcStatus } from "../../shared/llc";
@@ -56,6 +56,50 @@ import {
   syncDoolaRequiredActionsForCompany,
   syncSignatureRequirementFallback,
 } from "./requiredActions";
+import {
+  addressPlanForRow,
+  addressPlanIssueCodes,
+  withAddressChoiceEvidence,
+} from "./addressChoices";
+
+/** llc_email_log claim type for the address-choice hold alert (one per order). */
+export const OPS_ADDRESS_HOLD_ALERT_TYPE = "ops_address_choice_hold";
+
+/**
+ * Send-once doorbell for the address-choice hold (2026-10-14), the same claim
+ * the checkout-ready alert uses (submission.ts): the unique
+ * (registrationId, emailType) row in llc_email_log is inserted BEFORE
+ * sending, a duplicate means ops already heard, and the claim is released
+ * when no channel delivered so the next pass rings once more. Without a
+ * database there is nothing to claim against, so the alert goes out.
+ */
+async function sendAddressHoldAlertOnce(
+  registrationId: number,
+  alert: ReturnType<typeof submissionProblemAlert>,
+): Promise<"sent" | "skipped" | "failed"> {
+  const db = await getDb();
+  if (!db) return (await sendOpsAlert(alert).catch(() => false)) ? "sent" : "failed";
+  try {
+    await db
+      .insert(llcEmailLog)
+      .values({ registrationId, emailType: OPS_ADDRESS_HOLD_ALERT_TYPE });
+  } catch (error) {
+    if (error instanceof Error && /duplicate|ER_DUP/i.test(error.message)) return "skipped";
+    throw error;
+  }
+  const delivered = await sendOpsAlert(alert).catch(() => false);
+  if (delivered) return "sent";
+  await db
+    .delete(llcEmailLog)
+    .where(
+      and(
+        eq(llcEmailLog.registrationId, registrationId),
+        eq(llcEmailLog.emailType, OPS_ADDRESS_HOLD_ALERT_TYPE),
+      ),
+    )
+    .catch(() => {});
+  return "failed";
+}
 
 /**
  * File a paid Doola registration. Idempotent and single-flight: the
@@ -114,9 +158,41 @@ export async function fileDoolaRegistration(params: {
     };
   }
 
+  // Address-choice gate (2026-10-14), BEFORE the lock and any provider call:
+  // an order whose choices cannot be filed is held, not filed. That covers an
+  // order placed before the fix with the old "registered agent" switch on and
+  // nothing acknowledged (it would otherwise file the agent's office as the
+  // client's principal place of business, the case the owner asked us to
+  // end), an opt-in where the state refuses it, and the client's own address
+  // without a full street address. The client sees a card on the status page
+  // to choose; once saved, the filing starts. Nothing changes on the row here.
+  const addressPlan = addressPlanForRow(registration);
+  if (addressPlan.issues.length > 0) {
+    // Once per order: the payment webhook, Mark paid and client retries can
+    // each re-enter here for a paid order not yet filed, so a plain send
+    // would ring ops on every pass until the client confirms (the
+    // 2026-09-05 pattern).
+    await sendAddressHoldAlertOnce(
+      params.registrationId,
+      submissionProblemAlert({
+        registrationId: params.registrationId,
+        legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+        errorType: "address_choice_needed",
+        message: `Filing held before any provider call: the address choices cannot be sent (${addressPlanIssueCodes(addressPlan)}). The client is asked on the status page to choose the business address and where mail goes; the filing starts by itself once they save. Nothing to retry until then.`,
+        uncertain: false,
+      }),
+    ).catch(() => {});
+    return {
+      outcome: "not_ready",
+      reason: "The business address and mail choices need to be confirmed first",
+    };
+  }
+
   // Single-flight lock: only one caller wins payment_required → submitting.
   // The environment stamp rides the same write, so a row is fenced from the
-  // moment it first heads toward a provider.
+  // moment it first heads toward a provider. So does the evidence of which
+  // address modes and acknowledgment versions are being sent (no address
+  // text).
   const lock = await transitionLlcStatus({
     userId: params.userId,
     registrationId: params.registrationId,
@@ -129,6 +205,7 @@ export async function fileDoolaRegistration(params: {
       lastErrorMessage: null,
       retryable: false,
       doolaEnv: environment,
+      addressChoiceEvidence: withAddressChoiceEvidence(registration, "sent"),
     },
   });
   if (!lock.changed) {

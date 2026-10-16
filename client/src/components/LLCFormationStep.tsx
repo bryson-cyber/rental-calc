@@ -35,8 +35,11 @@ const INCLUDED = [
   },
   {
     icon: MailCheck,
-    title: 'Registered agent service',
-    detail: 'A professional address receives state and legal mail — not your home.',
+    title: 'Professional registered agent',
+    // Since 2026-10-14 the agent is included with every filing and does not
+    // decide the address: the client picks the address on the state filing
+    // and where mail goes in the wizard (own street address by default).
+    detail: 'Included with every filing. It accepts official legal papers for your company, and you choose the address on your state filing and where your mail goes.',
   },
   {
     icon: FileCheck2,

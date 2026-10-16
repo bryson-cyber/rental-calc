@@ -4,17 +4,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { LlcDraft } from "@shared/llc";
 import { LLC_ACTIVITY_PRESETS, LLC_ENTITY_SUFFIXES, LLC_FORMATION_STATES } from "@shared/llc";
+import { withAddressChoices, withFormationState } from "@shared/llcAddress";
 import { IndustryCombobox } from "./IndustryCombobox";
-import { AlertCircle, ArrowUpRight, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Plus, Trash2 } from "lucide-react";
 import {
   AddressFields,
-  FieldBlock,
   IncludedLine,
   NativeSelect,
   OfferBadge,
   SectionHeading,
   TextField,
 } from "./FormControls";
+import { AddressChoiceFields, addressChoiceSummary } from "./AddressChoiceFields";
 import {
   formatUsdFromCents,
   stateDisplayName,
@@ -128,7 +129,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           id="formationState"
           label="Formation state"
           value={draft.formationState ?? ""}
-          onChange={(event) => patch({ formationState: event.target.value })}
+          onChange={(event) => onChange(withFormationState(draft, event.target.value))}
           options={LLC_FORMATION_STATES.map((state) => ({ value: state, label: state }))}
           error={errors.formationState}
           help="Choose the state where the LLC will be legally formed."
@@ -142,7 +143,7 @@ export function BusinessStep({ draft, errors, onChange }: StepProps) {
           autoComplete="tel"
           inputMode="tel"
           error={errors.businessPhone}
-          help="US numbers work as-is — just type the 10 digits. International numbers need their + country code. Required if you use your own company address instead of our registered agent."
+          help="US numbers work as-is: just type the 10 digits. International numbers need their + country code. Needed with your own address in Step 3."
           optional
         />
         <TextField
@@ -232,99 +233,26 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
   );
 }
 
-/**
- * Selectable option card (used instead of a radio group — this app's UI kit
- * does not ship one). Fully keyboard-accessible via native buttons.
- */
-function ChoiceCard({
-  selected,
-  onSelect,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={`flex w-full cursor-pointer items-start gap-4 rounded-xl border p-5 text-left transition-colors ${
-        selected
-          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-          : "border-border bg-card hover:border-primary/40"
-      }`}
-    >
-      {selected ? (
-        <CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
-      ) : (
-        <Circle className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      )}
-      <span className="min-w-0 flex-1">{children}</span>
-    </button>
-  );
-}
-
 export function AddressAgentStep({ draft, errors, onChange }: StepProps) {
+  // Since 2026-10-14 the registered agent is always included and the
+  // business address and the mail address are two separate choices (the
+  // old single switch filed the agent's office as an LLC's principal place
+  // of business). Choices merge through withAddressChoices so the draft
+  // matches what the server saves back and autosave settles.
   return (
     <div>
       <SectionHeading
-        eyebrow="Step 3 · Registered agent"
-        title="Who receives legal mail for your LLC?"
-        description="Every LLC needs a registered agent — the official recipient for state mail and legal documents. Our professional service is included with your order."
+        eyebrow="Step 3 · Address"
+        title="Your business address and mail."
+        description="Two quick choices: the address on your state filing, and where your company's mail goes."
       />
-
-      <FieldBlock
-        htmlFor="agent-choice-service"
-        label="Registered agent"
-        error={errors.useRegisteredAgent}
-      >
-        <div role="radiogroup" aria-label="Registered agent" className="grid gap-3">
-          <ChoiceCard
-            selected={draft.useRegisteredAgent}
-            onSelect={() => onChange({ ...draft, useRegisteredAgent: true })}
-          >
-            <span className="flex flex-wrap items-center gap-2.5">
-              <span className="text-[15px] font-semibold text-foreground">
-                Professional registered agent
-              </span>
-              <OfferBadge>Included</OfferBadge>
-            </span>
-            <span className="mt-3 grid gap-2">
-              <IncludedLine>A professional address receives state mail — not your home</IncludedLine>
-              <IncludedLine>Legal documents accepted for your company at a professional address</IncludedLine>
-              <IncludedLine>Included with your formation order</IncludedLine>
-              <IncludedLine>Nothing extra to set up — we handle the paperwork</IncludedLine>
-            </span>
-          </ChoiceCard>
-          <ChoiceCard
-            selected={!draft.useRegisteredAgent}
-            onSelect={() => onChange({ ...draft, useRegisteredAgent: false })}
-          >
-            <span className="block text-[15px] font-semibold text-foreground">
-              Use my own address
-            </span>
-            <span className="mt-1.5 block text-[13px] leading-5 text-muted-foreground">
-              Your company mailing address goes on the filing and appears on the public
-              state record. You handle legal mail yourself.
-            </span>
-          </ChoiceCard>
-        </div>
-      </FieldBlock>
-
-      {!draft.useRegisteredAgent ? (
-        <div className="mt-8 border-t border-border pt-6">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Company mailing address</h3>
-          <AddressFields
-            idPrefix="companyAddress"
-            value={draft.companyAddress}
-            onChange={(companyAddress) => onChange({ ...draft, companyAddress })}
-            errors={errors}
-          />
-        </div>
-      ) : null}
+      <AddressChoiceFields
+        value={draft}
+        formationState={draft.formationState}
+        errors={errors}
+        onChange={(choices) => onChange(withAddressChoices(draft, choices))}
+        idPrefix="step3"
+      />
     </div>
   );
 }
@@ -635,6 +563,12 @@ export function ReviewStep({
   onEdit,
 }: StepProps & { onEdit: (step: number) => void }) {
   const legalDisplay = `${draft.legalName ?? ""} ${draft.entitySuffix}`.trim();
+  const addressSummary = addressChoiceSummary(draft);
+  // Final validation can flag a Step 3 field (for example the state changed
+  // after the agent's address was chosen); say so here, where the client is.
+  const addressError = Object.entries(errors).find(([key]) =>
+    /^(businessAddressMode|businessAgentAckVersion|mailingAgentAckVersion|businessPhone|companyAddress\.)/.test(key),
+  )?.[1];
   const pricingQuery = useStatePricing(draft.formationState);
   const pricing = pricingQuery.data;
   const showTotal =
@@ -673,29 +607,25 @@ export function ReviewStep({
 
         <section className="border-t border-border pt-4">
           <div className="flex items-center justify-between gap-4">
-            <h3 className="text-sm font-semibold text-foreground">Address and agent</h3>
+            <h3 className="text-sm font-semibold text-foreground">Address and mail</h3>
             <EditSection label="address" onClick={() => onEdit(3)} />
           </div>
           <dl className="mt-1 divide-y divide-border">
-            <SummaryLine
-              label="Registered agent"
-              value={draft.useRegisteredAgent ? "Registered agent service" : "Company mailing address"}
-            />
-            {!draft.useRegisteredAgent ? (
-              <SummaryLine
-                label="Company address"
-                value={[
-                  draft.companyAddress.line1,
-                  draft.companyAddress.line2,
-                  draft.companyAddress.city,
-                  draft.companyAddress.state,
-                  draft.companyAddress.postalCode,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-              />
-            ) : null}
+            <SummaryLine label="Registered agent" value="Professional registered agent (included)" />
+            <SummaryLine label="Principal place of business" value={addressSummary.principal} />
+            <SummaryLine label="Mail and EIN letter go to" value={addressSummary.mail} />
           </dl>
+          {addressError ? (
+            <div
+              role="alert"
+              className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-3"
+            >
+              <p className="text-[13px] font-medium text-destructive">{addressError}</p>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => onEdit(3)}>
+                Fix address
+              </Button>
+            </div>
+          ) : null}
         </section>
 
         <section className="border-t border-border pt-4">
@@ -761,7 +691,17 @@ export function ReviewStep({
       </div>
 
       <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-5">
-        <div className="flex items-start gap-3">
+        <dl className="mb-4 grid gap-2 border-b border-primary/15 pb-4 text-[13px] leading-5">
+          <div className="grid gap-0.5 sm:grid-cols-[13rem_1fr] sm:gap-4">
+            <dt className="font-semibold text-foreground">Principal place of business</dt>
+            <dd className="text-foreground">{addressSummary.principal}</dd>
+          </div>
+          <div className="grid gap-0.5 sm:grid-cols-[13rem_1fr] sm:gap-4">
+            <dt className="font-semibold text-foreground">Mail and EIN letter go to</dt>
+            <dd className="text-foreground">{addressSummary.mail}</dd>
+          </div>
+        </dl>
+        <div className="flex min-h-11 items-start gap-3">
           <Checkbox
             id="accuracyAttested"
             checked={draft.accuracyAttested}

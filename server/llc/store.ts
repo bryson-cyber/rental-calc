@@ -10,8 +10,20 @@ import {
 } from "../../drizzle/schema";
 import type { LlcDraft, LlcStatus } from "../../shared/llc";
 import { normalizeSsn } from "../../shared/llc";
+import {
+  BUSINESS_AGENT_ACK,
+  MAILING_AGENT_ACK,
+  legacyUseRegisteredAgent,
+  type LlcAddressMode,
+} from "../../shared/llcAddress";
 import { getDb } from "../db";
 import { encryptPii } from "./pii";
+import {
+  addressChoiceNeeded,
+  addressChoiceNote,
+  addressPlanForRow,
+  withAddressChoiceEvidence,
+} from "./addressChoices";
 
 function requireDb<T>(db: T | null): T {
   if (!db) throw new Error("Database is not available");
@@ -270,6 +282,69 @@ export function isRegistrationEditable(registration: {
   return true;
 }
 
+type AckColumns = {
+  businessAgentAckAt?: Date | null;
+  businessAgentAckVersion?: string | null;
+  mailingAgentAckAt?: Date | null;
+  mailingAgentAckVersion?: string | null;
+};
+
+/**
+ * The address-choice columns for a save (2026-10-14). The old single switch
+ * is DERIVED here (on only when both addresses are the agent's), never taken
+ * from the client. An opt-in keeps its acknowledgment only when the client
+ * sent the current wording version; the time is kept from an earlier save of
+ * the same version, otherwise stamped now. Choosing the client's own address
+ * clears it.
+ */
+export function addressChoiceColumns(
+  choices: Pick<
+    LlcDraft,
+    "businessAddressMode" | "mailingAddressMode" | "businessAgentAckVersion" | "mailingAgentAckVersion"
+  >,
+  existing: AckColumns,
+  now: Date = new Date(),
+) {
+  const ack = (
+    mode: LlcAddressMode,
+    sentVersion: string | undefined,
+    currentVersion: string,
+    previousVersion: string | null | undefined,
+    previousAt: Date | null | undefined,
+  ) => {
+    if (mode !== "registered_agent" || (sentVersion ?? "").trim() !== currentVersion) {
+      return { version: null, at: null };
+    }
+    return {
+      version: currentVersion,
+      at: previousVersion === currentVersion && previousAt ? previousAt : now,
+    };
+  };
+  const business = ack(
+    choices.businessAddressMode,
+    choices.businessAgentAckVersion,
+    BUSINESS_AGENT_ACK.version,
+    existing.businessAgentAckVersion,
+    existing.businessAgentAckAt,
+  );
+  const mailing = ack(
+    choices.mailingAddressMode,
+    choices.mailingAgentAckVersion,
+    MAILING_AGENT_ACK.version,
+    existing.mailingAgentAckVersion,
+    existing.mailingAgentAckAt,
+  );
+  return {
+    useRegisteredAgent: legacyUseRegisteredAgent(choices.businessAddressMode, choices.mailingAddressMode),
+    businessAddressMode: choices.businessAddressMode,
+    mailingAddressMode: choices.mailingAddressMode,
+    businessAgentAckVersion: business.version,
+    businessAgentAckAt: business.at,
+    mailingAgentAckVersion: mailing.version,
+    mailingAgentAckAt: mailing.at,
+  };
+}
+
 export async function saveLlcDraft(
   userId: number,
   registrationId: number,
@@ -300,7 +375,9 @@ export async function saveLlcDraft(
         industryType: draft.industryType || null,
         businessPhone: draft.businessPhone || null,
         website: draft.website || null,
-        useRegisteredAgent: draft.useRegisteredAgent,
+        // Address choices (2026-10-14): the old switch is derived from the
+        // two modes, never taken from the client.
+        ...addressChoiceColumns(draft, registration),
         companyAddressLine1: draft.companyAddress.line1 || null,
         companyAddressLine2: draft.companyAddress.line2 || null,
         companyAddressCity: draft.companyAddress.city || null,
@@ -362,6 +439,87 @@ export async function saveLlcDraft(
         })),
       );
     }
+  });
+
+  return getLlcRegistrationById(userId, registrationId);
+}
+
+export type LlcAddressChoicesInput = Pick<
+  LlcDraft,
+  | "businessAddressMode"
+  | "mailingAddressMode"
+  | "businessAgentAckVersion"
+  | "mailingAgentAckVersion"
+  | "companyAddress"
+  | "businessPhone"
+>;
+
+/**
+ * The one change a client can make to a SUBMITTED order (2026-10-14): the
+ * address choices, and only while the order has not reached the filing
+ * service and its current choices cannot be filed (an order placed before
+ * the fix with the old switch on). Nothing else on the order changes. The
+ * submission key is cleared so the company is created with a fresh
+ * idempotency key; that is safe because no company exists yet (no company
+ * id, and uncertain outcomes are excluded).
+ */
+export async function saveLlcAddressChoices(
+  userId: number,
+  registrationId: number,
+  choices: LlcAddressChoicesInput,
+) {
+  const db = requireDb(await getDb());
+  const registration = await findRegistrationById(db, userId, registrationId);
+  if (!registration) throw new Error("LLC registration was not found");
+  if (!addressChoiceNeeded(registration)) {
+    throw new Error("These address choices can no longer be changed");
+  }
+
+  const now = new Date();
+  const updates = {
+    ...addressChoiceColumns(choices, registration, now),
+    businessPhone: choices.businessPhone || null,
+    companyAddressLine1: choices.companyAddress.line1 || null,
+    companyAddressLine2: choices.companyAddress.line2 || null,
+    companyAddressCity: choices.companyAddress.city || null,
+    companyAddressState: choices.companyAddress.state || null,
+    companyAddressPostalCode: choices.companyAddress.postalCode || null,
+    companyAddressCountry: choices.companyAddress.country || "US",
+  };
+  const next = { ...registration, ...updates };
+  const plan = addressPlanForRow(next);
+  if (plan.issues.length > 0) {
+    throw new Error("These address choices are not complete");
+  }
+
+  await db.transaction(async (tx) => {
+    const updateResult = await tx
+      .update(llcRegistrations)
+      .set({
+        ...updates,
+        addressChoiceEvidence: withAddressChoiceEvidence(next, "confirmed", now),
+        submissionKey: null,
+        lastErrorType: null,
+        lastErrorMessage: null,
+      })
+      .where(
+        and(
+          eq(llcRegistrations.id, registration.id),
+          eq(llcRegistrations.userId, userId),
+          eq(llcRegistrations.status, registration.status),
+          isNull(llcRegistrations.doolaCompanyId),
+        ),
+      );
+    if (Number(updateResult[0].affectedRows ?? 0) !== 1) {
+      throw new Error("These address choices can no longer be changed");
+    }
+    await tx.insert(llcStatusHistory).values({
+      registrationId: registration.id,
+      fromStatus: registration.status,
+      toStatus: registration.status,
+      source: "user",
+      note: `Client confirmed the address choices after submission. ${addressChoiceNote(plan)}`.slice(0, 500),
+    });
   });
 
   return getLlcRegistrationById(userId, registrationId);

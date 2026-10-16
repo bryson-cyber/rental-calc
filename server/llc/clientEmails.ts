@@ -13,6 +13,7 @@ import { LLC_STATE_NAMES } from "../../shared/llc";
 import { getStatePricing } from "./pricing";
 import { isDemoSubmissionKey } from "./demoMarker";
 import { ensureStatusToken } from "./store";
+import { addressChoiceNeeded } from "./addressChoices";
 
 /**
  * Client-facing transactional emails for the LLC filing lifecycle.
@@ -184,6 +185,14 @@ export function renderApplicationReceivedEmail(params: {
   paymentLinkUrl: string | null;
   /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
   statusToken?: string | null;
+  /**
+   * True for an order held before filing until the client confirms the
+   * business address and where mail goes (2026-10-14, an order placed before
+   * the address split with the old agent switch on). The email then says so
+   * instead of promising the filing starts the moment the payment goes
+   * through. Omitted, the wording is unchanged.
+   */
+  addressChoiceNeeded?: boolean;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const state = stateDisplayName(params.formationState);
@@ -201,12 +210,19 @@ export function renderApplicationReceivedEmail(params: {
     // flow — never promise that a link is coming later. This email's job is
     // rescuing the client who closed the tab before paying: their filing
     // page carries the payment button and everything else.
-    lines.push(`Complete your payment from your filing page and your filing starts the moment it goes through:`);
+    lines.push(
+      params.addressChoiceNeeded
+        ? `Complete your payment from your filing page:`
+        : `Complete your payment from your filing page and your filing starts the moment it goes through:`,
+    );
   }
   lines.push(
     `${statusUrl(params.registrationId, params.statusToken)}`,
     ``,
-    `Filing payments are final and non-refundable. Already paid? You're all set — a confirmation is on its way, and the link above is your filing hub from here on out: live status, and every document (Articles, EIN letter, operating agreement) lands there the moment it's ready.`,
+    params.addressChoiceNeeded
+      ? // Held order (2026-10-14): never "you're all set" while a choice is open.
+        `Filing payments are final and non-refundable. One more step before we file: on that page, confirm your business address and where your company's mail goes. We now ask for these separately, so your state filing can show your own street address. Nothing is filed until you save them, and your filing starts as soon as you do and your payment is in. After that, the page is your filing hub: live status, and every document (Articles, EIN letter, operating agreement) lands there the moment it's ready.`
+      : `Filing payments are final and non-refundable. Already paid? You're all set — a confirmation is on its way, and the link above is your filing hub from here on out: live status, and every document (Articles, EIN letter, operating agreement) lands there the moment it's ready.`,
     ``,
     SIGN_OFF,
   );
@@ -221,6 +237,12 @@ export function renderPaymentConfirmedEmail(params: {
   retailPriceCents: number | null;
   /** Tokenized status link (?t=) — omitted, the plain URL renders unchanged. */
   statusToken?: string | null;
+  /**
+   * True for an order held before filing until the client confirms the
+   * business address and where mail goes (2026-10-14). The email must not say
+   * the filing is underway: it asks for that one step. Omitted, unchanged.
+   */
+  addressChoiceNeeded?: boolean;
 }): ClientEmailContent {
   const company = companyDisplayName(params);
   const state = stateDisplayName(params.formationState);
@@ -228,6 +250,24 @@ export function renderPaymentConfirmedEmail(params: {
     params.retailPriceCents !== null
       ? ` of ${formatUsd(params.retailPriceCents)}`
       : "";
+  if (params.addressChoiceNeeded) {
+    return finalize(`Payment received: one more step before we file in ${state}`, [
+      `We've received your payment${amount} for ${company}.`,
+      ``,
+      `One more step before we file in ${state}: confirm your business address and where your company's mail goes. We now ask for these separately, so your state filing can show your own street address. Nothing is filed until you save them, and your filing starts as soon as you do:`,
+      ``,
+      `${statusUrl(params.registrationId, params.statusToken)}`,
+      ``,
+      `What happens next:`,
+      `1. We file your LLC with the state`,
+      `2. The state approves your formation`,
+      `3. We secure your federal EIN`,
+      ``,
+      `This typically takes a few weeks and varies by state. We'll email you when your formation is complete.`,
+      ``,
+      SIGN_OFF,
+    ]);
+  }
   const lines = [
     `We've received your payment${amount} for ${company}. Your ${state} filing is now underway.`,
     ``,
@@ -701,6 +741,7 @@ export async function sendApplicationReceivedEmail(params: {
       retailPriceCents: registration.retailPriceCents,
       paymentLinkUrl: await bestEffortPaymentLink(registration.formationState),
       statusToken: await resolveStatusToken(registration),
+      addressChoiceNeeded: addressChoiceNeeded(registration),
     }),
   );
 }
@@ -718,6 +759,7 @@ export async function sendPaymentConfirmedEmail(params: {
       formationState: registration.formationState,
       retailPriceCents: registration.retailPriceCents,
       statusToken: await resolveStatusToken(registration),
+      addressChoiceNeeded: addressChoiceNeeded(registration),
     }),
   );
 }

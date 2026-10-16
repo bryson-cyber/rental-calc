@@ -49,6 +49,10 @@ const EMPTY_DRAFT: LlcDraft = {
   businessPhone: "",
   website: "",
   useRegisteredAgent: false,
+  businessAddressMode: "customer",
+  mailingAddressMode: "customer",
+  businessAgentAckVersion: "",
+  mailingAgentAckVersion: "",
   companyAddress: {
     line1: "",
     line2: "",
@@ -452,11 +456,8 @@ function RegistrationWorkspace({ registrationId }: { registrationId: number }) {
         </dl>
         <ul className="mt-4 space-y-2.5">
           <SummaryItem included>State filing &amp; Articles of Organization</SummaryItem>
-          <SummaryItem included={draft.useRegisteredAgent}>
-            {draft.useRegisteredAgent
-              ? "Professional registered agent"
-              : "Your own registered-agent address"}
-          </SummaryItem>
+          {/* Always included (2026-10-14): the agent is never a choice. */}
+          <SummaryItem included>Professional registered agent</SummaryItem>
           <SummaryItem included>Federal EIN (Tax ID)</SummaryItem>
           {draft.expediteEin ? <SummaryItem addon>Expedited EIN</SummaryItem> : null}
         </ul>

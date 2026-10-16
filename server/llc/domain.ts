@@ -4,6 +4,17 @@ import type { getLlcRegistrationById, listLlcRegistrationsForUser } from "./stor
 import { decryptPii, maskSsn } from "./pii";
 import type { LlcDraft } from "../../shared/llc";
 import { LLC_CLIENT_STATUS_LABELS, LLC_STATUS_LABELS } from "../../shared/llc";
+import {
+  BUSINESS_AGENT_ACK,
+  MAILING_AGENT_ACK,
+  legacyUseRegisteredAgent,
+  resolveAddressModes,
+} from "../../shared/llcAddress";
+import {
+  addressChoiceNeeded,
+  addressModesForOps,
+  filingStartsOnAddressConfirm,
+} from "./addressChoices";
 import type { WhopFormationSnapshot } from "./whop";
 
 type RegistrationBundle = NonNullable<
@@ -30,6 +41,45 @@ function clientSafeErrorMessage(message: string | null): string | null {
     : message;
 }
 
+/**
+ * Address modes as the client sees them (2026-10-14). A draft that predates
+ * the two fields opens with the new defaults (the client's own street
+ * address, mail to the client), so an old "use the registered agent" switch
+ * never carries over silently; a submitted order shows what it was submitted
+ * with. An opt-in acknowledgment shows as given only under the current
+ * wording version, so a wording change asks again.
+ *
+ * "Not editable" is not the same as "submitted": a filed company in
+ * action_required (name options, SS-4 signature) that was paid offline has no
+ * checkout session, so it still reads as editable. Once the filing service
+ * has a company for the order, what was filed is what the old switch said, so
+ * the page must say that and never show the new defaults ("Not entered yet")
+ * for an address the state already has.
+ */
+function draftAddressChoices(registration: RegistrationBundle["registration"]) {
+  const modes = resolveAddressModes(registration, {
+    legacyFallback:
+      !isRegistrationEditable(registration) || Boolean(registration.doolaCompanyId),
+  });
+  const businessAgentAckVersion =
+    modes.business === "registered_agent" &&
+    registration.businessAgentAckVersion === BUSINESS_AGENT_ACK.version
+      ? BUSINESS_AGENT_ACK.version
+      : "";
+  const mailingAgentAckVersion =
+    modes.mailing === "registered_agent" &&
+    registration.mailingAgentAckVersion === MAILING_AGENT_ACK.version
+      ? MAILING_AGENT_ACK.version
+      : "";
+  return {
+    useRegisteredAgent: legacyUseRegisteredAgent(modes.business, modes.mailing),
+    businessAddressMode: modes.business,
+    mailingAddressMode: modes.mailing,
+    businessAgentAckVersion,
+    mailingAgentAckVersion,
+  };
+}
+
 export function bundleToDraft(bundle: RegistrationBundle): LlcDraft {
   const { registration, founders } = bundle;
 
@@ -43,7 +93,7 @@ export function bundleToDraft(bundle: RegistrationBundle): LlcDraft {
     industryType: text(registration.industryType),
     businessPhone: text(registration.businessPhone),
     website: text(registration.website),
-    useRegisteredAgent: registration.useRegisteredAgent,
+    ...draftAddressChoices(registration),
     companyAddress: {
       line1: text(registration.companyAddressLine1),
       line2: text(registration.companyAddressLine2),
@@ -94,6 +144,14 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
     statusLabel: LLC_CLIENT_STATUS_LABELS[registration.status],
     canEdit: isRegistrationEditable(registration),
     canRetry: registration.retryable,
+    // A submitted order not yet with the filing service whose address
+    // choices cannot be filed (placed before 2026-10-14 with the old switch
+    // on): the status page asks the client to choose before anything is
+    // filed.
+    addressChoiceNeeded: addressChoiceNeeded(registration),
+    // Saving those choices starts the filing only once the payment is in;
+    // the card says which (same rule as the confirm route).
+    addressChoiceStartsFiling: filingStartsOnAddressConfirm(registration),
     safeErrorMessage: clientSafeErrorMessage(registration.lastErrorMessage),
     // Retail is client-facing by definition (it's the price the client saw at
     // submit); the wholesale checkout stays ops-only.
@@ -190,6 +248,11 @@ export function bundleToOpsView(bundle: RegistrationBundle) {
     safeErrorMessage: registration.lastErrorMessage,
     lastErrorType: registration.lastErrorType,
     canRetry: registration.retryable,
+    // Address choices (2026-10-14): modes only, plus the evidence stamped at
+    // submit, at the filing lock and on a status-page confirmation.
+    addressChoiceNeeded: addressChoiceNeeded(registration),
+    addressModes: addressModesForOps(registration),
+    addressChoiceEvidence: registration.addressChoiceEvidence ?? null,
     whopAccountId: registration.whopAccountId,
     accountEmailAlias: registration.accountEmailAlias,
     checkout:
