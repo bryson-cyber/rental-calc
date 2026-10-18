@@ -69,6 +69,10 @@ async function startServer() {
   // mounted before the JSON parser consumes the stream.
   const { registerStripeWebhook } = await import("../llc/stripeCheckout");
   registerStripeWebhook(app);
+  // Whop retail-payment webhook (Standard Webhooks HMAC over the RAW body) —
+  // same before-the-JSON-parser rule.
+  const { registerWhopRetailWebhook } = await import("../llc/whopRetailWebhook");
+  registerWhopRetailWebhook(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

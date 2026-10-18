@@ -45,7 +45,7 @@ import {
   Trash2,
   Trophy,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
 import {
@@ -417,6 +417,34 @@ function StatusWorkspace({
     },
     onError: (error) => toast.error(error.message),
   });
+  // Hosted checkout return (2026-10-18): when the checkout hands back a
+  // payment id, confirm it right away (server re-reads and verifies it
+  // against this order) instead of waiting for the webhook. Best-effort —
+  // the webhook, the reconciliation sweep, and the settle-poll above all
+  // still apply, so a failure here is silent.
+  const [returnedPaymentId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get("payment_id") ?? params.get("receipt_id");
+    return value && /^pay_[A-Za-z0-9]+$/.test(value) ? value : null;
+  });
+  const confirmCheckoutMutation = trpc.llc.confirmCheckout.useMutation({
+    onSuccess: (result) => {
+      if (result.state === "confirmed") {
+        void utils.llc.get.invalidate({ id: registrationId });
+        void utils.llc.track.invalidate();
+      }
+    },
+    onError: () => {},
+  });
+  const confirmMutate = confirmCheckoutMutation.mutate;
+  const confirmSent = useRef(false);
+  const signedIn = Boolean(user);
+  useEffect(() => {
+    if (returnedPaymentId && signedIn && !tokenMode && !confirmSent.current) {
+      confirmSent.current = true;
+      confirmMutate({ id: registrationId, paymentId: returnedPaymentId });
+    }
+  }, [returnedPaymentId, signedIn, tokenMode, registrationId, confirmMutate]);
   const retryMutation = trpc.llc.submit.useMutation({
     onSuccess: (result) => {
       if (result.outcome === "validation_error") {

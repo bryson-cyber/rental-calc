@@ -76,7 +76,8 @@ import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
-import { createLlcCheckoutSession } from "./stripeCheckout";
+import { createRetailCheckout } from "./retailCheckoutRail";
+import { processLlcWhopPayment } from "./whopRetailCheckout";
 import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
 import {
   createSs4SigningSessionForAction,
@@ -454,7 +455,10 @@ export const llcRouter = router({
             ? ctx.req.headers.referer.replace(/\/[^/]*$/, "")
             : undefined) ??
           ENV.appUrl;
-        const result = await createLlcCheckoutSession({
+        // Whop when its payment config is complete, else the existing
+        // Stripe checkout (retailCheckoutRail.ts). The rail never reaches
+        // the client payload — only the hosted checkout URL does.
+        const result = await createRetailCheckout({
           userId: ctx.user.id,
           userEmail: ctx.user.email,
           userName: ctx.user.name,
@@ -463,6 +467,7 @@ export const llcRouter = router({
         });
         return { checkoutUrl: result.checkoutUrl };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         const msg =
           error instanceof Error ? error.message : "Checkout session failed";
         throw new TRPCError({
@@ -474,6 +479,25 @@ export const llcRouter = router({
           message: msg,
         });
       }
+    }),
+
+  // Client returned from the hosted checkout with a payment id: confirm it
+  // now instead of waiting for the webhook. The payment is re-read from the
+  // payment provider and verified against this caller's own order.
+  confirmCheckout: protectedProcedure
+    .input(
+      registrationIdInput.extend({
+        paymentId: z.string().trim().regex(/^pay_[A-Za-z0-9]+$/).max(128),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      enforceRateLimit(ctx.user.id, "llc.checkout.confirm", 30);
+      const result = await processLlcWhopPayment({
+        paymentId: input.paymentId,
+        expectedUserId: ctx.user.id,
+        expectedRegistrationId: input.id,
+      });
+      return { state: result ? ("confirmed" as const) : ("pending" as const) };
     }),
 
   refreshStatus: protectedProcedure
@@ -597,21 +621,20 @@ export const llcOpsRouter = router({
         ownerEmail = user?.email ?? undefined;
         ownerName = user?.name ?? undefined;
       }
-      // Always clear the old session so createLlcCheckoutSession generates a fresh one
-      if (db && bundle.registration.checkoutSessionId) {
-        await db.update(llcRegistrations).set({
-          checkoutSessionId: null,
-          checkoutUrl: null,
-        }).where(eq(llcRegistrations.id, input.id));
-      }
-      const result = await createLlcCheckoutSession({
+      // Always mint a fresh checkout (forceNew). Whop when its payment
+      // config is complete — a fresh checkout configuration on the order's
+      // own exact-price plan, after closing any still-open Stripe session —
+      // otherwise the pre-existing Stripe behavior (clear the old session,
+      // create a new one). See retailCheckoutRail.ts.
+      const result = await createRetailCheckout({
         userId: owner.userId,
         userEmail: ownerEmail,
         userName: ownerName,
         registrationId: input.id,
         origin: "https://coachinayahturnkeytool.com",
+        forceNew: true,
       });
-      return { checkoutUrl: result.checkoutUrl };
+      return { checkoutUrl: result.checkoutUrl, rail: result.rail };
     }),
 
   listAll: adminProcedure.query(async () => {

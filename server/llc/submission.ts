@@ -451,7 +451,14 @@ export async function submitLlcRegistration(params: {
       try {
         const statePricing = await getStatePricing(validated.complete.formationState);
         if (statePricing.retailPriceCents !== null) {
-          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents };
+          // Include the expedited-EIN add-on the client was shown, exactly as
+          // the test-run and provider branches do — this snapshot is the
+          // amount the payment rail charges and verifies (2026-10-18).
+          const addOn =
+            validated.complete.expediteEin && statePricing.expediteEinPriceCents
+              ? statePricing.expediteEinPriceCents
+              : 0;
+          retailSnapshot = { retailPriceCents: statePricing.retailPriceCents + addOn };
         }
       } catch {
         // Best-effort, mirroring the provider path.

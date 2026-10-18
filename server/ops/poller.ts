@@ -130,6 +130,23 @@ export async function runStatusPollOnce(): Promise<{
       // Space out provider reads; beta rate limits are undocumented.
       await new Promise((resolve) => setTimeout(resolve, 1_500));
     }
+    // Whop retail-payment reconciliation (2026-10-18): settles any paid Whop
+    // checkout whose webhook was missed, on this same heartbeat, after the
+    // status sweep (still inside the single-flight guard). Awaited but
+    // isolated — a Whop outage can never fail the status sweep. No-op when
+    // the Whop API config is absent.
+    await import("../llc/whopRetailWebhook")
+      .then(({ runLlcWhopReconciliation }) => runLlcWhopReconciliation())
+      .then((report) => {
+        if (report && (report.processed > 0 || report.incomplete > 0)) {
+          console.log("[WhopRetail] reconciliation", report);
+        }
+      })
+      .catch((error) => {
+        console.warn("[WhopRetail] reconciliation failed", {
+          error: error instanceof Error ? error.name : "UnknownError",
+        });
+      });
   } catch (error) {
     console.warn("[Poller] Poll sweep failed", {
       error: error instanceof Error ? error.name : "UnknownError",

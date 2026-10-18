@@ -4,6 +4,16 @@ import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
 
+/** Additive, idempotent DDL for the Whop retail-payment rail columns. */
+export const WHOP_RETAIL_RAIL_DDL = [
+  "ALTER TABLE `llc_registrations` ADD `retailWhopPlanId` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `retailWhopPaymentId` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `checkoutQuoteHash` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `checkoutExpiresAt` timestamp NULL",
+  "CREATE UNIQUE INDEX `llc_registration_retail_whop_plan_unique` ON `llc_registrations` (`retailWhopPlanId`)",
+  "CREATE UNIQUE INDEX `llc_registration_retail_whop_payment_unique` ON `llc_registrations` (`retailWhopPaymentId`)",
+] as const;
+
 /**
  * Boot-time idempotent creation of the LLC tables (mirrors migrations
  * 0023/0024). The hosting platform pulls main and redeploys but cannot be
@@ -271,6 +281,13 @@ export async function ensureLlcTables(): Promise<void> {
     await db
       .execute(sql.raw("ALTER TABLE `llc_registrations` ADD `statusToken` varchar(64)"))
       .catch(() => undefined);
+    // Whop retail-payment rail (2026-10-18). Catch-guarded so a re-run on a
+    // database that already has them is a no-op. The unique indexes enforce
+    // one Whop payment <-> one order at the database layer, independent of
+    // the conditional claim UPDATE in whopRetailCheckout.ts.
+    for (const statement of WHOP_RETAIL_RAIL_DDL) {
+      await db.execute(sql.raw(statement)).catch(() => undefined);
+    }
 
     // statusToken backfill (2026-07-28): rows created before the column each
     // get their own unguessable token at boot so tokenized email links work
