@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { annualReportReminderEmail } from "./copy";
-import { reminderStageFor, runAnnualReportReminders, type ReminderDeps } from "./reminders";
+import { reminderStageFor, runAnnualReportReminders, sendAnnualReportPayAgainEmail, type ReminderDeps } from "./reminders";
 import { filing, makeDeps } from "./testFakes";
 
 // Wednesday 2026-12-30, 11 AM Pacific.
@@ -107,6 +107,17 @@ describe("annual report reminders", () => {
     expect(await runAnnualReportReminders(s.deps)).toMatchObject({ emailed: 0, skipped: { already_filing: 1 } });
   });
 
+  it("matches the cycle's report by due date first: one paid under another fiscal year still stops them", async () => {
+    const s = setup();
+    // Due 2027-01-29, seen from 2026-12-30: the cycle's fiscal year isn't confirmed yet, so only the due date can match.
+    await s.t.memory.store.upsertReport({ registrationId: 42, userId: 7, fiscalYear: 2026 }, { dueDate: "2027-01-29", status: "FILLED", priceInCents: 6000, paidAt: new Date(), paidCents: 6000 });
+    expect(await runAnnualReportReminders(s.deps)).toMatchObject({ emailed: 0, skipped: { already_filing: 1 } });
+    // A paid report for another due date doesn't.
+    const other = setup();
+    await other.t.memory.store.upsertReport({ registrationId: 42, userId: 7, fiscalYear: 2026 }, { dueDate: "2026-01-29", status: "FILING_COMPLETED", confirmedAt: new Date() });
+    expect((await runAnnualReportReminders(other.deps)).emailed).toBe(1);
+  });
+
   it("skips test and demo filings", async () => {
     const s = setup({ eligible: false });
     expect(await runAnnualReportReminders(s.deps)).toMatchObject({ emailed: 0, skipped: { not_eligible: 1 } });
@@ -121,6 +132,27 @@ describe("annual report reminders", () => {
   it("email only: the reminder deps carry no text channel", () => {
     const s = setup();
     expect(Object.keys(s.deps)).not.toContain("text");
+  });
+});
+
+describe("the pay-again email (ops: fee changed, refunded)", () => {
+  it("sends her one branded email with the link that opens her payment", async () => {
+    const s = setup();
+    expect(await sendAnnualReportPayAgainEmail({ registrationId: 42, reportId: 1, priceCents: 9000 }, s.deps)).toBe("sent");
+    expect(s.sent).toHaveLength(1);
+    const email = s.sent[0];
+    expect(email.to).toBe("amina@example.com");
+    expect(email.text).toContain("https://coachinayahturnkeytool.com/llc/status/42?file=annual-report");
+    expect(email.text).toContain("the $90 state fee");
+    expect(email.html).toContain(">Pay my state fee</a>");
+    for (const words of [email.subject, email.text]) {
+      expect(words).not.toMatch(/doola|whop/i);
+      expect(words).not.toMatch(/[—–]/);
+    }
+    expect(await sendAnnualReportPayAgainEmail({ registrationId: 42, reportId: 1, priceCents: 9000 }, setup({ sendOk: false }).deps)).toBe("failed");
+    const noEmail = setup();
+    noEmail.deps.recipient = async () => null;
+    expect(await sendAnnualReportPayAgainEmail({ registrationId: 42, reportId: 1, priceCents: 9000 }, noEmail.deps)).toBe("no_email");
   });
 });
 

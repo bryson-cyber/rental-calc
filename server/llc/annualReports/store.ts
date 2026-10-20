@@ -28,6 +28,8 @@ export type AnnualReportRow = {
   registrationId: number;
   userId: number;
   fiscalYear: number;
+  /** The calendar due date this report was submitted for ("yyyy-MM-dd"); null on rows from before 2026-10-20. */
+  dueDate: string | null;
   annualReportId: string | null;
   status: string | null;
   priceInCents: number | null;
@@ -56,6 +58,7 @@ export type ReportPatch = Partial<Omit<AnnualReportRow, "id" | "registrationId" 
 /** Conditions a guarded update must still meet when it lands. */
 export type ReportGuard = {
   paidAtIsNull?: boolean;
+  paidAtIsNotNull?: boolean;
   confirmedAtIsNull?: boolean;
   completedAtIsNull?: boolean;
   checkoutPlanId?: string;
@@ -66,11 +69,14 @@ export type AnnualReportStore = {
   upsertCompliance(row: Omit<ComplianceRow, "syncedAt"> & { syncedAt: Date }): Promise<void>;
   listReports(registrationId: number): Promise<AnnualReportRow[]>;
   getReport(id: number): Promise<AnnualReportRow | null>;
-  /** Insert the (registration, fiscal year) row or update it; returns the row as stored. */
-  upsertReport(key: { registrationId: number; userId: number; fiscalYear: number }, patch: ReportPatch): Promise<AnnualReportRow>;
+  /**
+   * Insert the (registration, fiscal year) row or update it; returns the row as stored. With a guard, the update lands
+   * only while the row still meets it (the returned row then shows what won).
+   */
+  upsertReport(key: { registrationId: number; userId: number; fiscalYear: number }, patch: ReportPatch, guard?: ReportGuard): Promise<AnnualReportRow>;
   /** A guarded update; true when the row matched (and so changed). */
   updateReport(id: number, patch: ReportPatch, guard?: ReportGuard): Promise<boolean>;
-  /** Paid, not confirmed: the confirm retries. */
+  /** Paid (or a no-fee report on file), not confirmed: the confirm retries. */
   listPaidUnconfirmed(limit: number): Promise<AnnualReportRow[]>;
   /** A checkout made, no payment seen, still a saved (FILLED) report: the payment reconciliation. */
   listAwaitingPayment(createdAfter: Date, limit: number): Promise<AnnualReportRow[]>;
@@ -157,6 +163,7 @@ function reportOf(row: Row): AnnualReportRow {
     registrationId: intOf(row.registrationId) ?? 0,
     userId: intOf(row.userId) ?? 0,
     fiscalYear: intOf(row.fiscalYear) ?? 0,
+    dueDate: textOf(row.dueDate),
     annualReportId: textOf(row.annualReportId),
     status: textOf(row.status),
     priceInCents: intOf(row.priceInCents),
@@ -182,10 +189,20 @@ function reportOf(row: Row): AnnualReportRow {
 }
 
 const PATCH_COLUMNS = new Set<keyof ReportPatch>([
-  "annualReportId", "status", "priceInCents", "answers", "checkoutSessionId", "checkoutUrl", "checkoutPlanId",
+  "dueDate", "annualReportId", "status", "priceInCents", "answers", "checkoutSessionId", "checkoutUrl", "checkoutPlanId",
   "checkoutQuoteHash", "checkoutPriceCents", "checkoutExpiresAt", "paymentReference", "paidCents", "paidAt",
   "submittedAt", "confirmedAt", "completedAt", "filedDocumentId", "lastError", "lastErrorAt",
 ]);
+
+function guardConditions(guard: ReportGuard): SQL[] {
+  const conditions: SQL[] = [];
+  if (guard.paidAtIsNull) conditions.push(sql`paidAt IS NULL`);
+  if (guard.paidAtIsNotNull) conditions.push(sql`paidAt IS NOT NULL`);
+  if (guard.confirmedAtIsNull) conditions.push(sql`confirmedAt IS NULL`);
+  if (guard.completedAtIsNull) conditions.push(sql`completedAt IS NULL`);
+  if (guard.checkoutPlanId !== undefined) conditions.push(sql`checkoutPlanId = ${guard.checkoutPlanId}`);
+  return conditions;
+}
 
 function patchAssignments(patch: ReportPatch): SQL[] {
   const out: SQL[] = [];
@@ -231,7 +248,7 @@ export const sqlAnnualReportStore: AnnualReportStore = {
     return row ? reportOf(row) : null;
   },
 
-  async upsertReport(key, patch) {
+  async upsertReport(key, patch, guard = {}) {
     const db = await database();
     await db.execute(sql`
       INSERT IGNORE INTO llc_annual_reports (registrationId, userId, fiscalYear)
@@ -239,7 +256,8 @@ export const sqlAnnualReportStore: AnnualReportStore = {
     `);
     const assignments = patchAssignments(patch);
     if (assignments.length > 0) {
-      await db.execute(sql`UPDATE llc_annual_reports SET ${sql.join(assignments, sql`, `)} WHERE registrationId = ${key.registrationId} AND fiscalYear = ${key.fiscalYear}`);
+      const conditions = [sql`registrationId = ${key.registrationId}`, sql`fiscalYear = ${key.fiscalYear}`, ...guardConditions(guard)];
+      await db.execute(sql`UPDATE llc_annual_reports SET ${sql.join(assignments, sql`, `)} WHERE ${sql.join(conditions, sql` AND `)}`);
     }
     const [row] = rowsOf(await db.execute(sql`SELECT * FROM llc_annual_reports WHERE registrationId = ${key.registrationId} AND fiscalYear = ${key.fiscalYear} LIMIT 1`));
     if (!row) throw new Error("Annual report row could not be saved");
@@ -249,11 +267,7 @@ export const sqlAnnualReportStore: AnnualReportStore = {
   async updateReport(id, patch, guard = {}) {
     const assignments = patchAssignments(patch);
     if (assignments.length === 0) return false;
-    const conditions: SQL[] = [sql`id = ${id}`];
-    if (guard.paidAtIsNull) conditions.push(sql`paidAt IS NULL`);
-    if (guard.confirmedAtIsNull) conditions.push(sql`confirmedAt IS NULL`);
-    if (guard.completedAtIsNull) conditions.push(sql`completedAt IS NULL`);
-    if (guard.checkoutPlanId !== undefined) conditions.push(sql`checkoutPlanId = ${guard.checkoutPlanId}`);
+    const conditions: SQL[] = [sql`id = ${id}`, ...guardConditions(guard)];
     const db = await database();
     const result = await db.execute(sql`UPDATE llc_annual_reports SET ${sql.join(assignments, sql`, `)} WHERE ${sql.join(conditions, sql` AND `)}`);
     return affectedRowsOf(result) === 1;
@@ -262,7 +276,9 @@ export const sqlAnnualReportStore: AnnualReportStore = {
   async listPaidUnconfirmed(limit) {
     const db = await database();
     return rowsOf(await db.execute(sql`
-      SELECT * FROM llc_annual_reports WHERE paidAt IS NOT NULL AND confirmedAt IS NULL ORDER BY paidAt ASC LIMIT ${limit}
+      SELECT * FROM llc_annual_reports
+      WHERE confirmedAt IS NULL AND (paidAt IS NOT NULL OR (priceInCents = 0 AND status = 'FILLED' AND annualReportId IS NOT NULL))
+      ORDER BY paidAt IS NULL ASC, paidAt ASC, id ASC LIMIT ${limit}
     `)).map(reportOf);
   },
 

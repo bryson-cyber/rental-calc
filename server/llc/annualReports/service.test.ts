@@ -42,7 +42,7 @@ describe("compliance calendar sync", () => {
     await syncCompliance(42, { maxAgeMs: 10 * 60_000 }, t.deps);
     await syncCompliance(42, { maxAgeMs: 10 * 60_000 }, t.deps);
     expect(t.provider.calendar).toHaveBeenCalledTimes(1);
-    t.setNow(new Date("2026-12-10T18:11:00Z"));
+    t.setNow(new Date("2027-01-10T18:11:00Z"));
     await syncCompliance(42, { maxAgeMs: 10 * 60_000 }, t.deps);
     expect(t.provider.calendar).toHaveBeenCalledTimes(2);
 
@@ -64,7 +64,7 @@ describe("compliance calendar sync", () => {
     const t = makeDeps();
     await syncCompliance(42, {}, t.deps);
     expect((await syncStaleCalendars(t.deps)).synced).toBe(0);
-    t.setNow(new Date("2026-12-11T15:00:00Z"));
+    t.setNow(new Date("2027-01-11T15:00:00Z"));
     expect((await syncStaleCalendars(t.deps)).synced).toBe(1);
   });
 });
@@ -98,11 +98,15 @@ describe("submit and replace", () => {
   it("submits only the fields shown, company details apart, and stores the fixed price", async () => {
     const t = makeDeps();
     const result = await submitAnnualReport(7, 42, { ...ANSWERS, assetValue: "999", invented: "x" } as never, t.deps);
-    expect(t.provider.submit).toHaveBeenCalledWith("dc_test123", {
-      fiscalYear: 2027,
-      answers: [{ fieldId: "hasAssets", value: false }],
-      companyDetails: { companyName: "Amina Studio LLC", mailingAddress: ANSWERS.mailingAddress },
-    });
+    expect(t.provider.submit).toHaveBeenCalledWith(
+      "dc_test123",
+      {
+        fiscalYear: 2027,
+        answers: [{ fieldId: "hasAssets", value: false }],
+        companyDetails: { companyName: "Amina Studio LLC", mailingAddress: ANSWERS.mailingAddress },
+      },
+      { attempt: "first" },
+    );
     expect(result).toMatchObject({ priceCents: 6000, previousPriceCents: 6000, priceChanged: false, confirmOutcome: null });
     expect(t.memory.reports[0]).toMatchObject({ status: "FILLED", priceInCents: 6000, annualReportId: "ar_1" });
     expect(t.provider.confirm).not.toHaveBeenCalled();
@@ -237,7 +241,7 @@ describe("confirm: the money rule", () => {
     let ops = await getOpsAnnualReports(42, t.deps);
     expect(ops.reports[0].canConfirm).toBe(false);
     await t.memory.store.updateReport(reportId, { paidAt: new Date(), paidCents: 6000, paymentReference: "pay_1" });
-    t.setNow(new Date("2026-12-10T19:00:00Z"));
+    t.setNow(new Date("2027-01-10T19:00:00Z"));
     ops = await getOpsAnnualReports(42, t.deps);
     expect(ops.reports[0]).toMatchObject({ canConfirm: true, paidCents: 6000, paymentReference: "pay_1" });
     expect(await opsConfirmAnnualReport(42, reportId, t.deps)).toBe("confirmed");
@@ -292,14 +296,15 @@ describe("webhooks", () => {
 
 describe("her card", () => {
   const base = { registrationId: 42, userId: 7, state: "WY" as const, nextDueDate: "2027-03-01", lastFiledDate: null, filingRequired: true, quotePriceCents: 6000, quoteIsMinimum: false, syncedAt: new Date(), lastError: null };
-  const now = new Date("2026-12-10T18:00:00Z");
+  // Inside the 2027-03-01 cycle's window, in 2027 (so its fiscal year is confirmed).
+  const now = new Date("2027-01-10T18:00:00Z");
 
   it("due, overdue, not yet due and not required read in plain words", () => {
     const due = buildMemberView(filing(), { ...base, status: "UPCOMING" }, [], now);
     expect(due).toMatchObject({ cardState: "due", canFile: true, dueDateWords: "March 1, 2027", stateName: "Wyoming" });
     expect(due.body).toContain("due March 1, 2027");
     expect(buildMemberView(filing(), { ...base, status: "OVERDUE" }, [], now)).toMatchObject({ cardState: "overdue", canFile: true });
-    expect(buildMemberView(filing(), { ...base, status: "NOT_YET_DUE" }, [], now)).toMatchObject({ cardState: "not_yet_due", headline: "Not due yet", canFile: false });
+    expect(buildMemberView(filing(), { ...base, nextDueDate: "2028-03-01", status: "NOT_YET_DUE" }, [], now)).toMatchObject({ cardState: "not_yet_due", headline: "Not due yet", canFile: false });
     expect(buildMemberView(filing(), { ...base, status: "UPCOMING", filingRequired: false }, [], now)).toMatchObject({ cardState: "not_required", headline: "Your state doesn't require an annual report", canFile: false });
     expect(buildMemberView(filing(), { ...base, status: "UNSUPPORTED_STATE" }, [], now)).toMatchObject({ cardState: "not_required", canFile: false });
     expect(buildMemberView(filing(), null, [], now)).toMatchObject({ cardState: "checking", canFile: false });
@@ -325,63 +330,6 @@ describe("her card", () => {
     t.providerReports.push(providerReport({ annualReportId: "doola_ar_77", status: "FILLED" }));
     const view = await getMemberAnnualReport(7, 42, t.deps);
     expect(JSON.stringify(view)).not.toMatch(/doola|whop|dc_test|ar_1|annualReportId/i);
-  });
-});
-
-describe("the filing window (live check 2026-10-20)", () => {
-  // The provider answered the same due date for fiscal years 2026 and 2027, so filing opens only within 90 days of
-  // the calendar's due date, or once it says OVERDUE.
-  const far = { state: "WY", nextDueDate: "2027-09-01", lastFiledDate: null, status: "UPCOMING" as const };
-  const now = new Date("2026-10-20T18:00:00Z");
-
-  it("more than 90 days out: no File button, the card says when it opens", async () => {
-    const t = makeDeps({ calendar: far, now });
-    const view = await getMemberAnnualReport(7, 42, t.deps);
-    expect(view).toMatchObject({ cardState: "not_yet_due", canFile: false, dueDateWords: "September 1, 2027", opensOnWords: "June 3, 2027" });
-    expect(view?.body).toContain("Filing opens on June 3, 2027");
-  });
-
-  it("the form and the submit refuse before the window opens, without asking the provider", async () => {
-    const t = makeDeps({ calendar: far, now });
-    await expect(getAnnualReportForm(7, 42, t.deps)).rejects.toMatchObject({ code: "not_open", message: expect.stringContaining("June 3, 2027") });
-    await expect(submitAnnualReport(7, 42, ANSWERS, t.deps)).rejects.toMatchObject({ code: "not_open" });
-    expect(t.provider.getRequirements).not.toHaveBeenCalled();
-    expect(t.provider.submit).not.toHaveBeenCalled();
-  });
-
-  it("opens exactly 90 days before the due date (Pacific date)", async () => {
-    // 2027-06-03 is 90 days before 2027-09-01; 6 AM UTC on June 3 is still June 2 in California.
-    const early = makeDeps({ calendar: far, now: new Date("2027-06-03T06:00:00Z") });
-    expect((await getMemberAnnualReport(7, 42, early.deps))?.canFile).toBe(false);
-    const open = makeDeps({ calendar: far, now: new Date("2027-06-03T18:00:00Z") });
-    expect(await getMemberAnnualReport(7, 42, open.deps)).toMatchObject({ cardState: "due", canFile: true, opensOnWords: null });
-    // The fiscal year is still the due date's year (awaiting provider confirmation).
-    await getAnnualReportForm(7, 42, open.deps);
-    expect(open.provider.getRequirements).toHaveBeenCalledWith("dc_test123", 2027);
-  });
-
-  it("OVERDUE is always open; no due date is never open", async () => {
-    const overdue = makeDeps({ calendar: { ...far, status: "OVERDUE" }, now });
-    expect(await getMemberAnnualReport(7, 42, overdue.deps)).toMatchObject({ cardState: "overdue", canFile: true });
-    const unknown = makeDeps({ calendar: { ...far, nextDueDate: null }, now });
-    expect((await getMemberAnnualReport(7, 42, unknown.deps))?.canFile).toBe(false);
-    await expect(getAnnualReportForm(7, 42, unknown.deps)).rejects.toMatchObject({ code: "not_open" });
-  });
-
-  it("saved answers outside the window can't be paid or changed until it opens", async () => {
-    const t = makeDeps({ calendar: far, now });
-    await t.memory.store.upsertReport({ registrationId: 42, userId: 7, fiscalYear: 2027 }, { status: "FILLED", priceInCents: 6000, annualReportId: "ar_1" });
-    const view = await getMemberAnnualReport(7, 42, t.deps);
-    expect(view).toMatchObject({ cardState: "saved", canFile: false, opensOnWords: "June 3, 2027" });
-  });
-});
-
-describe("prefill", () => {
-  it("fills the mailing address only from her own mailing address, never her business address", async () => {
-    const t = makeDeps({ facts: filing({ mailingAddress: null }) });
-    const form = await getAnnualReportForm(7, 42, t.deps);
-    expect(form.answers).not.toHaveProperty("mailingAddress");
-    expect(form.answers).toMatchObject({ companyName: "Amina Studio LLC" });
   });
 });
 

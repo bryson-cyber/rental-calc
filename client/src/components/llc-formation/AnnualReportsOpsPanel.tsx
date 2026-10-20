@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import { dateWords, feeWords } from "@shared/llcAnnualReports";
+import { OPS_FEE_ACTION_LABELS } from "@shared/llcAnnualReportOps";
 import { CalendarClock, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,7 +11,8 @@ import { toast } from "sonner";
  * due date, last filed), the fee quote, and each year's report with its status, fixed fee, payment, confirm and filed
  * stamps and last error. The server reads the provider when this opens (at most every 10 minutes) and the hourly
  * sweep keeps it fresh. "Confirm filing" shows only for a paid (or no-fee) report the hand-off missed, and still goes
- * through the server's verified-payment guard.
+ * through the server's verified-payment guard. A paid report whose fee changed gets the two fee buttons the ops alerts
+ * name: refunded (she pays again, by email link) or absorbed (file it now at our cost).
  */
 function when(value: number | null) {
   if (!value) return "—";
@@ -28,6 +30,17 @@ export function AnnualReportsOpsPanel({ registrationId }: { registrationId: numb
     },
     onError: (error) => toast.error(error.message),
   });
+  const feeAction = {
+    onSuccess: (result: { outcome: string; message: string; view: NonNullable<typeof query.data> }) => {
+      utils.llcOps.annualReports.setData({ id: registrationId }, result.view);
+      if (result.outcome === "reset" || result.outcome === "confirmed" || result.outcome === "already_confirmed") toast.success(result.message);
+      else toast.error(result.message);
+    },
+    onError: (error: { message: string }) => toast.error(error.message),
+  };
+  const resetPayment = trpc.llcOps.resetAnnualReportPayment.useMutation(feeAction);
+  const absorbDifference = trpc.llcOps.absorbAnnualReportDifference.useMutation(feeAction);
+  const busy = confirm.isPending || resetPayment.isPending || absorbDifference.isPending;
 
   if (query.isLoading) return <Skeleton className="mb-5 h-20 w-full rounded-xl" />;
   const view = query.data;
@@ -92,13 +105,45 @@ export function AnnualReportsOpsPanel({ registrationId }: { registrationId: numb
                     )}
                   </td>
                   <td className="max-w-[14rem] py-1 pr-3 text-slate-500">{report.lastError ?? "—"}</td>
-                  <td className="py-1">
+                  <td className="space-y-1 py-1">
+                    {report.canResetPayment ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg px-2 text-xs"
+                        disabled={busy}
+                        onClick={() => {
+                          if (window.confirm(`Refunded in the Whop dashboard? This clears the payment on the ${report.fiscalYear} report and emails her a link to pay ${report.priceInCents !== null ? feeWords(report.priceInCents) : "the fee"}.`)) {
+                            resetPayment.mutate({ id: registrationId, reportId: report.id });
+                          }
+                        }}
+                      >
+                        {resetPayment.isPending && resetPayment.variables?.reportId === report.id ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
+                        <span className="ml-1">{OPS_FEE_ACTION_LABELS.refunded_pay_again}</span>
+                      </Button>
+                    ) : null}
+                    {report.feeChanged ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg px-2 text-xs"
+                        disabled={busy}
+                        onClick={() => {
+                          if (window.confirm(`She paid ${feeWords(report.paidCents ?? 0)}; the fee is ${report.priceInCents !== null ? feeWords(report.priceInCents) : "unknown"}. We cover the difference and hand the ${report.fiscalYear} report to the provider now?`)) {
+                            absorbDifference.mutate({ id: registrationId, reportId: report.id });
+                          }
+                        }}
+                      >
+                        {absorbDifference.isPending && absorbDifference.variables?.reportId === report.id ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
+                        <span className="ml-1">{OPS_FEE_ACTION_LABELS.absorb_difference}</span>
+                      </Button>
+                    ) : null}
                     {report.canConfirm ? (
                       <Button
                         size="sm"
                         variant="outline"
                         className="h-8 rounded-lg px-2 text-xs"
-                        disabled={confirm.isPending}
+                        disabled={busy}
                         onClick={() => {
                           if (window.confirm(`Hand the ${report.fiscalYear} annual report to the provider to file now?`)) {
                             confirm.mutate({ id: registrationId, reportId: report.id });

@@ -168,16 +168,48 @@ type WhopCheckoutResponse = {
   plan?: { id?: string } | null;
 };
 
+/** Whop money: a scalar in dollars (older revisions) or { amount, currency } (the 2026 API). */
+export type WhopMoney = number | string | { amount?: number | string | null; currency?: string | null } | null | undefined;
+
 export type WhopPayment = {
   id?: string;
   status?: string;
   substatus?: string;
-  total?: number | string;
+  total?: WhopMoney;
+  /** Sales tax Whop added on top of the plan price (absent or null when none). */
+  tax_amount?: WhopMoney;
   currency?: string;
   plan_id?: string | null;
   plan?: { id?: string } | null;
   metadata?: Record<string, unknown> | null;
 };
+
+/** A Whop money value in dollars; null for anything malformed or negative (fails closed). */
+export function readWhopMoneyAmount(value: WhopMoney): number | null {
+  const raw = typeof value === "object" && value !== null ? value.amount : value;
+  if (typeof raw !== "number" && typeof raw !== "string") return null;
+  if (typeof raw === "string" && !raw.trim()) return null;
+  const amount = Number(raw);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+export function readWhopMoneyCurrency(value: WhopMoney): string | null {
+  if (typeof value !== "object" || value === null || typeof value.currency !== "string") return null;
+  const currency = value.currency.trim();
+  return /^[a-z]{3}$/i.test(currency) ? currency.toUpperCase() : null;
+}
+
+/**
+ * What she paid BEFORE any sales tax Whop added, in cents: total − tax_amount (Her First Order's fix, PR #327). The
+ * plan is created for the exact pre-tax price, so this is the amount to compare; a taxed payment of the right price
+ * is accepted, a short one is not. NaN when either value is unreadable, so a comparison always fails closed.
+ */
+export function priceBeforeTaxCents(payment: Pick<WhopPayment, "total" | "tax_amount">): number {
+  const toCents = (value: number | null) => (value === null ? Number.NaN : Math.round(value * 100));
+  const total = toCents(readWhopMoneyAmount(payment.total));
+  const tax = payment.tax_amount === undefined || payment.tax_amount === null ? 0 : toCents(readWhopMoneyAmount(payment.tax_amount));
+  return Number.isSafeInteger(total) && Number.isSafeInteger(tax) ? total - tax : Number.NaN;
+}
 
 export function centsToWhopPrice(cents: number): number {
   return Number((cents / 100).toFixed(2));
@@ -634,8 +666,10 @@ export async function processLlcWhopPayment(input: {
   }
 
   const planId = String(payment.plan_id || payment.plan?.id || "");
-  const paidCents = Math.round(Number(payment.total) * 100);
-  const currency = String(payment.currency || "").toUpperCase();
+  // Compare the amount before sales tax (HFO PR #327): Whop adds tax on top of the
+  // exact-price plan, so payment.total alone would refuse every taxed payment.
+  const paidCents = priceBeforeTaxCents(payment);
+  const currency = String(payment.currency || readWhopMoneyCurrency(payment.total) || "").toUpperCase();
   if (
     !registration.retailWhopPlanId ||
     planId !== registration.retailWhopPlanId ||

@@ -9,13 +9,13 @@
  * it (FILING_COMPLETED) → the filed report lands in her documents. A zero-fee report confirms without payment.
  *
  * Money rule: confirmReport never confirms a priced report without a verified payment for that report's exact price,
- * re-read from the provider just before the hand-off. Every step is safe to repeat (double clicks, webhook replays,
- * payment retries): stamps are guarded updates and the provider's confirm is idempotent.
+ * and never confirms anything (paid or no-fee) without a successful re-read of the provider's report that shows that
+ * same price just before the hand-off. A missing price is unknown, never $0. Every step is safe to repeat (double
+ * clicks, webhook replays, payment retries): stamps are guarded updates and the provider's confirm is idempotent.
  *
- * Filing window (live check 2026-10-20, ported to the Coach Inayah app first; back-port to the siblings): the provider
- * answered the same due date for fiscal years 2026 and 2027, so the form, the submit and the File button open only
- * within 90 days of the calendar's due date or once it says OVERDUE (shared/llcAnnualReports.ts isFilingWindowOpen).
- * This is the one change from Her First Order's copy of this file.
+ * Filing window (2026-10-20 review): a cycle opens FILING_WINDOW_DAYS before the calendar's due date (or when it's
+ * overdue) and files the due date's year only when that is unambiguous (filingCycle). The form, the submit and the
+ * checkout refuse outside it, so the File button never reopens right after a filing rolls the calendar forward.
  */
 import { DoolaApiError } from "../doola";
 import { LLC_STATE_NAMES } from "../../../shared/llc";
@@ -24,9 +24,6 @@ import {
   ANNUAL_REPORT_STATUS_WORDS,
   dateWords,
   feeWords,
-  filingOpensOn,
-  isFilingWindowOpen,
-  pacificToday,
   validateAnnualReportAnswers,
   type AnnualReportAnswers,
   type AnnualReportCardState,
@@ -34,16 +31,19 @@ import {
   type MemberAnnualReportField,
   type MemberAnnualReportView,
 } from "../../../shared/llcAnnualReports";
+import { OPS_FEE_ACTION_LABELS } from "../../../shared/llcAnnualReportOps";
 import {
   COMPANY_DETAIL_KEYS,
   type AnnualReportField,
   type AnnualReportProvider,
+  type AnnualReportRequirements,
   type AnnualReportSubmission,
   type CompanyDetailKey,
   type ProviderAnnualReport,
 } from "./provider";
 import type { AnnualReportRow, AnnualReportStore, ComplianceRow, ReportPatch } from "./store";
 import type { FilingFacts, FilingSource } from "./filings";
+import { addDays, daysBetween, pacificToday } from "./dates";
 
 export type AnnualReportAlerts = {
   /** At most once per (registration, type); never throws. */
@@ -67,6 +67,8 @@ export type AnnualReportDeps = {
 /** A page view reads the provider again at most this often; the daily sweep after this long. */
 export const PAGE_VIEW_SYNC_MS = 10 * 60_000;
 export const DAILY_SYNC_MS = 20 * 60 * 60_000;
+/** After a failed calendar read, the next sweep reads it again within about this long. */
+export const RETRY_AFTER_FAILURE_MS = 60 * 60_000;
 
 export type AnnualReportErrorCode =
   | "not_found"
@@ -76,8 +78,8 @@ export type AnnualReportErrorCode =
   | "invalid"
   | "conflict"
   | "unsupported"
-  | "not_open"
-  | "unavailable";
+  | "unavailable"
+  | "not_open";
 
 /** A refusal in plain words she can read (no provider names, no codes). */
 export class AnnualReportError extends Error {
@@ -100,28 +102,52 @@ export function errorCodeOf(error: unknown): string {
   return typeof code === "string" ? code.slice(0, 64) : error instanceof Error ? error.name.slice(0, 64) : "UnknownError";
 }
 
-/**
- * The fiscal year this cycle files: the due date's year, else this year. Awaiting provider confirmation: a live check
- * (2026-10-20) returned the same due date for fiscal years 2026 and 2027, which is why filing only opens inside the
- * 90-day window (filingWindowOpen below).
- */
-export function cycleFiscalYear(compliance: Pick<ComplianceRow, "nextDueDate"> | null, now: Date): number {
-  const year = Number(String(compliance?.nextDueDate ?? "").slice(0, 4));
-  return Number.isInteger(year) && year > 2000 ? year : now.getUTCFullYear();
+/** A cycle opens this many days before the calendar's due date (the 60/30/7-day reminders all fall inside it). */
+export const FILING_WINDOW_DAYS = 90;
+
+export type FilingCycle = {
+  /** Fileable now: within FILING_WINDOW_DAYS of the due date, or overdue. */
+  open: boolean;
+  overdue: boolean;
+  dueDate: string | null;
+  /** The first day it can be filed ("yyyy-MM-dd"): the due date less FILING_WINDOW_DAYS. */
+  opensOn: string | null;
+  /**
+   * The fiscal year this cycle files, only when it is unambiguous: open, and overdue or due in this (Pacific) year.
+   * Null otherwise, including a January to March due date whose window starts the year before (which year the
+   * provider means is the open question in docs/LLC_ANNUAL_REPORTS_2026-10-20.md).
+   */
+  fiscalYear: number | null;
+};
+
+/** The calendar's cycle as of `now` (pure). Closed without a due date, when the state asks for none, or unsupported. */
+export function filingCycle(
+  compliance: Pick<ComplianceRow, "nextDueDate" | "filingRequired" | "status"> | null,
+  now: Date,
+): FilingCycle {
+  const due = compliance?.nextDueDate ?? null;
+  if (!due || !/^\d{4}-\d{2}-\d{2}$/.test(due) || compliance?.filingRequired === false || compliance?.status === "UNSUPPORTED_STATE") {
+    return { open: false, overdue: false, dueDate: due, opensOn: null, fiscalYear: null };
+  }
+  const today = pacificToday(now);
+  const days = daysBetween(today, due);
+  const overdue = days < 0 || compliance?.status === "OVERDUE";
+  const open = overdue || days <= FILING_WINDOW_DAYS;
+  const dueYear = Number(due.slice(0, 4));
+  return {
+    open,
+    overdue,
+    dueDate: due,
+    opensOn: addDays(due, -FILING_WINDOW_DAYS),
+    fiscalYear: open && (overdue || today.slice(0, 4) === due.slice(0, 4)) ? dueYear : null,
+  };
 }
 
-/** Filing is open for this calendar today (Pacific date): within 90 days of the due date, or OVERDUE. */
-export function filingWindowOpen(compliance: Pick<ComplianceRow, "nextDueDate" | "status"> | null, now: Date): boolean {
-  return Boolean(compliance) && isFilingWindowOpen({ nextDueDate: compliance?.nextDueDate ?? null, status: compliance?.status ?? null }, pacificToday(now));
-}
-
-function requireFilingWindow(compliance: ComplianceRow | null, now: Date) {
-  if (filingWindowOpen(compliance, now)) return;
-  const opens = dateWords(filingOpensOn(compliance?.nextDueDate ?? null));
-  throw new AnnualReportError(
-    "not_open",
-    opens ? `Filing for this year's annual report opens on ${opens}. We'll email you when it's time.` : "Filing opens here once your state's due date is in. We'll email you when it's time.",
-  );
+/** The cycle's report: the one submitted for this due date, else the one for this fiscal year. */
+export function reportForCycle(reports: readonly AnnualReportRow[], dueDate: string | null, fiscalYear: number | null): AnnualReportRow | null {
+  return (dueDate ? reports.find((report) => report.dueDate === dueDate) : undefined)
+    ?? (fiscalYear !== null ? reports.find((report) => report.fiscalYear === fiscalYear) : undefined)
+    ?? null;
 }
 
 /** The provider's field as the member page gets it: provider names scrubbed from every label. */
@@ -145,8 +171,9 @@ export function prefillAnswers(fields: readonly AnnualReportField[], facts: Fili
     if (field.group !== "COMPANY_DETAIL") continue;
     const key = field.fieldId as CompanyDetailKey;
     if (field.type === "ADDRESS") {
+      // Her mailing address only: when she chose the agent's address for mail, the field stays empty (and is not sent
+      // unless she types one), so her business address never goes out as her mail address.
       const address =
-        // Her own mailing address only, never her business address in its place (review fix, 2026-10-20).
         key === "mailingAddress" ? facts.mailingAddress : key === "address" || key === "physicalAddress" ? facts.businessAddress : null;
       if (address) out[field.fieldId] = address;
     } else if (key === "companyName" && facts.companyName) {
@@ -178,17 +205,24 @@ export function buildSubmission(fields: readonly AnnualReportField[], cleaned: R
   };
 }
 
-const isLocked = (row: AnnualReportRow | null | undefined) =>
+/** Paid, handed over or past FILLED: her answers can't change and the cycle needs nothing more from her. */
+export const isLocked = (row: AnnualReportRow | null | undefined) =>
   Boolean(row && (row.paidAt || row.confirmedAt || (row.status && row.status !== "FILLED")));
 
 // ─── Calendar and report sync ──────────────────────────────────────────────────────────────────────────────────────
 
 export type SyncResult = { facts: FilingFacts; compliance: ComplianceRow | null; reports: AnnualReportRow[] };
 
-async function alertAwaitingInformation(deps: AnnualReportDeps, facts: FilingFacts, row: AnnualReportRow) {
+/** One AWAITING_INFORMATION episode: the provider's updatedAt for it, else today's date (a new episode, a new alert). */
+function awaitingEpisode(updatedAt: string | null | undefined, now: Date): string {
+  const compact = String(updatedAt ?? "").replace(/[^0-9A-Za-z]/g, "").slice(0, 24);
+  return compact || pacificToday(now).replaceAll("-", "");
+}
+
+async function alertAwaitingInformation(deps: AnnualReportDeps, facts: FilingFacts, row: AnnualReportRow, episode: string) {
   await deps.alerts.once({
     registrationId: facts.registrationId,
-    type: `ar_awaiting_${row.id}`,
+    type: `ar_awaiting_${row.id}_${episode}`,
     subject: `Annual report needs information (order #${facts.registrationId})`,
     lines: [
       `The ${row.fiscalYear} annual report for order #${facts.registrationId} (${facts.companyName || "company"}) is AWAITING_INFORMATION at the filing provider.`,
@@ -214,15 +248,50 @@ async function applyProviderReports(deps: AnnualReportDeps, facts: FilingFacts, 
     };
     const saved = await deps.store.upsertReport({ registrationId: facts.registrationId, userId: facts.userId, fiscalYear: row?.fiscalYear ?? report.fiscalYear }, patch);
     if (report.status === "AWAITING_INFORMATION" && row?.status !== "AWAITING_INFORMATION") {
-      await alertAwaitingInformation(deps, facts, saved);
+      await alertAwaitingInformation(deps, facts, saved, awaitingEpisode(report.updatedAt, now));
     }
+  }
+}
+
+/** Ops hear once per cycle when the window is open but which fiscal year it files can't be told (filingCycle). */
+async function alertYearUnconfirmed(deps: AnnualReportDeps, facts: FilingFacts, dueDate: string, why: string) {
+  await deps.alerts.once({
+    registrationId: facts.registrationId,
+    type: `ar_year_unconfirmed_${facts.registrationId}_${dueDate}`,
+    subject: `Annual report filing year needs confirming (order #${facts.registrationId})`,
+    lines: [
+      `Order #${facts.registrationId} (${facts.companyName || "company"}): the annual report due ${dueDate} is inside the filing window, but ${why}.`,
+      "Her page says we're confirming her filing year with the state and will email her; filing stays closed until it's clear. Ask the provider which fiscalYear satisfies this due date (see docs/LLC_ANNUAL_REPORTS_2026-10-20.md, open question).",
+    ],
+  });
+}
+
+/** The wrong-year safety net: a filed report whose due date is still the calendar's next due date two weeks later. */
+const WRONG_YEAR_GRACE_MS = 14 * 86_400_000;
+
+async function checkFiledCycles(deps: AnnualReportDeps, facts: FilingFacts, compliance: ComplianceRow, reports: AnnualReportRow[]) {
+  const now = deps.now();
+  for (const row of reports) {
+    if (row.status !== "FILING_COMPLETED" || !row.dueDate || !row.completedAt) continue;
+    if (row.dueDate !== compliance.nextDueDate || now.getTime() - row.completedAt.getTime() < WRONG_YEAR_GRACE_MS) continue;
+    await deps.alerts.once({
+      registrationId: facts.registrationId,
+      type: `ar_wrong_year_${row.id}`,
+      subject: `Annual report may have been filed for the wrong year (order #${facts.registrationId})`,
+      lines: [
+        `Order #${facts.registrationId}, the ${row.fiscalYear} annual report was filed (completed ${row.completedAt.toISOString().slice(0, 10)}) for the cycle due ${row.dueDate}, but two weeks later the provider's calendar still says the next one is due ${compliance.nextDueDate} (${compliance.status ?? "no status"}).`,
+        "It may have been filed for a different fiscal year than the state expected. Check with the provider before she is told anything; her page still shows it as filed.",
+      ],
+    });
   }
 }
 
 /**
  * Read the provider's compliance calendar, state fee quote and report list for one filing into our rows. With
  * `maxAgeMs`, a calendar read more recently than that is reused (page views); without it, it always reads. Never
- * throws for a provider outage: the last good values stay and lastError says what failed.
+ * throws for a provider outage: the last good values stay and lastError says what failed. A read whose calendar
+ * failed is not counted fresh: syncedAt stays at most RETRY_AFTER_FAILURE_MS short of stale, so the hourly sweep
+ * (and the next page view) tries again within about an hour instead of trusting old values for a day.
  */
 export async function syncCompliance(registrationId: number, options: { maxAgeMs?: number }, deps: AnnualReportDeps): Promise<SyncResult | null> {
   const facts = await deps.filings.load(registrationId);
@@ -247,6 +316,9 @@ export async function syncCompliance(registrationId: number, options: { maxAgeMs
     return null;
   });
 
+  // The calendar drives the window: without it this read is not fresh (see above).
+  const retrySyncedAt = new Date(now.getTime() - DAILY_SYNC_MS + RETRY_AFTER_FAILURE_MS);
+  const syncedAt = calendar ? now : existing?.syncedAt && existing.syncedAt < retrySyncedAt ? existing.syncedAt : retrySyncedAt;
   const compliance: ComplianceRow & { syncedAt: Date } = {
     registrationId,
     userId: facts.userId,
@@ -257,7 +329,7 @@ export async function syncCompliance(registrationId: number, options: { maxAgeMs
     filingRequired: fee ? fee.isFilingRequired : existing?.filingRequired ?? null,
     quotePriceCents: fee ? fee.priceInCents : existing?.quotePriceCents ?? null,
     quoteIsMinimum: fee ? fee.isMinimum : existing?.quoteIsMinimum ?? false,
-    syncedAt: now,
+    syncedAt,
     lastError: failure,
   };
   await deps.store.upsertCompliance(compliance);
@@ -267,6 +339,13 @@ export async function syncCompliance(registrationId: number, options: { maxAgeMs
   if (reports.some((report) => report.status === "FILING_COMPLETED" && !report.filedDocumentId)) {
     const result = await deps.documents.mirror({ facts, reports }).catch(() => ({ mirrored: 0 }));
     if (result.mirrored > 0) reports = await deps.store.listReports(registrationId);
+  }
+  if (calendar) {
+    const cycle = filingCycle(compliance, now);
+    if (cycle.open && cycle.fiscalYear === null && cycle.dueDate && !isLocked(reportForCycle(reports, cycle.dueDate, null))) {
+      await alertYearUnconfirmed(deps, facts, cycle.dueDate, `its window opened ${cycle.opensOn} in the year before the due date, so the fiscal year to file is not confirmed`);
+    }
+    await checkFiledCycles(deps, facts, compliance, reports);
   }
   return { facts, compliance, reports };
 }
@@ -280,6 +359,51 @@ async function requireOwnEligible(userId: number, registrationId: number, deps: 
     throw new AnnualReportError("not_eligible", "Annual reports open here once your LLC is official.");
   }
   return facts;
+}
+
+const YEAR_UNCONFIRMED_WORDS = "We're confirming your filing year with the state. We'll email you when it's ready to file.";
+
+export type OpenFilingCycle = FilingCycle & { open: true; dueDate: string; fiscalYear: number };
+
+/** The cycle as of now, or a plain refusal: the form, the submit and the checkout all go through this. */
+export function requireOpenCycle(compliance: ComplianceRow | null, now: Date): OpenFilingCycle {
+  if (compliance?.filingRequired === false) throw new AnnualReportError("not_required", "Your state doesn't require an annual report, so there's nothing to file.");
+  if (compliance?.status === "UNSUPPORTED_STATE") {
+    throw new AnnualReportError("unsupported", "Annual reports for your state can't be filed online yet. Our team will reach out to help.");
+  }
+  const cycle = filingCycle(compliance, now);
+  if (!cycle.dueDate) throw new AnnualReportError("not_open", "We don't have your annual report due date yet. We'll let you know when it's time to file.");
+  if (!cycle.open) {
+    const opens = dateWords(cycle.opensOn);
+    throw new AnnualReportError("not_open", `Your next annual report can't be filed yet.${opens ? ` Filing opens ${opens}.` : ""} We'll email you before then.`);
+  }
+  if (cycle.fiscalYear === null) throw new AnnualReportError("not_open", YEAR_UNCONFIRMED_WORDS);
+  return cycle as OpenFilingCycle;
+}
+
+/** Sync (at most every 10 minutes) and require the open cycle; for app glue (the checkout) that must refuse the same way. */
+export async function requireOpenFiling(registrationId: number, deps: AnnualReportDeps): Promise<{ facts: FilingFacts; cycle: OpenFilingCycle; reports: AnnualReportRow[] }> {
+  const synced = await syncCompliance(registrationId, { maxAgeMs: PAGE_VIEW_SYNC_MS }, deps);
+  if (!synced) throw new AnnualReportError("not_eligible", "Annual reports open here once your LLC is official.");
+  return { facts: synced.facts, cycle: requireOpenCycle(synced.compliance, deps.now()), reports: synced.reports };
+}
+
+/** The state's questions for exactly the cycle's fiscal year; a different year back means the year isn't confirmed. */
+async function loadCycleRequirements(facts: FilingFacts, cycle: OpenFilingCycle, deps: AnnualReportDeps): Promise<AnnualReportRequirements> {
+  let requirements: AnnualReportRequirements;
+  try {
+    requirements = await deps.provider.getRequirements(facts.companyId as string, cycle.fiscalYear);
+  } catch (error) {
+    if (errorCodeOf(error) === "E_STATE_NOT_SUPPORTED") {
+      throw new AnnualReportError("unsupported", "Annual reports for your state can't be filed online yet. Our team will reach out to help.");
+    }
+    throw new AnnualReportError("unavailable", "The state's questions couldn't be loaded right now. Please try again in a few minutes.");
+  }
+  if (requirements.fiscalYear !== cycle.fiscalYear) {
+    await alertYearUnconfirmed(deps, facts, cycle.dueDate, `the requirements asked for fiscal year ${cycle.fiscalYear} came back for ${requirements.fiscalYear}`);
+    throw new AnnualReportError("not_open", YEAR_UNCONFIRMED_WORDS);
+  }
+  return requirements;
 }
 
 export type AnnualReportForm = {
@@ -297,25 +421,16 @@ export type AnnualReportForm = {
 
 export async function getAnnualReportForm(userId: number, registrationId: number, deps: AnnualReportDeps): Promise<AnnualReportForm> {
   const facts = await requireOwnEligible(userId, registrationId, deps);
-  const synced = await syncCompliance(registrationId, { maxAgeMs: PAGE_VIEW_SYNC_MS }, deps);
-  const compliance = synced?.compliance ?? null;
-  requireFilingWindow(compliance, deps.now());
-  let requirements;
-  try {
-    requirements = await deps.provider.getRequirements(facts.companyId as string, cycleFiscalYear(compliance, deps.now()));
-  } catch (error) {
-    if (errorCodeOf(error) === "E_STATE_NOT_SUPPORTED") {
-      throw new AnnualReportError("unsupported", "Annual reports for your state can't be filed online yet. Our team will reach out to help.");
-    }
-    throw new AnnualReportError("unavailable", "The state's questions couldn't be loaded right now. Please try again in a few minutes.");
-  }
-  const current = (synced?.reports ?? []).find((report) => report.fiscalYear === requirements.fiscalYear) ?? null;
+  const { cycle, reports } = await requireOpenFiling(registrationId, deps);
+  const compliance = await deps.store.getCompliance(registrationId);
+  const requirements = await loadCycleRequirements(facts, cycle, deps);
+  const current = reportForCycle(reports, cycle.dueDate, cycle.fiscalYear);
   if (isLocked(current)) throw new AnnualReportError("locked", "This year's annual report is already on its way, so the answers can't be changed.");
   const fields = requirements.fields.map(memberField);
   return {
     fiscalYear: requirements.fiscalYear,
-    dueDate: requirements.dueDate ?? compliance?.nextDueDate ?? null,
-    dueDateWords: dateWords(requirements.dueDate ?? compliance?.nextDueDate ?? null),
+    dueDate: cycle.dueDate,
+    dueDateWords: dateWords(cycle.dueDate),
     isFilingRequired: requirements.isFilingRequired,
     fields: requirements.isFilingRequired ? fields : [],
     answers: { ...prefillAnswers(requirements.fields, facts), ...(current?.answers ?? {}) },
@@ -329,7 +444,8 @@ export async function getAnnualReportForm(userId: number, registrationId: number
 
 export type SubmitResult = {
   reportId: number;
-  priceCents: number;
+  /** The fee the provider fixed for these answers; null while it hasn't said (never read as $0). */
+  priceCents: number | null;
   /** What she was shown before this submit: the fee of her earlier answers, else the state quote. */
   previousPriceCents: number | null;
   priceChanged: boolean;
@@ -339,34 +455,35 @@ export type SubmitResult = {
 };
 
 const FIELD_PROBLEM = "Check this answer.";
+const PAID_LOCKED_WORDS = "Your payment is in, so your answers can't be changed now. We'll email you when your report is with the state.";
+
+/** Names this submit attempt for the provider's idempotency key: what the row looked like before it. */
+function submitAttempt(row: AnnualReportRow | null): string {
+  return row ? `${row.id}:${row.annualReportId ?? "none"}:${row.submittedAt?.getTime() ?? 0}` : "first";
+}
 
 export async function submitAnnualReport(userId: number, registrationId: number, answers: AnnualReportAnswers, deps: AnnualReportDeps): Promise<SubmitResult> {
   const facts = await requireOwnEligible(userId, registrationId, deps);
   const companyId = facts.companyId as string;
-  const synced = await syncCompliance(registrationId, { maxAgeMs: PAGE_VIEW_SYNC_MS }, deps);
-  const compliance = synced?.compliance ?? null;
-  requireFilingWindow(compliance, deps.now());
-  let requirements;
-  try {
-    requirements = await deps.provider.getRequirements(companyId, cycleFiscalYear(compliance, deps.now()));
-  } catch (error) {
-    if (errorCodeOf(error) === "E_STATE_NOT_SUPPORTED") {
-      throw new AnnualReportError("unsupported", "Annual reports for your state can't be filed online yet. Our team will reach out to help.");
-    }
-    throw new AnnualReportError("unavailable", "The state's questions couldn't be loaded right now. Please try again in a few minutes.");
-  }
+  const { cycle, reports } = await requireOpenFiling(registrationId, deps);
+  const compliance = await deps.store.getCompliance(registrationId);
+  const requirements = await loadCycleRequirements(facts, cycle, deps);
   if (!requirements.isFilingRequired) throw new AnnualReportError("not_required", "Your state doesn't require an annual report, so there's nothing to file.");
-  const current = (synced?.reports ?? []).find((report) => report.fiscalYear === requirements.fiscalYear) ?? null;
-  if (isLocked(current)) throw new AnnualReportError("locked", "This year's annual report is already on its way, so the answers can't be changed.");
+  // The row this submit writes (one per fiscal year) and the cycle's report (by due date): never one already paid,
+  // handed over or filed, so one due date is never filed twice under two fiscal years.
+  const current = reports.find((report) => report.fiscalYear === cycle.fiscalYear) ?? null;
+  if (isLocked(current) || isLocked(reportForCycle(reports, cycle.dueDate, cycle.fiscalYear))) {
+    throw new AnnualReportError("locked", "This year's annual report is already on its way, so the answers can't be changed.");
+  }
 
   const fields = requirements.fields.map(memberField);
   const validation = validateAnnualReportAnswers(fields, answers);
   if (!validation.ok) throw new AnnualReportError("invalid", "A few answers need a look before this can be sent.", validation.errors);
 
-  const body = buildSubmission(requirements.fields, validation.cleaned, requirements.fiscalYear);
+  const body = buildSubmission(requirements.fields, validation.cleaned, cycle.fiscalYear);
   let submitted;
   try {
-    submitted = await deps.provider.submit(companyId, body);
+    submitted = await deps.provider.submit(companyId, body, { attempt: submitAttempt(current) });
   } catch (error) {
     const code = errorCodeOf(error);
     if (code === "E_VALIDATION_FAILED") {
@@ -388,13 +505,16 @@ export async function submitAnnualReport(userId: number, registrationId: number,
   }
 
   const report = submitted.report;
-  const price = report.priceInCents ?? 0;
+  // A missing price is unknown, never $0: stored as null, no checkout and no zero-fee confirm until it's known.
+  const price = report.priceInCents;
   const previousPriceCents = current?.priceInCents ?? compliance?.quotePriceCents ?? null;
   // A new price voids any checkout made for the old one: she pays the price on file, never an older one.
   const checkoutStale = current?.checkoutPriceCents !== null && current?.checkoutPriceCents !== undefined && current.checkoutPriceCents !== price;
+  // Guarded: a payment claimed (or a hand-off) since the check above wins; nothing about the paid report changes.
   const row = await deps.store.upsertReport(
     { registrationId, userId: facts.userId, fiscalYear: report.fiscalYear },
     {
+      dueDate: cycle.dueDate,
       annualReportId: report.annualReportId,
       status: report.status,
       priceInCents: price,
@@ -406,13 +526,15 @@ export async function submitAnnualReport(userId: number, registrationId: number,
         ? { checkoutSessionId: null, checkoutUrl: null, checkoutPlanId: null, checkoutQuoteHash: null, checkoutPriceCents: null, checkoutExpiresAt: null }
         : {}),
     },
+    { paidAtIsNull: true, confirmedAtIsNull: true },
   );
+  if (row.paidAt || row.confirmedAt) throw new AnnualReportError("locked", PAID_LOCKED_WORDS);
   const confirmOutcome = price === 0 && report.status === "FILLED" ? await confirmReport(row.id, { source: "zero_fee" }, deps) : null;
   return {
     reportId: row.id,
     priceCents: price,
     previousPriceCents,
-    priceChanged: previousPriceCents !== null && previousPriceCents !== price,
+    priceChanged: previousPriceCents !== null && price !== null && previousPriceCents !== price,
     isReplaced: submitted.isReplaced,
     confirmOutcome,
   };
@@ -434,56 +556,24 @@ export async function confirmReport(
   if (row.confirmedAt) return "already_confirmed";
   if (!row.annualReportId || row.priceInCents === null) return "not_ready";
   const price = row.priceInCents;
-  // THE money rule: a priced report goes to the state only on a verified payment of exactly its price.
-  if (price > 0 && !(row.paidAt && row.paidCents === price)) return "not_paid";
-
   const now = deps.now();
-  const stampConfirmed = async (status: string) => {
-    await deps.store.updateReport(row.id, { confirmedAt: now, status, lastError: null, lastErrorAt: null }, { confirmedAtIsNull: true });
-  };
-
-  // Re-read the provider's report right before the hand-off: its status and the price it will charge.
-  let live: ProviderAnnualReport | null = null;
-  try {
-    live = await deps.provider.get(facts.companyId, row.annualReportId);
-  } catch {
-    live = null;
-  }
-  if (live && live.status !== "FILLED") {
-    await stampConfirmed(live.status);
-    return "already_confirmed";
-  }
-  if (live && live.priceInCents !== null && live.priceInCents !== price) {
-    await deps.store.updateReport(row.id, { priceInCents: live.priceInCents, lastError: "price_mismatch", lastErrorAt: now });
-    if (price === 0) return "not_paid";
-    await deps.alerts.once({
-      registrationId: row.registrationId,
-      type: `ar_mismatch_${row.id}`,
-      subject: `Annual report payment does not match the fee (order #${row.registrationId})`,
-      lines: [
-        `Order #${row.registrationId}, ${row.fiscalYear} annual report: she paid ${feeWords(row.paidCents ?? 0)} (payment ${row.paymentReference ?? "n/a"}), but the filing provider now prices it at ${feeWords(live.priceInCents)}.`,
-        "It was NOT confirmed. Refund or collect the difference, then confirm it from /admin/llc.",
-      ],
-    });
-    return "price_mismatch";
-  }
-
-  try {
-    const confirmed = await deps.provider.confirm(facts.companyId, row.annualReportId);
-    await stampConfirmed(confirmed?.status ?? "IN_PROGRESS");
-    if (confirmed?.status === "AWAITING_INFORMATION") await alertAwaitingInformation(deps, facts, row);
-    return "confirmed";
-  } catch (error) {
-    const code = errorCodeOf(error);
-    if (code === "E_RESOURCE_CONFLICT") {
-      // Wrong status for a confirm: someone already handed it over. Read it back and record what it is.
-      const after = await deps.provider.get(facts.companyId, row.annualReportId).catch(() => null);
-      if (after && after.status !== "FILLED") {
-        await stampConfirmed(after.status);
-        return "already_confirmed";
-      }
+  // THE money rule: a priced report goes to the state only on a verified payment of exactly its price. A payment for
+  // a fee that has since changed is ops' call (the two fee buttons on /admin/llc); they hear once.
+  if (price > 0 && !(row.paidAt && row.paidCents === price)) {
+    if (row.paidAt && row.lastError !== "price_mismatch") {
+      await deps.store.updateReport(row.id, { lastError: "price_mismatch", lastErrorAt: now }, { confirmedAtIsNull: true });
+      await alertFeeChanged(deps, row, price);
     }
-    await deps.store.updateReport(row.id, { lastError: `confirm:${code}`, lastErrorAt: now });
+    return "not_paid";
+  }
+
+  // An ops note (a difference we absorbed) survives the stamp, so the row keeps its audit line.
+  const keptNote = row.lastError?.startsWith("ops:") ? row.lastError : null;
+  const stampConfirmed = async (status: string) => {
+    await deps.store.updateReport(row.id, { confirmedAt: now, status, lastError: keptNote, lastErrorAt: keptNote ? row.lastErrorAt : null }, { confirmedAtIsNull: true });
+  };
+  const failed = async (code: string): Promise<ConfirmOutcome> => {
+    await deps.store.updateReport(row.id, { lastError: `confirm:${code}`.slice(0, 255), lastErrorAt: now });
     await deps.alerts.once({
       registrationId: row.registrationId,
       type: `ar_confirm_failed_${row.id}`,
@@ -496,8 +586,63 @@ export async function confirmReport(
       ],
     });
     return "confirm_failed";
+  };
+
+  // Re-read the provider's report right before the hand-off: its status and the price it will charge. Nothing is
+  // confirmed without this read (paid or no-fee); a failed read is a confirm_failed the hourly sweep retries.
+  let live: ProviderAnnualReport | null;
+  try {
+    live = await deps.provider.get(facts.companyId, row.annualReportId);
+  } catch (error) {
+    return failed(`reread:${errorCodeOf(error)}`);
+  }
+  if (!live) return failed("reread:not_found");
+  if (live.status !== "FILLED") {
+    await stampConfirmed(live.status);
+    return "already_confirmed";
+  }
+  if (live.priceInCents === null) return failed("reread:no_price");
+  if (live.priceInCents !== price) {
+    await deps.store.updateReport(row.id, { priceInCents: live.priceInCents, lastError: "price_mismatch", lastErrorAt: now }, { confirmedAtIsNull: true });
+    if (!row.paidAt) return "not_paid";
+    await alertFeeChanged(deps, { ...row, priceInCents: live.priceInCents }, live.priceInCents);
+    return "price_mismatch";
+  }
+
+  try {
+    const confirmed = await deps.provider.confirm(facts.companyId, row.annualReportId);
+    await stampConfirmed(confirmed?.status ?? "IN_PROGRESS");
+    if (confirmed?.status === "AWAITING_INFORMATION") await alertAwaitingInformation(deps, facts, row, awaitingEpisode(confirmed.updatedAt, now));
+    return "confirmed";
+  } catch (error) {
+    const code = errorCodeOf(error);
+    if (code === "E_RESOURCE_CONFLICT") {
+      // Wrong status for a confirm: someone already handed it over. Read it back and record what it is.
+      const after = await deps.provider.get(facts.companyId, row.annualReportId).catch(() => null);
+      if (after && after.status !== "FILLED") {
+        await stampConfirmed(after.status);
+        return "already_confirmed";
+      }
+    }
+    return failed(code);
   }
 }
+
+/** A paid report whose fee is no longer what she paid: never confirmed; ops pick one of the two fee buttons. */
+async function alertFeeChanged(deps: AnnualReportDeps, row: AnnualReportRow, feeCents: number) {
+  await deps.alerts.once({
+    registrationId: row.registrationId,
+    type: `ar_mismatch_${row.id}`,
+    subject: `Annual report payment does not match the fee (order #${row.registrationId})`,
+    lines: [
+      `Order #${row.registrationId}, ${row.fiscalYear} annual report: she paid ${feeWords(row.paidCents ?? 0)} (payment ${row.paymentReference ?? "n/a"}), but the filing provider now prices it at ${feeWords(feeCents)}.`,
+      `It was NOT confirmed. On /admin/llc, open the order's Annual reports and either refund her payment in the payment processor and press "${OPS_FEE_ACTION_LABELS.refunded_pay_again}" (she gets an email with a link to pay the new fee), or press "${OPS_FEE_ACTION_LABELS.absorb_difference}" to file it now with us covering the difference.`,
+    ],
+  });
+}
+
+/** The two ops buttons for a paid report whose fee changed (the alerts name them by these labels). */
+export { OPS_FEE_ACTION_LABELS };
 
 // ─── Webhooks ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -543,7 +688,12 @@ function filedOnWords(row: AnnualReportRow, compliance: ComplianceRow | null): s
   return dateWords(completed) ?? dateWords(compliance?.lastFiledDate ?? null);
 }
 
-/** Pure: the member card from what we have on file. */
+/**
+ * Pure: the member card from what we have on file. Due and overdue (with the File button) only while the cycle is
+ * open (filingCycle); before that it's "Not due yet" with the day filing opens. The cycle's report is matched by its
+ * due date, then its fiscal year, so a report filed for this due date keeps the card "filed" until the calendar
+ * moves on, and the next cycle's File button only shows once that cycle opens.
+ */
 export function buildMemberView(
   facts: Pick<FilingFacts, "registrationId" | "state">,
   compliance: ComplianceRow | null,
@@ -552,14 +702,13 @@ export function buildMemberView(
 ): MemberAnnualReportView {
   const stateName = stateNameOf(compliance?.state ?? facts.state);
   const dueWords = dateWords(compliance?.nextDueDate ?? null);
-  const year = cycleFiscalYear(compliance, now);
+  const cycle = filingCycle(compliance, now);
+  const fileable = cycle.open && cycle.fiscalYear !== null;
   const current =
-    reports.find((report) => report.fiscalYear === year) ??
+    reportForCycle(reports, cycle.dueDate, cycle.fiscalYear) ??
     reports.find((report) => report.status !== null && report.status !== "FILING_COMPLETED") ??
     null;
   const lastFiled = reports.find((report) => report.status === "FILING_COMPLETED") ?? null;
-  const open = filingWindowOpen(compliance, now);
-  const opensWords = dateWords(filingOpensOn(compliance?.nextDueDate ?? null));
 
   let cardState: AnnualReportCardState;
   let body: string;
@@ -576,37 +725,38 @@ export function buildMemberView(
   } else if (current?.status === "IN_PROGRESS" || (current?.confirmedAt && current.status === "FILLED")) {
     cardState = "filing";
     body = "We're filing it with the state. We'll let you know when it's done.";
-  } else if (current?.status === "FILLED") {
+  } else if (current?.status === "FILLED" && fileable) {
     cardState = "saved";
-    const price = current.priceInCents ?? 0;
-    body = price > 0
-      ? `Your answers are saved. The state fee is ${feeWords(price)}. Pay it and we send your report to the state.`
-      : "Your answers are saved. There's no state fee, so we're sending it to the state.";
+    body = current.priceInCents === null
+      ? "Your answers are saved. We're getting the state fee for them and will show it here."
+      : current.priceInCents > 0
+        ? `Your answers are saved. The state fee is ${feeWords(current.priceInCents)}. Pay it and we send your report to the state.`
+        : "Your answers are saved. There's no state fee, so we're sending it to the state.";
   } else if (compliance?.filingRequired === false || compliance?.status === "UNSUPPORTED_STATE") {
     cardState = "not_required";
     body = compliance?.status === "UNSUPPORTED_STATE" && compliance.filingRequired !== false
       ? `${stateName} annual reports can't be filed here yet. Our team will reach out if anything is needed.`
       : `${stateName} doesn't ask LLCs like yours for an annual report, so there's nothing to file.`;
-  } else if (compliance?.status === "NOT_YET_DUE") {
-    cardState = "not_yet_due";
-    const filed = lastFiled ? filedOnWords(lastFiled, compliance) : null;
-    body = `${filed ? `Your last one was filed on ${filed}. ` : ""}${dueWords ? `Your next annual report is due ${dueWords}. We'll email you before then.` : "We'll let you know when it's time to file."}`;
-  } else if (compliance?.status === "OVERDUE") {
-    cardState = "overdue";
-    body = `It was due ${dueWords ?? "already"}. File it now to keep your LLC in good standing with ${stateName}. It takes a few minutes.`;
-  } else if (compliance?.status === "UPCOMING" && open) {
-    cardState = "due";
-    body = `Your ${stateName} annual report is due ${dueWords ?? "soon"}. Answer the state's questions, pay the state fee, and we file it for you.`;
-  } else if (compliance?.status === "UPCOMING") {
-    // More than 90 days out: not open for filing yet (live check 2026-10-20).
-    cardState = "not_yet_due";
-    body = `Your next ${stateName} annual report is due ${dueWords ?? "later this year"}. Filing opens ${opensWords ? `on ${opensWords}` : "closer to the date"}, and we'll email you before it's due.`;
-  } else {
+  } else if (!compliance || (!cycle.dueDate && !compliance.status)) {
     cardState = "checking";
     body = "We'll show your due date here as soon as we have it.";
+  } else if (cycle.open && cycle.fiscalYear === null) {
+    cardState = "confirming_year";
+    body = `Your ${stateName} annual report is due ${dueWords ?? "soon"}. We're confirming your filing year with the state, and we'll email you when it's ready to file.`;
+  } else if (cycle.open && cycle.overdue) {
+    cardState = "overdue";
+    body = `It was due ${dueWords ?? "already"}. File it now to keep your LLC in good standing with ${stateName}. It takes a few minutes.`;
+  } else if (cycle.open) {
+    cardState = "due";
+    body = `Your ${stateName} annual report is due ${dueWords ?? "soon"}. Answer the state's questions, pay the state fee, and we file it for you.`;
+  } else {
+    cardState = "not_yet_due";
+    const filed = lastFiled ? filedOnWords(lastFiled, compliance) : null;
+    const opens = dateWords(cycle.opensOn);
+    body = `${filed ? `Your last one was filed on ${filed}. ` : ""}${dueWords ? `Your next annual report is due ${dueWords}.${opens ? ` Filing opens ${opens}.` : ""} We'll email you before then.` : "We'll let you know when it's time to file."}`;
   }
 
-  const fileable = (cardState === "due" || cardState === "overdue" || cardState === "saved") && open;
+  const canFile = fileable && (cardState === "due" || cardState === "overdue" || cardState === "saved");
   return {
     registrationId: facts.registrationId,
     stateName,
@@ -615,8 +765,8 @@ export function buildMemberView(
     body,
     dueDate: compliance?.nextDueDate ?? null,
     dueDateWords: dueWords,
-    canFile: fileable,
-    opensOnWords: !open && opensWords && (cardState === "not_yet_due" || cardState === "saved") ? opensWords : null,
+    opensOnWords: cycle.open ? null : dateWords(cycle.opensOn),
+    canFile,
     quote:
       compliance?.quotePriceCents !== null && compliance?.quotePriceCents !== undefined && compliance.filingRequired !== false
         ? { priceCents: compliance.quotePriceCents, isMinimum: compliance.quoteIsMinimum }
@@ -672,6 +822,7 @@ export type OpsAnnualReportView = {
   reports: Array<{
     id: number;
     fiscalYear: number;
+    dueDate: string | null;
     annualReportId: string | null;
     status: string | null;
     priceInCents: number | null;
@@ -684,6 +835,10 @@ export type OpsAnnualReportView = {
     hasDocument: boolean;
     lastError: string | null;
     canConfirm: boolean;
+    /** Paid, not handed over, and the fee is no longer what she paid: the two fee buttons. */
+    feeChanged: boolean;
+    /** "Fee changed: refunded, let her pay again" also applies to an unpaid report a mismatched payment hit. */
+    canResetPayment: boolean;
   }>;
 };
 
@@ -710,6 +865,7 @@ export async function getOpsAnnualReports(registrationId: number, deps: AnnualRe
     reports: synced.reports.map((row) => ({
       id: row.id,
       fiscalYear: row.fiscalYear,
+      dueDate: row.dueDate,
       annualReportId: row.annualReportId,
       status: row.status,
       priceInCents: row.priceInCents,
@@ -723,8 +879,68 @@ export async function getOpsAnnualReports(registrationId: number, deps: AnnualRe
       lastError: row.lastError,
       // Paid (or no fee) and not handed over yet: ops may push the confirm.
       canConfirm: !row.confirmedAt && row.status === "FILLED" && row.priceInCents !== null && (row.priceInCents === 0 || (Boolean(row.paidAt) && row.paidCents === row.priceInCents)),
+      feeChanged: isFeeChanged(row),
+      canResetPayment: canResetPayment(row),
     })),
   };
+}
+
+const isFeeChanged = (row: AnnualReportRow) =>
+  Boolean(row.paidAt) && !row.confirmedAt && row.priceInCents !== null && row.paidCents !== row.priceInCents;
+
+const canResetPayment = (row: AnnualReportRow) =>
+  !row.confirmedAt && row.status === "FILLED" && (isFeeChanged(row) || (!row.paidAt && row.lastError === "payment_mismatch"));
+
+export type OpsFeeActionOutcome = "reset" | "not_allowed" | ConfirmOutcome;
+
+/**
+ * Ops "Fee changed: refunded, let her pay again", after ops refunded her payment in the payment processor: the
+ * payment and the checkout come off the report (guarded: never once it's handed over), so her page asks for the fee
+ * on file again with a fresh checkout. The app emails her the pay link (router glue). An audit line stays in
+ * lastError.
+ */
+export async function opsResetAnnualReportPayment(registrationId: number, reportId: number, deps: AnnualReportDeps): Promise<OpsFeeActionOutcome> {
+  const row = await deps.store.getReport(reportId);
+  if (!row || row.registrationId !== registrationId) return "not_found";
+  if (!canResetPayment(row)) return "not_allowed";
+  const note = `ops: refunded ${row.paidAt ? `${feeWords(row.paidCents ?? 0)} payment ${row.paymentReference ?? "n/a"}` : "a mismatched payment"}; she pays ${row.priceInCents !== null ? feeWords(row.priceInCents) : "the fee"} again`;
+  const reset = await deps.store.updateReport(
+    row.id,
+    {
+      paymentReference: null,
+      paidAt: null,
+      paidCents: null,
+      checkoutSessionId: null,
+      checkoutUrl: null,
+      checkoutPlanId: null,
+      checkoutQuoteHash: null,
+      checkoutPriceCents: null,
+      checkoutExpiresAt: null,
+      lastError: note.slice(0, 255),
+      lastErrorAt: deps.now(),
+    },
+    { confirmedAtIsNull: true },
+  );
+  return reset ? "reset" : "not_allowed";
+}
+
+/**
+ * Ops "Difference absorbed, file it": we cover the gap, so the payment on file is taken as the fee on file (an audit
+ * line with both amounts stays in lastError), then the normal guarded confirm runs, re-reading the provider's price
+ * first like every confirm.
+ */
+export async function opsAbsorbAnnualReportDifference(registrationId: number, reportId: number, deps: AnnualReportDeps): Promise<OpsFeeActionOutcome> {
+  const row = await deps.store.getReport(reportId);
+  if (!row || row.registrationId !== registrationId) return "not_found";
+  if (!isFeeChanged(row) || row.priceInCents === null) return "not_allowed";
+  const note = `ops: absorbed the difference (paid ${feeWords(row.paidCents ?? 0)}, fee ${feeWords(row.priceInCents)}, payment ${row.paymentReference ?? "n/a"})`;
+  const absorbed = await deps.store.updateReport(
+    row.id,
+    { paidCents: row.priceInCents, lastError: note.slice(0, 255), lastErrorAt: deps.now() },
+    { confirmedAtIsNull: true, paidAtIsNotNull: true },
+  );
+  if (!absorbed) return "not_allowed";
+  return confirmReport(row.id, { source: "ops" }, deps);
 }
 
 /** Ops "Confirm filing": the same guarded confirm; it still refuses without a verified payment. */

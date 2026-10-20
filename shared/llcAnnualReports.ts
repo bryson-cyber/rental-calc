@@ -195,48 +195,12 @@ export function feeWords(cents: number): string {
   return `$${dollars.toLocaleString("en-US", { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
 }
 
-// ─── When filing opens (live check, 2026-10-20) ─────────────────────────────────────────────────────────────────────
-
-/**
- * Filing opens this many days before the calendar's due date, or as soon as the calendar says OVERDUE. A live check
- * on 2026-10-20 showed the provider answering the same due date (2027-09-01) for requirements asked for fiscal year
- * 2026 and 2027, so a report opened far ahead could be filed against the wrong year. Until the provider confirms how
- * fiscal years map to due dates, the File button, the form and the submit stay closed outside this window, and the
- * card says when it opens. The cycle's fiscal year stays the due date's year (also awaiting provider confirmation).
- */
-export const ANNUAL_REPORT_FILING_WINDOW_DAYS = 90;
-
-const DAY_MS = 86_400_000;
-
-/** "yyyy-MM-dd" plus whole days; null for anything that isn't a real date. */
-export function addDaysToDate(value: string | null | undefined, days: number): string | null {
-  const match = DATE_RE.exec(String(value ?? "").slice(0, 10));
-  if (!match || !validDate(match[0])) return null;
-  return new Date(Date.parse(`${match[0]}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
-}
-
-/** Today's date where the owner works (Pacific), "yyyy-MM-dd". The reminders and the filing window both use it. */
-export function pacificToday(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
-
-/** The first day filing is open for this due date, "yyyy-MM-dd"; null without a due date. */
-export function filingOpensOn(nextDueDate: string | null | undefined): string | null {
-  return addDaysToDate(nextDueDate, -ANNUAL_REPORT_FILING_WINDOW_DAYS);
-}
-
-/** Open when the calendar says OVERDUE, or the due date is at most 90 days away (or past). Closed without a due date. */
-export function isFilingWindowOpen(calendar: { nextDueDate: string | null | undefined; status?: string | null }, today: string): boolean {
-  if (calendar.status === "OVERDUE") return true;
-  const opensOn = filingOpensOn(calendar.nextDueDate);
-  return opensOn !== null && today >= opensOn;
-}
-
 /** The member card's state. */
 export type AnnualReportCardState =
   | "checking"
   | "not_required"
   | "not_yet_due"
+  | "confirming_year"
   | "due"
   | "overdue"
   | "saved"
@@ -249,6 +213,7 @@ export const ANNUAL_REPORT_CARD_HEADLINES: Record<AnnualReportCardState, string>
   checking: "We're checking your state's annual report date",
   not_required: "Your state doesn't require an annual report",
   not_yet_due: "Not due yet",
+  confirming_year: "We're confirming your filing year",
   due: "Your annual report is coming up",
   overdue: "Your annual report is past due",
   saved: "Your answers are saved",
@@ -277,9 +242,9 @@ export type MemberAnnualReportView = {
   body: string;
   dueDate: string | null;
   dueDateWords: string | null;
-  canFile: boolean;
-  /** While filing isn't open yet (more than 90 days before the due date): the day it opens, in words. */
+  /** The day filing opens, in words, while it isn't open yet. */
   opensOnWords: string | null;
+  canFile: boolean;
   /** The state's fee quote before she answers, when known. */
   quote: { priceCents: number; isMinimum: boolean } | null;
   current: {

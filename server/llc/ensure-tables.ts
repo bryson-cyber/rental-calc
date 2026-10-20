@@ -3,7 +3,7 @@ import { llcRegistrations } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
-import { ANNUAL_REPORT_TABLES } from "./annualReports/tables";
+import { ANNUAL_REPORT_COLUMN_SETS, ANNUAL_REPORT_TABLES } from "./annualReports/tables";
 
 /** Additive, idempotent DDL for the Whop retail-payment rail columns. */
 export const WHOP_RETAIL_RAIL_DDL = [
@@ -275,6 +275,15 @@ export async function ensureLlcTables(): Promise<void> {
       await db.execute(statement).catch((error) => {
         console.error("[LLC] annual report table ensure failed:", error instanceof Error ? error.message : error);
       });
+    }
+    // Columns added after the first version (dueDate, 2026-10-20 review):
+    // idempotent-by-catch like every ADD here (duplicate column once applied).
+    for (const { table, columns } of ANNUAL_REPORT_COLUMN_SETS) {
+      for (const [column, definition] of columns) {
+        await db
+          .execute(sql.raw(`ALTER TABLE \`${table}\` ADD \`${column}\` ${definition}`))
+          .catch(() => undefined);
+      }
     }
     // Durable ops hold (2026-08-06): a manual unrelease stamps opsHeldAt and
     // the auto-release sweep skips the row from then on, so ops can pull a

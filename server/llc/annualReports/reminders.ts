@@ -8,7 +8,9 @@
  * - Claim-once per filing + due date + stage in llc_email_log (`annual_report_<due>_<stage>`), the same send-once
  *   table every LLC email here uses; a failed send lets the claim go so a later pass retries. A new due date (next
  *   year) is a new set of claims.
- * - Nothing once that cycle's report is paid, handed to the state or filed; nothing for test or demo filings.
+ * - Only inside the filing window (service.FILING_WINDOW_DAYS before the due date, or overdue), and nothing once that
+ *   cycle's report (matched by its due date, then its fiscal year) is paid, handed to the state or filed; nothing for
+ *   test or demo filings.
  * - Sent to the account email that owns the filing, through this app's client email transport (SMTP, "Inayah"),
  *   exactly like the formation lifecycle emails. Those are service emails with no unsubscribe list in this app, so
  *   none is checked here either.
@@ -24,26 +26,15 @@ import { llcEmailLog } from "../../../drizzle/schema";
 import { getDb } from "../../db";
 import { deliverClientEmail, statusUrl, type ClientEmailContent } from "../clientEmails";
 import { LLC_STATE_NAMES } from "../../../shared/llc";
-import { addDaysToDate, dateWords, pacificToday } from "../../../shared/llcAnnualReports";
-import { annualReportReminderEmail, type ReminderStage } from "./copy";
+import { dateWords } from "../../../shared/llcAnnualReports";
+import { annualReportPayAgainEmail, annualReportReminderEmail, type ReminderStage } from "./copy";
 import { isDuplicateKeyError } from "./defaults";
 import { loadReminderRecipient } from "./filings";
-import { cycleFiscalYear, type AnnualReportDeps } from "./service";
+import { filingCycle, isLocked, reportForCycle, type AnnualReportDeps } from "./service";
+import { addDays, daysBetween, pacificToday } from "./dates";
 import { defaultAnnualReportDeps } from "./defaults";
 
-export { pacificToday };
-
-const DAY_MS = 86_400_000;
-
-export function daysBetween(fromYmd: string, toYmd: string): number {
-  const from = Date.parse(`${fromYmd}T00:00:00Z`);
-  const to = Date.parse(`${toYmd}T00:00:00Z`);
-  return Math.round((to - from) / DAY_MS);
-}
-
-export function addDays(ymd: string, days: number): string {
-  return addDaysToDate(ymd, days) ?? ymd;
-}
+export { addDays, daysBetween, pacificToday };
 
 /** The one stage that applies today, or null (more than 60 days out). */
 export function reminderStageFor(nextDueDate: string, today: string, calendarStatus?: string | null): ReminderStage | null {
@@ -96,9 +87,15 @@ export async function runAnnualReportReminders(deps: ReminderDeps): Promise<Remi
       bump(summary, "not_eligible");
       continue;
     }
-    const cycleYear = cycleFiscalYear(compliance, now);
+    // Only inside the filing window (every stage is, today), and never for a cycle whose report is already paid,
+    // handed over or filed: the cycle's report is matched by its due date first, then its fiscal year.
+    const cycle = filingCycle(compliance, now);
+    if (!cycle.open) {
+      bump(summary, "not_open");
+      continue;
+    }
     const reports = await deps.service.store.listReports(compliance.registrationId);
-    if (reports.some((report) => report.fiscalYear === cycleYear && (report.paidAt || report.confirmedAt || (report.status && report.status !== "FILLED")))) {
+    if (isLocked(reportForCycle(reports, compliance.nextDueDate, cycle.fiscalYear))) {
       bump(summary, "already_filing");
       continue;
     }
@@ -167,4 +164,31 @@ export function defaultReminderDeps(service: AnnualReportDeps = defaultAnnualRep
     portalUrl: (registrationId) => statusUrl(registrationId),
     email: { send: (to, content) => deliverClientEmail(to, content) },
   };
+}
+
+export type PayAgainEmailOutcome = "sent" | "no_email" | "failed";
+
+/**
+ * Ops "Fee changed: refunded, let her pay again": one service email with her pay link (`?file=annual-report` opens the
+ * payment on her LLC page). Not claim-once: each press is a deliberate ops action. This app's LLC service emails have
+ * no suppression list (see the header), so none is checked; ops reach her directly when it fails.
+ */
+export async function sendAnnualReportPayAgainEmail(
+  input: { registrationId: number; reportId: number; priceCents: number | null },
+  deps: ReminderDeps = defaultReminderDeps(),
+): Promise<PayAgainEmailOutcome> {
+  const recipient = await deps.recipient(input.registrationId);
+  if (!recipient?.email) return "no_email";
+  const facts = await deps.service.filings.load(input.registrationId);
+  const compliance = await deps.service.store.getCompliance(input.registrationId);
+  const stateName = LLC_STATE_NAMES[String(compliance?.state ?? facts?.state ?? "").toUpperCase() as keyof typeof LLC_STATE_NAMES] ?? "your state";
+  const content = annualReportPayAgainEmail({
+    firstName: recipient.firstName,
+    companyName: facts?.companyName ?? "",
+    stateName,
+    priceCents: input.priceCents,
+    fileUrl: `${deps.portalUrl(input.registrationId)}?file=annual-report`,
+  });
+  const sent = await deps.email.send(recipient.email, content).catch(() => false);
+  return sent ? "sent" : "failed";
 }

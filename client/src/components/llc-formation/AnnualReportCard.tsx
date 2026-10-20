@@ -54,6 +54,10 @@ function QuestionInput({
     const address = (value && typeof value === "object" ? value : { line1: "", city: "", state: "", postalCode: "", country: "USA" }) as AnnualReportAddressValue;
     return (
       <FieldBlock label={field.label} htmlFor={`${id}-line1`} error={error} optional={optional}>
+        {/* An optional company detail left as is isn't sent, so the state keeps what it has on file. */}
+        {optional && field.group === "COMPANY_DETAIL" ? (
+          <p className="mb-2 text-xs leading-5 text-muted-foreground">Leave this as is to keep what's on file with the state.</p>
+        ) : null}
         <AddressFields
           idPrefix={id}
           value={{ ...address, country: "US" }}
@@ -195,11 +199,15 @@ export function AnnualReportCard({ registrationId }: { registrationId: number })
     }
   }, [form, loadedFor]);
 
-  // The reminder link (?file=annual-report) opens the filing straight away, once filing is open.
+  // The reminder link (?file=annual-report) opens the filing straight away, once filing is open; a saved report
+  // waiting for its fee (the pay-again email) opens the payment.
   useEffect(() => {
     if (!view?.canFile || typeof window === "undefined") return;
-    if (new URLSearchParams(window.location.search).get("file") === "annual-report") setStage((current) => (current === "closed" ? "form" : current));
-  }, [view?.canFile]);
+    if (new URLSearchParams(window.location.search).get("file") !== "annual-report") return;
+    const waiting = view.current?.needsPayment && view.current.priceCents !== null ? { reportId: view.current.id, priceCents: view.current.priceCents } : null;
+    if (waiting) setPayment((current) => current ?? waiting);
+    setStage((current) => (current === "closed" ? (waiting ? "pay" : "form") : current));
+  }, [view?.canFile, view?.current?.needsPayment, view?.current?.id, view?.current?.priceCents]);
 
   // Back from the hosted checkout: the server re-reads the payment and verifies it against her own report.
   useEffect(() => {
@@ -268,9 +276,17 @@ export function AnnualReportCard({ registrationId }: { registrationId: number })
             toast.error(result.message);
             return;
           }
-          if (result.confirmOutcome) {
+          // No fee: only a confirmed hand-off says it's on its way; otherwise the card shows what's saved.
+          if (result.confirmOutcome === "confirmed" || result.confirmOutcome === "already_confirmed") {
             setStage("closed");
             setDoneMessage("There's no state fee, so we're sending your report to the state now.");
+            refresh();
+            return;
+          }
+          if (result.confirmOutcome || result.priceCents === null || result.priceCents <= 0) {
+            setStage("closed");
+            setPayment(null);
+            toast.success("Your answers are saved.");
             refresh();
             return;
           }
@@ -283,7 +299,12 @@ export function AnnualReportCard({ registrationId }: { registrationId: number })
           setStage("pay");
           refresh();
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) => {
+          // A refusal (say, her payment landed meanwhile): the card re-reads and shows where it stands.
+          toast.error(error.message);
+          setStage("closed");
+          refresh();
+        },
       },
     );
   };

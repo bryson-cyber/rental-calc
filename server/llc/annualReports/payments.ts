@@ -28,6 +28,8 @@ import {
   WHOP_RETAIL_API_BASE,
   centsToWhopPrice,
   fetchWhopPayment,
+  priceBeforeTaxCents,
+  readWhopMoneyCurrency,
   getWhopRetailApiConfig,
   getWhopRetailConfig,
   safeCheckoutOrigin,
@@ -38,7 +40,8 @@ import {
 import { paidPaymentsForExactPlan } from "../whopRetailWebhook";
 import { LLC_STATE_NAMES } from "../../../shared/llc";
 import { feeWords } from "../../../shared/llcAnnualReports";
-import { confirmReport, filingWindowOpen, type AnnualReportDeps, type ConfirmOutcome } from "./service";
+import { AnnualReportError, OPS_FEE_ACTION_LABELS, confirmReport, requireOpenFiling, type AnnualReportDeps, type ConfirmOutcome } from "./service";
+import type { AnnualReportRow } from "./store";
 import { defaultAnnualReportDeps } from "./defaults";
 import {
   ANNUAL_REPORT_CHECKOUT_KIND,
@@ -48,6 +51,8 @@ import {
 } from "./paymentMetadata";
 
 export { ANNUAL_REPORT_CHECKOUT_KIND, ANNUAL_REPORT_CHECKOUT_METADATA_VERSION, isAnnualReportPaymentPayload, readAnnualReportPaymentMetadata };
+/** Re-exported: the one before-tax rule both the formation and the annual report payments use (whopRetailCheckout.ts). */
+export { priceBeforeTaxCents };
 
 /** Where Whop sends her back: her LLC page, marked so the page confirms the annual report payment (not formation). */
 export const ANNUAL_REPORT_RETURN_PARAM = "annual_report";
@@ -81,30 +86,6 @@ export function buildAnnualReportQuoteHash(input: {
       ["rc-llc-annual-report-v1", input.reportId, input.registrationId, input.fiscalYear, input.annualReportId, input.amountCents, input.currency.toUpperCase()].join("|"),
     )
     .digest("hex");
-}
-
-// ─── Money read from Whop (scalar or { amount, currency }) ─────────────────────────────────────────────────────────
-
-/** Whop's 2026 API answers money as { amount, currency }; older revisions a scalar in dollars. Fails closed. */
-function readMoneyAmount(value: unknown): number | null {
-  const raw = typeof value === "object" && value !== null ? (value as { amount?: unknown }).amount : value;
-  if (typeof raw !== "number" && typeof raw !== "string") return null;
-  if (typeof raw === "string" && !raw.trim()) return null;
-  const amount = Number(raw);
-  return Number.isFinite(amount) && amount >= 0 ? amount : null;
-}
-
-function readMoneyCurrency(value: unknown): string | null {
-  const currency = typeof value === "object" && value !== null ? (value as { currency?: unknown }).currency : null;
-  return typeof currency === "string" && /^[a-z]{3}$/i.test(currency.trim()) ? currency.trim().toUpperCase() : null;
-}
-
-/** The amount she paid before any sales tax Whop added, in cents (the HFO #327 fix); NaN when unreadable. */
-export function priceBeforeTaxCents(payment: { total?: unknown; tax_amount?: unknown }): number {
-  const toCents = (value: number | null) => (value === null ? Number.NaN : Math.round(value * 100));
-  const total = toCents(readMoneyAmount(payment.total));
-  const tax = payment.tax_amount === undefined || payment.tax_amount === null ? 0 : toCents(readMoneyAmount(payment.tax_amount));
-  return Number.isSafeInteger(total) && Number.isSafeInteger(tax) ? total - tax : Number.NaN;
 }
 
 // ─── Checkout ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -144,12 +125,23 @@ export async function createAnnualReportCheckout(
   if (row.paidAt || row.confirmedAt || row.status !== "FILLED" || !row.annualReportId) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "This annual report isn't waiting for payment." });
   }
-  const amountCents = row.priceInCents ?? 0;
-  if (amountCents <= 0) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "There's no state fee to pay for this report." });
-  // The filing window (live check 2026-10-20): no payment, so no hand-off to file, before it opens.
-  if (!filingWindowOpen(await deps.store.getCompliance(row.registrationId), deps.now())) {
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Filing for this year's annual report isn't open yet." });
+  // Only for the cycle that's open now (the same window and fiscal year the form and the submit require; live check
+  // 2026-10-20: no payment, so no hand-off to file, before the window opens).
+  let cycle;
+  try {
+    ({ cycle } = await requireOpenFiling(input.registrationId, deps));
+  } catch (error) {
+    if (error instanceof AnnualReportError) throw new TRPCError({ code: "PRECONDITION_FAILED", message: error.message });
+    throw error;
   }
+  if (row.dueDate ? row.dueDate !== cycle.dueDate : row.fiscalYear !== cycle.fiscalYear) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "This annual report isn't waiting for payment." });
+  }
+  if (row.priceInCents === null) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The state fee for your answers isn't set yet. Please try again in a few minutes." });
+  }
+  const amountCents = row.priceInCents;
+  if (amountCents <= 0) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "There's no state fee to pay for this report." });
 
   const config = getWhopRetailConfig(input.env);
   if (!config.ok) {
@@ -236,6 +228,36 @@ export async function createAnnualReportCheckout(
 
 const paymentRef = (paymentId: string) => createHash("sha256").update(paymentId).digest("hex").slice(0, 10);
 
+const paidWordsOf = (paidCents: number, currency: string) =>
+  `${Number.isSafeInteger(paidCents) ? feeWords(paidCents) : "an unreadable amount"}${currency ? ` ${currency}` : ""}`;
+
+/** A second, different payment for a report already paid: never applied; ops refund it. Once per payment. */
+async function alertDuplicatePayment(deps: AnnualReportDeps, row: AnnualReportRow, paymentId: string, paidWith: string | null) {
+  await deps.alerts.once({
+    registrationId: row.registrationId,
+    type: `ar_dup_pay_${row.id}_${paymentRef(paymentId)}`,
+    subject: `Second payment for one annual report (order #${row.registrationId})`,
+    lines: [
+      `Order #${row.registrationId}, ${row.fiscalYear} annual report was already paid with ${paidWith ?? "another payment"}; another Whop payment ${paymentId} also succeeded.`,
+      "Refund the second payment in the Whop dashboard. Nothing else was changed.",
+    ],
+  });
+}
+
+/** A real payment that isn't this report's fee on file (or its checkout): never applied. Once per payment. */
+async function alertPaymentMismatch(deps: AnnualReportDeps, row: AnnualReportRow, paymentId: string, paidWords: string) {
+  await deps.store.updateReport(row.id, { lastError: "payment_mismatch", lastErrorAt: deps.now() }, { paidAtIsNull: true });
+  await deps.alerts.once({
+    registrationId: row.registrationId,
+    type: `ar_pay_mismatch_${row.id}_${paymentRef(paymentId)}`,
+    subject: `Annual report payment does not match the fee (order #${row.registrationId})`,
+    lines: [
+      `Order #${row.registrationId}, ${row.fiscalYear} annual report: Whop payment ${paymentId} paid ${paidWords} before tax, but the fee on file is ${row.priceInCents !== null ? feeWords(row.priceInCents) : "not set yet"} (or the checkout it was made for is no longer this report's).`,
+      `Usually her answers changed the fee after this checkout was made. The report was NOT confirmed and this payment was NOT applied, so "${OPS_FEE_ACTION_LABELS.absorb_difference}" doesn't apply to it. Refund it in the Whop dashboard, then on /admin/llc open the order's Annual reports and press "${OPS_FEE_ACTION_LABELS.refunded_pay_again}": she gets an email with a link to pay the fee on file.`,
+    ],
+  });
+}
+
 /**
  * Verify one payment and, when it is exactly this report's fee, claim it and confirm the report. Null while the
  * payment isn't paid yet or isn't an annual report payment. A real payment that doesn't match is never applied: ops
@@ -245,7 +267,7 @@ export async function processAnnualReportPayment(
   input: { paymentId: string; expectedUserId?: number; expectedRegistrationId?: number; fetchImpl?: typeof fetch },
   deps: AnnualReportDeps = defaultAnnualReportDeps(),
 ): Promise<AnnualReportPaymentResult | null> {
-  const payment = (await fetchWhopPayment(input.paymentId, input.fetchImpl ?? fetch)) as (WhopPayment & { tax_amount?: unknown }) | null;
+  const payment: WhopPayment | null = await fetchWhopPayment(input.paymentId, input.fetchImpl ?? fetch);
   if (!payment || payment.status !== "paid" || payment.substatus !== "succeeded") return null;
   if (payment.id && payment.id !== input.paymentId) return null;
   const metadata = readAnnualReportPaymentMetadata(payment);
@@ -265,21 +287,13 @@ export async function processAnnualReportPayment(
       // A replay (webhook retry, the return page, the reconciler): the claim stands; the confirm is idempotent.
       return { ...base, outcome: await confirmReport(row.id, { source: "payment" }, deps) };
     }
-    await deps.alerts.once({
-      registrationId: row.registrationId,
-      type: `ar_dup_pay_${row.id}_${paymentRef(input.paymentId)}`,
-      subject: `Second payment for one annual report (order #${row.registrationId})`,
-      lines: [
-        `Order #${row.registrationId}, ${row.fiscalYear} annual report was already paid with ${row.paymentReference}; another Whop payment ${input.paymentId} also succeeded.`,
-        "Refund the second payment in the Whop dashboard. Nothing else was changed.",
-      ],
-    });
+    await alertDuplicatePayment(deps, row, input.paymentId, row.paymentReference);
     return { ...base, outcome: "duplicate_payment" };
   }
 
   const planId = String(payment.plan_id || payment.plan?.id || "");
   const paidCents = priceBeforeTaxCents(payment);
-  const currency = String(payment.currency || readMoneyCurrency(payment.total) || "").toUpperCase();
+  const currency = String(payment.currency || readWhopMoneyCurrency(payment.total) || "").toUpperCase();
   if (
     !row.checkoutPlanId ||
     planId !== row.checkoutPlanId ||
@@ -289,16 +303,7 @@ export async function processAnnualReportPayment(
     paidCents !== row.priceInCents ||
     currency !== "USD"
   ) {
-    await deps.store.updateReport(row.id, { lastError: "payment_mismatch", lastErrorAt: deps.now() });
-    await deps.alerts.once({
-      registrationId: row.registrationId,
-      type: `ar_pay_mismatch_${row.id}_${paymentRef(input.paymentId)}`,
-      subject: `Annual report payment does not match the fee (order #${row.registrationId})`,
-      lines: [
-        `Order #${row.registrationId}, ${row.fiscalYear} annual report: Whop payment ${input.paymentId} paid ${Number.isSafeInteger(paidCents) ? feeWords(paidCents) : "an unreadable amount"} ${currency || ""} before tax, but the fee on file is ${feeWords(row.priceInCents ?? 0)}.`,
-        "Usually her answers changed the fee after this checkout was made. The report was NOT confirmed. Refund it or collect the difference, then confirm from /admin/llc.",
-      ],
-    });
+    await alertPaymentMismatch(deps, row, input.paymentId, paidWordsOf(paidCents, currency));
     return { ...base, outcome: "payment_mismatch" };
   }
 
@@ -308,8 +313,17 @@ export async function processAnnualReportPayment(
     { paidAtIsNull: true, checkoutPlanId: planId },
   );
   if (!claimed) {
+    // Lost the claim: another payment won it (ops hear, like any second payment), or the report's checkout changed
+    // under it (a resubmit with a new fee), which is a mismatch. Either way this payment is never applied.
     const fresh = await deps.store.getReport(row.id);
-    if (fresh?.paymentReference !== input.paymentId) return { ...base, outcome: "duplicate_payment" };
+    if (fresh?.paymentReference !== input.paymentId) {
+      if (fresh && !fresh.paidAt && fresh.checkoutPlanId !== planId) {
+        await alertPaymentMismatch(deps, fresh, input.paymentId, paidWordsOf(paidCents, currency));
+        return { ...base, outcome: "payment_mismatch" };
+      }
+      await alertDuplicatePayment(deps, fresh ?? row, input.paymentId, fresh?.paymentReference ?? null);
+      return { ...base, outcome: "duplicate_payment" };
+    }
   }
   return { ...base, outcome: await confirmReport(row.id, { source: "payment" }, deps) };
 }

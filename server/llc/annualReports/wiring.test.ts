@@ -164,6 +164,19 @@ describe("wiring and white-label", () => {
     const tables = read("server/llc/annualReports/tables.ts");
     expect(tables.match(/CREATE TABLE IF NOT EXISTS/g)).toHaveLength(2);
     expect(tables).toContain("UNIQUE INDEX \\`llc_annual_reports_year_uq\\` (\\`registrationId\\`, \\`fiscalYear\\`)");
+    // Columns added later (dueDate) through this app's catch-guarded ADD, right after the tables.
+    expect(tables).toContain('{ table: "llc_annual_reports", columns: [["dueDate", "varchar(10) NULL"]] }');
+    expect(ensure.indexOf("for (const { table, columns } of ANNUAL_REPORT_COLUMN_SETS)")).toBeGreaterThan(ensure.indexOf("for (const statement of ANNUAL_REPORT_TABLES)"));
+  });
+
+  it("the ops panel offers the two fee buttons and the router serves them", () => {
+    const panel = read("client/src/components/llc-formation/AnnualReportsOpsPanel.tsx");
+    expect(panel).toContain("OPS_FEE_ACTION_LABELS.refunded_pay_again");
+    expect(panel).toContain("OPS_FEE_ACTION_LABELS.absorb_difference");
+    expect(panel).not.toMatch(/Refresh|Sync/);
+    const router = read("server/llc/annualReports/router.ts");
+    expect(router).toContain("resetAnnualReportPayment: adminProcedure");
+    expect(router).toContain("absorbAnnualReportDifference: adminProcedure");
   });
 
   it("the hourly poller runs the sweep; the Whop webhook routes annual report fees before the formation branch", () => {

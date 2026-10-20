@@ -4,7 +4,7 @@
  * code.
  */
 import { vi } from "vitest";
-import type { AnnualReportProvider, AnnualReportRequirements, ComplianceCalendarEvent, ProviderAnnualReport } from "./provider";
+import type { AnnualReportProvider, AnnualReportRequirements, AnnualReportSubmission, ComplianceCalendarEvent, ProviderAnnualReport } from "./provider";
 import type { AnnualReportDeps } from "./service";
 import type { AnnualReportRow, AnnualReportStore, ComplianceRow, ReportGuard, ReportPatch } from "./store";
 import type { FilingFacts } from "./filings";
@@ -16,6 +16,7 @@ export function memoryStore() {
   const blank = (key: { registrationId: number; userId: number; fiscalYear: number }): AnnualReportRow => ({
     id: nextId++,
     ...key,
+    dueDate: null,
     annualReportId: null,
     status: null,
     priceInCents: null,
@@ -41,6 +42,12 @@ export function memoryStore() {
   const apply = (row: AnnualReportRow, patch: ReportPatch) => {
     for (const [key, value] of Object.entries(patch)) if (value !== undefined) (row as Record<string, unknown>)[key] = value;
   };
+  const meets = (row: AnnualReportRow, guard: ReportGuard) =>
+    !(guard.paidAtIsNull && row.paidAt) &&
+    !(guard.paidAtIsNotNull && !row.paidAt) &&
+    !(guard.confirmedAtIsNull && row.confirmedAt) &&
+    !(guard.completedAtIsNull && row.completedAt) &&
+    !(guard.checkoutPlanId !== undefined && row.checkoutPlanId !== guard.checkoutPlanId);
   const store: AnnualReportStore = {
     async getCompliance(registrationId) {
       const row = compliance.get(registrationId);
@@ -56,27 +63,25 @@ export function memoryStore() {
       const row = reports.find((candidate) => candidate.id === id);
       return row ? { ...row } : null;
     },
-    async upsertReport(key, patch) {
+    async upsertReport(key, patch, guard: ReportGuard = {}) {
       let row = reports.find((candidate) => candidate.registrationId === key.registrationId && candidate.fiscalYear === key.fiscalYear);
       if (!row) {
         row = blank(key);
         reports.push(row);
       }
-      apply(row, patch);
+      if (meets(row, guard)) apply(row, patch);
       return { ...row };
     },
     async updateReport(id, patch, guard: ReportGuard = {}) {
       const row = reports.find((candidate) => candidate.id === id);
-      if (!row) return false;
-      if (guard.paidAtIsNull && row.paidAt) return false;
-      if (guard.confirmedAtIsNull && row.confirmedAt) return false;
-      if (guard.completedAtIsNull && row.completedAt) return false;
-      if (guard.checkoutPlanId !== undefined && row.checkoutPlanId !== guard.checkoutPlanId) return false;
+      if (!row || !meets(row, guard)) return false;
       apply(row, patch);
       return true;
     },
     async listPaidUnconfirmed() {
-      return reports.filter((row) => row.paidAt && !row.confirmedAt).map((row) => ({ ...row }));
+      return reports
+        .filter((row) => !row.confirmedAt && (row.paidAt || (row.priceInCents === 0 && row.status === "FILLED" && row.annualReportId)))
+        .map((row) => ({ ...row }));
     },
     async listAwaitingPayment() {
       return reports.filter((row) => row.checkoutPlanId && !row.paidAt && !row.confirmedAt && row.status === "FILLED").map((row) => ({ ...row }));
@@ -136,7 +141,7 @@ export function fakeProvider(calendar: ComplianceCalendarEvent | null = { state:
   const provider = {
     getRequirements: vi.fn(async () => requirements()),
     getStateFee: vi.fn(async () => ({ state: "WY", entityType: "LLC", priceInCents: 6000, isFilingRequired: true, isMinimum: true })),
-    submit: vi.fn(async () => {
+    submit: vi.fn(async (_companyId: string, _body: AnnualReportSubmission, _options?: { attempt?: string }) => {
       const report = providerReport();
       const index = reports.findIndex((existing) => existing.fiscalYear === report.fiscalYear);
       if (index >= 0) reports.splice(index, 1);
@@ -182,7 +187,8 @@ export function makeDeps(options: { facts?: FilingFacts; calendar?: ComplianceCa
   const facts = options.facts ?? filing();
   const alerts = { once: vi.fn(async () => "sent") };
   const documents = { mirror: vi.fn(async () => ({ mirrored: 0 })) };
-  let now = options.now ?? new Date("2026-12-10T18:00:00Z");
+  // Fifty days before the 2027-03-01 due date, in 2027: inside the filing window, the fiscal year confirmed (2027).
+  let now = options.now ?? new Date("2027-01-10T18:00:00Z");
   const deps: AnnualReportDeps = {
     provider: fake.provider,
     store: memory.store,

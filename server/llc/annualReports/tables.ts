@@ -8,7 +8,8 @@
  *   the state fee quote (isFilingRequired, priceInCents, isMinimum) and when it was last read.
  * - llc_annual_reports: one row per filing and fiscal year. The provider's report id, status and fixed price, her
  *   answers as sent, the checkout made for that exact price, the verified payment, and when it was submitted,
- *   confirmed and filed. No card data; the payment reference is the processor's payment id.
+ *   confirmed and filed, and the calendar due date it was submitted for. No card data; the payment reference is the
+ *   processor's payment id.
  *
  * Dates from the provider ("yyyy-MM-dd") are kept as text so no time zone ever shifts a due date.
  */
@@ -40,6 +41,7 @@ export const ANNUAL_REPORT_TABLES: readonly SQL[] = [
     \`registrationId\` int NOT NULL,
     \`userId\` int NOT NULL,
     \`fiscalYear\` int NOT NULL,
+    \`dueDate\` varchar(10) NULL,
     \`annualReportId\` varchar(128) NULL,
     \`status\` varchar(32) NULL,
     \`priceInCents\` int NULL,
@@ -67,4 +69,13 @@ export const ANNUAL_REPORT_TABLES: readonly SQL[] = [
     INDEX \`llc_annual_reports_plan_idx\` (\`checkoutPlanId\`),
     INDEX \`llc_annual_reports_paid_idx\` (\`paidAt\`, \`confirmedAt\`)
   )`,
+];
+
+/**
+ * Columns added after the tables' first version (2026-10-20 review), ensured at boot by ensureLlcTables with this
+ * app's catch-guarded ALTER TABLE ... ADD (a duplicate-column error once applied is the no-op). dueDate: the calendar due date a report was submitted for,
+ * which the card, the reminders and the wrong-year check match on before the fiscal year.
+ */
+export const ANNUAL_REPORT_COLUMN_SETS: ReadonlyArray<{ table: string; columns: ReadonlyArray<readonly [string, string]> }> = [
+  { table: "llc_annual_reports", columns: [["dueDate", "varchar(10) NULL"]] },
 ];

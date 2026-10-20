@@ -10,14 +10,18 @@ import { ENV } from "../../_core/env";
 import { checkRateLimit } from "../../ops/rateLimit";
 import { defaultAnnualReportDeps } from "./defaults";
 import { createAnnualReportCheckout, processAnnualReportPayment, type AnnualReportPaymentResult } from "./payments";
+import { defaultReminderDeps, sendAnnualReportPayAgainEmail } from "./reminders";
 import {
   AnnualReportError,
   getAnnualReportForm,
   getMemberAnnualReport,
   getOpsAnnualReports,
+  opsAbsorbAnnualReportDifference,
   opsConfirmAnnualReport,
+  opsResetAnnualReportPayment,
   submitAnnualReport,
   type ConfirmOutcome,
+  type OpsFeeActionOutcome,
 } from "./service";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -137,6 +141,27 @@ export const annualReportMemberProcedures = {
     }),
 };
 
+const CONFIRM_WORDS: Record<ConfirmOutcome, string> = {
+  confirmed: "Confirmed. The provider is filing it.",
+  already_confirmed: "It was already handed over; the record is updated.",
+  not_paid: "Not confirmed: there's no verified payment for this report's exact fee.",
+  price_mismatch: "Not confirmed: the provider's fee no longer matches what she paid. See the ops alert.",
+  confirm_failed: "The provider refused the confirm (or its report couldn't be read back). See the last error; the hourly sweep retries.",
+  not_found: "That report was not found on this order.",
+  not_ready: "This report hasn't been submitted to the provider yet, or its fee isn't known.",
+};
+
+const FEE_ACTION_WORDS: Record<Exclude<OpsFeeActionOutcome, ConfirmOutcome>, string> = {
+  reset: "Payment cleared. Her page asks for the fee on file again.",
+  not_allowed: "Nothing changed: this report isn't a paid, unfiled report with a changed fee (or it was just handed over).",
+};
+
+const PAY_AGAIN_EMAIL_WORDS = {
+  sent: "We emailed her the link to pay.",
+  no_email: "No email on file for her. Reach her directly.",
+  failed: "The email to her failed. Reach her directly.",
+} as const;
+
 export const annualReportOpsProcedures = {
   /** The order's annual reports for /admin/llc; read again from the provider when the last read is over 10 minutes old. */
   annualReports: adminProcedure.input(idInput).query(async ({ input }) => getOpsAnnualReports(input.id, defaultAnnualReportDeps())),
@@ -147,15 +172,34 @@ export const annualReportOpsProcedures = {
     .mutation(async ({ input }) => {
       const deps = defaultAnnualReportDeps();
       const outcome = await opsConfirmAnnualReport(input.id, input.reportId, deps);
-      const words: Record<ConfirmOutcome, string> = {
-        confirmed: "Confirmed. The provider is filing it.",
-        already_confirmed: "It was already handed over; the record is updated.",
-        not_paid: "Not confirmed: there's no verified payment for this report's exact fee.",
-        price_mismatch: "Not confirmed: the provider's fee no longer matches what she paid. See the ops alert.",
-        confirm_failed: "The provider refused the confirm. See the last error; the hourly sweep retries.",
-        not_found: "That report was not found on this order.",
-        not_ready: "This report hasn't been submitted to the provider yet.",
-      };
-      return { outcome, message: words[outcome], view: await getOpsAnnualReports(input.id, deps) };
+      return { outcome, message: CONFIRM_WORDS[outcome], view: await getOpsAnnualReports(input.id, deps) };
+    }),
+
+  /**
+   * "Fee changed: refunded, let her pay again" (after the refund in the Whop dashboard): the payment and checkout come
+   * off the unfiled report and she gets a branded email with her pay link.
+   */
+  resetAnnualReportPayment: adminProcedure
+    .input(idInput.extend({ reportId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const deps = defaultAnnualReportDeps();
+      const outcome = await opsResetAnnualReportPayment(input.id, input.reportId, deps);
+      let message = FEE_ACTION_WORDS[outcome as keyof typeof FEE_ACTION_WORDS] ?? CONFIRM_WORDS[outcome as ConfirmOutcome];
+      if (outcome === "reset") {
+        const row = await deps.store.getReport(input.reportId);
+        const emailed = await sendAnnualReportPayAgainEmail({ registrationId: input.id, reportId: input.reportId, priceCents: row?.priceInCents ?? null }, defaultReminderDeps(deps)).catch(() => "failed" as const);
+        message = `${message} ${PAY_AGAIN_EMAIL_WORDS[emailed]}`;
+      }
+      return { outcome, message, view: await getOpsAnnualReports(input.id, deps) };
+    }),
+
+  /** "Difference absorbed, file it": the payment on file counts as the fee on file, then the normal guarded confirm. */
+  absorbAnnualReportDifference: adminProcedure
+    .input(idInput.extend({ reportId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const deps = defaultAnnualReportDeps();
+      const outcome = await opsAbsorbAnnualReportDifference(input.id, input.reportId, deps);
+      const message = FEE_ACTION_WORDS[outcome as keyof typeof FEE_ACTION_WORDS] ?? CONFIRM_WORDS[outcome as ConfirmOutcome];
+      return { outcome, message, view: await getOpsAnnualReports(input.id, deps) };
     }),
 };

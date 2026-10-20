@@ -226,16 +226,22 @@ export function normalizeCalendar(payload: unknown): ComplianceCalendarEvent | n
   };
 }
 
-/** Same body, same key: a retried identical submit is deduplicated by the provider; changed answers get a new key. */
-export function submissionIdempotencyKey(companyId: string, body: AnnualReportSubmission): string {
-  const digest = createHash("sha256").update(JSON.stringify([companyId, body])).digest("hex").slice(0, 40);
+/**
+ * One key per submit attempt: the company, the body and the caller's attempt token (the service passes what the row
+ * looked like before this submit). A double click or a network retry within one attempt sends the same key and is
+ * deduplicated by the provider; the next real submit has a new token, so answers A, then B, then A again send A
+ * afresh instead of getting the first A's cached response back (2026-10-20 review).
+ */
+export function submissionIdempotencyKey(companyId: string, body: AnnualReportSubmission, attempt = ""): string {
+  const digest = createHash("sha256").update(JSON.stringify(attempt ? [companyId, body, attempt] : [companyId, body])).digest("hex").slice(0, 40);
   return `hfo-annual-report-${digest}`;
 }
 
 export type AnnualReportProvider = {
   getRequirements(companyId: string, fiscalYear?: number): Promise<AnnualReportRequirements>;
   getStateFee(companyId: string): Promise<AnnualReportStateFee>;
-  submit(companyId: string, body: AnnualReportSubmission): Promise<{ report: ProviderAnnualReport; isReplaced: boolean }>;
+  /** `attempt` names this submit attempt for the idempotency key (submissionIdempotencyKey). */
+  submit(companyId: string, body: AnnualReportSubmission, options?: { attempt?: string }): Promise<{ report: ProviderAnnualReport; isReplaced: boolean }>;
   confirm(companyId: string, annualReportId: string): Promise<ProviderAnnualReport | null>;
   list(companyId: string): Promise<ProviderAnnualReport[]>;
   get(companyId: string, annualReportId: string): Promise<ProviderAnnualReport | null>;
@@ -256,12 +262,12 @@ export const doolaAnnualReportProvider: AnnualReportProvider = {
     const { payload } = await doolaRequest<unknown>({ method: "GET", path: `${reportsBase(companyId)}/state-fees` });
     return normalizeStateFee(payload);
   },
-  async submit(companyId, body) {
+  async submit(companyId, body, options) {
     const { payload } = await doolaRequest<unknown>({
       method: "POST",
       path: reportsBase(companyId),
       body,
-      idempotencyKey: submissionIdempotencyKey(companyId, body),
+      idempotencyKey: submissionIdempotencyKey(companyId, body, options?.attempt),
     });
     const report = normalizeReport(payload);
     if (!report) throw malformed();

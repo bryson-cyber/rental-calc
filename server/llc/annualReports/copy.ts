@@ -24,6 +24,7 @@ export type ReminderCopyInput = {
 };
 
 export const REMINDER_BUTTON_LABEL = "File my annual report";
+export const PAY_AGAIN_BUTTON_LABEL = "Pay my state fee";
 const SIGN_OFF = "The Coach Inayah team";
 
 const flat = (value: string, max = 180) => value.replace(/[\r\n\t]+/g, " ").slice(0, max).trim();
@@ -84,5 +85,32 @@ export function annualReportReminderEmail(input: ReminderCopyInput): ClientEmail
       SIGN_OFF,
     ],
     REMINDER_BUTTON_LABEL,
+  );
+}
+
+/**
+ * After ops refunded a payment made for a fee that then changed (ops "Fee changed: refunded" on /admin/llc): her
+ * refund is on its way and the link to pay the fee on file. Same voice and rules as the reminders.
+ */
+export function annualReportPayAgainEmail(input: { firstName: string; companyName: string; stateName: string; priceCents: number | null; fileUrl: string }): ClientEmailContent {
+  const company = flat(input.companyName) || "your LLC";
+  const name = flat(input.firstName, 60);
+  const fee = input.priceCents !== null && input.priceCents > 0 ? `the ${feeWords(input.priceCents)} state fee` : "the state fee";
+  return finalize(
+    "Your annual report: one more step",
+    [
+      name ? `Hi ${name},` : "Hi there,",
+      "",
+      `The state's fee for the annual report for ${company} changed after you paid, so we refunded your payment. It goes back to the card you used.`,
+      "",
+      `To finish, pay ${fee} in your Coach Inayah account. As soon as it's paid, we file your report with ${input.stateName}. There's no extra charge from us.`,
+      "",
+      `${PAY_AGAIN_BUTTON_LABEL}:`,
+      "",
+      input.fileUrl,
+      "",
+      SIGN_OFF,
+    ],
+    PAY_AGAIN_BUTTON_LABEL,
   );
 }
