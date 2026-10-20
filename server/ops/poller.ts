@@ -47,6 +47,13 @@ export async function runStatusPollOnce(): Promise<{
     .then(({ sendCompletionRescueEmails }) => sendCompletionRescueEmails())
     .then((r) => { if (r.sent > 0) console.log(`[LLC] Completion-rescue emails sent: ${r.sent}`); })
     .catch(() => {});
+  // Annual reports (2026-10-20, server/llc/annualReports/sweep.ts): calendars
+  // older than a day, missed annual report payments, confirm retries, then
+  // the 60/30/7-day and overdue reminder emails. Fire-and-forget like the
+  // rescue sweeps; it has its own single-flight guard.
+  import("../llc/annualReports/sweep")
+    .then(({ runAnnualReportSweep }) => runAnnualReportSweep())
+    .catch(() => {});
   let polled = 0;
   let failed = 0;
 
@@ -130,6 +137,23 @@ export async function runStatusPollOnce(): Promise<{
       // Space out provider reads; beta rate limits are undocumented.
       await new Promise((resolve) => setTimeout(resolve, 1_500));
     }
+    // Whop retail-payment reconciliation (2026-10-18): settles any paid Whop
+    // checkout whose webhook was missed, on this same heartbeat, after the
+    // status sweep (still inside the single-flight guard). Awaited but
+    // isolated — a Whop outage can never fail the status sweep. No-op when
+    // the Whop API config is absent.
+    await import("../llc/whopRetailWebhook")
+      .then(({ runLlcWhopReconciliation }) => runLlcWhopReconciliation())
+      .then((report) => {
+        if (report && (report.processed > 0 || report.incomplete > 0)) {
+          console.log("[WhopRetail] reconciliation", report);
+        }
+      })
+      .catch((error) => {
+        console.warn("[WhopRetail] reconciliation failed", {
+          error: error instanceof Error ? error.name : "UnknownError",
+        });
+      });
   } catch (error) {
     console.warn("[Poller] Poll sweep failed", {
       error: error instanceof Error ? error.name : "UnknownError",

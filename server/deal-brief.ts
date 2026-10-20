@@ -19,6 +19,7 @@ import type { RentalizerResponse } from './airdna';
 import { REVENUE_BOOST_FACTOR } from './airdna';
 import type { BnbCalcArbAnalysis, BnbCalcArbComparable } from './bnbcalc';
 import { routedLLMCall, FEATURES } from './model-router';
+import { clientDealWatchOuts } from '../shared/deal-brief-content';
 
 // ============================================================
 // Startup cost
@@ -332,6 +333,7 @@ Hard rules:
 - Use ONLY numbers given in <facts>. Never invent, round differently, or compute new dollar figures.
 - No guarantees ("guaranteed", "risk-free", "can't lose"). No "you should" / "you must" — describe what top operators do instead.
 - No legal, tax, or regulatory claims about this city.
+- Do not include a projection-versus-comparable earnings warning or instructions to underwrite to comp numbers instead of the optimized projection. Keep the optimized-scenario label and the real comparable figures; use watchOuts for concrete operational issues such as seasonality, running costs, or upkeep instead. Never claim that the projection has been proven by comps when it has not.
 - Output ONLY a JSON object, no markdown fences, matching this shape:
 {
   "headline": "≤ 12 words, the deal's strongest point",
@@ -393,9 +395,9 @@ export function parseDealBrief(text: string): DealBrief | null {
       upsideMoves: Array.isArray(raw.upsideMoves)
         ? raw.upsideMoves.map((m: any) => ({ move: str(m?.move), why: str(m?.why) })).filter((m: any) => m.move)
         : [],
-      watchOuts: Array.isArray(raw.watchOuts)
+      watchOuts: clientDealWatchOuts(Array.isArray(raw.watchOuts)
         ? raw.watchOuts.map((w: any) => ({ risk: str(w?.risk), howTopOperatorsHandleIt: str(w?.howTopOperatorsHandleIt) })).filter((w: any) => w.risk)
-        : [],
+        : []),
       closingNote: str(raw.closingNote),
     };
     return brief.headline && brief.whyItWorks.length ? brief : null;

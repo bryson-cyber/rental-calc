@@ -4,6 +4,17 @@ import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
 import { ensureAddressColumns } from "./addressChoices";
+import { ANNUAL_REPORT_COLUMN_SETS, ANNUAL_REPORT_TABLES } from "./annualReports/tables";
+
+/** Additive, idempotent DDL for the Whop retail-payment rail columns. */
+export const WHOP_RETAIL_RAIL_DDL = [
+  "ALTER TABLE `llc_registrations` ADD `retailWhopPlanId` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `retailWhopPaymentId` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `checkoutQuoteHash` varchar(64)",
+  "ALTER TABLE `llc_registrations` ADD `checkoutExpiresAt` timestamp NULL",
+  "CREATE UNIQUE INDEX `llc_registration_retail_whop_plan_unique` ON `llc_registrations` (`retailWhopPlanId`)",
+  "CREATE UNIQUE INDEX `llc_registration_retail_whop_payment_unique` ON `llc_registrations` (`retailWhopPaymentId`)",
+] as const;
 
 /**
  * Boot-time idempotent creation of the LLC tables (mirrors migrations
@@ -257,6 +268,24 @@ export async function ensureLlcTables(): Promise<void> {
         CONSTRAINT \`llc_webhook_event_unique\` UNIQUE(\`eventId\`)
       )
     `);
+    // Annual report filing (2026-10-20, server/llc/annualReports): the
+    // compliance calendar per filing and one row per filing and fiscal year.
+    // CREATE TABLE IF NOT EXISTS, one statement at a time; a failure is
+    // logged and never stops the rest of this ensure.
+    for (const statement of ANNUAL_REPORT_TABLES) {
+      await db.execute(statement).catch((error) => {
+        console.error("[LLC] annual report table ensure failed:", error instanceof Error ? error.message : error);
+      });
+    }
+    // Columns added after the first version (dueDate, 2026-10-20 review):
+    // idempotent-by-catch like every ADD here (duplicate column once applied).
+    for (const { table, columns } of ANNUAL_REPORT_COLUMN_SETS) {
+      for (const [column, definition] of columns) {
+        await db
+          .execute(sql.raw(`ALTER TABLE \`${table}\` ADD \`${column}\` ${definition}`))
+          .catch(() => undefined);
+      }
+    }
     // Durable ops hold (2026-08-06): a manual unrelease stamps opsHeldAt and
     // the auto-release sweep skips the row from then on, so ops can pull a
     // document back without the next Doola poll re-releasing it.
@@ -282,6 +311,14 @@ export async function ensureLlcTables(): Promise<void> {
     // quietly failed ADD would break the LLC pages while this boot still
     // logged "Schema ensured".
     await ensureAddressColumns((statement) => db.execute(sql.raw(statement)));
+
+    // Whop retail-payment rail (2026-10-18). Catch-guarded so a re-run on a
+    // database that already has them is a no-op. The unique indexes enforce
+    // one Whop payment <-> one order at the database layer, independent of
+    // the conditional claim UPDATE in whopRetailCheckout.ts.
+    for (const statement of WHOP_RETAIL_RAIL_DDL) {
+      await db.execute(sql.raw(statement)).catch(() => undefined);
+    }
 
     // statusToken backfill (2026-07-28): rows created before the column each
     // get their own unguessable token at boot so tokenized email links work

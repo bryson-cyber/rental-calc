@@ -2919,6 +2919,18 @@ export const llcRegistrations = mysqlTable(
     retailPriceCents: int("retailPriceCents"),
     /** When the client's retail payment was received (ops-confirmed). */
     retailPaidAt: timestamp("retailPaidAt"),
+    /**
+     * Whop retail-payment rail (2026-10-18). The hidden one-time plan minted
+     * for this order's exact frozen quote, the single Whop payment that paid
+     * it (unique: one payment can never pay two orders, and an order accepts
+     * exactly one), the quote hash carried in the checkout metadata, and when
+     * the prepared checkout stops being reused. Created by the boot-time
+     * ensure guard in server/llc/ensure-tables.ts (no drizzle migration).
+     */
+    retailWhopPlanId: varchar("retailWhopPlanId", { length: 64 }),
+    retailWhopPaymentId: varchar("retailWhopPaymentId", { length: 64 }),
+    checkoutQuoteHash: varchar("checkoutQuoteHash", { length: 64 }),
+    checkoutExpiresAt: timestamp("checkoutExpiresAt"),
     opsNotifiedAt: timestamp("opsNotifiedAt"),
     providerStatus: json("providerStatus").$type<Record<string, unknown> | null>(),
     lastProviderSyncAt: timestamp("lastProviderSyncAt"),
@@ -2961,6 +2973,8 @@ export const llcRegistrations = mysqlTable(
     index("llc_registration_user_idx").on(table.userId),
     uniqueIndex("llc_registration_whop_account_unique").on(table.whopAccountId),
     uniqueIndex("llc_registration_checkout_unique").on(table.checkoutSessionId),
+    uniqueIndex("llc_registration_retail_whop_plan_unique").on(table.retailWhopPlanId),
+    uniqueIndex("llc_registration_retail_whop_payment_unique").on(table.retailWhopPaymentId),
     index("llc_registration_status_idx").on(table.status),
     index("llc_registration_doola_company_idx").on(table.doolaCompanyId),
   ],

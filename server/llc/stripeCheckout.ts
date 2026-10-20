@@ -142,6 +142,46 @@ export async function createLlcCheckoutSession(params: CreateCheckoutParams) {
 }
 
 // ---------------------------------------------------------------------------
+// In-flight session inspection (Whop rail cutover, 2026-10-18)
+// ---------------------------------------------------------------------------
+
+/** True when a stored checkoutSessionId is a Stripe Checkout Session. */
+export function isStripeCheckoutSessionId(sessionId: string | null | undefined): boolean {
+  return typeof sessionId === "string" && sessionId.startsWith("cs_");
+}
+
+/**
+ * Live state of an existing Stripe Checkout Session, so the Whop rail never
+ * strands an order mid-payment: "open" sessions stay on Stripe, "complete"
+ * ones are awaiting the Stripe webhook, and only "expired" ones (or ones we
+ * expire ourselves) may be replaced. "unknown" = Stripe unreachable or not
+ * configured; callers treat it conservatively.
+ */
+export async function getStripeCheckoutSessionState(
+  sessionId: string,
+): Promise<"open" | "complete" | "expired" | "unknown"> {
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (session.status === "open" || session.status === "complete" || session.status === "expired") {
+      return session.status;
+    }
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Expire an open Stripe session so it can no longer be paid. */
+export async function expireStripeCheckoutSession(sessionId: string): Promise<boolean> {
+  try {
+    await getStripe().checkout.sessions.expire(sessionId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Webhook handler
 // ---------------------------------------------------------------------------
 
