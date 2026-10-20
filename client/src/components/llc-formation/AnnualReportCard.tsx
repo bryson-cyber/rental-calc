@@ -21,7 +21,7 @@ import { toast } from "sonner";
  * of this year's report in plain words, and the filing itself: the state's questions (shown and hidden as she
  * answers), a review, the submit (the fee is fixed then), the state fee through the same secure hosted checkout as
  * her formation payment, and the hand-off to the state. Filing opens 90 days before the due date (or once overdue);
- * before that the card says the day it opens. No provider or processor names anywhere on this card.
+ * before that the server's sentence on the card says the day it opens ("Filing opens <date>"). No provider or processor names anywhere on this card.
  */
 
 type Stage = "closed" | "form" | "review" | "pay";
@@ -325,11 +325,6 @@ export function AnnualReportCard({ registrationId }: { registrationId: number })
           <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{view.body}</p>
           {view.dueDateWords && view.cardState !== "not_required" ? (
             <p className="mt-2 text-[13px] font-medium text-foreground">Due {view.dueDateWords}</p>
-          ) : null}
-          {view.opensOnWords && !view.canFile ? (
-            <p className="mt-1 text-[13px] font-medium text-primary" data-annual-report-opens="">
-              Opens on {view.opensOnWords}
-            </p>
           ) : null}
           {doneMessage ? (
             <p role="status" className="mt-3 flex items-center gap-2 text-[13px] font-medium text-emerald-700">
