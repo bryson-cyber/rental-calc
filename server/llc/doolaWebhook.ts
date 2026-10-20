@@ -21,6 +21,8 @@ import { refreshDoolaRegistrationStatus } from "./doolaSubmission";
 import { transitionLlcStatus } from "./store";
 import { sendOpsAlert, submissionProblemAlert } from "../ops/notify";
 import { ingestDoolaRequiredActionWebhook } from "./requiredActions";
+import { isAnnualReportEvent, processAnnualReportEvent } from "./annualReports/service";
+import { defaultAnnualReportDeps } from "./annualReports/defaults";
 
 export interface DoolaWebhookEvent {
   eventId?: string;
@@ -167,6 +169,24 @@ export async function processDoolaEvent(event: DoolaWebhookEvent): Promise<void>
         uncertain: false,
       }),
     ).catch(() => {});
+    return;
+  }
+
+  // Annual reports (2026-10-20, relayed verbatim by Northform like every
+  // event): submitted/completed carry only the company id, so both re-read
+  // that filing's reports; the document event also mirrors the filed report
+  // into her vault. Never the formation refresh.
+  if (isAnnualReportEvent(eventName)) {
+    await processAnnualReportEvent(
+      { eventName, doolaCompanyId, documentId: event.eventPayload?.documentId ?? null },
+      defaultAnnualReportDeps(),
+    ).catch((error) => {
+      console.error("[DoolaWebhook] annual report event failed", {
+        registrationId: registration.id,
+        eventName,
+        error: error instanceof Error ? error.name : "UnknownError",
+      });
+    });
     return;
   }
 

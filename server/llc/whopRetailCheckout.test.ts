@@ -361,6 +361,37 @@ describe("Whop payment confirmation", () => {
     expect(mocks.fileDoola).not.toHaveBeenCalled();
   });
 
+  it("compares the amount before sales tax (HFO #327): a taxed payment of the right price is accepted", async () => {
+    armed();
+    // $450 plan + $37.13 sales tax: total 487.13, tax_amount 37.13 -> exactly the $450.00 quote.
+    const scalar = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment({ total: 487.13, tax_amount: 37.13 })) as any });
+    expect(scalar?.outcome).toBe("filed");
+    expect(mocks.claimWhere).toHaveBeenCalledTimes(1);
+    // The 2026 money shape ({ amount, currency }) reads the same way, currency included.
+    vi.clearAllMocks();
+    armed();
+    mocks.claimWhere.mockResolvedValue([{ affectedRows: 1 }]);
+    mocks.fileDoola.mockResolvedValue({ outcome: "filed", doolaCompanyId: "co_1" });
+    mocks.industry.mockReturnValue("Real Estate");
+    const shaped = await processLlcWhopPayment({
+      paymentId: "pay_llc42",
+      fetchImpl: (async () => paidPayment({ total: { amount: "487.13", currency: "usd" }, tax_amount: { amount: "37.13", currency: "usd" }, currency: undefined })) as any,
+    });
+    expect(shaped?.outcome).toBe("filed");
+  });
+
+  it.each([
+    ["a short taxed payment (right total, too little before tax)", { total: 450, tax_amount: 37.13 }],
+    ["an unreadable tax amount", { total: 487.13, tax_amount: "n/a" }],
+    ["an unreadable total", { total: "n/a" }],
+  ])("refuses %s before claiming", async (_label, overrides) => {
+    armed();
+    await expect(processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment(overrides)) as any }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(mocks.claimWhere).not.toHaveBeenCalled();
+    expect(mocks.fileDoola).not.toHaveBeenCalled();
+  });
+
   it("ignores unpaid and foreign payments", async () => {
     armed();
     await expect(processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment({ status: "open" })) as any })).resolves.toBeNull();

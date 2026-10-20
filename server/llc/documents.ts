@@ -32,6 +32,15 @@ function requireDb<T>(db: T | null): T {
 }
 
 /**
+ * A filed annual report (2026-10-20). The formation sweep leaves these alone:
+ * annualReports/documents.ts mirrors each one under "Annual report <year>",
+ * so the vault never holds the same filing twice under two names.
+ */
+export function isAnnualReportDocumentType(documentType: string | null | undefined): boolean {
+  return /annual[\s_-]?report/i.test(documentType ?? "");
+}
+
+/**
  * Mirror provider formation documents (articles, EIN letters, …) into the
  * member's own ACL'd storage (pdfs/{userId}/llc/{registrationId}/…) so
  * downloads survive the provider relationship and are served from our domain
@@ -50,6 +59,8 @@ export async function mirrorFormationDocuments(params: {
   userId: number;
   registrationId: number;
   snapshot: WhopFormationSnapshot | null;
+  /** Only annualReports/documents.ts sets this, with its own year-named entries. */
+  includeAnnualReports?: boolean;
 }): Promise<{ mirrored: number; skipped: number }> {
   let mirrored = 0;
   let skipped = 0;
@@ -69,6 +80,10 @@ export async function mirrorFormationDocuments(params: {
         }
         const name = (document.name ?? document.document_type ?? "Document").slice(0, 200);
         const documentType = (document.document_type ?? "document").slice(0, 128);
+        if (isAnnualReportDocumentType(documentType) !== Boolean(params.includeAnnualReports)) {
+          skipped += 1;
+          continue;
+        }
 
         // Idempotency: the unique mirror key is checked first so a re-poll
         // never re-downloads or re-uploads an already-mirrored document.

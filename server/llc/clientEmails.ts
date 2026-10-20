@@ -101,7 +101,7 @@ function companyDisplayName(params: {
  * browsers). Mirrors the results-token pattern: the unguessable token IS
  * the credential. Token-less calls render the plain URL unchanged.
  */
-function statusUrl(registrationId: number, statusToken?: string | null): string {
+export function statusUrl(registrationId: number, statusToken?: string | null): string {
   const base = (process.env.APP_BASE_URL || process.env.VITE_APP_URL || "https://coachinayahturnkeytool.com")
     .trim()
     .replace(/\/+$/, "");
@@ -127,7 +127,7 @@ const URL_TOKEN = /(https?:\/\/[^\s<>"')\]]+)/g;
  * deliberately no heavy branded wrapper, matching this app's transactional
  * email style so messages land in the primary inbox.
  */
-function textToHtml(text: string): string {
+function textToHtml(text: string, buttonLabel = "Open your filing page"): string {
   const linked = text
     .split(URL_TOKEN)
     .map((token, index) => {
@@ -147,7 +147,7 @@ function textToHtml(text: string): string {
       // inline. The plain-text version is untouched either way.
       const buttonMatch = paragraph.match(/^<a href="([^"]+)"[^>]*>[^<]+<\/a>$/);
       if (buttonMatch) {
-        return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;"><tr><td style="border-radius:8px;background-color:#C9A962;"><a href="${buttonMatch[1]}" style="display:inline-block;padding:14px 28px;font-weight:bold;font-size:15px;color:#0F172A;text-decoration:none;">Open your filing page</a></td></tr></table>`;
+        return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;"><tr><td style="border-radius:8px;background-color:#C9A962;"><a href="${buttonMatch[1]}" style="display:inline-block;padding:14px 28px;font-weight:bold;font-size:15px;color:#0F172A;text-decoration:none;">${escapeHtml(buttonLabel)}</a></td></tr></table>`;
       }
       return `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#1e293b;">${paragraph.replace(/\n/g, "<br>")}</p>`;
     })
@@ -168,9 +168,10 @@ function textToHtml(text: string): string {
 </table></td></tr></table></body></html>`;
 }
 
-function finalize(subject: string, lines: string[]): ClientEmailContent {
+/** Exported for the annual report reminders (annualReports/copy.ts), which name their own button. */
+export function finalize(subject: string, lines: string[], buttonLabel?: string): ClientEmailContent {
   const text = lines.join("\n");
-  return { subject, text, html: textToHtml(text) };
+  return { subject, text, html: textToHtml(text, buttonLabel) };
 }
 
 // ─── Templates (pure renderers, exported for tests) ───
@@ -351,8 +352,8 @@ function resolveFromAddress(smtpFrom: string): string {
   return `"Inayah" <${addr}>`;
 }
 
-/** Best-effort delivery; returns false (never throws) on any failure. */
-async function deliverClientEmail(
+/** Best-effort delivery; returns false (never throws) on any failure. Exported for the annual report reminders. */
+export async function deliverClientEmail(
   to: string,
   content: ClientEmailContent,
 ): Promise<boolean> {

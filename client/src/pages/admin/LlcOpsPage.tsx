@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trpc } from '@/lib/trpc';
+import { AnnualReportsOpsPanel } from '@/components/llc-formation/AnnualReportsOpsPanel';
 import {
   AlertCircle,
   ArrowLeft,
@@ -1382,6 +1383,9 @@ export default function LlcOpsPage() {
                           <td colSpan={8} className="border-b border-slate-100 px-4 pb-6 pt-1">
                             <p className="mb-2 font-sans text-[11px] text-slate-400">Last provider sync: {formatDate(order.lastProviderSyncAt)}</p>
                             <RequiredActionsPanel registrationId={order.id} />
+                            {order.status === 'completed' && !order.isDemo ? (
+                              <AnnualReportsOpsPanel registrationId={order.id} />
+                            ) : null}
                             <DocumentsPanel registrationId={order.id} />
                           </td>
                         </tr>
