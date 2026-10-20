@@ -47,6 +47,13 @@ export async function runStatusPollOnce(): Promise<{
     .then(({ sendCompletionRescueEmails }) => sendCompletionRescueEmails())
     .then((r) => { if (r.sent > 0) console.log(`[LLC] Completion-rescue emails sent: ${r.sent}`); })
     .catch(() => {});
+  // Annual reports (2026-10-20, server/llc/annualReports/sweep.ts): calendars
+  // older than a day, missed annual report payments, confirm retries, then
+  // the 60/30/7-day and overdue reminder emails. Fire-and-forget like the
+  // rescue sweeps; it has its own single-flight guard.
+  import("../llc/annualReports/sweep")
+    .then(({ runAnnualReportSweep }) => runAnnualReportSweep())
+    .catch(() => {});
   let polled = 0;
   let failed = 0;
 

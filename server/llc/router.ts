@@ -77,6 +77,7 @@ import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
 import { createRetailCheckout } from "./retailCheckoutRail";
+import { annualReportMemberProcedures, annualReportOpsProcedures } from "./annualReports/router";
 import { processLlcWhopPayment } from "./whopRetailCheckout";
 import { getDoolaFormationCostCents, listDoolaStateFees } from "./doola";
 import {
@@ -164,6 +165,9 @@ function requiredActionProcedureError(error: unknown): TRPCError {
 }
 
 export const llcRouter = router({
+  // Annual report filing (2026-10-20, server/llc/annualReports/router.ts).
+  ...annualReportMemberProcedures,
+
   list: protectedProcedure.query(async ({ ctx }) => {
     const rows = await listLlcRegistrationsForUser(ctx.user.id);
     return rows.map(registrationRowToSummary);
@@ -605,6 +609,8 @@ export const llcRouter = router({
 });
 
 export const llcOpsRouter = router({
+  ...annualReportOpsProcedures,
+
   // Admin: generate a live checkout link for any registration
   generateCheckoutLink: adminProcedure
     .input(registrationIdInput)

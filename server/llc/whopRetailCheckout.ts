@@ -183,7 +183,7 @@ export function centsToWhopPrice(cents: number): number {
   return Number((cents / 100).toFixed(2));
 }
 
-function safePurchaseUrl(value: unknown): string {
+export function safePurchaseUrl(value: unknown): string {
   if (typeof value !== "string" || !value) return "";
   if (value.startsWith("https://")) return value;
   if (value.startsWith("/")) return `https://whop.com${value}`;

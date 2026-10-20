@@ -26,6 +26,7 @@ import {
   readLlcPaymentMetadata,
   whopRetailHeaders,
 } from "./whopRetailCheckout";
+import { isAnnualReportPaymentPayload, readAnnualReportPaymentMetadata } from "./annualReports/paymentMetadata";
 
 export const WHOP_WEBHOOK_PATH = "/api/whop/webhook";
 const TIMESTAMP_TOLERANCE_SEC = 5 * 60;
@@ -109,11 +110,20 @@ function isForeignPayment(data: any): boolean {
   return Boolean(data?.metadata && typeof data.metadata === "object" && !readLlcPaymentMetadata(data));
 }
 
+type AnnualReportPaymentProcessor = (input: { paymentId: string }) => Promise<{ outcome: string } | null>;
+
+/** Loaded only for an annual report payment, so formation webhooks never pull in the annual report service. */
+const processAnnualReportPaymentLazily: AnnualReportPaymentProcessor = async (input) => {
+  const { processAnnualReportPayment } = await import("./annualReports/payments");
+  return processAnnualReportPayment(input);
+};
+
 export async function handleWhopWebhookEvent(
   payload: any,
   deps: {
     processPayment?: typeof processLlcWhopPayment;
     fetchPayment?: typeof fetchWhopPayment;
+    processAnnualReportPayment?: AnnualReportPaymentProcessor;
   } = {},
 ): Promise<string> {
   const type = String(payload?.type || "");
@@ -121,6 +131,35 @@ export async function handleWhopWebhookEvent(
   const fetchPayment = deps.fetchPayment ?? fetchWhopPayment;
   const paymentId = paymentIdFromEvent(payload);
   if (!paymentId) return "ignored:no-payment-id";
+
+  // An LLC annual report's state fee (2026-10-20): routed BEFORE the formation
+  // branch (whose foreign-metadata guard would drop it). The body only routes;
+  // annualReports/payments.ts re-reads the payment from Whop, verifies plan,
+  // quote hash, amount before tax and currency, claims once and confirms. Its
+  // mismatches alert ops inside that module (once each); the reconciliation
+  // sweep retries anything this delivery could not finish.
+  if (type === "payment.succeeded" && isAnnualReportPaymentPayload(payload)) {
+    try {
+      const result = await (deps.processAnnualReportPayment ?? processAnnualReportPaymentLazily)({ paymentId });
+      return result ? `llc-annual-report-${result.outcome}` : "llc-annual-report-pending";
+    } catch (error) {
+      if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "NOT_FOUND")) {
+        await sendOpsAlert({
+          subject: `ACTION: Whop annual report payment needs review (${paymentId})`,
+          lines: [
+            "A succeeded Whop payment carried this app's annual report checkout metadata but does not match an annual report on file.",
+            "",
+            `Whop payment: ${paymentId}`,
+            `Reason: ${error.message}`,
+            "",
+            "Check the order's Annual reports section in /admin/llc and the payment in the Whop dashboard; refund if it can't be applied.",
+          ],
+        }).catch(() => false);
+        return `llc-annual-report-rejected:${error.code}`;
+      }
+      throw error;
+    }
+  }
 
   if (type === "payment.succeeded") {
     if (isForeignPayment(payload.data)) return "ignored:foreign-payment";
@@ -152,6 +191,23 @@ export async function handleWhopWebhookEvent(
     // Only alert for payments that belong to this app's LLC checkout.
     const payment = await fetchPayment(paymentId).catch(() => null);
     const metadata = payment ? readLlcPaymentMetadata(payment) : null;
+    const annualReport = payment && !metadata ? readAnnualReportPaymentMetadata(payment) : null;
+    if (annualReport) {
+      // An annual report state fee (2026-10-20): ops decide; nothing is undone automatically.
+      await sendOpsAlert({
+        subject: `${type.startsWith("dispute.") ? "⚠️ DISPUTE" : "Refund"}: Whop annual report payment (${paymentId})`,
+        lines: [
+          `Whop event: ${type}`,
+          `Whop payment: ${paymentId}`,
+          `Order: #${annualReport.registrationId}, annual report row #${annualReport.reportId}`,
+          "",
+          type.startsWith("dispute.")
+            ? "Action required: respond in the Whop dashboard within the deadline. If the report was already handed to the state, the state fee is spent."
+            : "Review the order's Annual reports section in /admin/llc.",
+        ],
+      }).catch(() => false);
+      return `alerted:${type}`;
+    }
     if (!metadata) return "ignored:foreign-refund-or-dispute";
     await sendOpsAlert({
       subject: `${type.startsWith("dispute.") ? "⚠️ DISPUTE" : "Refund"}: Whop LLC payment (${paymentId})`,
@@ -238,7 +294,8 @@ export type LlcWhopReconcileReport = {
   outcomes: Record<string, number>;
 };
 
-async function paidPaymentsForExactPlan(input: {
+/** Succeeded payments on one exact plan (formation orders and annual report checkouts both reconcile through it). */
+export async function paidPaymentsForExactPlan(input: {
   apiKey: string;
   companyId: string;
   planId: string;

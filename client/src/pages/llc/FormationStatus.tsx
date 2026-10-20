@@ -55,6 +55,7 @@ import {
 } from "@/components/llc-formation/useStatePricing";
 import { getLoginUrl } from "@/const";
 import { LlcPageShell } from "./LlcPageShell";
+import { AnnualReportCard } from "@/components/llc-formation/AnnualReportCard";
 
 /** Join a query param onto a URL that may already carry a query string. */
 function appendQueryParam(url: string, param: string): string {
@@ -424,6 +425,9 @@ function StatusWorkspace({
   // still apply, so a failure here is silent.
   const [returnedPaymentId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
+    // An annual report payment comes back here too (?annual_report=paid); its
+    // own card confirms it, so the formation confirm stays out of the way.
+    if (params.get("annual_report")) return null;
     const value = params.get("payment_id") ?? params.get("receipt_id");
     return value && /^pay_[A-Za-z0-9]+$/.test(value) ? value : null;
   });
@@ -756,6 +760,31 @@ function StatusWorkspace({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* Annual report (2026-10-20): signed-in owners of an official, real
+          LLC. Filing and paying need the account, so token viewers see a
+          sign-in line instead. */}
+      {registration.status === "completed" && !registration.isSample ? (
+        user && !tokenMode ? (
+          <AnnualReportCard registrationId={registrationId} />
+        ) : (
+          <div className="apple-card p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Annual report</p>
+            <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+              Sign in to see your annual report due date and file it.
+            </p>
+            <Button
+              className="mt-3"
+              variant="outline"
+              onClick={() => {
+                window.location.href = getLoginUrl(`/llc/status/${registrationId}?file=annual-report`);
+              }}
+            >
+              Sign in
+            </Button>
+          </div>
+        )
       ) : null}
 
       {(registration.status === "failed" || registration.status === "action_required") &&

@@ -3,6 +3,7 @@ import { llcRegistrations } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
+import { ANNUAL_REPORT_TABLES } from "./annualReports/tables";
 
 /** Additive, idempotent DDL for the Whop retail-payment rail columns. */
 export const WHOP_RETAIL_RAIL_DDL = [
@@ -266,6 +267,15 @@ export async function ensureLlcTables(): Promise<void> {
         CONSTRAINT \`llc_webhook_event_unique\` UNIQUE(\`eventId\`)
       )
     `);
+    // Annual report filing (2026-10-20, server/llc/annualReports): the
+    // compliance calendar per filing and one row per filing and fiscal year.
+    // CREATE TABLE IF NOT EXISTS, one statement at a time; a failure is
+    // logged and never stops the rest of this ensure.
+    for (const statement of ANNUAL_REPORT_TABLES) {
+      await db.execute(statement).catch((error) => {
+        console.error("[LLC] annual report table ensure failed:", error instanceof Error ? error.message : error);
+      });
+    }
     // Durable ops hold (2026-08-06): a manual unrelease stamps opsHeldAt and
     // the auto-release sweep skips the row from then on, so ops can pull a
     // document back without the next Doola poll re-releasing it.

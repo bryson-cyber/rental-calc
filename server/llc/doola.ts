@@ -38,18 +38,22 @@ export class DoolaApiError extends Error {
   readonly httpStatus: number | null;
   readonly code: string | null;
   readonly retryable: boolean;
+  /** Per-field validation codes (error.fields on E_VALIDATION_FAILED), fieldId → code. Server-side only. */
+  readonly fields: Record<string, string>;
 
   constructor(params: {
     message: string;
     httpStatus: number | null;
     code: string | null;
     retryable: boolean;
+    fields?: Record<string, string>;
   }) {
     super(params.message);
     this.name = "DoolaApiError";
     this.httpStatus = params.httpStatus;
     this.code = params.code;
     this.retryable = params.retryable;
+    this.fields = params.fields ?? {};
   }
 }
 
@@ -144,7 +148,12 @@ function isRetryableStatus(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
-async function doolaRequest<T>(params: {
+/**
+ * The one authenticated partner-API call (base URL, key, timeout, envelope
+ * and error mapping). Exported for the feature clients that live in their
+ * own modules (annualReports/provider.ts); nothing client-facing may call it.
+ */
+export async function doolaRequest<T>(params: {
   method: "GET" | "POST";
   path: string;
   body?: unknown;
@@ -187,12 +196,17 @@ async function doolaRequest<T>(params: {
   if (!response.ok || envelope.error) {
     const code = typeof envelope.error?.code === "string" ? envelope.error.code : null;
     // Provider text stays server-side (ops logs); never client-facing.
-    const fieldErrors =
-      envelope.error && typeof envelope.error === "object" && "fields" in envelope.error
-        ? Object.entries((envelope.error as { fields?: Record<string, { code?: string }> }).fields ?? {}).map(
-            ([field, detail]) => `${field}:${detail?.code ?? "?"}`,
-          )
-        : [];
+    const fieldCodes: Record<string, string> = {};
+    if (envelope.error && typeof envelope.error === "object" && "fields" in envelope.error) {
+      for (const [field, detail] of Object.entries(
+        (envelope.error as { fields?: Record<string, { code?: string } | string> }).fields ?? {},
+      )) {
+        fieldCodes[field.slice(0, 64)] = String(
+          (typeof detail === "string" ? detail : detail?.code) ?? "?",
+        ).slice(0, 64);
+      }
+    }
+    const fieldErrors = Object.entries(fieldCodes).map(([field, fieldCode]) => `${field}:${fieldCode}`);
     console.error("[Doola] API request failed", {
       method: params.method,
       path: params.path.replace(/\/dc_[A-Za-z0-9]+/g, "/dc_[redacted]"),
@@ -205,6 +219,7 @@ async function doolaRequest<T>(params: {
       httpStatus: response.status,
       code,
       retryable: isRetryableStatus(response.status),
+      fields: fieldCodes,
     });
   }
 
@@ -705,6 +720,9 @@ export async function createDoolaSignatureSession(
 /** Doola PascalCase document types → the vault's snake_case vocabulary. */
 const DOOLA_DOCUMENT_TYPES: Record<string, string> = {
   ArticlesOfOrganization: "articles_of_organization",
+  // Filed annual reports (2026-10-20) mirror through annualReports/documents.ts
+  // under their own "Annual report <year>" name, never the formation sweep.
+  AnnualReport: "annual_report",
   EinLetter: "ein_letter",
   OperatingAgreement: "operating_agreement",
   CorporateBylaws: "corporate_bylaws",
