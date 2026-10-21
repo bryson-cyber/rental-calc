@@ -15,6 +15,7 @@
 import { randomUUID } from "node:crypto";
 import type { llcFounders, llcRegistrations } from "../../drizzle/schema";
 import { decryptPii } from "./pii";
+import { addressPlanForRow, addressPlanIssueCodes } from "./addressChoices";
 
 type LlcRegistrationRecord = typeof llcRegistrations.$inferSelect;
 type LlcFounderRecord = typeof llcFounders.$inferSelect;
@@ -375,33 +376,42 @@ export function mapRegistrationToDoolaCompany(
     });
   }
 
-  const companyAddress = registration.useRegisteredAgent
-    ? null
-    : {
-        line1: registration.companyAddressLine1 ?? "",
-        ...(registration.companyAddressLine2 ? { line2: registration.companyAddressLine2 } : {}),
-        city: registration.companyAddressCity ?? "",
-        state: registration.companyAddressState ?? "",
-        postalCode: registration.companyAddressPostalCode ?? "",
-        country: toIso3Country(registration.companyAddressCountry),
-        ...(normalizePhoneForDoola(registration.businessPhone)
-          ? { phone: normalizePhoneForDoola(registration.businessPhone) }
-          : {}),
-      };
+  // Address choices (2026-10-14): the business address (the principal place
+  // of business on the state filing) and the mailing address are mapped
+  // independently. "customer" sends the client's own address;
+  // "registered_agent" sends no address and the provider uses its agent's
+  // office in the formation state. The registered agent SERVICE is not part
+  // of this array: the provider attaches it to every company, in every mode,
+  // unchanged. Last line of defense behind the pre-lock gate in
+  // doolaSubmission.ts: a plan that breaks the rules (an opt-in without its
+  // acknowledgment, the agent's address where the state refuses it, the
+  // client's address without a full street address) is never sent.
+  const plan = addressPlanForRow(registration);
+  if (plan.issues.length > 0) {
+    throw new DoolaApiError({
+      message: `The order's address choices cannot be filed (${addressPlanIssueCodes(plan)}).`,
+      httpStatus: null,
+      code: "E_ADDRESS_CHOICE",
+      retryable: false,
+    });
+  }
 
-  // Registered-agent mode routes BOTH addresses through Doola's RA: state
-  // filings and postal mail (incl. the EIN letter) then arrive as API
-  // documents — the strongest white-label posture available. Own-address
-  // mode uses the company address for both.
-  const addresses = registration.useRegisteredAgent
-    ? [
-        { provider: "registeredAgent", type: "mailing" },
-        { provider: "registeredAgent", type: "business" },
-      ]
-    : [
-        { provider: "customer", type: "mailing", address: companyAddress },
-        { provider: "customer", type: "business", address: companyAddress },
-      ];
+  const customerAddress = {
+    line1: registration.companyAddressLine1 ?? "",
+    ...(registration.companyAddressLine2 ? { line2: registration.companyAddressLine2 } : {}),
+    city: registration.companyAddressCity ?? "",
+    state: registration.companyAddressState ?? "",
+    postalCode: registration.companyAddressPostalCode ?? "",
+    country: toIso3Country(registration.companyAddressCountry),
+    ...(normalizePhoneForDoola(registration.businessPhone)
+      ? { phone: normalizePhoneForDoola(registration.businessPhone) }
+      : {}),
+  };
+  const addressEntry = (type: "mailing" | "business", mode: "customer" | "registered_agent") =>
+    mode === "customer"
+      ? { provider: "customer", type, address: customerAddress }
+      : { provider: "registeredAgent", type };
+  const addresses = [addressEntry("mailing", plan.mailing), addressEntry("business", plan.business)];
 
   const industry = deriveDoolaIndustry(registration);
 

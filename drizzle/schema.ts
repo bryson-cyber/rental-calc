@@ -2891,6 +2891,23 @@ export const llcRegistrations = mysqlTable(
     companyAddressCountry: varchar("companyAddressCountry", { length: 2 })
       .default("US")
       .notNull(),
+    /**
+     * Address choices (2026-10-14), added by the boot-time guard in
+     * server/llc/ensure-tables.ts (columns listed in addressChoices.ts). NULL
+     * on orders from before then: drafts open with the new defaults,
+     * submitted orders are read from useRegisteredAgent. Values: "customer" |
+     * "registered_agent".
+     */
+    businessAddressMode: varchar("businessAddressMode", { length: 24 }),
+    mailingAddressMode: varchar("mailingAddressMode", { length: 24 }),
+    /** When and under which wording version the client opted in to the agent's address as business address. */
+    businessAgentAckAt: timestamp("businessAgentAckAt"),
+    businessAgentAckVersion: varchar("businessAgentAckVersion", { length: 64 }),
+    /** When and under which wording version the client opted in to mail at the agent. */
+    mailingAgentAckAt: timestamp("mailingAgentAckAt"),
+    mailingAgentAckVersion: varchar("mailingAgentAckVersion", { length: 64 }),
+    /** Evidence of the modes and wording versions at submission and when sent to filing (never address text). */
+    addressChoiceEvidence: json("addressChoiceEvidence").$type<Record<string, unknown> | null>(),
     expediteEin: boolean("expediteEin").default(false).notNull(),
     accuracyAttested: boolean("accuracyAttested").default(false).notNull(),
     whopAccountId: varchar("whopAccountId", { length: 64 }),

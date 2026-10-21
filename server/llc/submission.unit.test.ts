@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makePersistedBundle } from "./test-fixtures";
+import { MAILING_AGENT_ACK } from "../../shared/llcAddress";
 
 const database = vi.hoisted(() => ({
   get: vi.fn(),
@@ -42,7 +43,7 @@ vi.mock("./whop", async () => {
   };
 });
 
-import { submitLlcRegistration } from "./submission";
+import { LlcSubmissionValidationError, submitLlcRegistration } from "./submission";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -133,5 +134,74 @@ describe("LLC submission status and idempotency unit gates", () => {
     expect(result.message).toBe("Manual review is required.");
     expect(database.transition).not.toHaveBeenCalled();
     expect(provider.registerLlc).not.toHaveBeenCalled();
+  });
+});
+
+describe("address choices at submit (2026-10-14; owner: an LLC was filed with the registered agent's address as its business address; fix it in every app)", () => {
+  it("refuses a draft from before the split whose old switch was on until Step 3 is saved", async () => {
+    // The address and phone are on file, so the new defaults validate; but
+    // the row still says the agent for both. Submitting would record evidence
+    // the client never saw and the order would be held after the client
+    // confirmed its own address on review (or, from the status page's retry,
+    // without seeing it at all).
+    const bundle = makePersistedBundle("ready");
+    bundle.registration.useRegisteredAgent = true;
+    database.get.mockResolvedValue(bundle);
+
+    await expect(submitLlcRegistration({ userId: 7, registrationId: 41 })).rejects.toMatchObject({
+      fieldErrors: { businessAddressMode: expect.stringMatching(/Step 3/) },
+    });
+    expect(database.transition).not.toHaveBeenCalled();
+    expect(provider.createAccount).not.toHaveBeenCalled();
+  });
+
+  it("the legacy filing leg never takes a split choice it cannot send", async () => {
+    // That leg has one switch for both addresses, so the business address
+    // and the mail cannot go to different places through it.
+    const bundle = makePersistedBundle("ready");
+    Object.assign(bundle.registration, {
+      whopAccountId: "biz_existing",
+      businessAddressMode: "customer",
+      mailingAddressMode: "registered_agent",
+      mailingAgentAckVersion: MAILING_AGENT_ACK.version,
+      mailingAgentAckAt: new Date("2026-10-14T18:00:00.000Z"),
+    });
+    database.get.mockResolvedValue(bundle);
+
+    const failure = await submitLlcRegistration({ userId: 7, registrationId: 41 }).catch((error) => error);
+    expect(failure).toBeInstanceOf(LlcSubmissionValidationError);
+    expect(failure.fieldErrors.businessAddressMode).toMatch(/same option for both/);
+    expect(JSON.stringify(failure.fieldErrors)).not.toMatch(/whop|doola/i);
+    expect(database.transition).not.toHaveBeenCalled();
+    expect(provider.registerLlc).not.toHaveBeenCalled();
+  });
+
+  it("the submit lock stamps which modes were submitted, never address text", async () => {
+    const bundle = makePersistedBundle("ready");
+    Object.assign(bundle.registration, {
+      businessAddressMode: "customer",
+      mailingAddressMode: "registered_agent",
+      mailingAgentAckVersion: MAILING_AGENT_ACK.version,
+      mailingAgentAckAt: new Date("2026-10-14T18:00:00.000Z"),
+    });
+    database.get.mockResolvedValue(bundle);
+    database.transition.mockResolvedValue({ changed: false, registration: bundle.registration });
+
+    await submitLlcRegistration({ userId: 7, registrationId: 41 });
+
+    const lock = database.transition.mock.calls[0][0] as {
+      toStatus: string;
+      updates: { addressChoiceEvidence: { submitted: Record<string, unknown> } };
+    };
+    expect(lock.toStatus).toBe("submitting");
+    expect(lock.updates.addressChoiceEvidence.submitted).toMatchObject({
+      business: "customer",
+      mailing: "registered_agent",
+      modesSource: "stored",
+      mailingAgentAckVersion: MAILING_AGENT_ACK.version,
+      mailingAgentAckAt: "2026-10-14T18:00:00.000Z",
+      businessAgentAckVersion: null,
+    });
+    expect(JSON.stringify(lock.updates.addressChoiceEvidence)).not.toMatch(/100 Main|Cheyenne|82001/);
   });
 });

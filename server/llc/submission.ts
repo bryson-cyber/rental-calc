@@ -6,6 +6,7 @@ import {
   createSubmissionAttempt,
   finishSubmissionAttempt,
   getLlcRegistrationById,
+  isRegistrationEditable,
   transitionLlcStatus,
   updateLlcRegistrationProviderFields,
 } from "./store";
@@ -17,6 +18,7 @@ import {
   submissionProblemAlert,
 } from "../ops/notify";
 import { bundleToDraft, bundleToRegistrationView } from "./domain";
+import { unsavedLegacyAddressChoiceErrors, withAddressChoiceEvidence } from "./addressChoices";
 import {
   sendFormationCompleteEmail,
 } from "./clientEmails";
@@ -107,8 +109,18 @@ async function requireValidatedBundle(userId: number, registrationId: number) {
     ...bundleToDraft(bundle),
     currentStep: 6,
   });
-  if (!parsed.success) {
-    throw new LlcSubmissionValidationError(issuesByField(parsed.error));
+  // A draft from before 2026-10-14 with the old switch on saves Step 3 first,
+  // so what is submitted (and recorded as evidence) is what the client
+  // confirmed.
+  const legacyErrors = unsavedLegacyAddressChoiceErrors(
+    bundle.registration,
+    isRegistrationEditable(bundle.registration),
+  );
+  if (!parsed.success || Object.keys(legacyErrors).length > 0) {
+    throw new LlcSubmissionValidationError({
+      ...legacyErrors,
+      ...(parsed.success ? {} : issuesByField(parsed.error)),
+    });
   }
 
   // Owner-controlled availability: an inactive state can never be handed off
@@ -330,6 +342,27 @@ export async function submitLlcRegistration(params: {
     };
   }
 
+  // Address choices on the legacy filing leg (LLC_PROVIDER=whop, opt-in
+  // only; 2026-10-14): that leg has ONE switch for both addresses, so a split
+  // choice (the client's business address with mail at the agent, or the
+  // reverse) would silently send something the client did not choose. Same
+  // routing rule as the provider fork below, decided before the lock so
+  // nothing moves.
+  const routesToLegacyLeg =
+    !existing.isTest &&
+    !(existing.provider === "doola" || Boolean(existing.doolaCompanyId)) &&
+    (Boolean(existing.whopAccountId || existing.checkoutSessionId) ||
+      getConfiguredLlcProvider() !== "doola");
+  if (
+    routesToLegacyLeg &&
+    validated.complete.businessAddressMode !== validated.complete.mailingAddressMode
+  ) {
+    throw new LlcSubmissionValidationError({
+      businessAddressMode:
+        "On this order your business address and your mail go to the same place. Choose the same option for both in Step 3.",
+    });
+  }
+
   const lock = await transitionLlcStatus({
     userId: params.userId,
     registrationId: params.registrationId,
@@ -341,6 +374,9 @@ export async function submitLlcRegistration(params: {
       lastErrorType: null,
       lastErrorMessage: null,
       retryable: false,
+      // Evidence (2026-10-14): which business and mail modes were submitted,
+      // with the acknowledgment versions and times. Never address text.
+      addressChoiceEvidence: withAddressChoiceEvidence(existing, "submitted"),
     },
   });
 

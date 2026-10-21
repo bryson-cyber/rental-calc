@@ -54,6 +54,8 @@ import {
   useStatePricing,
 } from "@/components/llc-formation/useStatePricing";
 import { getLoginUrl } from "@/const";
+import { addressChoiceSummary } from "@/components/llc-formation/AddressChoiceFields";
+import { ConfirmAddressCard } from "@/components/llc-formation/ConfirmAddressCard";
 import { LlcPageShell } from "./LlcPageShell";
 import { AnnualReportCard } from "@/components/llc-formation/AnnualReportCard";
 
@@ -121,6 +123,17 @@ const STATUS_COPY = {
     title: "Your submission did not go through.",
     body: "Your draft is still intact. Retry is available only when doing so cannot create a duplicate registration.",
   },
+} as const;
+
+/**
+ * Heading for an order held before filing until the client confirms the
+ * address choices (2026-10-14). Replaces "You don't need to do anything else
+ * right now", which is not true for a held order.
+ */
+const ADDRESS_CHOICE_COPY = {
+  eyebrow: "Order received",
+  title: "One quick choice before we file.",
+  body: "Confirm your business address and where your company's mail goes below. Nothing is filed until you save it.",
 } as const;
 
 /** Friendly labels for well-known document types (fallback: stored name). */
@@ -518,7 +531,9 @@ function StatusWorkspace({
     );
   }
 
-  const copy = STATUS_COPY[registration.status];
+  const copy = registration.addressChoiceNeeded
+    ? ADDRESS_CHOICE_COPY
+    : STATUS_COPY[registration.status];
   const isProviderStatus = ["payment_required", "processing", "completed"].includes(
     registration.status,
   );
@@ -574,9 +589,14 @@ function StatusWorkspace({
               <FileCheck2 className="size-4 text-emerald-700" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-foreground">Payment received — you're all set</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                {/* A held order is not "all set" (2026-10-14): one choice is open. */}
+                {registration.addressChoiceNeeded ? "Payment received" : "Payment received — you're all set"}
+              </h3>
               <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
-                {registration.status === "payment_required"
+                {registration.addressChoiceNeeded
+                  ? "One more step: confirm your business address and where mail goes below, and your filing starts."
+                  : registration.status === "payment_required"
                   ? "Confirming your payment now — this page updates itself in a few seconds. Your filing starts automatically; nothing else is needed from you."
                   : "Your filing is underway. This page is your hub: live status, and every document lands here the moment it's ready. We'll also email you at each step."}
               </p>
@@ -659,6 +679,23 @@ function StatusWorkspace({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* Address choices (2026-10-14): an order placed with the old single
+          "registered agent" switch is held before filing until the client
+          chooses the business address and where mail goes. Works for token
+          viewers too (no sign-in), like the required-action cards. */}
+      {registration.addressChoiceNeeded ? (
+        <ConfirmAddressCard
+          registrationId={registrationId}
+          statusToken={statusToken}
+          draft={registration.draft}
+          startsFilingOnSave={registration.addressChoiceStartsFiling}
+          onSaved={() => {
+            if (tokenMode) void trackQuery.refetch();
+            else void registrationQuery.refetch();
+          }}
+        />
       ) : null}
 
       {showPaymentCard ? (
@@ -925,10 +962,22 @@ function StatusWorkspace({
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Registered agent</dt>
+            <dd className="mt-1 text-sm font-medium text-foreground">Professional registered agent (included)</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Principal place of business</dt>
             <dd className="mt-1 text-sm font-medium text-foreground">
-              {registration.draft.useRegisteredAgent
-                ? "Professional registered-agent service"
-                : "Company-provided address"}
+              {registration.addressChoiceNeeded
+                ? "Waiting for your choice above"
+                : addressChoiceSummary(registration.draft).principal}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mail and EIN letter go to</dt>
+            <dd className="mt-1 text-sm font-medium text-foreground">
+              {registration.addressChoiceNeeded
+                ? "Waiting for your choice above"
+                : addressChoiceSummary(registration.draft).mail}
             </dd>
           </div>
           <div>

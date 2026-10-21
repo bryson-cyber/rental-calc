@@ -17,6 +17,7 @@ import {
   toIso3Country,
 } from "./doola";
 import { encryptPii } from "./pii";
+import { BUSINESS_AGENT_ACK, MAILING_AGENT_ACK } from "../../shared/llcAddress";
 
 const TEST_KEY = "a".repeat(64);
 
@@ -37,6 +38,13 @@ function makeRegistration(overrides: Record<string, unknown> = {}) {
     businessPhone: "+17025550100",
     website: null,
     useRegisteredAgent: true,
+    // Pin moved (2026-10-14): the old switch alone no longer sends the agent's address; this fixture now carries the explicit agent opt-ins with their acknowledgments (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
+    businessAddressMode: "registered_agent",
+    mailingAddressMode: "registered_agent",
+    businessAgentAckVersion: BUSINESS_AGENT_ACK.version,
+    businessAgentAckAt: now,
+    mailingAgentAckVersion: MAILING_AGENT_ACK.version,
+    mailingAgentAckAt: now,
     companyAddressLine1: null,
     companyAddressLine2: null,
     companyAddressCity: null,
@@ -242,6 +250,7 @@ describe("Doola request mapping", () => {
   });
 
   it("registered-agent mode routes BOTH addresses through the RA with no address objects", () => {
+    // Pin moved (2026-10-14): both agent entries now need both opt-ins acknowledged (see the fixture) (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
     const company = mapRegistrationToDoolaCompany(makeRegistration(), [makeFounder()], "dc_1");
     expect(company.addresses).toEqual([
       { provider: "registeredAgent", type: "mailing" },
@@ -252,6 +261,9 @@ describe("Doola request mapping", () => {
   it("own-address mode sends the company address for both entries with the business phone", () => {
     const registration = makeRegistration({
       useRegisteredAgent: false,
+      // Pin moved (2026-10-14): own-address mode is now the two stored modes, not the old switch (owner: an LLC was filed with the registered agent's address as its business address; fix it in every app).
+      businessAddressMode: "customer",
+      mailingAddressMode: "customer",
       companyAddressLine1: "500 Main St",
       companyAddressCity: "Las Vegas",
       companyAddressState: "NV",

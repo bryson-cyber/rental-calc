@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
+  llcAddressStepSchema,
   llcCompleteSchema,
   llcDraftSchema,
   issuesByField,
@@ -8,13 +9,16 @@ import {
   DOOLA_DIRECT_MARKER,
   isValidDoolaIndustry,
 } from "../../shared/llc";
+import { LLC_ADDRESS_MODES } from "../../shared/llcAddress";
 import { deriveDoolaIndustry } from "./doola";
 import {
   createLlcRegistration,
   findLlcRegistrationOwner,
   getLlcRegistrationById,
+  isRegistrationEditable,
   listAllLlcRegistrations,
   listLlcRegistrationsForUser,
+  saveLlcAddressChoices,
   saveLlcDraft,
   statusTokenMatches,
   transitionLlcStatus,
@@ -76,6 +80,12 @@ import { LLC_FORMATION_STATES } from "../../shared/llc";
 import { PiiConfigurationError } from "./pii";
 import { checkRateLimit } from "../ops/rateLimit";
 import { fileDoolaRegistration } from "./doolaSubmission";
+import {
+  addressChoiceNeeded,
+  addressModesForOps,
+  filingStartsOnAddressConfirm,
+  unsavedLegacyAddressChoiceErrors,
+} from "./addressChoices";
 import { createRetailCheckout } from "./retailCheckoutRail";
 import { annualReportMemberProcedures, annualReportOpsProcedures } from "./annualReports/router";
 import { processLlcWhopPayment } from "./whopRetailCheckout";
@@ -126,6 +136,16 @@ const httpUrlSchema = z
     message: "Payment links must start with http:// or https://",
   });
 
+/** The address choices a held order can confirm from the status page (2026-10-14). */
+const addressChoicesInput = z.object({
+  businessAddressMode: z.enum(LLC_ADDRESS_MODES),
+  mailingAddressMode: z.enum(LLC_ADDRESS_MODES),
+  businessAgentAckVersion: z.string().trim().max(64).default(""),
+  mailingAgentAckVersion: z.string().trim().max(64).default(""),
+  companyAddress: llcDraftSchema.shape.companyAddress,
+  businessPhone: z.string().trim().max(32).default(""),
+});
+
 async function requireRegistrationBundle(userId: number, registrationId: number) {
   const bundle = await getLlcRegistrationById(userId, registrationId);
   if (!bundle) {
@@ -162,6 +182,51 @@ function requiredActionProcedureError(error: unknown): TRPCError {
     message: "We could not complete that filing action. Please try again or contact support.",
     cause: error,
   });
+}
+
+/**
+ * Shared body of llc.confirmAddressChoices and its token twin (2026-10-14).
+ * The formation state comes from the order, never from the client.
+ */
+async function confirmAddressChoicesFor(
+  userId: number,
+  bundle: Awaited<ReturnType<typeof requireRegistrationBundle>>,
+  choices: z.output<typeof addressChoicesInput>,
+) {
+  const registrationId = bundle.registration.id;
+  const validation = llcAddressStepSchema.safeParse({
+    ...choices,
+    formationState: bundle.registration.formationState ?? "",
+  });
+  if (!validation.success) {
+    return { saved: false as const, fieldErrors: issuesByField(validation.error) };
+  }
+  let saved;
+  try {
+    saved = await saveLlcAddressChoices(userId, registrationId, choices);
+  } catch (error) {
+    console.error("[LLC] Address confirmation failed", {
+      userId,
+      registrationId,
+      error: error instanceof Error ? error.name : "UnknownError",
+    });
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "These choices can't be changed on this order anymore. Our team can help.",
+    });
+  }
+  if (!saved) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "This registration could not be found in your workspace." });
+  }
+  if (filingStartsOnAddressConfirm(saved.registration)) {
+    void fileDoolaRegistration({ userId, registrationId }).catch((error) => {
+      console.error(
+        "[LLC] Filing after address confirmation failed:",
+        error instanceof Error ? error.name : "UnknownError",
+      );
+    });
+  }
+  return { saved: true as const, registration: bundleToRegistrationView(saved) };
 }
 
 export const llcRouter = router({
@@ -333,12 +398,19 @@ export const llcRouter = router({
         ...bundleToDraft(bundle),
         currentStep: 6,
       });
+      // Same rule as submit (2026-10-14): a pre-split draft with the old
+      // switch on saves Step 3 before it can be submitted.
+      const legacyErrors = unsavedLegacyAddressChoiceErrors(
+        bundle.registration,
+        isRegistrationEditable(bundle.registration),
+      );
 
-      if (!result.success) {
-        return {
-          valid: false as const,
-          fieldErrors: issuesByField(result.error),
+      if (!result.success || Object.keys(legacyErrors).length > 0) {
+        const fieldErrors: Record<string, string> = {
+          ...legacyErrors,
+          ...(result.success ? {} : issuesByField(result.error)),
         };
+        return { valid: false as const, fieldErrors };
       }
 
       const inactiveError = await getInactiveStateError(result.data.formationState);
@@ -483,6 +555,54 @@ export const llcRouter = router({
           message: msg,
         });
       }
+    }),
+
+  /**
+   * An order submitted before 2026-10-14 with the old "registered agent"
+   * switch on is held before filing (doolaSubmission's address gate). Here
+   * the client chooses the business address and where mail goes, with the
+   * same rules and acknowledgments as Step 3; nothing else about the order
+   * can change. When the payment is already in, the filing starts right away.
+   */
+  confirmAddressChoices: protectedProcedure
+    .input(registrationIdInput.extend({ choices: addressChoicesInput }))
+    .mutation(async ({ ctx, input }) => {
+      enforceRateLimit(ctx.user.id, "llc.confirmAddress", 20);
+      const bundle = await requireRegistrationBundle(ctx.user.id, input.id);
+      return confirmAddressChoicesFor(ctx.user.id, bundle, input.choices);
+    }),
+
+  /**
+   * The same confirmation from a tokenized email link (no session), like the
+   * required-action ByToken procedures: the unguessable status token is the
+   * credential, and every failure answers the same NOT_FOUND.
+   */
+  confirmAddressChoicesByToken: publicProcedure
+    .input(
+      registrationIdInput.extend({
+        token: z.string().min(32).max(64),
+        choices: addressChoicesInput,
+      }),
+    )
+    .mutation(async ({ input }) => {
+      if (!checkRateLimit(`llc.confirmAddress.token:${input.id}`, 20, HOUR_MS)) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Please wait and try again." });
+      }
+      const owner = await requireTokenRegistrationOwner(input.id, input.token);
+      const bundle = await requireRegistrationBundle(owner.userId, input.id);
+      const result = await confirmAddressChoicesFor(owner.userId, bundle, input.choices);
+      if (!result.saved) return result;
+      // A token viewer never gets founder SSNs back (same rule as llc.track).
+      return {
+        ...result,
+        registration: {
+          ...result.registration,
+          draft: {
+            ...result.registration.draft,
+            founders: result.registration.draft.founders.map((founder) => ({ ...founder, ssn: "" })),
+          },
+        },
+      };
     }),
 
   // Client returned from the hosted checkout with a payment id: confirm it
@@ -711,6 +831,10 @@ export const llcOpsRouter = router({
       lastProviderSyncAt: registration.lastProviderSyncAt?.getTime() ?? null,
       updatedAt: registration.updatedAt.getTime(),
       openRequiredActionCount: openActionCount.get(registration.id) ?? 0,
+      // Address choices (2026-10-14): held before filing until the client
+      // confirms on the status page; modes only, never address text.
+      addressChoiceNeeded: addressChoiceNeeded(registration),
+      addressModes: addressModesForOps(registration),
     }));
   }),
 

@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { isValidWhopTaxonomySelection } from "./whop-taxonomy";
 import { DOOLA_VALID_INDUSTRIES } from "./doola-industries";
+import {
+  ACCEPTED_BUSINESS_AGENT_ACK_VERSIONS,
+  ACCEPTED_MAILING_AGENT_ACK_VERSIONS,
+  BUSINESS_AGENT_ACK,
+  LLC_ADDRESS_MODES,
+  MAILING_AGENT_ACK,
+  agentBusinessAddressBlockedReason,
+  nonStreetAddressReason,
+  type LlcAddressMode,
+} from "./llcAddress";
 
 export const LLC_FORMATION_STATES = [
   "AL",
@@ -298,7 +308,22 @@ export const llcDraftSchema = z.object({
   industryType: trimmedDraftString(128),
   businessPhone: trimmedDraftString(32),
   website: trimmedDraftString(2048),
+  /**
+   * Legacy single switch (before 2026-10-14). Read-only now: the server
+   * derives it from the two modes below on every save (on only when both are
+   * the agent's) and ignores what a client sends, so an old browser tab can
+   * never again send the agent's address by leaving it on.
+   */
   useRegisteredAgent: z.boolean().default(false),
+  /** The principal place of business on the state filing. Default: the client's own street address. */
+  businessAddressMode: z.enum(LLC_ADDRESS_MODES).default("customer"),
+  /** Where mail and the EIN letter go. Default: the client's business address. */
+  mailingAddressMode: z.enum(LLC_ADDRESS_MODES).default("customer"),
+  /** Wording version acknowledged for the agent's address as business address ("" = not acknowledged). */
+  businessAgentAckVersion: z.string().trim().max(64).default(""),
+  /** Wording version acknowledged for mail at the agent ("" = not acknowledged). */
+  mailingAgentAckVersion: z.string().trim().max(64).default(""),
+  /** The client's own address: used for every address entry that is "customer". */
   companyAddress: llcDraftAddressSchema.default({ country: "US" }),
   expediteEin: z.boolean().default(false),
   accuracyAttested: z.boolean().default(false),
@@ -417,23 +442,152 @@ export const llcActivityStepSchema = z
     }
   });
 
-export const llcAddressStepSchema = z
-  .object({
-    useRegisteredAgent: z.boolean(),
-    companyAddress: llcDraftAddressSchema,
-  })
-  .superRefine((value, context) => {
-    if (value.useRegisteredAgent) return;
-    const addressResult = completeAddressSchema.safeParse(value.companyAddress);
+export type LlcAddressPlanInput = {
+  formationState?: string | null;
+  businessAddressMode: LlcAddressMode;
+  mailingAddressMode: LlcAddressMode;
+  businessAgentAckVersion?: string | null;
+  mailingAgentAckVersion?: string | null;
+  companyAddress: z.input<typeof llcDraftAddressSchema>;
+  businessPhone?: string | null;
+};
+
+export type LlcAddressPlanIssueCode =
+  | "state_requires_own_business_address"
+  | "business_agent_ack_missing"
+  | "mailing_agent_ack_missing"
+  | "address_incomplete"
+  | "address_not_street"
+  | "phone_missing"
+  | "phone_invalid";
+
+export type LlcAddressPlanIssue = {
+  code: LlcAddressPlanIssueCode;
+  path: (string | number)[];
+  message: string;
+};
+
+/**
+ * Every reason an order's address choices cannot be filed (2026-10-14). One
+ * rule set for the wizard (Step 3), final validation, and the server's filing
+ * gate:
+ *  - the agent's address as business address where the state refuses it;
+ *  - either agent opt-in without its acknowledgment (a wording version the
+ *    client actually saw; new orders must carry the current version);
+ *  - the client's own address used anywhere without a full street address
+ *    (no PO box, no "c/o"), or without a business phone.
+ * Messages are plain words and never contain the address itself.
+ */
+export function llcAddressPlanIssues(
+  input: LlcAddressPlanInput,
+  options: {
+    acceptedBusinessAckVersions?: readonly string[];
+    acceptedMailingAckVersions?: readonly string[];
+  } = {},
+): LlcAddressPlanIssue[] {
+  const issues: LlcAddressPlanIssue[] = [];
+  const businessVersions = options.acceptedBusinessAckVersions ?? [BUSINESS_AGENT_ACK.version];
+  const mailingVersions = options.acceptedMailingAckVersions ?? [MAILING_AGENT_ACK.version];
+
+  if (input.businessAddressMode === "registered_agent") {
+    const blocked = agentBusinessAddressBlockedReason(input.formationState);
+    if (blocked) {
+      issues.push({ code: "state_requires_own_business_address", path: ["businessAddressMode"], message: blocked });
+    }
+    if (!businessVersions.includes((input.businessAgentAckVersion ?? "").trim())) {
+      issues.push({
+        code: "business_agent_ack_missing",
+        path: ["businessAgentAckVersion"],
+        message: "Check the box to confirm, or use your own street address instead.",
+      });
+    }
+  }
+
+  if (input.mailingAddressMode === "registered_agent") {
+    if (!mailingVersions.includes((input.mailingAgentAckVersion ?? "").trim())) {
+      issues.push({
+        code: "mailing_agent_ack_missing",
+        path: ["mailingAgentAckVersion"],
+        message: "Check the box to confirm, or have mail sent to your own address instead.",
+      });
+    }
+  }
+
+  if (input.businessAddressMode === "customer" || input.mailingAddressMode === "customer") {
+    const addressResult = completeAddressSchema.safeParse(input.companyAddress);
     if (!addressResult.success) {
       for (const issue of addressResult.error.issues) {
-        context.addIssue({
-          ...issue,
-          path: ["companyAddress", ...issue.path],
+        issues.push({
+          code: "address_incomplete",
+          path: ["companyAddress", ...(issue.path as (string | number)[])],
+          message: issue.message,
         });
       }
     }
+    for (const field of ["line1", "line2"] as const) {
+      const reason = nonStreetAddressReason(input.companyAddress[field]);
+      if (reason) {
+        issues.push({
+          code: "address_not_street",
+          path: ["companyAddress", field],
+          message:
+            reason === "po_box"
+              ? "Use a street address. A PO box can't be used here."
+              : "Use your own street address here, without \"c/o\".",
+        });
+      }
+    }
+    // Provider contract, kept from before: a phone always rides with the
+    // client's own address. A phone typed wrong is called wrong, not
+    // missing: Step 3 now has its own phone field.
+    const phone = (input.businessPhone ?? "").trim();
+    const phoneCheck = phone ? e164PhoneSchema.safeParse(phone) : null;
+    if (!phone) {
+      issues.push({
+        code: "phone_missing",
+        path: ["businessPhone"],
+        message: "A business phone is required when using your own company address",
+      });
+    } else if (phoneCheck && !phoneCheck.success) {
+      issues.push({
+        code: "phone_invalid",
+        path: ["businessPhone"],
+        message: phoneCheck.error.issues[0]?.message ?? "Enter a valid business phone number",
+      });
+    }
+  }
+
+  return issues;
+}
+
+/** The same rules for an order already on file, accepting every wording version still honored. */
+export function llcAddressPlanIssuesForFiling(input: LlcAddressPlanInput): LlcAddressPlanIssue[] {
+  return llcAddressPlanIssues(input, {
+    acceptedBusinessAckVersions: ACCEPTED_BUSINESS_AGENT_ACK_VERSIONS,
+    acceptedMailingAckVersions: ACCEPTED_MAILING_AGENT_ACK_VERSIONS,
   });
+}
+
+function addAddressPlanIssues(
+  input: LlcAddressPlanInput,
+  context: { addIssue: (issue: { code: "custom"; path: (string | number)[]; message: string }) => void },
+) {
+  for (const issue of llcAddressPlanIssues(input)) {
+    context.addIssue({ code: "custom", path: issue.path, message: issue.message });
+  }
+}
+
+export const llcAddressStepSchema = z
+  .object({
+    formationState: z.string().trim().max(2).optional().or(z.literal("")),
+    businessAddressMode: z.enum(LLC_ADDRESS_MODES),
+    mailingAddressMode: z.enum(LLC_ADDRESS_MODES),
+    businessAgentAckVersion: z.string().trim().max(64).optional(),
+    mailingAgentAckVersion: z.string().trim().max(64).optional(),
+    companyAddress: llcDraftAddressSchema,
+    businessPhone: z.string().trim().max(32).optional().or(z.literal("")),
+  })
+  .superRefine((value, context) => addAddressPlanIssues(value, context));
 
 export const llcFoundersStepSchema = z
   .object({
@@ -498,6 +652,10 @@ export const llcCompleteSchema = z
       .optional()
       .transform((value) => value || undefined),
     useRegisteredAgent: z.boolean(),
+    businessAddressMode: z.enum(LLC_ADDRESS_MODES),
+    mailingAddressMode: z.enum(LLC_ADDRESS_MODES),
+    businessAgentAckVersion: z.string().trim().max(64).default(""),
+    mailingAgentAckVersion: z.string().trim().max(64).default(""),
     companyAddress: llcDraftAddressSchema,
     expediteEin: z.boolean(),
     accuracyAttested: z.literal(true, {
@@ -532,28 +690,12 @@ export const llcCompleteSchema = z
       });
     }
 
-    if (!value.useRegisteredAgent) {
-      const addressResult = completeAddressSchema.safeParse(value.companyAddress);
-      if (!addressResult.success) {
-        for (const issue of addressResult.error.issues) {
-          context.addIssue({
-            ...issue,
-            path: ["companyAddress", ...issue.path],
-          });
-        }
-      }
-
-      // Provider contract: business_phone is required unless the registered
-      // agent supplies the contact details — enforced here so an own-address
-      // order can never be rejected downstream for a missing phone.
-      if (!value.businessPhone) {
-        context.addIssue({
-          code: "custom",
-          path: ["businessPhone"],
-          message: "A business phone is required when using your own company address",
-        });
-      }
-    }
+    // Address choices (2026-10-14): the business address and the mail
+    // address are checked separately, the old single switch is ignored. The
+    // phone rule rides along (required whenever the client's own address is
+    // used), so an own-address order can never be rejected downstream for a
+    // missing phone.
+    addAddressPlanIssues(value, context);
 
     const primaryCount = value.founders.filter((founder) => founder.isPrimary).length;
     if (primaryCount !== 1) {

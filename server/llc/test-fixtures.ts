@@ -11,6 +11,11 @@ export const validDraft: LlcDraft = {
   businessPhone: "+12125550100",
   website: "https://northstar.example",
   useRegisteredAgent: false,
+  // Address choices (2026-10-14): the defaults, the client's own address for both.
+  businessAddressMode: "customer",
+  mailingAddressMode: "customer",
+  businessAgentAckVersion: "",
+  mailingAgentAckVersion: "",
   companyAddress: {
     line1: "100 Main Street",
     line2: "Suite 4",
