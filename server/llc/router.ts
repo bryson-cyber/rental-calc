@@ -6,11 +6,10 @@ import {
   llcDraftSchema,
   issuesByField,
   validateLlcStep,
-  DOOLA_DIRECT_MARKER,
-  isValidDoolaIndustry,
 } from "../../shared/llc";
 import { LLC_ADDRESS_MODES } from "../../shared/llcAddress";
 import { deriveDoolaIndustry } from "./doola";
+import { withNormalizedActivityMarker } from "./activityMarker";
 import {
   createLlcRegistration,
   findLlcRegistrationOwner,
@@ -113,6 +112,13 @@ function enforceRateLimit(userId: number, action: string, limit: number) {
 }
 
 const registrationIdInput = z.object({ id: z.number().int().positive() });
+
+/**
+ * The wizard's draft as received. A browser on an older cached bundle still
+ * sends the legacy activity marker; it is renamed here, before validation
+ * and storage, so it is never stored or sent back (activityMarker.ts).
+ */
+const draftInput = llcDraftSchema.transform(withNormalizedActivityMarker);
 const requiredActionInput = registrationIdInput.extend({
   actionId: z.number().int().positive(),
 });
@@ -301,7 +307,7 @@ export const llcRouter = router({
     }),
 
   saveDraft: protectedProcedure
-    .input(registrationIdInput.extend({ draft: llcDraftSchema }))
+    .input(registrationIdInput.extend({ draft: draftInput }))
     .mutation(async ({ ctx, input }) => {
       try {
         const bundle = await saveLlcDraft(ctx.user.id, input.id, input.draft);
@@ -336,7 +342,7 @@ export const llcRouter = router({
     .input(
       registrationIdInput.extend({
         step: z.number().int().min(1).max(5),
-        draft: llcDraftSchema,
+        draft: draftInput,
       }),
     )
     .mutation(async ({ ctx, input }) => {

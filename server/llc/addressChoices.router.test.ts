@@ -224,7 +224,7 @@ describe("llc.validateForSubmission with a draft from before the address split",
     Object.assign(bundle.registration, {
       useRegisteredAgent: true,
       // A rental preset, so the industry guard passes and only the address rule is under test.
-      businessType: "doola_direct",
+      businessType: "direct_label",
       industryGroup: "721310",
       industryType: "Short term rentals",
       ...overrides,

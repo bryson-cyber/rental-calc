@@ -5,6 +5,7 @@ import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
 import { ensureAddressColumns } from "./addressChoices";
 import { ensureFilingDetailColumns } from "./filingDetailColumns";
+import { renameLegacyActivityMarkers } from "./activityMarker";
 import { ANNUAL_REPORT_COLUMN_SETS, ANNUAL_REPORT_TABLES } from "./annualReports/tables";
 
 /** Additive, idempotent DDL for the Whop retail-payment rail columns. */
@@ -22,8 +23,9 @@ export const WHOP_RETAIL_RAIL_DDL = [
  * 0023/0024). The hosting platform pulls main and redeploys but cannot be
  * relied on to run drizzle migrations, so — like the sibling member app —
  * the LLC feature creates its own schema at startup. CREATE TABLE IF NOT
- * EXISTS plus catch-guarded ADD COLUMN statements only; never drops or
- * rewrites anything.
+ * EXISTS plus catch-guarded ADD COLUMN statements, and two idempotent data
+ * updates (the statusToken backfill, the activity-marker rename); never
+ * drops anything.
  */
 export async function ensureLlcTables(): Promise<void> {
   const db = await getDb();
@@ -316,6 +318,12 @@ export async function ensureLlcTables(): Promise<void> {
     // server/llc/doolaSubmission.ts): ops-only, shown on the orders page.
     // Same guard shape as the address columns: every order read selects it.
     await ensureFilingDetailColumns((statement) => db.execute(sql.raw(statement)));
+    // White-label (2026-10-29, server/llc/activityMarker.ts): the stored
+    // activity marker that named the provider is renamed to the neutral one,
+    // so no draft or order reads the old word back to a client. Idempotent
+    // (matches no row once applied) and leaves updatedAt as it was; a failure
+    // is logged by column and never stops the rest of this ensure.
+    await renameLegacyActivityMarkers((statement) => db.execute(sql.raw(statement)));
 
     // Whop retail-payment rail (2026-10-18). Catch-guarded so a re-run on a
     // database that already has them is a no-op. The unique indexes enforce

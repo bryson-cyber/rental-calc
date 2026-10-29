@@ -297,7 +297,7 @@ describe("the ops alert", () => {
 describe("an activity with no filing industry", () => {
   it.each([
     ["a taxonomy triple that is not a wizard choice", { businessType: "physical_product", industryGroup: "clothing_and_apparel", industryType: "not_a_wizard_choice" }],
-    ["a provider label that is not on the list", { businessType: "doola_direct", industryGroup: "doola_direct", industryType: "Workwear studio" }],
+    ["a provider label that is not on the list", { businessType: "direct_label", industryGroup: "direct_label", industryType: "Workwear studio" }],
   ])("%s is parked in action_required before any provider call, with one deduped alert, and never sent", async (_label, activity) => {
     store.get.mockResolvedValue(paidBundle(activity));
 
@@ -340,7 +340,9 @@ describe("an activity with no filing industry", () => {
     for (const [activity, industry] of [
       [{}, "Online education services"],
       [{ businessType: "services", industryGroup: "consulting", industryType: "other_management_consulting_services" }, "Business consulting"],
-      [{ businessType: "doola_direct", industryGroup: "721310", industryType: "Short term rentals" }, "Short term rentals"],
+      [{ businessType: "direct_label", industryGroup: "721310", industryType: "Short term rentals" }, "Short term rentals"],
+      // A stored row the boot rename has not reached yet (the legacy marker) still files.
+      [{ businessType: "doola_direct", industryGroup: "doola_direct", industryType: "Short term rentals" }, "Short term rentals"],
     ] as const) {
       fetchMock.mockClear();
       store.get.mockResolvedValue(paidBundle(activity));

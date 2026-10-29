@@ -19,7 +19,7 @@ import { addressPlanForRow, addressPlanIssueCodes } from "./addressChoices";
 
 type LlcRegistrationRecord = typeof llcRegistrations.$inferSelect;
 type LlcFounderRecord = typeof llcFounders.$inferSelect;
-import { DOOLA_DIRECT_MARKER } from "../../shared/llc";
+import { isDirectLabelMarker } from "./activityMarker";
 import { DOOLA_VALID_INDUSTRIES } from "../../shared/doola-industries";
 import { industryForActivity } from "./industryMap";
 import type { WhopFormationSnapshot } from "./whop";
@@ -328,9 +328,11 @@ export function deriveBusinessDescription(registration: LlcRegistrationRecord): 
  * 2026-10-27, refuses a create without `industry` (E_INDUSTRY_INVALID) and no
  * longer accepts `naicsCode`.
  *
- *  - businessType "doola_direct" (this wizard's presets and searchable list):
- *    industryType IS the label, sent only when it is on the list. A preset
- *    stores its doolaIndustry there, so the preset's label is what files.
+ *  - businessType DIRECT_LABEL_MARKER (this wizard's presets and searchable
+ *    list; a stored row may still hold the legacy value, see
+ *    activityMarker.ts): industryType IS the label, sent only when it is on
+ *    the list. A preset stores its filingIndustry there, so the preset's label
+ *    is what files.
  *  - Anything else is the three-level taxonomy (orders and drafts from before
  *    the provider-label switch, or a triple the activity step still accepts):
  *    the activity table in server/llc/industryMap.ts, which covers every
@@ -342,7 +344,7 @@ export function deriveBusinessDescription(registration: LlcRegistrationRecord): 
 export function deriveDoolaIndustry(
   registration: Pick<LlcRegistrationRecord, "businessType" | "industryGroup" | "industryType">,
 ): string | undefined {
-  if (registration.businessType === DOOLA_DIRECT_MARKER) {
+  if (isDirectLabelMarker(registration.businessType)) {
     const label = registration.industryType?.trim();
     return label && DOOLA_VALID_INDUSTRIES.has(label) ? label : undefined;
   }

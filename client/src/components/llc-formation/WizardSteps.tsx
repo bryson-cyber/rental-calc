@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { LlcDraft } from "@shared/llc";
 import {
+  DIRECT_LABEL_MARKER,
   LLC_ACTIVITY_CHOICES,
   LLC_ACTIVITY_PRESETS,
   LLC_ENTITY_SUFFIXES,
@@ -100,7 +101,8 @@ type StepProps = {
   onChange: (draft: LlcDraft) => void;
 };
 
-// Legacy taxonomy reference removed — industry now uses Doola-direct system
+// Industry: a one-tap preset or a label from the searchable list, saved
+// under DIRECT_LABEL_MARKER (shared/llc.ts), or an app activity choice.
 
 export function BusinessStep({ draft, errors, onChange }: StepProps) {
   const patch = (values: Partial<LlcDraft>) => onChange({ ...draft, ...values });
@@ -186,7 +188,7 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
         </p>
         <div className="flex flex-wrap gap-2">
           {LLC_ACTIVITY_PRESETS.map((preset) => {
-            const active = draft.industryType === preset.doolaIndustry;
+            const active = draft.industryType === preset.filingIndustry;
             return (
               <button
                 key={preset.key}
@@ -195,9 +197,9 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
                 onClick={() =>
                   onChange({
                     ...draft,
-                    businessType: "doola_direct",
+                    businessType: DIRECT_LABEL_MARKER,
                     industryGroup: preset.naicsCode,
-                    industryType: preset.doolaIndustry,
+                    industryType: preset.filingIndustry,
                   })
                 }
                 className={`rounded-xl border p-4 text-left transition-colors ${
@@ -269,8 +271,8 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
           onChange={(value) =>
             onChange({
               ...draft,
-              businessType: "doola_direct",
-              industryGroup: "doola_direct",
+              businessType: DIRECT_LABEL_MARKER,
+              industryGroup: DIRECT_LABEL_MARKER,
               industryType: value,
             })
           }
