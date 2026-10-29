@@ -223,6 +223,52 @@ export const LLC_ACTIVITY_PRESETS = [
 export const DOOLA_DIRECT_MARKER = "doola_direct";
 
 /**
+ * Activity choices this app offers beside the one-tap presets and the
+ * searchable industry list (the owner, 2026-10-29: "could you add this NAICS
+ * code? NAICS Code: 541618 – Other Management Consulting Services"). Each is
+ * keyed in the three-level activity style (businessType / industryGroup /
+ * industryType), in the existing services / consulting group, so the order
+ * keeps the client's own activity; server/llc/industryMap.ts maps it to the
+ * filing industry label sent with the filing.
+ */
+export const LLC_ACTIVITY_CHOICES = [
+  {
+    key: "other_management_consulting",
+    label: "Other management consulting services",
+    description: "Management consulting for businesses and organizations",
+    naicsCode: "541618",
+    businessType: "services",
+    industryGroup: "consulting",
+    industryType: "other_management_consulting_services",
+  },
+] as const;
+
+export type LlcActivityChoice = (typeof LLC_ACTIVITY_CHOICES)[number];
+
+/** The app-offered activity choice these keys select, if any. */
+export function findLlcActivityChoice(activity: {
+  businessType?: string | null;
+  industryGroup?: string | null;
+  industryType?: string | null;
+}): LlcActivityChoice | undefined {
+  return LLC_ACTIVITY_CHOICES.find(
+    (choice) =>
+      choice.businessType === activity.businessType &&
+      choice.industryGroup === activity.industryGroup &&
+      choice.industryType === activity.industryType,
+  );
+}
+
+/** How an activity reads to the client: an app choice by its label, otherwise the stored industry. */
+export function llcActivityLabel(activity: {
+  businessType?: string | null;
+  industryGroup?: string | null;
+  industryType?: string | null;
+}): string {
+  return findLlcActivityChoice(activity)?.label ?? activity.industryType ?? "";
+}
+
+/**
  * Returns true if the industry value is a valid Doola industry label.
  * Used for both step-level and complete-schema validation.
  */
@@ -426,13 +472,15 @@ export const llcActivityStepSchema = z
       }
       return;
     }
-    // Legacy path: whop-taxonomy validation for old registrations
+    // Legacy path: whop-taxonomy validation for old registrations, plus this
+    // app's own activity choices (LLC_ACTIVITY_CHOICES).
     if (
       !isValidWhopTaxonomySelection(
         value.businessType,
         value.industryGroup,
         value.industryType,
-      )
+      ) &&
+      !findLlcActivityChoice(value)
     ) {
       context.addIssue({
         code: "custom",
@@ -681,7 +729,8 @@ export const llcCompleteSchema = z
         value.businessType,
         value.industryGroup,
         value.industryType,
-      )
+      ) &&
+      !findLlcActivityChoice(value)
     ) {
       context.addIssue({
         code: "custom",

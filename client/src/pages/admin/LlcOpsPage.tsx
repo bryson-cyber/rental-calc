@@ -30,6 +30,7 @@ import {
   Mail,
   PenLine,
   RefreshCw,
+  RotateCcw,
   Shield,
   Sparkles,
   Trash2,
@@ -156,6 +157,39 @@ function GeneratePaymentLinkButton({ orderId }: { orderId: number }) {
     >
       {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
       Generate payment link
+    </Button>
+  );
+}
+
+/**
+ * Retry filing (2026-10-29): the one way to re-file a paid filing the
+ * provider refused, or one parked for review. Nothing automatic resends it.
+ * Sent as the order stands now, so ops correct it first; the answer
+ * (accepted, or what the provider refused) comes back in the toast.
+ */
+function RetryFilingButton({ orderId }: { orderId: number }) {
+  const utils = trpc.useUtils();
+  const mutation = trpc.llcOps.retryFiling.useMutation({
+    onSuccess: (result) => {
+      void utils.llcOps.listAll.invalidate();
+      if (result.outcome === 'filed' || result.outcome === 'already_filed') toast.success(result.message);
+      else toast.error(result.message);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  return (
+    <Button
+      size="sm"
+      className="h-8 rounded-lg px-3 text-xs font-semibold"
+      disabled={mutation.isPending}
+      onClick={() => {
+        if (window.confirm('Send this filing again? Correct what the provider refused first; it is sent as the order stands now.')) {
+          mutation.mutate({ id: orderId });
+        }
+      }}
+    >
+      {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+      <span className="ml-1">Retry filing</span>
     </Button>
   );
 }
@@ -1358,6 +1392,11 @@ export default function LlcOpsPage() {
                               {order.lastErrorMessage}
                             </p>
                           ) : null}
+                          {order.providerErrorDetail ? (
+                            <p className="mt-1 max-w-[18rem] break-words text-[11px] font-medium leading-4 text-red-600">
+                              Provider refused: {order.providerErrorDetail}
+                            </p>
+                          ) : null}
                           {order.addressChoiceNeeded ? (
                             <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
                               Address choice needed
@@ -1393,6 +1432,7 @@ export default function LlcOpsPage() {
                             ) : order.status === 'payment_required' ? (
                               <GeneratePaymentLinkButton orderId={order.id} />
                             ) : null}
+                            {order.canRetryFiling ? <RetryFilingButton orderId={order.id} /> : null}
                             <Button
                               size="sm"
                               variant="outline"

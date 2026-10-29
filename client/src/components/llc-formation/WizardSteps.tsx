@@ -3,7 +3,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { LlcDraft } from "@shared/llc";
-import { LLC_ACTIVITY_PRESETS, LLC_ENTITY_SUFFIXES, LLC_FORMATION_STATES } from "@shared/llc";
+import {
+  LLC_ACTIVITY_CHOICES,
+  LLC_ACTIVITY_PRESETS,
+  LLC_ENTITY_SUFFIXES,
+  LLC_FORMATION_STATES,
+  findLlcActivityChoice,
+  llcActivityLabel,
+} from "@shared/llc";
 import { withAddressChoices, withFormationState } from "@shared/llcAddress";
 import { IndustryCombobox } from "./IndustryCombobox";
 import { AlertCircle, ArrowUpRight, Plus, Trash2 } from "lucide-react";
@@ -205,6 +212,47 @@ export function ActivityStep({ draft, errors, onChange }: StepProps) {
                 </span>
                 <span className="mt-1.5 block text-[11px] font-medium text-primary">
                   NAICS: {preset.naicsCode}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Professional services (owner, 2026-10-29: NAICS 541618). Saved with
+          its own activity keys (LLC_ACTIVITY_CHOICES), not a list label. */}
+      <div className="mb-6">
+        <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Professional services
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {LLC_ACTIVITY_CHOICES.map((choice) => {
+            const active = findLlcActivityChoice(draft)?.key === choice.key;
+            return (
+              <button
+                key={choice.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  onChange({
+                    ...draft,
+                    businessType: choice.businessType,
+                    industryGroup: choice.industryGroup,
+                    industryType: choice.industryType,
+                  })
+                }
+                className={`rounded-xl border p-4 text-left transition-colors ${
+                  active
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border bg-card hover:border-primary/40"
+                }`}
+              >
+                <span className="block text-sm font-semibold text-foreground">{choice.label}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {choice.description}
+                </span>
+                <span className="mt-1.5 block text-[11px] font-medium text-primary">
+                  NAICS: {choice.naicsCode}
                 </span>
               </button>
             );
@@ -601,7 +649,7 @@ export function ReviewStep({
             <EditSection label="activity" onClick={() => onEdit(2)} />
           </div>
           <dl className="mt-1 divide-y divide-border">
-            <SummaryLine label="Industry" value={draft.industryType || "Not selected"} />
+            <SummaryLine label="Industry" value={llcActivityLabel(draft) || "Not selected"} />
           </dl>
         </section>
 

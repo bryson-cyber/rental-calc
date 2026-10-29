@@ -625,6 +625,7 @@ export async function submitLlcRegistration(params: {
             message:
               "A formation already exists on this connected account (likely from an earlier interrupted attempt). Retrieve the existing checkout from the Whop dashboard instead of resubmitting.",
             uncertain: true,
+            provider: "whop",
           }),
         );
         const conflicted = await getLlcRegistrationById(
@@ -852,6 +853,7 @@ export async function submitLlcRegistration(params: {
           errorType: failure.errorType,
           message: failure.message,
           uncertain: failure.uncertain,
+          provider: "whop",
         }),
       );
     }

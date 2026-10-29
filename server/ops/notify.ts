@@ -242,24 +242,46 @@ export function statusChangeAlert(params: {
   };
 }
 
+/**
+ * Internal ops alert for a filing that did not go through. Names the filing
+ * provider when the caller knows it (2026-10-29, as in Her First Order's PR
+ * #397: doola filings were reported as "the automatic Whop submission");
+ * never sent to a client.
+ */
 export function submissionProblemAlert(params: {
   registrationId: number;
   legalName: string;
   errorType: string;
   message: string;
   uncertain: boolean;
+  provider?: "doola" | "whop";
+  /** The provider's own reason (error code, field:code pairs), when it gave one. */
+  providerDetail?: string | null;
 }): OpsAlert {
   const legalName = clean(params.legalName, 180);
+  const what =
+    params.provider === "doola"
+      ? "The doola filing"
+      : params.provider === "whop"
+        ? "The automatic Whop submission"
+        : "The automatic filing";
+  const dashboard =
+    params.provider === "doola"
+      ? "the doola partner portal"
+      : params.provider === "whop"
+        ? "the Whop dashboard"
+        : "the provider's dashboard";
   return {
     subject: `ATTENTION: Order #${params.registrationId} (${legalName}) needs review`,
     lines: [
-      `The automatic Whop submission for order #${params.registrationId} did not complete.`,
+      `${what} for order #${params.registrationId} did not complete.`,
       ``,
       `Company: ${legalName}`,
       `Error type: ${clean(params.errorType, 128)}`,
+      ...(params.providerDetail ? [`Provider said: ${clean(params.providerDetail, 500)}`] : []),
       `Detail: ${clean(params.message, 500)}`,
       params.uncertain
-        ? `Outcome is UNCERTAIN — check the Whop dashboard before retrying so a duplicate is not created.`
+        ? `Outcome is UNCERTAIN — check ${dashboard} before retrying so a duplicate is not created.`
         : `The client's draft is intact. Review the ops dashboard to correct and retry.`,
     ],
   };

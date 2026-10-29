@@ -217,6 +217,26 @@ export function registrationRowToSummary(row: RegistrationRow) {
 }
 
 /**
+ * A paid doola filing with no company yet, failed or parked for review: ops
+ * may re-file it with Retry filing (llcOps.retryFiling, 2026-10-29).
+ */
+export function opsCanRetryFiling(registration: {
+  provider: string | null;
+  isTest: boolean;
+  status: string;
+  retailPaidAt: Date | null;
+  doolaCompanyId: string | null;
+}): boolean {
+  return (
+    registration.provider === "doola" &&
+    !registration.isTest &&
+    Boolean(registration.retailPaidAt) &&
+    !registration.doolaCompanyId &&
+    (registration.status === "failed" || registration.status === "action_required")
+  );
+}
+
+/**
  * Operations view. Includes the wholesale checkout, costs, margin, provider
  * identifiers, the sanitized provider snapshot (documents, signatures, EIN and
  * state flags), and the full history with internal notes.
@@ -248,6 +268,10 @@ export function bundleToOpsView(bundle: RegistrationBundle) {
     safeErrorMessage: registration.lastErrorMessage,
     lastErrorType: registration.lastErrorType,
     canRetry: registration.retryable,
+    // Ops-only: the provider's reason for refusing the last filing, and
+    // whether Retry filing applies. llcOps.retryFiling re-checks both.
+    providerErrorDetail: registration.providerErrorDetail ?? null,
+    canRetryFiling: opsCanRetryFiling(registration),
     // Address choices (2026-10-14): modes only, plus the evidence stamped at
     // submit, at the filing lock and on a status-page confirmation.
     addressChoiceNeeded: addressChoiceNeeded(registration),

@@ -19,7 +19,8 @@
  *     conditional UPDATE (idempotent per Whop payment id).
  *  3. Paid -> retailPaidAt -> the same path the Stripe webhook uses: client
  *     payment-confirmed email, ops alert, and (when LLC_AUTO_FILE_ENABLED)
- *     the pre-filing industry guard then fileDoolaRegistration.
+ *     fileDoolaRegistration, whose own gates hold an activity with no filing
+ *     industry and a filing the provider already refused (2026-10-29).
  *
  * White-label: nothing this module returns to a client or emails a client
  * names the filing provider. Whop's own branding inside Whop's checkout page
@@ -35,13 +36,11 @@ import { getStatePricing } from "./pricing";
 import {
   findLlcRegistrationOwner,
   getLlcRegistrationById,
-  transitionLlcStatus,
   updateLlcRegistrationProviderFields,
 } from "./store";
 import { fileDoolaRegistration } from "./doolaSubmission";
 import { sendPaymentConfirmedEmail } from "./clientEmails";
-import { sendOpsAlert, submissionProblemAlert } from "../ops/notify";
-import { deriveDoolaIndustry } from "./doola";
+import { sendOpsAlert } from "../ops/notify";
 
 export const WHOP_RETAIL_API_BASE = "https://api.whop.com/api/v1";
 export const WHOP_RETAIL_API_VERSION = "2026-09-02-2";
@@ -504,7 +503,12 @@ export type LlcWhopPaymentResult = {
     | "filing_failed"
     | "filing_held"
     | "already_paid"
-    | "action_required";
+    /**
+     * The filing step held the order (fileDoolaRegistration "held"): an
+     * activity with no filing industry (parked in action_required), or a
+     * filing the provider already refused, which waits for Retry filing.
+     */
+    | "held_for_review";
   registrationId: number;
   paymentId: string;
 };
@@ -531,42 +535,17 @@ export async function fetchWhopPayment(
 
 /**
  * Post-payment path, mirroring the Stripe webhook's handleCheckoutCompleted:
- * pre-filing industry guard, then fileDoolaRegistration — only when
- * LLC_AUTO_FILE_ENABLED (otherwise ops' Mark paid / retry files it).
+ * fileDoolaRegistration — only when LLC_AUTO_FILE_ENABLED (otherwise ops'
+ * Mark paid / Retry filing files it). The filing step's own gates decide
+ * what happens (2026-10-29): an activity with no filing industry is parked
+ * before any provider call (this function used to carry its own copy of that
+ * guard), and a filing the provider already refused is held for Retry
+ * filing. Both answer "held_for_review", which callers treat as handled.
  */
 async function fileAfterRetailPayment(
-  registration: { id: number; userId: number; legalName: string | null; entitySuffix: string },
+  registration: { id: number; userId: number },
 ): Promise<LlcWhopPaymentResult["outcome"]> {
   if (!ENV.llcAutoFileEnabled) return "filing_held";
-  const bundle = await getLlcRegistrationById(registration.userId, registration.id);
-  const industry = bundle ? deriveDoolaIndustry(bundle.registration) : undefined;
-  if (!industry) {
-    await transitionLlcStatus({
-      userId: registration.userId,
-      registrationId: registration.id,
-      toStatus: "action_required",
-      source: "system",
-      note: "Industry could not be mapped to a valid filing category. Our team will resolve this.",
-      expectedStatuses: ["payment_required", "ready"],
-      updates: {
-        lastErrorType: "industry_unmappable",
-        lastErrorMessage:
-          "Your selected industry could not be mapped to a valid filing category. Our team is reviewing and will update your filing shortly.",
-        retryable: false,
-      },
-    }).catch(() => {});
-    void sendOpsAlert(
-      submissionProblemAlert({
-        registrationId: registration.id,
-        legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
-        errorType: "industry_unmappable",
-        message:
-          "Payment received (Whop) but industry cannot be resolved to a valid Doola label. Registration businessType/industryType needs manual correction before filing can proceed.",
-        uncertain: false,
-      }),
-    ).catch(() => {});
-    return "action_required";
-  }
   try {
     const filing = await fileDoolaRegistration({
       userId: registration.userId,
@@ -575,6 +554,7 @@ async function fileAfterRetailPayment(
     if (filing.outcome === "filed") return "filed";
     if (filing.outcome === "already_filed") return "already_filed";
     if (filing.outcome === "failed") return "filing_failed";
+    if (filing.outcome === "held") return "held_for_review";
     return "filing_started";
   } catch (error) {
     console.error(`[WhopRetail] Auto-file after payment failed for #${registration.id}:`, error);
@@ -645,15 +625,16 @@ export async function processLlcWhopPayment(input: {
     if (registration.retailWhopPaymentId !== input.paymentId) {
       throw new TRPCError({ code: "CONFLICT", message: "This filing already has a different confirmed payment." });
     }
-    // Paid but filing never started (e.g. crash between claim and file):
-    // resume filing only from payment_required — never auto-retry a failed
-    // filing, which stays an ops decision exactly as on the Stripe rail.
-    const outcome =
-      registration.status === "payment_required" && !registration.doolaCompanyId
-        ? await fileAfterRetailPayment(registration)
-        : registration.doolaCompanyId
-          ? "already_filed"
-          : "already_paid";
+    // Already applied: the webhook, the client's return and the payment
+    // sweep all re-enter here (a crash between claim and file, a retryable
+    // failure). The filing step decides whether to file (2026-10-29): it
+    // holds a filing the provider refused until ops press Retry filing, and
+    // re-files a retryable or uncertain failure under the same idempotency
+    // key. This replaces the earlier rule here (resume only from
+    // payment_required) so the two never disagree.
+    const outcome = registration.doolaCompanyId
+      ? "already_filed"
+      : await fileAfterRetailPayment(registration);
     return {
       outcome: outcome === "filing_held" ? "already_paid" : outcome,
       registrationId: registration.id,

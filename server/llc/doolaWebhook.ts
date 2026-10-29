@@ -97,6 +97,7 @@ export async function processDoolaEvent(event: DoolaWebhookEvent): Promise<void>
       submissionProblemAlert({
         registrationId: 0,
         legalName: "ALL FILINGS",
+        provider: "doola",
         errorType: "webhook_disabled",
         message:
           "Doola disabled the webhook endpoint after repeated delivery failures. Status updates fall back to polling — re-enable the endpoint in the Doola Partner Portal.",
@@ -150,6 +151,7 @@ export async function processDoolaEvent(event: DoolaWebhookEvent): Promise<void>
       submissionProblemAlert({
         registrationId: registration.id,
         legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+        provider: "doola",
         errorType: `formation_failed_${event.eventPayload?.reasonCode ?? "unknown"}`,
         message: "Doola reported the formation FAILED. Review the order and contact support if needed.",
         uncertain: true,
@@ -164,6 +166,7 @@ export async function processDoolaEvent(event: DoolaWebhookEvent): Promise<void>
       submissionProblemAlert({
         registrationId: registration.id,
         legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+        provider: "doola",
         errorType: "signature_reminder",
         message: `${form} is still awaiting the founder's signature (${event.eventPayload?.daysSinceRequested ?? "?"} days). Re-send the signing link to the client under your brand.`,
         uncertain: false,

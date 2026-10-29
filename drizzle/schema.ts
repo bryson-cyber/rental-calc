@@ -2937,6 +2937,15 @@ export const llcRegistrations = mysqlTable(
     lastErrorType: varchar("lastErrorType", { length: 128 }),
     lastErrorMessage: varchar("lastErrorMessage", { length: 500 }),
     retryable: boolean("retryable").default(false).notNull(),
+    /**
+     * Ops-only: why the provider refused the last filing attempt, as the
+     * error code and field:code pairs it returned (2026-10-29, ported from
+     * Her First Order's PR #397, where a 400 was re-filed 62 times and nobody
+     * could see which field failed). Never client-facing; cleared when the
+     * filing is accepted. Added by the boot-time guard in
+     * server/llc/filingDetailColumns.ts (no drizzle migration).
+     */
+    providerErrorDetail: varchar("providerErrorDetail", { length: 500 }),
     submissionKey: varchar("submissionKey", { length: 64 }),
     /**
      * Unguessable per-registration token (48 hex chars) carried by email
