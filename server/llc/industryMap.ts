@@ -6,9 +6,9 @@
  * is no longer accepted; HFO's order #32 ("workwear") was refused that way.
  *
  * This app's wizard (client/src/components/llc-formation/WizardSteps.tsx)
- * writes the provider's own label: businessType "doola_direct" (a one-tap
- * preset or the searchable list from shared/doola-industries.ts), with
- * industryType holding the label. deriveDoolaIndustry in doola.ts reads that
+ * writes the provider's own label: businessType DIRECT_LABEL_MARKER (a
+ * one-tap preset or the searchable list from shared/doola-industries.ts),
+ * with industryType holding the label. deriveDoolaIndustry in doola.ts reads that
  * label first. Everything else is the three-level taxonomy of
  * shared/whop-taxonomy.ts (2,033 choices in 140 groups, the same file as
  * HFO's): drafts and orders from before the provider-label switch, and any

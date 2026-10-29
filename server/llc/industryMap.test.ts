@@ -7,7 +7,7 @@
  * label that is on this app's reference list (shared/doola-industries.ts)
  * AND on the provider's live list fetched 2026-10-29
  * (fixtures/provider-industries-2026-10-29.json):
- *  1. a one-tap preset (businessType "doola_direct", industryType = its label);
+ *  1. a one-tap preset (businessType DIRECT_LABEL_MARKER, industryType = its label);
  *  2. any label from the searchable list (the same shape);
  *  3. the app's own choices (LLC_ACTIVITY_CHOICES; the owner's NAICS 541618);
  *  4. every taxonomy choice (orders and drafts from before the provider-label
@@ -20,7 +20,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DOOLA_INDUSTRY_OPTIONS, DOOLA_VALID_INDUSTRIES } from "../../shared/doola-industries";
 import {
-  DOOLA_DIRECT_MARKER,
+  DIRECT_LABEL_MARKER,
   LLC_ACTIVITY_CHOICES,
   LLC_ACTIVITY_PRESETS,
   findLlcActivityChoice,
@@ -47,14 +47,14 @@ const taxonomyChoices = Object.entries(taxonomy).flatMap(([businessType, groups]
 
 /** Exactly what the wizard's preset tiles write (client/src/components/llc-formation/WizardSteps.tsx). */
 const presetActivities = LLC_ACTIVITY_PRESETS.map((preset) => ({
-  businessType: DOOLA_DIRECT_MARKER,
+  businessType: DIRECT_LABEL_MARKER,
   industryGroup: preset.naicsCode,
-  industryType: preset.doolaIndustry,
+  industryType: preset.filingIndustry,
 }));
 /** Exactly what the searchable list writes for each label it offers. */
 const listActivities = DOOLA_INDUSTRY_OPTIONS.map((option) => ({
-  businessType: DOOLA_DIRECT_MARKER,
-  industryGroup: DOOLA_DIRECT_MARKER,
+  businessType: DIRECT_LABEL_MARKER,
+  industryGroup: DIRECT_LABEL_MARKER,
   industryType: option.value,
 }));
 const appChoiceActivities = LLC_ACTIVITY_CHOICES.map(({ businessType, industryGroup, industryType }) => ({
@@ -108,7 +108,7 @@ describe("every wizard activity has a filing industry on the live list", () => {
     expect(presetActivities.length).toBeGreaterThan(0);
     for (const [index, activity] of presetActivities.entries()) {
       const label = deriveDoolaIndustry(activity);
-      expect(label).toBe(LLC_ACTIVITY_PRESETS[index].doolaIndustry);
+      expect(label).toBe(LLC_ACTIVITY_PRESETS[index].filingIndustry);
       expect(LIVE_LABELS.has(label!), label).toBe(true);
     }
   });
@@ -165,8 +165,8 @@ describe("every wizard activity has a filing industry on the live list", () => {
     expect(industryForActivity({ businessType: "services", industryGroup: "clothing_and_apparel", industryType: "workwear" })).toBeUndefined();
     expect(industryForActivity({ businessType: null, industryGroup: null, industryType: null })).toBeUndefined();
     // A provider-label row whose label is not on the list (an old or typed value).
-    expect(deriveDoolaIndustry({ businessType: DOOLA_DIRECT_MARKER, industryGroup: DOOLA_DIRECT_MARKER, industryType: "Workwear studio" })).toBeUndefined();
-    expect(deriveDoolaIndustry({ businessType: DOOLA_DIRECT_MARKER, industryGroup: DOOLA_DIRECT_MARKER, industryType: "" })).toBeUndefined();
+    expect(deriveDoolaIndustry({ businessType: DIRECT_LABEL_MARKER, industryGroup: DIRECT_LABEL_MARKER, industryType: "Workwear studio" })).toBeUndefined();
+    expect(deriveDoolaIndustry({ businessType: DIRECT_LABEL_MARKER, industryGroup: DIRECT_LABEL_MARKER, industryType: "" })).toBeUndefined();
     // The app's choice keys only count together.
     expect(deriveDoolaIndustry({ ...CONSULTING_541618, industryGroup: "professional_services" })).toBeUndefined();
   });
@@ -226,7 +226,7 @@ describe("the payload builder", () => {
     const preset = LLC_ACTIVITY_PRESETS[0];
     const { registration, founders } = rowWith(presetActivities[0]);
     const body = mapRegistrationToDoolaCompany(registration, founders, "cus_1");
-    expect(body.industry).toBe(preset.doolaIndustry);
+    expect(body.industry).toBe(preset.filingIndustry);
     expect(JSON.stringify(body)).not.toContain(`"${preset.naicsCode}"`);
   });
 

@@ -144,8 +144,8 @@ describe("LLC activity presets", () => {
     const { DOOLA_VALID_INDUSTRIES } = await import("../../shared/doola-industries");
     for (const preset of LLC_ACTIVITY_PRESETS) {
       expect(
-        DOOLA_VALID_INDUSTRIES.has(preset.doolaIndustry),
-        `Preset "${preset.key}" has invalid doolaIndustry: "${preset.doolaIndustry}"`,
+        DOOLA_VALID_INDUSTRIES.has(preset.filingIndustry),
+        `Preset "${preset.key}" has invalid filingIndustry: "${preset.filingIndustry}"`,
       ).toBe(true);
     }
   });

@@ -17,7 +17,7 @@ import {
   statusChangeAlert,
   submissionProblemAlert,
 } from "../ops/notify";
-import { bundleToDraft, bundleToRegistrationView } from "./domain";
+import { bundleToDraft, bundleToRegistrationView, clientSafeErrorMessage } from "./domain";
 import { unsavedLegacyAddressChoiceErrors, withAddressChoiceEvidence } from "./addressChoices";
 import {
   sendFormationCompleteEmail,
@@ -295,7 +295,7 @@ export async function submitLlcRegistration(params: {
       outcome: "action_required" as const,
       registration: bundleToRegistrationView(validated.bundle),
       message:
-        existing.lastErrorMessage ??
+        clientSafeErrorMessage(existing.lastErrorMessage) ??
         "This submission needs attention before it can continue.",
     };
   }
@@ -337,7 +337,7 @@ export async function submitLlcRegistration(params: {
       outcome: "action_required" as const,
       registration: bundleToRegistrationView(validated.bundle),
       message:
-        existing.lastErrorMessage ??
+        clientSafeErrorMessage(existing.lastErrorMessage) ??
         "This submission needs attention before it can be retried.",
     };
   }

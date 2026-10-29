@@ -62,7 +62,7 @@ function makeRow(overrides: Record<string, unknown> = {}) {
     legalName: "Amara Rose Stays",
     entitySuffix: "LLC",
     formationState: "OK",
-    businessType: "doola_direct",
+    businessType: "direct_label",
     industryGroup: "721310",
     industryType: "Short term rentals",
     businessPhone: "+19185550100",

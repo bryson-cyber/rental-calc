@@ -16,6 +16,7 @@ import {
   filingStartsOnAddressConfirm,
 } from "./addressChoices";
 import type { WhopFormationSnapshot } from "./whop";
+import { normalizeActivityMarker } from "./activityMarker";
 
 type RegistrationBundle = NonNullable<
   Awaited<ReturnType<typeof getLlcRegistrationById>>
@@ -29,16 +30,26 @@ function text(value: string | null | undefined): string {
   return value ?? "";
 }
 
+/** Either provider's name, anywhere in a text (white-label: never in a client payload). */
+const PROVIDER_NAME = /doola|whop/i;
+
+/** Provider-written text for a client payload: kept as is unless it names a provider. */
+function clientSafeProviderText(value: string, fallback: string): string {
+  return PROVIDER_NAME.test(value) ? fallback : value;
+}
+
 /**
- * Belt-and-braces for rows written before the white-label conversion: any
- * stored error text naming the provider is replaced with neutral copy before
- * it can reach a client.
+ * Belt-and-braces for rows written before the white-label conversion, and
+ * for a provider's own text copied into the row (a required action's
+ * reason): any stored error text naming a provider is replaced with neutral
+ * copy before it can reach a client.
  */
-function clientSafeErrorMessage(message: string | null): string | null {
+export function clientSafeErrorMessage(message: string | null): string | null {
   if (!message) return message;
-  return /whop/i.test(message)
-    ? "Our team is reviewing this filing. No action is needed from you right now."
-    : message;
+  return clientSafeProviderText(
+    message,
+    "Our team is reviewing this filing. No action is needed from you right now.",
+  );
 }
 
 /**
@@ -88,8 +99,10 @@ export function bundleToDraft(bundle: RegistrationBundle): LlcDraft {
     legalName: text(registration.legalName),
     entitySuffix: registration.entitySuffix,
     formationState: text(registration.formationState),
-    businessType: text(registration.businessType),
-    industryGroup: text(registration.industryGroup),
+    // A row the boot rename has not reached yet still holds the legacy
+    // activity marker; the client only ever sees the current one.
+    businessType: text(normalizeActivityMarker(registration.businessType)),
+    industryGroup: text(normalizeActivityMarker(registration.industryGroup)),
     industryType: text(registration.industryType),
     businessPhone: text(registration.businessPhone),
     website: text(registration.website),
@@ -177,8 +190,12 @@ export function bundleToRegistrationView(bundle: RegistrationBundle) {
               action.actionCode === "FORMATION_SIGNATURE_SS4_PENDING"
             ? ("ss4_signature" as const)
             : ("support" as const),
-      title: action.actionName,
-      reason: action.reason,
+      // The provider's own wording: shown as is unless it names a provider.
+      title: clientSafeProviderText(action.actionName, "Filing action needed"),
+      reason: clientSafeProviderText(
+        action.reason,
+        "This step is needed to finish your filing. Our team can help with any questions.",
+      ),
       status: action.status,
       open: action.open,
       canRespond:

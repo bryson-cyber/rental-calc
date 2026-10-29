@@ -170,57 +170,64 @@ export const LLC_CLIENT_STATUS_LABELS: Record<
 };
 
 /**
- * One-tap activity presets: common client profiles with direct Doola industry labels.
- * Each preset stores the exact Doola industry string (validated against their API).
- * The wizard uses businessType="doola_direct" as a marker that the new system is in use.
+ * One-tap activity presets: common client profiles with the filing service's
+ * own industry labels. Each preset's filingIndustry is the exact label from
+ * the reference list (validated against the provider's API). The wizard saves
+ * businessType = DIRECT_LABEL_MARKER to say industryType holds such a label.
  */
 export const LLC_ACTIVITY_PRESETS = [
   {
     key: "short_term_rental",
     label: "Short-term rental",
     description: "Airbnb, vacation rental, or VRBO property business",
-    doolaIndustry: "Short term rentals",
+    filingIndustry: "Short term rentals",
     naicsCode: "721310",
   },
   {
     key: "airbnb_rentals",
     label: "Airbnb rentals",
     description: "Airbnb-specific rental hosting business",
-    doolaIndustry: "Airbnb rentals",
+    filingIndustry: "Airbnb rentals",
     naicsCode: "721310",
   },
   {
     key: "vacation_rentals",
     label: "Vacation rentals",
     description: "Vacation rental or seasonal property business",
-    doolaIndustry: "Vacation rentals",
+    filingIndustry: "Vacation rentals",
     naicsCode: "531110",
   },
   {
     key: "rental_property",
     label: "Rental property",
     description: "Long-term or mixed rental property management",
-    doolaIndustry: "Rental property",
+    filingIndustry: "Rental property",
     naicsCode: "531110",
   },
   {
     key: "real_estate_investing",
     label: "Real estate investing",
     description: "Real estate investment and holding company",
-    doolaIndustry: "Real estate investing",
+    filingIndustry: "Real estate investing",
     naicsCode: "531390",
   },
   {
     key: "property_management",
     label: "Property management",
     description: "Managing rental properties for owners",
-    doolaIndustry: "Property management",
+    filingIndustry: "Property management",
     naicsCode: "531311",
   },
 ] as const;
 
-/** Marker value for businessType when using the Doola-direct industry system */
-export const DOOLA_DIRECT_MARKER = "doola_direct";
+/**
+ * Marker value for businessType (and industryGroup, for a label picked from
+ * the searchable list): industryType holds the filing service's own industry
+ * label. White-label (2026-10-29): this file ships in the browser bundle, so
+ * the marker names no provider. The value it replaced is accepted and renamed
+ * server-side only (server/llc/activityMarker.ts), never here.
+ */
+export const DIRECT_LABEL_MARKER = "direct_label";
 
 /**
  * Activity choices this app offers beside the one-tap presets and the
@@ -461,8 +468,8 @@ export const llcActivityStepSchema = z
     industryType: requiredTrimmedString("Industry", 128),
   })
   .superRefine((value, context) => {
-    // New system: businessType === "doola_direct" means industryType is a Doola label
-    if (value.businessType === DOOLA_DIRECT_MARKER) {
+    // businessType === DIRECT_LABEL_MARKER: industryType is a label from the reference list
+    if (value.businessType === DIRECT_LABEL_MARKER) {
       if (!isValidDoolaIndustry(value.industryType)) {
         context.addIssue({
           code: "custom",
@@ -715,8 +722,8 @@ export const llcCompleteSchema = z
       .max(10, "A maximum of 10 founders is supported"),
   })
   .superRefine((value, context) => {
-    // New system: businessType === "doola_direct" means industryType is a Doola label
-    if (value.businessType === DOOLA_DIRECT_MARKER) {
+    // businessType === DIRECT_LABEL_MARKER: industryType is a label from the reference list
+    if (value.businessType === DIRECT_LABEL_MARKER) {
       if (!isValidDoolaIndustry(value.industryType)) {
         context.addIssue({
           code: "custom",
