@@ -23,6 +23,8 @@ import {
   DoolaConfigurationError,
   createDoolaCompany,
   createDoolaCustomer,
+  deriveDoolaIndustry,
+  doolaErrorDetail,
   extractDoolaFiledName,
   getDoolaDocumentDownload,
   getDoolaEnvironment,
@@ -48,6 +50,7 @@ import {
 import { sendDocumentsReleasedEmail, sendFormationCompleteEmail } from "./clientEmails";
 import { buildClientOperatingAgreementPdf, demoStateName } from "./demo";
 import { isTestRegistration } from "./demoMarker";
+import { sendOpsAlertWithin } from "./opsAlertClaim";
 import { llcDocuments, llcEmailLog } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { and, eq, isNull } from "drizzle-orm";
@@ -64,6 +67,42 @@ import {
 
 /** llc_email_log claim type for the address-choice hold alert (one per order). */
 export const OPS_ADDRESS_HOLD_ALERT_TYPE = "ops_address_choice_hold";
+
+/** llc_email_log claim type prefix for a filing-problem alert: one per order and error type per window. */
+export const OPS_FILING_PROBLEM_ALERT_TYPE = "ops_filing_problem";
+export const OPS_FILING_PROBLEM_ALERT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * True when the provider refused this order's last filing for a reason a
+ * retry cannot fix (a validation error: retryable off, not transport-
+ * uncertain, not our own configuration). Such an order is never re-filed by
+ * the payment webhooks, the client's return from checkout, the payment sweep,
+ * Mark paid or an address confirmation; only an explicit ops retry from the
+ * orders page (llcOps.retryFiling) does that, after a correction (2026-10-29,
+ * ported from Her First Order's PR #397: HFO's order #32 was re-filed 62
+ * times by its payment sweep, each one the same 400 and the same page to the
+ * owner). Retryable failures and uncertain ones (the watchdog's recovered
+ * interruption) keep re-filing automatically under their idempotency key.
+ * whopRetailWebhook.ts's payment sweep mirrors this rule in SQL.
+ *
+ * This is the one rule for re-filing. It replaces this app's earlier bound
+ * in the Whop payment replay (which resumed only an unstarted, payment_required
+ * filing and so never re-filed any failure, retryable or not) instead of
+ * stacking on top of it.
+ */
+export function filingHeldForOpsRetry(registration: {
+  status: string;
+  retryable: boolean;
+  lastErrorType: string | null;
+}): boolean {
+  return (
+    registration.status === "failed" &&
+    !registration.retryable &&
+    Boolean(registration.lastErrorType) &&
+    !registration.lastErrorType!.startsWith(UNCERTAIN_ERROR_PREFIX) &&
+    registration.lastErrorType !== "provider_configuration"
+  );
+}
 
 /**
  * Send-once doorbell for the address-choice hold (2026-10-14), the same claim
@@ -104,17 +143,23 @@ async function sendAddressHoldAlertOnce(
 /**
  * File a paid Doola registration. Idempotent and single-flight: the
  * payment_required → submitting transition is the lock, the stored
- * submissionKey drives Doola's Idempotency-Key replay, and stored
- * doolaCustomerId/doolaCompanyId are never re-created.
+ * submissionKey drives Doola's Idempotency-Key replay (an ops retry reuses
+ * it), and stored doolaCustomerId/doolaCompanyId are never re-created. A
+ * filing the provider refused is held for ops (filingHeldForOpsRetry) unless
+ * `opsRetry` is set; an activity with no filing industry is parked before
+ * any provider call.
  */
 export async function fileDoolaRegistration(params: {
   userId: number;
   registrationId: number;
+  /** An explicit ops retry from the orders page (llcOps.retryFiling), the only caller that re-files a held order. */
+  opsRetry?: boolean;
 }): Promise<
   | { outcome: "filed"; doolaCompanyId: string }
   | { outcome: "already_filed"; doolaCompanyId: string }
   | { outcome: "not_ready"; reason: string }
-  | { outcome: "failed"; message: string }
+  | { outcome: "held"; reason: string }
+  | { outcome: "failed"; message: string; providerDetail: string | null }
 > {
   const bundle = await getLlcRegistrationById(params.userId, params.registrationId);
   if (!bundle) return { outcome: "not_ready", reason: "Registration not found" };
@@ -132,6 +177,17 @@ export async function fileDoolaRegistration(params: {
   if (!registration.retailPaidAt) {
     return { outcome: "not_ready", reason: "Retail payment has not been confirmed" };
   }
+  // Rejected-filing hold, before the lock and any provider call: the payment
+  // webhooks, the client's return from checkout, the payment sweep, Mark paid
+  // and an address confirmation all land here, and none of them may resend a
+  // filing the provider already refused. Nothing changes on the row and
+  // nothing is sent: ops heard when it was refused.
+  if (!params.opsRetry && filingHeldForOpsRetry(registration)) {
+    return {
+      outcome: "held",
+      reason: "The provider refused this filing; it re-files only from an ops retry after a correction",
+    };
+  }
 
   // Environment fence: a row stamped for one environment must never file
   // against the other (e.g. a sandbox-era test order after the production
@@ -143,15 +199,20 @@ export async function fileDoolaRegistration(params: {
     return { outcome: "not_ready", reason: "The filing service is not configured" };
   }
   if (registration.doolaEnv && registration.doolaEnv !== environment) {
-    await sendOpsAlert(
-      submissionProblemAlert({
+    // Once a day per order: every payment pass re-enters here.
+    await sendOpsAlertWithin({
+      registrationId: params.registrationId,
+      emailType: `${OPS_FILING_PROBLEM_ALERT_TYPE}:environment_mismatch`,
+      windowMs: OPS_FILING_PROBLEM_ALERT_WINDOW_MS,
+      alert: submissionProblemAlert({
         registrationId: params.registrationId,
         legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
         errorType: "environment_mismatch",
+        provider: "doola",
         message: `Filing refused: this order was created against the ${registration.doolaEnv} environment but the app is now configured for ${environment}. If it is a leftover test order, delete or ignore it; it will never file automatically.`,
         uncertain: true,
       }),
-    ).catch(() => {});
+    });
     return {
       outcome: "not_ready",
       reason: "This order belongs to a different filing environment",
@@ -180,6 +241,7 @@ export async function fileDoolaRegistration(params: {
         errorType: "address_choice_needed",
         message: `Filing held before any provider call: the address choices cannot be sent (${addressPlanIssueCodes(addressPlan)}). The client is asked on the status page to choose the business address and where mail goes; the filing starts by itself once they save. Nothing to retry until then.`,
         uncertain: false,
+        provider: "doola",
       }),
     ).catch(() => {});
     return {
@@ -188,18 +250,65 @@ export async function fileDoolaRegistration(params: {
     };
   }
 
+  // Industry gate (2026-10-29), before the lock and any provider call: since
+  // 2026-10-27 the provider refuses a create without an industry (HFO's order
+  // #32 was refused that way). An activity with no label on the provider's
+  // list (deriveDoolaIndustry: the wizard's own label, else
+  // server/llc/industryMap.ts) is parked for ops in action_required, where no
+  // automatic path files it, and never sent. Ops fix the mapping or the
+  // order's activity, then press Retry filing. This one gate replaces the
+  // copies the Stripe and Whop payment handlers each carried, so Mark paid,
+  // an address confirmation and a client retry are covered too.
+  if (!deriveDoolaIndustry(registration)) {
+    await transitionLlcStatus({
+      userId: params.userId,
+      registrationId: params.registrationId,
+      toStatus: "action_required",
+      source: "system",
+      note: "Held before filing: the business activity has no filing industry yet",
+      expectedStatuses: ["payment_required", "failed"],
+      updates: {
+        lastErrorType: "industry_unmappable",
+        lastErrorMessage:
+          "Our team is confirming one detail of your filing. Nothing further is needed from you right now.",
+        retryable: false,
+      },
+    }).catch(() => {});
+    await sendOpsAlertWithin({
+      registrationId: params.registrationId,
+      emailType: `${OPS_FILING_PROBLEM_ALERT_TYPE}:industry_unmappable`,
+      windowMs: OPS_FILING_PROBLEM_ALERT_WINDOW_MS,
+      alert: submissionProblemAlert({
+        registrationId: params.registrationId,
+        legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
+        errorType: "industry_unmappable",
+        provider: "doola",
+        message: `Filing held before any provider call: the business activity (${registration.businessType ?? "?"} / ${registration.industryGroup ?? "?"} / ${registration.industryType ?? "?"}) has no doola industry label, and doola refuses a filing without one. Add the activity to server/llc/industryMap.ts or correct the order's activity, then press Retry filing on the orders page.`,
+        uncertain: false,
+      }),
+    });
+    return {
+      outcome: "held",
+      reason: "The business activity has no filing industry yet",
+    };
+  }
+
   // Single-flight lock: only one caller wins payment_required → submitting.
   // The environment stamp rides the same write, so a row is fenced from the
   // moment it first heads toward a provider. So does the evidence of which
   // address modes and acknowledgment versions are being sent (no address
-  // text).
+  // text). An ops retry may also take an order parked in action_required.
   const lock = await transitionLlcStatus({
     userId: params.userId,
     registrationId: params.registrationId,
     toStatus: "submitting",
     source: "system",
-    note: "Filing with the formation service (retail payment confirmed)",
-    expectedStatuses: ["payment_required", "failed"],
+    note: params.opsRetry
+      ? "Filing with the formation service (ops retry after review)"
+      : "Filing with the formation service (retail payment confirmed)",
+    expectedStatuses: params.opsRetry
+      ? ["payment_required", "failed", "action_required"]
+      : ["payment_required", "failed"],
     updates: {
       lastErrorType: null,
       lastErrorMessage: null,
@@ -278,7 +387,7 @@ export async function fileDoolaRegistration(params: {
       source: "system",
       note: "The formation service accepted the filing",
       expectedStatuses: ["submitting"],
-      updates: { lastErrorType: null, lastErrorMessage: null, retryable: false },
+      updates: { lastErrorType: null, lastErrorMessage: null, retryable: false, providerErrorDetail: null },
     });
     return { outcome: "filed", doolaCompanyId };
   } catch (error) {
@@ -300,6 +409,9 @@ export async function fileDoolaRegistration(params: {
     const errorType = isConfig
       ? "provider_configuration"
       : `${uncertainOutcome ? UNCERTAIN_ERROR_PREFIX : ""}${(api?.code ?? "provider_failure").toLowerCase()}`;
+    // Which field or rule the provider refused, ops-only (codes, no values).
+    // Before 2026-10-29 this reached only the server log.
+    const providerDetail = api ? doolaErrorDetail(api) : null;
 
     await finishSubmissionAttempt({
       attemptId,
@@ -322,22 +434,32 @@ export async function fileDoolaRegistration(params: {
         lastErrorMessage:
           "Your filing needs a quick review by our team. Nothing further is needed from you right now.",
         retryable,
+        providerErrorDetail: providerDetail,
       },
     }).catch(() => {});
 
-    await sendOpsAlert(
-      submissionProblemAlert({
+    // At most once per order and error type per 24 hours: the same failure
+    // repeating (a retryable outage, an ops retry before the fix) pages once.
+    await sendOpsAlertWithin({
+      registrationId: params.registrationId,
+      emailType: `${OPS_FILING_PROBLEM_ALERT_TYPE}:${errorType}`,
+      windowMs: OPS_FILING_PROBLEM_ALERT_WINDOW_MS,
+      alert: submissionProblemAlert({
         registrationId: params.registrationId,
         legalName: `${registration.legalName ?? "Unknown"} ${registration.entitySuffix}`,
         errorType,
+        provider: "doola",
+        providerDetail,
         message: uncertainOutcome
-          ? "Doola filing outcome is UNCERTAIN after retail payment (the request may have landed provider-side). Retry from the order page is safe — it replays the same idempotency key. Do NOT edit the order first."
-          : "Doola filing failed AFTER retail payment was collected — review and retry from the order page.",
-        uncertain: uncertainOutcome || !retryable,
+          ? "Doola filing outcome is UNCERTAIN after retail payment (the request may have landed provider-side). Retry filing on the orders page is safe — it replays the same idempotency key. Do NOT edit the order first."
+          : retryable
+            ? "Doola filing failed AFTER retail payment was collected (a temporary provider error). It re-files by itself on the next payment pass, or press Retry filing on the orders page."
+            : "Doola REFUSED the filing AFTER retail payment was collected. It will not re-file by itself: correct what the provider names, then press Retry filing on the orders page.",
+        uncertain: uncertainOutcome,
       }),
-    ).catch(() => {});
+    });
 
-    return { outcome: "failed", message: "The filing could not be submitted." };
+    return { outcome: "failed", message: "The filing could not be submitted.", providerDetail };
   }
 }
 

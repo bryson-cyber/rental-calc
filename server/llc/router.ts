@@ -34,6 +34,7 @@ import {
   bundleToDraft,
   bundleToOpsView,
   bundleToRegistrationView,
+  opsCanRetryFiling,
   registrationRowToSummary,
 } from "./domain";
 import {
@@ -816,6 +817,10 @@ export const llcOpsRouter = router({
               : null
           : null,
       lastErrorMessage: registration.lastErrorMessage,
+      // Ops-only: the provider's reason it refused the last filing (field
+      // codes, no values) and whether Retry filing applies to this row.
+      providerErrorDetail: registration.providerErrorDetail ?? null,
+      canRetryFiling: opsCanRetryFiling(registration),
       // Provider truth for the list view: what doola's snapshot last said.
       stateRegistered:
         (registration.providerStatus as { state_registered?: boolean } | null)
@@ -937,6 +942,41 @@ export const llcOpsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
       }
       return { refreshed: result.refreshed, message: result.message, registration: bundleToOpsView(bundle) };
+    }),
+
+  /**
+   * Retry filing (2026-10-29, ported from Her First Order's PR #397): the one
+   * way to re-file a paid order the provider refused, or one parked for
+   * review in action_required. The payment webhooks, the client's return
+   * from checkout, the payment sweep and Mark paid all hold such an order
+   * (fileDoolaRegistration's filingHeldForOpsRetry), so it is resent only
+   * when ops press this after correcting it. The stored submissionKey is
+   * reused, so the provider sees the same Idempotency-Key. Awaited, so the
+   * orders page shows what the provider said at once.
+   */
+  retryFiling: adminProcedure
+    .input(registrationIdInput)
+    .mutation(async ({ input }) => {
+      const owner = await findLlcRegistrationOwner(input.id);
+      if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      const existing = await getLlcRegistrationById(owner.userId, input.id);
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      if (!opsCanRetryFiling(existing.registration)) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Only a paid filing that failed or is in review, with no company filed yet, can be retried.",
+        });
+      }
+      const result = await fileDoolaRegistration({ userId: owner.userId, registrationId: input.id, opsRetry: true });
+      const message =
+        result.outcome === "filed" || result.outcome === "already_filed"
+          ? "Filed. The formation service accepted it."
+          : result.outcome === "failed"
+            ? `Refused again${result.providerDetail ? `: ${result.providerDetail}` : "."} Correct it and retry.`
+            : result.reason;
+      const bundle = await getLlcRegistrationById(owner.userId, input.id);
+      if (!bundle) throw new TRPCError({ code: "NOT_FOUND", message: "Registration not found." });
+      return { outcome: result.outcome, message, registration: bundleToOpsView(bundle) };
     }),
 
   // ─── Document vault management ───

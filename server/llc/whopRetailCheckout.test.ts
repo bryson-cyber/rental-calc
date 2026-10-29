@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   fileDoola: vi.fn(),
   sendOpsAlert: vi.fn(),
   claimWhere: vi.fn(),
-  industry: vi.fn(),
   env: { isProduction: true, llcAutoFileEnabled: true },
 }));
 
@@ -28,7 +27,6 @@ vi.mock("./store", () => ({
 vi.mock("./pricing", () => ({ getStatePricing: mocks.getPricing }));
 vi.mock("./clientEmails", () => ({ sendPaymentConfirmedEmail: mocks.sendPaymentEmail }));
 vi.mock("./doolaSubmission", () => ({ fileDoolaRegistration: mocks.fileDoola }));
-vi.mock("./doola", () => ({ deriveDoolaIndustry: mocks.industry }));
 vi.mock("../ops/notify", () => ({
   sendOpsAlert: mocks.sendOpsAlert,
   submissionProblemAlert: (p: any) => ({ subject: `problem ${p.errorType}`, lines: [] }),
@@ -149,7 +147,6 @@ beforeEach(() => {
   mocks.sendPaymentEmail.mockResolvedValue("sent");
   mocks.sendOpsAlert.mockResolvedValue(true);
   mocks.fileDoola.mockResolvedValue({ outcome: "filed", doolaCompanyId: "co_1" });
-  mocks.industry.mockReturnValue("Real Estate");
   resetWhopFallbackAlertForTests();
 });
 
@@ -338,13 +335,18 @@ describe("Whop payment confirmation", () => {
     expect(mocks.fileDoola).not.toHaveBeenCalled();
   });
 
-  it("routes an unmappable industry to action_required instead of filing", async () => {
+  // Pin moved (2026-10-29): this rail no longer carries its own industry
+  // guard. The one gate lives in fileDoolaRegistration (it parks an
+  // activity with no filing industry in action_required before any provider
+  // call, and holds a filing the provider refused); this rail reports its
+  // hold as handled. server/llc/refileLoop.filing.test.ts pins the gate.
+  it("reports the filing step's hold (no filing industry, or a refused filing) as held_for_review", async () => {
     armed();
-    mocks.industry.mockReturnValue(undefined);
+    mocks.fileDoola.mockResolvedValue({ outcome: "held", reason: "The business activity has no filing industry yet" });
     const result = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
-    expect(result?.outcome).toBe("action_required");
-    expect(mocks.transition).toHaveBeenCalledWith(expect.objectContaining({ toStatus: "action_required" }));
-    expect(mocks.fileDoola).not.toHaveBeenCalled();
+    expect(result?.outcome).toBe("held_for_review");
+    expect(mocks.fileDoola).toHaveBeenCalledWith({ userId: 7, registrationId: 42 });
+    expect(mocks.transition).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -372,7 +374,6 @@ describe("Whop payment confirmation", () => {
     armed();
     mocks.claimWhere.mockResolvedValue([{ affectedRows: 1 }]);
     mocks.fileDoola.mockResolvedValue({ outcome: "filed", doolaCompanyId: "co_1" });
-    mocks.industry.mockReturnValue("Real Estate");
     const shaped = await processLlcWhopPayment({
       paymentId: "pay_llc42",
       fetchImpl: (async () => paidPayment({ total: { amount: "487.13", currency: "usd" }, tax_amount: { amount: "37.13", currency: "usd" }, currency: undefined })) as any,
@@ -405,26 +406,47 @@ describe("Whop payment confirmation", () => {
       .rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("is idempotent per payment id: a replay never re-emails, and only resumes an unstarted filing", async () => {
-    mocks.getRegistration.mockResolvedValue(bundle(registration({
-      retailWhopPlanId: "plan_llc42",
-      retailWhopPaymentId: "pay_llc42",
-      retailPaidAt: new Date("2026-10-18T00:00:00Z"),
-    })));
+  // Pin moved (2026-10-29): a replay used to resume only a payment_required
+  // filing and answer "already_paid" for any failed one, its own bound on
+  // re-filing. The filing step's hold-for-ops rule (filingHeldForOpsRetry,
+  // ported from Her First Order's PR #397) is now the one rule: a replay
+  // hands every paid, unfiled order to it, a refused filing comes back held,
+  // and a retryable failure re-files under its idempotency key.
+  it("is idempotent per payment id: a replay never re-emails, and hands the unfiled order to the filing step", async () => {
+    const paidReplay = (overrides: Record<string, unknown> = {}) =>
+      bundle(registration({
+        retailWhopPlanId: "plan_llc42",
+        retailWhopPaymentId: "pay_llc42",
+        retailPaidAt: new Date("2026-10-18T00:00:00Z"),
+        ...overrides,
+      }));
+    mocks.getRegistration.mockResolvedValue(paidReplay());
     await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
     expect(mocks.sendPaymentEmail).not.toHaveBeenCalled();
     expect(mocks.claimWhere).not.toHaveBeenCalled();
     expect(mocks.fileDoola).toHaveBeenCalledTimes(1);
 
+    // A refused filing: the filing step holds it, and the replay says so.
     mocks.fileDoola.mockClear();
-    mocks.getRegistration.mockResolvedValue(bundle(registration({
-      status: "failed",
-      retailWhopPlanId: "plan_llc42",
-      retailWhopPaymentId: "pay_llc42",
-      retailPaidAt: new Date("2026-10-18T00:00:00Z"),
-    })));
-    const replay = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
-    expect(replay?.outcome).toBe("already_paid");
+    mocks.fileDoola.mockResolvedValue({ outcome: "held", reason: "refused" });
+    mocks.getRegistration.mockResolvedValue(paidReplay({ status: "failed", retryable: false, lastErrorType: "e_validation_failed" }));
+    const held = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
+    expect(held?.outcome).toBe("held_for_review");
+    expect(mocks.fileDoola).toHaveBeenCalledWith({ userId: 7, registrationId: 42 });
+    expect(mocks.sendPaymentEmail).not.toHaveBeenCalled();
+
+    // Already filed: answered without asking the filing step.
+    mocks.fileDoola.mockClear();
+    mocks.getRegistration.mockResolvedValue(paidReplay({ status: "processing", doolaCompanyId: "co_1" }));
+    const filed = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
+    expect(filed?.outcome).toBe("already_filed");
+    expect(mocks.fileDoola).not.toHaveBeenCalled();
+
+    // Auto-file off: nothing files, the payment is simply already applied.
+    mocks.env.llcAutoFileEnabled = false;
+    mocks.getRegistration.mockResolvedValue(paidReplay({ status: "failed", retryable: true, lastErrorType: "e_rate_limited" }));
+    const off = await processLlcWhopPayment({ paymentId: "pay_llc42", fetchImpl: (async () => paidPayment()) as any });
+    expect(off?.outcome).toBe("already_paid");
     expect(mocks.fileDoola).not.toHaveBeenCalled();
   });
 

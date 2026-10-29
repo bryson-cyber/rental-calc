@@ -109,6 +109,7 @@ export async function runStatusPollOnce(): Promise<{
                   registrationId: registration.id,
                   legalName: "(see order page)",
                   errorType: "uncertain_interrupted",
+                  provider: "doola",
                   message:
                     "A filing was interrupted mid-flight (server restart?) and has been recovered to a retryable failure. Retry from the order page is safe — it replays the same idempotency key. Do NOT edit the order first.",
                   uncertain: true,

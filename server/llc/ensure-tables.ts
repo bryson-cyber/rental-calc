@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { seedStatePricing } from "./pricing";
 import { generateStatusToken } from "./store";
 import { ensureAddressColumns } from "./addressChoices";
+import { ensureFilingDetailColumns } from "./filingDetailColumns";
 import { ANNUAL_REPORT_COLUMN_SETS, ANNUAL_REPORT_TABLES } from "./annualReports/tables";
 
 /** Additive, idempotent DDL for the Whop retail-payment rail columns. */
@@ -311,6 +312,10 @@ export async function ensureLlcTables(): Promise<void> {
     // quietly failed ADD would break the LLC pages while this boot still
     // logged "Schema ensured".
     await ensureAddressColumns((statement) => db.execute(sql.raw(statement)));
+    // The provider's reason for refusing the last filing attempt (2026-10-29,
+    // server/llc/doolaSubmission.ts): ops-only, shown on the orders page.
+    // Same guard shape as the address columns: every order read selects it.
+    await ensureFilingDetailColumns((statement) => db.execute(sql.raw(statement)));
 
     // Whop retail-payment rail (2026-10-18). Catch-guarded so a re-run on a
     // database that already has them is a no-op. The unique indexes enforce

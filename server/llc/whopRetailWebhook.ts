@@ -13,7 +13,7 @@ import crypto from "node:crypto";
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, like, ne, or } from "drizzle-orm";
 import { llcRegistrations, llcWebhookEvents } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { ENV } from "../_core/env";
@@ -27,6 +27,7 @@ import {
   whopRetailHeaders,
 } from "./whopRetailCheckout";
 import { isAnnualReportPaymentPayload, readAnnualReportPaymentMetadata } from "./annualReports/paymentMetadata";
+import { UNCERTAIN_ERROR_PREFIX } from "./store";
 
 export const WHOP_WEBHOOK_PATH = "/api/whop/webhook";
 const TIMESTAMP_TOLERANCE_SEC = 5 * 60;
@@ -342,9 +343,13 @@ function bump(report: LlcWhopReconcileReport, key: string) {
 /**
  * One sweep: (a) unpaid orders holding a Whop plan -> look for a succeeded
  * payment on that exact plan and apply it; (b) orders already claimed by a
- * Whop payment but still in payment_required (filing never started) ->
- * resume filing (only when auto-file is enabled; the processor re-checks).
- * No-op (returns null) when the Whop API config is absent.
+ * Whop payment with no company filed yet -> hand them back to the filing step
+ * (only when auto-file is enabled; the processor re-checks). That covers a
+ * filing that never started (payment_required) and a retryable or uncertain
+ * failure, never a filing the provider refused (2026-10-29: the query leaves
+ * those out, mirroring filingHeldForOpsRetry, and the filing step holds one
+ * that slips through). No-op (returns null) when the Whop API config is
+ * absent.
  */
 export async function runLlcWhopReconciliation(input: {
   fetchImpl?: typeof fetch;
@@ -387,10 +392,25 @@ export async function runLlcWhopReconciliation(input: {
           and(
             eq(llcRegistrations.provider, "doola"),
             eq(llcRegistrations.isTest, false),
-            eq(llcRegistrations.status, "payment_required"),
+            // A filing that never started, or one that failed in a way that
+            // may be retried (2026-10-29, Her First Order's PR #397 rule;
+            // before, this pass took payment_required only). A wedged
+            // "submitting" row is the watchdog's (server/ops/poller.ts).
+            inArray(llcRegistrations.status, ["payment_required", "failed"]),
             isNotNull(llcRegistrations.retailWhopPaymentId),
             isNotNull(llcRegistrations.retailPaidAt),
             isNull(llcRegistrations.doolaCompanyId),
+            // Never a filing the provider refused (filingHeldForOpsRetry in
+            // doolaSubmission.ts, which also holds it if one slips through):
+            // it re-files only from Retry filing on the orders page. HFO's
+            // order #32 was re-filed 62 times by its payment sweep.
+            or(
+              ne(llcRegistrations.status, "failed"),
+              eq(llcRegistrations.retryable, true),
+              isNull(llcRegistrations.lastErrorType),
+              like(llcRegistrations.lastErrorType, `${UNCERTAIN_ERROR_PREFIX}%`),
+              eq(llcRegistrations.lastErrorType, "provider_configuration"),
+            ),
           ),
         )
         .limit(200)

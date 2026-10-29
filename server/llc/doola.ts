@@ -19,8 +19,9 @@ import { addressPlanForRow, addressPlanIssueCodes } from "./addressChoices";
 
 type LlcRegistrationRecord = typeof llcRegistrations.$inferSelect;
 type LlcFounderRecord = typeof llcFounders.$inferSelect;
-import { LLC_ACTIVITY_PRESETS, DOOLA_DIRECT_MARKER } from "../../shared/llc";
+import { DOOLA_DIRECT_MARKER } from "../../shared/llc";
 import { DOOLA_VALID_INDUSTRIES } from "../../shared/doola-industries";
+import { industryForActivity } from "./industryMap";
 import type { WhopFormationSnapshot } from "./whop";
 
 export const DEFAULT_DOOLA_API_BASE_URL = "https://api.doola.com";
@@ -56,6 +57,19 @@ export class DoolaApiError extends Error {
     this.retryable = params.retryable;
     this.fields = params.fields ?? {};
   }
+}
+
+/**
+ * Ops-only summary of why the provider refused a request: its error code and
+ * the field:code pairs (e.g. "E_VALIDATION_FAILED · industry:E_INDUSTRY_INVALID").
+ * Codes and field names only, never submitted values, so no personal data.
+ */
+export function doolaErrorDetail(error: DoolaApiError): string {
+  const fields = Object.entries(error.fields).map(([field, code]) => `${field}:${code}`);
+  return [error.code ?? `HTTP ${error.httpStatus ?? "?"}`, fields.join(", ")]
+    .filter(Boolean)
+    .join(" · ")
+    .slice(0, 500);
 }
 
 export interface DoolaConfig {
@@ -309,30 +323,30 @@ export function deriveBusinessDescription(registration: LlcRegistrationRecord): 
 }
 
 /**
- * Doola industry label resolved from the registration.
+ * Doola industry label for the registration's activity. Doola validates
+ * against its OWN industry list (shared/doola-industries.ts) and, since
+ * 2026-10-27, refuses a create without `industry` (E_INDUSTRY_INVALID) and no
+ * longer accepts `naicsCode`.
  *
- * New system (businessType === "doola_direct"): industryType IS the Doola label.
- * Legacy system: look up the preset by taxonomy triple and return its doolaIndustry.
+ *  - businessType "doola_direct" (this wizard's presets and searchable list):
+ *    industryType IS the label, sent only when it is on the list. A preset
+ *    stores its doolaIndustry there, so the preset's label is what files.
+ *  - Anything else is the three-level taxonomy (orders and drafts from before
+ *    the provider-label switch, or a triple the activity step still accepts):
+ *    the activity table in server/llc/industryMap.ts, which covers every
+ *    choice. Before 2026-10-29 this returned undefined for every such row.
  *
- * Returns undefined only for legacy registrations that have no matching preset.
+ * Undefined means unmappable: the filing step holds the order before any
+ * call, and the payload builder refuses to build it.
  */
-export function deriveDoolaIndustry(registration: LlcRegistrationRecord): string | undefined {
-  // New system: industryType stores the Doola industry label directly
+export function deriveDoolaIndustry(
+  registration: Pick<LlcRegistrationRecord, "businessType" | "industryGroup" | "industryType">,
+): string | undefined {
   if (registration.businessType === DOOLA_DIRECT_MARKER) {
     const label = registration.industryType?.trim();
-    if (label && DOOLA_VALID_INDUSTRIES.has(label)) return label;
-    return undefined;
+    return label && DOOLA_VALID_INDUSTRIES.has(label) ? label : undefined;
   }
-
-  // Legacy system: match against presets
-  const preset = LLC_ACTIVITY_PRESETS.find(
-    (candidate) =>
-      candidate.doolaIndustry &&
-      // Legacy presets no longer carry businessType/industryGroup/industryType
-      // but we keep backward compat for any old registrations that matched
-      false,
-  );
-  return (preset as { doolaIndustry?: string } | undefined)?.doolaIndustry;
+  return industryForActivity(registration);
 }
 
 // ─── Request mapping ─────────────────────────────────────────────────────────
@@ -413,7 +427,19 @@ export function mapRegistrationToDoolaCompany(
       : { provider: "registeredAgent", type };
   const addresses = [addressEntry("mailing", plan.mailing), addressEntry("business", plan.business)];
 
+  // Last line of defense behind the pre-lock industry gate in
+  // doolaSubmission.ts: the provider refuses a create without an industry
+  // (2026-10-27), so none is ever sent. The industry label is the only
+  // classification field; `naicsCode` is never sent.
   const industry = deriveDoolaIndustry(registration);
+  if (!industry) {
+    throw new DoolaApiError({
+      message: "The order's business activity has no filing industry.",
+      httpStatus: null,
+      code: "E_INDUSTRY_UNMAPPED",
+      retryable: false,
+    });
+  }
 
   return {
     doolaCustomerId,
@@ -425,7 +451,7 @@ export function mapRegistrationToDoolaCompany(
         entityTypeEnding: registration.entitySuffix,
       },
     ],
-    ...(industry ? { industry } : {}),
+    industry,
     description: deriveBusinessDescription(registration),
     responsibleParty: {
       legalFirstName: primary.firstName ?? "",
